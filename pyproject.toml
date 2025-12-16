@@ -1,0 +1,104 @@
+[project]
+name = "langgraph-fastapi-template"
+version = "0.1.0"
+description = "LangGraph FastAPI Template"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.121.0",
+    "langchain>=1.0.5",
+    "langchain-core>=1.0.4",
+    "langchain-openai>=1.0.2",
+    "langfuse==3.9.1",
+    "langgraph>=1.0.2",
+    "langgraph-checkpoint-postgres>=3.0.1",
+    "passlib[bcrypt]>=1.7.4",
+    "psycopg2-binary>=2.9.10",
+    "pydantic[email]>=2.11.1",
+    "pydantic-settings>=2.8.1",
+    "python-dotenv>=1.1.0",
+    "python-jose[cryptography]>=3.4.0",
+    "python-multipart>=0.0.20",
+    "sqlmodel>=0.0.24",
+    "structlog>=25.2.0",
+    "supabase>=2.15.0",
+    "uvicorn>=0.34.0",
+    "bcrypt>=4.3.0",
+    "slowapi>=0.1.9",
+    "email-validator>=2.2.0",
+    "prometheus-client>=0.19.0",
+    "starlette-prometheus>=0.7.0",
+    "asgiref>=3.8.1",
+    "duckduckgo-search>=3.9.0",
+    "langchain-community>=0.4.1",
+    "tqdm>=4.67.1",
+    "colorama>=0.4.6",
+    "ddgs>=9.6.0",
+    "tenacity>=9.1.2",
+    "mem0ai>=1.0.0",
+    "uvloop>=0.22.1",
+]
+
+[project.optional-dependencies]
+dev = ["black", "isort", "flake8", "ruff", "djlint==1.36.4"]
+
+[dependency-groups]
+test = ["httpx>=0.28.1", "pytest>=8.3.5"]
+
+
+[tool.pytest.ini_options]
+markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
+python_files = ["test_*.py", "*_test.py", "tests.py"]
+
+[tool.black]
+line-length = 119
+exclude = "venv|migrations"
+
+[tool.flake8]
+docstring-convention = "all"
+ignore = ["D107", "D212", "E501", "W503", "W605", "D203", "D100"]
+exclude = "venv|migrations"
+max-line-length = 119
+
+# radon
+radon-max-cc = 10
+
+[tool.isort]
+profile = "black"
+multi_line_output = "VERTICAL_HANGING_INDENT"
+force_grid_wrap = 2
+line_length = 119
+skip = ["migrations", "venv"]
+
+[tool.pylint."messages control"]
+disable = [
+    "line-too-long",
+    "trailing-whitespace",
+    "missing-function-docstring",
+    "consider-using-f-string",
+    "import-error",
+    "too-few-public-methods",
+    "redefined-outer-name",
+]
+
+[tool.pylint.master]
+ignore = "migrations"
+
+[tool.ruff]
+line-length = 119
+exclude = ["migrations", "*.ipynb", "venv"]
+
+[tool.ruff.lint]
+# Enable flake8-bugbear (`B`) rules and docstring (`D`) rules
+select = ["E", "F", "B", "ERA", "D"]
+# Never enforce `E501` (line length violations).
+ignore = ["E501", "F401", "D203", "D213", "B904", "B008"]
+# Avoid trying to fix flake8-bugbear (`B`) violations.
+unfixable = ["B"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# Ignore `E402` (import violations) in all `__init__.py` files
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]

@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+*.jsonl
+
+# Virtual environments
+.venv
+
+# Environment variables
+.env
+.env.development
+.env.staging
+.env.production
+
+# Misc
+*.ipynb
+
+# Reports
+evals/reports/

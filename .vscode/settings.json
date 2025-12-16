@@ -1,0 +1,44 @@
+{
+    "editor.formatOnSave": true,
+    "python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
+    "isort.args": [
+        "--settings-path=${workspaceFolder}/pyproject.toml"
+    ],
+    "black-formatter.args": [
+        "--config=${workspaceFolder}/pyproject.toml"
+    ],
+    "flake8.args": [
+        "--config=${workspaceFolder}/pyproject.toml"
+    ],
+    "mypy-type-checker.args": [
+        "--config-file=${workspaceFolder}/pyproject.toml"
+    ],
+    "pylint.args": [
+        "--rcfile=${workspaceFolder}/pyproject.toml"
+    ],
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+        "editor.formatOnSave": true,
+    },
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.indexing": true,
+    "python.languageServer": "None",
+    "python.analysis.completeFunctionParens": true,
+    "editor.rulers": [
+        {
+            "column": 99,
+            "color": "#FFFFFF"
+        },
+        {
+            "column": 119,
+            "color": "#90EE90"
+        }
+    ],
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+}
