@@ -21,7 +21,7 @@ from app.core.evals.metrics.task_completion.template import TaskCompletionTempla
 
 if TYPE_CHECKING:
     from app.core.traces.entities import Trace
-    from app.infrastructure.providers.base import AbstractLLMProvider
+    from app.infrastructure.llm.engine import LLMEngine
 
 
 @register_metric("task_completion")
@@ -34,25 +34,28 @@ class TaskCompletionMetric(BaseMetric):
     async def evaluate(
         self,
         trace: Trace,
-        provider: AbstractLLMProvider,
+        llm: LLMEngine,
         *,
         threshold: float | None = None,
+        model: str | None = None,
     ) -> MetricResult:
         """Run the two-stage evaluation and return a scored result.
 
         Args:
             trace: The full trace with spans.
-            provider: LLM provider for judge calls.
+            llm: Universal LLM engine for judge calls.
             threshold: Optional override for the pass/fail threshold.
+            model: Optional override for the evaluation model.
         """
         effective_threshold = threshold if threshold is not None else self.threshold
 
         # Stage 1: Extract the task and outcome from the trace.
         trace_dict = trace.model_dump(mode="json")
         extract_prompt = TaskCompletionTemplate.extract_task_and_outcome(trace_dict)
-        extraction = await provider.generate_structured(
+        extraction = await llm.generate_structured(
             prompt=extract_prompt,
             response_schema=TaskAndOutcome,
+            model=model,
         )
 
         # Stage 2: Judge how well the outcome matches the task.
@@ -60,9 +63,10 @@ class TaskCompletionMetric(BaseMetric):
             task=extraction.task,
             actual_outcome=extraction.outcome,
         )
-        verdict = await provider.generate_structured(
+        verdict = await llm.generate_structured(
             prompt=verdict_prompt,
             response_schema=TaskCompletionVerdict,
+            model=model,
         )
 
         return MetricResult(

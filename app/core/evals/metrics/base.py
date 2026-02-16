@@ -2,8 +2,8 @@
 
 Every concrete metric (TaskCompletion, Hallucination, etc.) subclasses
 ``BaseMetric`` and implements ``evaluate()``.  The eval worker calls
-this method with a trace and an LLM provider, keeping the metric logic
-completely decoupled from infrastructure.
+this method with a trace and the LLM engine, keeping the metric logic
+completely decoupled from infrastructure details.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from app.core.traces.entities import Trace
-    from app.infrastructure.providers.base import AbstractLLMProvider
+    from app.infrastructure.llm.engine import LLMEngine
 
 
 class MetricResult(BaseModel):
@@ -41,16 +41,18 @@ class BaseMetric(ABC):
     async def evaluate(
         self,
         trace: Trace,
-        provider: AbstractLLMProvider,
+        llm: LLMEngine,
         *,
         threshold: float | None = None,
+        model: str | None = None,
     ) -> MetricResult:
         """Score a trace using this metric.
 
         Args:
             trace: The full trace entity (with spans).
-            provider: An LLM provider to call for judge reasoning.
+            llm: Universal LLM engine for judge reasoning calls.
             threshold: Override the default pass/fail threshold.
+            model: Override the default evaluation model string.
 
         Returns:
             A ``MetricResult`` with score, reason, and optional metadata.
