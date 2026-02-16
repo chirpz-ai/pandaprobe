@@ -1,6 +1,6 @@
 # Opentracer
 
-Open-source, multi-tenant agent tracing and evaluation service. Trace agentic workflows from any framework, evaluate them with LLM-as-judge metrics, and query results via a REST API.
+Open-source, modern and multi-tenant agent tracing and evaluation service. Trace agentic workflows from any framework, evaluate them with novel metrics, and query results via a REST API.
 
 ## Quick Start
 
@@ -159,7 +159,7 @@ The evaluation engine uses [LiteLLM](https://github.com/BerriAI/litellm) and sup
 - **OpenAI** — `openai/gpt-4o-mini`
 - **Anthropic** — `anthropic/claude-3-5-sonnet-20241022`
 - **Vertex AI** — `vertex_ai/gemini-2.5-flash` (default)
-- **Google GenAI** — `gemini/gemini-2.0-flash`
+- **Google GenAI** — `gemini/gemini-2.5-flash`
 
 Set only the keys for the providers you use. The service reports unavailable providers clearly via `GET /v1/evaluations/providers`.
 
@@ -174,7 +174,3 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 | `GOOGLE_CLOUD_PROJECT_ID` | GCP project for Vertex AI |
 | `GEMINI_API_KEY` | Google AI Studio key |
 | `EVAL_LLM_MODEL` | Default eval model (LiteLLM format) |
-
-## License
-
-MIT
