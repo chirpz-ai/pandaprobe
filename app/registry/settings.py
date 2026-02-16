@@ -95,11 +95,20 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "console"
     LOG_DIR: Path = Path("logs")
 
-    # -- Evaluation LLM ------------------------------------------------------
-    EVAL_LLM_PROVIDER: str = "openai"
-    EVAL_LLM_MODEL: str = "gpt-4o-mini"
-    EVAL_LLM_API_KEY: str = ""
-    EVAL_LLM_BASE_URL: str = ""
+    # -- LLM Provider Credentials --------------------------------------------
+    # Only set the keys for providers you intend to use.  The service
+    # gracefully skips providers whose credentials are absent.
+    OPENAI_API_KEY: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    GOOGLE_CLOUD_PROJECT_ID: str = ""
+    VERTEX_AI_LOCATION: str = "us-central1"
+
+    # -- Evaluation LLM defaults ---------------------------------------------
+    # Model string follows LiteLLM format: "<provider>/<model>"
+    # e.g. "openai/gpt-4o-mini", "anthropic/claude-3-5-sonnet-20241022",
+    #      "gemini/gemini-2.0-flash", "vertex_ai/gemini-pro"
+    EVAL_LLM_MODEL: str = "openai/gpt-4o-mini"
     EVAL_LLM_TEMPERATURE: float = 0.0
 
     # -- Rate limiting --------------------------------------------------------

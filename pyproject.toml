@@ -22,7 +22,7 @@ dependencies = [
     "slowapi>=0.1.9",
     "email-validator>=2.2.0",
     "python-multipart>=0.0.20",
-    "openai>=1.50.0",
+    "litellm>=1.81.0",
 ]
 
 [project.optional-dependencies]
