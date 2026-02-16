@@ -1,4 +1,4 @@
-# Opentracer
+# OpenTracer
 
 Open-source, modern and multi-tenant agent tracing and evaluation service. Trace agentic workflows from any framework, evaluate them with novel metrics, and query results via a REST API.
 
