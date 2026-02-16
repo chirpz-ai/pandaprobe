@@ -174,3 +174,14 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 | `GOOGLE_CLOUD_PROJECT_ID` | GCP project for Vertex AI |
 | `GEMINI_API_KEY` | Google AI Studio key |
 | `EVAL_LLM_MODEL` | Default eval model (LiteLLM format) |
+
+
+# Authors
+
+Built by the founder of Chirpz AI. Contact sina@chirpz.ai for all enquiries.
+
+<br />
+
+# License
+
+OpenTracer is licensed under Apache 2.0 - see the [LICENSE.md](https://github.com/chirpz-ai/opentracer/LICENSE) file for details.
