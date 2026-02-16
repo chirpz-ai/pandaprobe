@@ -108,7 +108,7 @@ class Settings(BaseSettings):
     # Model string follows LiteLLM format: "<provider>/<model>"
     # e.g. "openai/gpt-4o-mini", "anthropic/claude-3-5-sonnet-20241022",
     #      "gemini/gemini-2.0-flash", "vertex_ai/gemini-pro"
-    EVAL_LLM_MODEL: str = "openai/gpt-4o-mini"
+    EVAL_LLM_MODEL: str = "vertex_ai/gemini-2.5-flash"
     EVAL_LLM_TEMPERATURE: float = 0.0
 
     # -- Rate limiting --------------------------------------------------------
