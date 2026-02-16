@@ -40,6 +40,18 @@ down:  ## Stop all services
 logs:  ## Tail service logs
 	docker compose logs -f
 
+logs-app:  ## Tail app logs only
+	docker compose logs -f app
+
+logs-worker:  ## Tail worker logs only
+	docker compose logs -f worker
+
+ps:  ## Show running containers
+	docker compose ps
+
+restart:  ## Restart all services
+	docker compose restart
+
 # -- Testing ------------------------------------------------------------------
 
 test:  ## Run the test suite
