@@ -95,6 +95,13 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "console"
     LOG_DIR: Path = Path("logs")
 
+    # -- Evaluation LLM ------------------------------------------------------
+    EVAL_LLM_PROVIDER: str = "openai"
+    EVAL_LLM_MODEL: str = "gpt-4o-mini"
+    EVAL_LLM_API_KEY: str = ""
+    EVAL_LLM_BASE_URL: str = ""
+    EVAL_LLM_TEMPERATURE: float = 0.0
+
     # -- Rate limiting --------------------------------------------------------
     RATE_LIMIT_DEFAULT: str = "200/minute"
 

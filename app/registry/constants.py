@@ -36,6 +36,15 @@ class TraceStatus(StrEnum):
     ERROR = "ERROR"
 
 
+class EvaluationStatus(StrEnum):
+    """Lifecycle status of an evaluation job."""
+
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
 # Prefix prepended to every generated API key.
 API_KEY_PREFIX = "otr_"
 
