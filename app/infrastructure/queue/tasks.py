@@ -97,18 +97,13 @@ async def _execute_evaluation(evaluation_id: str, org_id: str) -> dict[str, str]
     from app.infrastructure.db.engine import async_session_factory
     from app.infrastructure.db.repositories.eval_repo import EvalRepository
     from app.infrastructure.db.repositories.trace_repo import TraceRepository
-    from app.infrastructure.providers.openai import OpenAIProvider
+    from app.infrastructure.llm.engine import LLMEngine
     from app.registry.constants import EvaluationStatus
-    from app.registry.settings import settings
 
     eval_uuid = UUID(evaluation_id)
     org_uuid = UUID(org_id)
 
-    provider = OpenAIProvider(
-        api_key=settings.EVAL_LLM_API_KEY,
-        model=settings.EVAL_LLM_MODEL,
-        base_url=settings.EVAL_LLM_BASE_URL or None,
-    )
+    llm = LLMEngine()
 
     async with async_session_factory() as session:
         eval_repo = EvalRepository(session)
@@ -133,7 +128,7 @@ async def _execute_evaluation(evaluation_id: str, org_id: str) -> dict[str, str]
             metric = metric_cls()
 
             try:
-                result: MetricResult = await metric.evaluate(trace, provider)
+                result: MetricResult = await metric.evaluate(trace, llm)
 
                 eval_result = EvaluationResult(
                     id=uuid4(),
