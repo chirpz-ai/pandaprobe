@@ -19,7 +19,10 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from app.registry.constants import SpanKind, SpanStatusCode, TraceStatus
+from sqlalchemy import Float
+from sqlalchemy.dialects.postgresql import ARRAY
+
+from app.registry.constants import EvaluationStatus, SpanKind, SpanStatusCode, TraceStatus
 
 
 def _utcnow() -> datetime:
@@ -130,3 +133,54 @@ class SpanModel(Base):
     __table_args__ = (
         Index("ix_spans_trace_id", "trace_id"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Evaluations domain
+# ---------------------------------------------------------------------------
+
+
+class EvaluationModel(Base):
+    """A batch-evaluation job targeting a single trace."""
+
+    __tablename__ = "evaluations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    trace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("traces.trace_id"), nullable=False)
+    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    metric_names: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
+    status: Mapped[str] = mapped_column(
+        SAEnum(EvaluationStatus, name="evaluation_status", create_constraint=False, native_enum=False, length=20),
+        default=EvaluationStatus.PENDING,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    results: Mapped[list["EvaluationResultModel"]] = relationship(
+        back_populates="evaluation", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("ix_evaluations_org_trace", "org_id", "trace_id"),
+    )
+
+
+class EvaluationResultModel(Base):
+    """Outcome of a single metric applied to a trace."""
+
+    __tablename__ = "evaluation_results"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    evaluation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evaluations.id"), nullable=False
+    )
+    metric_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+    threshold: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_: Mapped[dict] = mapped_column("metadata", JSONB, default=dict, nullable=False)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    evaluation: Mapped["EvaluationModel"] = relationship(back_populates="results")
