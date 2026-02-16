@@ -11,11 +11,14 @@ ENV APP_ENV=${APP_ENV} \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=on
 
-# System dependencies (libpq for psycopg2, build-essential for C extensions)
+# System deps: libpq (psycopg2), curl (healthcheck), pg client + redis
+# tools (entrypoint connectivity checks)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     curl \
+    postgresql-client \
+    redis-tools \
     && pip install --upgrade pip \
     && pip install uv \
     && rm -rf /var/lib/apt/lists/*

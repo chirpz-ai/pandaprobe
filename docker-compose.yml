@@ -1,6 +1,6 @@
 services:
-  # ---------- API server ----------
-  api:
+  # ---------- FastAPI application ----------
+  app:
     build:
       context: .
       args:
