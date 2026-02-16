@@ -43,6 +43,6 @@ def list_integrations() -> list[str]:
 
 def _import_builtin_integrations() -> None:
     """Force-import all built-in integration modules."""
-    import app.integrations.langchain  # noqa: F401
-    import app.integrations.langgraph  # noqa: F401
-    import app.integrations.crewai  # noqa: F401
+    import app.integrations.langchain.transformer  # noqa: F401
+    import app.integrations.langgraph.transformer  # noqa: F401
+    import app.integrations.crewai.transformer  # noqa: F401
