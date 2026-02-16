@@ -1,86 +1,80 @@
 #!/bin/bash
 set -e
 
-# Print initial environment values (before loading .env)
-echo "Starting with these environment variables:"
-echo "APP_ENV: ${APP_ENV:-development}"
-echo "Initial Database Host: $( [[ -n ${POSTGRES_HOST:-${DB_HOST:-}} ]] && echo 'set' || echo 'Not set' )"
-echo "Initial Database Port: $( [[ -n ${POSTGRES_PORT:-${DB_PORT:-}} ]] && echo 'set' || echo 'Not set' )"
-echo "Initial Database Name: $( [[ -n ${POSTGRES_DB:-${DB_NAME:-}} ]] && echo 'set' || echo 'Not set' )"
-echo "Initial Database User: $( [[ -n ${POSTGRES_USER:-${DB_USER:-}} ]] && echo 'set' || echo 'Not set' )"
+# ── Colour helpers ──────────────────────────────────────────────────────────
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Colour
+BOLD='\033[1m'
 
-# Load environment variables from the appropriate .env file
+ok()   { echo -e "  ${GREEN}✔${NC} $1"; }
+fail() { echo -e "  ${RED}✘${NC} $1"; }
+info() { echo -e "  ${CYAN}ℹ${NC} $1"; }
+
+# ── Banner ──────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════╗${NC}"
+echo -e "${BOLD}${CYAN}║         Opentracer Service v0.1.0        ║${NC}"
+echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${BOLD}Environment:${NC} ${APP_ENV:-development}"
+echo ""
+
+# ── Load .env file if present ───────────────────────────────────────────────
 if [ -f ".env.${APP_ENV}" ]; then
-    echo "Loading environment from .env.${APP_ENV}"
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        # Skip comments and empty lines
-        [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "$line" ]] && continue
-
-        # Extract the key
-        key=$(echo "$line" | cut -d '=' -f 1)
-
-        # Only set if not already set in environment
-        if [[ -z "${!key}" ]]; then
-            export "$line"
-        else
-            echo "Keeping existing value for $key"
-        fi
-    done <".env.${APP_ENV}"
+    info "Loading .env.${APP_ENV}"
+    set -a
+    # shellcheck source=/dev/null
+    source ".env.${APP_ENV}"
+    set +a
 elif [ -f ".env" ]; then
-    echo "Loading environment from .env"
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        # Skip comments and empty lines
-        [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "$line" ]] && continue
-
-        # Extract the key
-        key=$(echo "$line" | cut -d '=' -f 1)
-
-        # Only set if not already set in environment
-        if [[ -z "${!key}" ]]; then
-            export "$line"
-        else
-            echo "Keeping existing value for $key"
-        fi
-    done <".env"
-else
-    echo "Warning: No .env file found. Using system environment variables."
+    info "Loading .env"
+    set -a
+    source ".env"
+    set +a
 fi
 
-# Check required sensitive environment variables
-required_vars=("JWT_SECRET_KEY" "OPENAI_API_KEY")
-missing_vars=()
+# ── Dependency checks ──────────────────────────────────────────────────────
+echo -e "\n${BOLD}Service connectivity:${NC}"
 
-for var in "${required_vars[@]}"; do
-    if [[ -z "${!var}" ]]; then
-        missing_vars+=("$var")
-    fi
+# PostgreSQL
+if pg_isready -h "${POSTGRES_HOST:-localhost}" -p "${POSTGRES_PORT:-5432}" -U "${POSTGRES_USER:-postgres}" -q 2>/dev/null; then
+    ok "PostgreSQL  → ${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-opentracer_db}"
+else
+    fail "PostgreSQL  → ${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432} (unreachable)"
+fi
+
+# Redis
+if redis-cli -h "${REDIS_HOST:-localhost}" -p "${REDIS_PORT:-6379}" ping 2>/dev/null | grep -q PONG; then
+    ok "Redis       → ${REDIS_HOST:-localhost}:${REDIS_PORT:-6379}"
+else
+    fail "Redis       → ${REDIS_HOST:-localhost}:${REDIS_PORT:-6379} (unreachable)"
+fi
+
+# ── Detect service role from CMD ────────────────────────────────────────────
+echo ""
+SERVICE_ROLE="unknown"
+for arg in "$@"; do
+    case "$arg" in
+        *uvicorn*) SERVICE_ROLE="app" ;;
+        *celery*)  SERVICE_ROLE="worker" ;;
+    esac
 done
 
-if [[ ${#missing_vars[@]} -gt 0 ]]; then
-    echo "ERROR: The following required environment variables are missing:"
-    for var in "${missing_vars[@]}"; do
-        echo "  - $var"
-    done
-    echo "Please provide these variables through environment or .env files."
-    exit 1
-fi
+case "$SERVICE_ROLE" in
+    app)
+        echo -e "${BOLD}Starting:${NC} ${GREEN}App (FastAPI)${NC} on port 8000"
+        echo -e "  Swagger UI → http://localhost:8000/docs"
+        ;;
+    worker)
+        echo -e "${BOLD}Starting:${NC} ${YELLOW}Worker (Celery)${NC}"
+        ;;
+    *)
+        echo -e "${BOLD}Starting:${NC} $*"
+        ;;
+esac
 
-# Print final environment info
-echo -e "\nFinal environment configuration:"
-echo "Environment: ${APP_ENV:-development}"
-
-echo "Database Host: $( [[ -n ${POSTGRES_HOST:-${DB_HOST:-}} ]] && echo 'set' || echo 'Not set' )"
-echo "Database Port: $( [[ -n ${POSTGRES_PORT:-${DB_PORT:-}} ]] && echo 'set' || echo 'Not set' )"
-echo "Database Name: $( [[ -n ${POSTGRES_DB:-${DB_NAME:-}} ]] && echo 'set' || echo 'Not set' )"
-echo "Database User: $( [[ -n ${POSTGRES_USER:-${DB_USER:-}} ]] && echo 'set' || echo 'Not set' )"
-
-echo "LLM Model: ${DEFAULT_LLM_MODEL:-Not set}"
-echo "Debug Mode: ${DEBUG:-false}"
-
-# Run database migrations if necessary
-# e.g., alembic upgrade head
-
-# Execute the CMD
+echo ""
 exec "$@"
