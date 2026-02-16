@@ -87,6 +87,25 @@ async def get_available_metrics() -> MetricListResponse:
     return MetricListResponse(metrics=list_metrics())
 
 
+class ProviderInfo(BaseModel):
+    """Availability info for a single LLM provider."""
+
+    key: str
+    name: str
+    description: str
+    available: bool
+    message: str
+
+
+@router.get("/providers", response_model=list[ProviderInfo])
+async def get_available_providers() -> list[ProviderInfo]:
+    """List LLM providers and their availability based on configured credentials."""
+    from app.infrastructure.llm.engine import LLMEngine
+
+    engine = LLMEngine()
+    return [ProviderInfo(**p) for p in engine.available_providers()]
+
+
 @router.post("", status_code=202, response_model=EvaluationAccepted)
 async def create_evaluation(
     body: CreateEvaluationRequest,
