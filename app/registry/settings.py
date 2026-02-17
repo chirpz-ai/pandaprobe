@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     APP_ENV: Environment = Environment.DEVELOPMENT
     PROJECT_NAME: str = "Opentracer"
     VERSION: str = "0.1.0"
-    DESCRIPTION: str = "Open-source agent tracing and evaluation service"
+    DESCRIPTION: str = "Open-source agent engineering service"
     DEBUG: bool = False
     API_V1_PREFIX: str = "/v1"
     ALLOWED_ORIGINS: list[str] = ["*"]
