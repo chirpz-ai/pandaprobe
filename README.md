@@ -84,6 +84,23 @@ flowchart TB
 
 ```
 
+
+```mermaid
+flowchart TB
+    Client["Client sends POST /v1/traces"] --> API["API Layer (app/api/)"]
+    API -->|"validates request,\nresolves org from API key"| Services["Services Layer (app/services/)"]
+    Services -->|"serialises trace,\ncalls .delay()"| Queue["Queue (app/infrastructure/queue/)"]
+    Queue -->|"Redis enqueue"| Redis["Redis"]
+    Redis -->|"dequeue"| Worker["Celery Worker (tasks.py)"]
+    Worker -->|"calls repo.create_trace()"| Repo["Repository (app/infrastructure/db/)"]
+    Repo -->|"SQL INSERT"| DB["PostgreSQL"]
+    
+    Client2["Client sends GET /v1/traces"] --> API2["API Layer"]
+    API2 --> Services2["Services Layer"]
+    Services2 --> Repo2["Repository"]
+    Repo2 --> DB
+```
+
 ## Project Structure
 
 ```
