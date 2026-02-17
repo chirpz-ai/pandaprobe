@@ -43,12 +43,6 @@ flowchart TB
         EVALS["Evals\n(Metrics, Results)"]
     end
 
-    subgraph Integrations["Integrations"]
-        LC["LangChain"]
-        LG["LangGraph"]
-        CR["CrewAI"]
-    end
-
     subgraph Infra["Infrastructure"]
         DB["PostgreSQL"]
         REDIS["Redis"]
@@ -88,10 +82,6 @@ flowchart TB
     TR_SVC --> DB
     EV_SVC --> DB
 
-    R_TRACE -.->|"ingest"| Integrations
-    LC --> TRACES
-    LG --> TRACES
-    CR --> TRACES
 ```
 
 ## Project Structure
@@ -109,10 +99,6 @@ app/
 │   ├── db/              # SQLAlchemy models + repositories
 │   ├── queue/           # Celery app + tasks
 │   └── llm/             # Universal LLM engine (LiteLLM)
-├── integrations/        # Framework transformers
-│   ├── langchain/
-│   ├── langgraph/
-│   └── crewai/
 ├── services/            # Orchestration (identity, trace, eval)
 └── main.py
 ```
@@ -145,8 +131,8 @@ make help        # show all commands
 | `POST` | `/v1/organizations` | Create an organization |
 | `POST` | `/v1/organizations/{id}/api-keys` | Generate API key |
 | `POST` | `/v1/traces` | Ingest a trace (async, 202) |
-| `POST` | `/v1/traces/ingest/{source}` | Ingest framework-specific trace |
 | `GET`  | `/v1/traces` | List traces |
+| `GET`  | `/v1/traces/{id}` | Get trace with spans |
 | `POST` | `/v1/evaluations` | Trigger async evaluation |
 | `GET`  | `/v1/evaluations/{id}` | Get evaluation results |
 | `GET`  | `/v1/evaluations/providers` | List available LLM providers |

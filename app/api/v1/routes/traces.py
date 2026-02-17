@@ -1,12 +1,8 @@
 """Routes for trace ingestion and retrieval.
 
-Two ingestion paths:
-- ``POST /traces`` -- accepts the universal Opentracer format.
-- ``POST /traces/ingest/{source}`` -- accepts a framework-specific
-  payload (e.g. ``langchain``, ``crewai``) and normalises it via the
-  integration transformer.
-
-Read endpoints query the database directly.
+``POST /traces`` accepts the universal Opentracer format, validates
+the schema, injects the organisation ID, and enqueues the trace for
+background persistence.  Read endpoints query the database directly.
 """
 
 from datetime import datetime
@@ -21,7 +17,6 @@ from app.api.v1.dependencies import require_org
 from app.core.identity.entities import Organization
 from app.core.traces.entities import Span, Trace
 from app.infrastructure.db.engine import get_db_session
-from app.integrations import get_integration, list_integrations
 from app.registry.constants import SpanKind, SpanStatusCode, TraceStatus
 from app.services.trace_service import TraceService
 
@@ -196,46 +191,6 @@ async def list_traces(
         )
         for t in traces
     ]
-
-
-@router.post("/ingest/{source}", status_code=202, response_model=TraceAccepted)
-async def ingest_framework_trace(
-    source: str,
-    body: dict[str, Any],
-    org: Organization = Depends(require_org),
-) -> TraceAccepted:
-    """Accept a framework-specific trace payload for normalisation and persistence.
-
-    The ``source`` path parameter selects the integration transformer
-    (e.g. ``langchain``, ``langgraph``, ``crewai``).  The raw payload
-    is transformed into the universal Opentracer format, then enqueued.
-    """
-    try:
-        transformer_cls = get_integration(source)
-    except KeyError:
-        from fastapi import HTTPException
-
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown integration '{source}'. Available: {list_integrations()}",
-        )
-
-    transformer = transformer_cls()
-    trace = transformer.transform(body, org_id=org.id)
-    task_id = TraceService.enqueue_trace(trace)
-    return TraceAccepted(trace_id=trace.trace_id, task_id=task_id)
-
-
-class IntegrationListResponse(BaseModel):
-    """Available framework integrations."""
-
-    integrations: list[str]
-
-
-@router.get("/integrations", response_model=IntegrationListResponse)
-async def get_available_integrations() -> IntegrationListResponse:
-    """List all registered framework integrations."""
-    return IntegrationListResponse(integrations=list_integrations())
 
 
 # ---------------------------------------------------------------------------
