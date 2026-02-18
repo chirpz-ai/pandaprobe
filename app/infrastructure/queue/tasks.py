@@ -63,7 +63,7 @@ async def _persist_trace(payload: dict[str, Any]) -> dict[str, str]:
 
 
 @celery.task(name="run_evaluation", bind=True, max_retries=2, default_retry_delay=10)
-def run_evaluation(self: Any, evaluation_id: str, org_id: str) -> dict[str, str]:
+def run_evaluation(self: Any, evaluation_id: str, project_id: str) -> dict[str, str]:
     """Load a stored trace and run the requested metrics against it.
 
     The evaluation row must already exist in the database (created by
@@ -73,20 +73,20 @@ def run_evaluation(self: Any, evaluation_id: str, org_id: str) -> dict[str, str]
     Args:
         self: Celery task instance.
         evaluation_id: UUID of the evaluation job.
-        org_id: UUID of the owning organisation.
+        project_id: UUID of the owning project.
 
     Returns:
         A dict summarising the evaluation outcome.
     """
     try:
-        return asyncio.run(_execute_evaluation(evaluation_id, org_id))
+        return asyncio.run(_execute_evaluation(evaluation_id, project_id))
     except Exception as exc:
         logger.error("run_evaluation_failed", error=str(exc), evaluation_id=evaluation_id)
         asyncio.run(_fail_evaluation(evaluation_id))
         raise self.retry(exc=exc)
 
 
-async def _execute_evaluation(evaluation_id: str, org_id: str) -> dict[str, str]:
+async def _execute_evaluation(evaluation_id: str, project_id: str) -> dict[str, str]:
     """Core async logic for running an evaluation job."""
     from datetime import datetime, timezone
     from uuid import UUID, uuid4
@@ -101,7 +101,7 @@ async def _execute_evaluation(evaluation_id: str, org_id: str) -> dict[str, str]
     from app.registry.constants import EvaluationStatus
 
     eval_uuid = UUID(evaluation_id)
-    org_uuid = UUID(org_id)
+    proj_uuid = UUID(project_id)
 
     llm = LLMEngine()
 
@@ -114,11 +114,11 @@ async def _execute_evaluation(evaluation_id: str, org_id: str) -> dict[str, str]
         await session.commit()
 
         # Load the evaluation and its target trace.
-        evaluation = await eval_repo.get_evaluation(eval_uuid, org_uuid)
+        evaluation = await eval_repo.get_evaluation(eval_uuid, proj_uuid)
         if evaluation is None:
             raise ValueError(f"Evaluation {evaluation_id} not found")
 
-        trace = await trace_repo.get_trace(evaluation.trace_id, org_uuid)
+        trace = await trace_repo.get_trace(evaluation.trace_id, proj_uuid)
         if trace is None:
             raise ValueError(f"Trace {evaluation.trace_id} not found for evaluation")
 
