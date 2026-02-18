@@ -76,8 +76,7 @@ def check_provider_credentials(provider_key: str) -> tuple[bool, str]:
 
     if missing:
         return False, (
-            f"Provider '{spec.name}' is not configured. "
-            f"Missing environment variable(s): {', '.join(missing)}"
+            f"Provider '{spec.name}' is not configured. Missing environment variable(s): {', '.join(missing)}"
         )
 
     return True, f"Provider '{spec.name}' is available."
@@ -88,13 +87,15 @@ def get_available_providers() -> list[dict[str, Any]]:
     result = []
     for key, spec in PROVIDERS.items():
         available, message = check_provider_credentials(key)
-        result.append({
-            "key": key,
-            "name": spec.name,
-            "description": spec.description,
-            "available": available,
-            "message": message,
-        })
+        result.append(
+            {
+                "key": key,
+                "name": spec.name,
+                "description": spec.description,
+                "available": available,
+                "message": message,
+            }
+        )
     return result
 
 

@@ -13,9 +13,8 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies import require_org
+from app.api.v1.dependencies import APIKeyContext, require_api_key
 from app.core.evals.metrics import list_metrics
-from app.core.identity.entities import Organization
 from app.infrastructure.db.engine import get_db_session
 from app.registry.constants import EvaluationStatus
 from app.services.eval_service import EvalService
@@ -24,7 +23,7 @@ router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
 
 # ---------------------------------------------------------------------------
-# Request / Response schemas
+# Schemas
 # ---------------------------------------------------------------------------
 
 
@@ -53,7 +52,7 @@ class EvaluationResponse(BaseModel):
 
     id: UUID
     trace_id: UUID
-    org_id: UUID
+    project_id: UUID
     metric_names: list[str]
     status: EvaluationStatus
     results: list[EvaluationResultResponse]
@@ -109,18 +108,17 @@ async def get_available_providers() -> list[ProviderInfo]:
 @router.post("", status_code=202, response_model=EvaluationAccepted)
 async def create_evaluation(
     body: CreateEvaluationRequest,
-    org: Organization = Depends(require_org),
+    ctx: APIKeyContext = Depends(require_api_key),
     session: AsyncSession = Depends(get_db_session),
 ) -> EvaluationAccepted:
     """Trigger an asynchronous evaluation of a trace.
 
-    The evaluation is queued for background processing.  Poll
-    ``GET /v1/evaluations/{id}`` to check status and retrieve results.
+    The project is resolved automatically from the API key.
     """
     svc = EvalService(session)
     evaluation = await svc.create_evaluation(
         trace_id=body.trace_id,
-        org_id=org.id,
+        project_id=ctx.project_id,
         metric_names=body.metrics,
     )
     return EvaluationAccepted(
@@ -134,28 +132,26 @@ async def create_evaluation(
 @router.get("/{evaluation_id}", response_model=EvaluationResponse)
 async def get_evaluation(
     evaluation_id: UUID,
-    org: Organization = Depends(require_org),
+    ctx: APIKeyContext = Depends(require_api_key),
     session: AsyncSession = Depends(get_db_session),
 ) -> EvaluationResponse:
     """Retrieve an evaluation with all its metric results."""
     svc = EvalService(session)
-    evaluation = await svc.get_evaluation(evaluation_id, org.id)
+    evaluation = await svc.get_evaluation(evaluation_id, ctx.project_id)
     return _to_response(evaluation)
 
 
 @router.get("", response_model=list[EvaluationResponse])
 async def list_evaluations(
-    org: Organization = Depends(require_org),
+    ctx: APIKeyContext = Depends(require_api_key),
     session: AsyncSession = Depends(get_db_session),
     trace_id: UUID | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[EvaluationResponse]:
-    """List evaluations for the authenticated organisation."""
+    """List evaluations for the project associated with the API key."""
     svc = EvalService(session)
-    evaluations = await svc.list_evaluations(
-        org.id, trace_id=trace_id, limit=limit, offset=offset
-    )
+    evaluations = await svc.list_evaluations(ctx.project_id, trace_id=trace_id, limit=limit, offset=offset)
     return [_to_response(e) for e in evaluations]
 
 
@@ -169,7 +165,7 @@ def _to_response(evaluation):
     return EvaluationResponse(
         id=evaluation.id,
         trace_id=evaluation.trace_id,
-        org_id=evaluation.org_id,
+        project_id=evaluation.project_id,
         metric_names=evaluation.metric_names,
         status=evaluation.status,
         results=[

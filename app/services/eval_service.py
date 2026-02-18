@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.evals.entities import Evaluation
-from app.core.evals.metrics import get_metric, list_metrics
+from app.core.evals.metrics import list_metrics
 from app.infrastructure.db.repositories.eval_repo import EvalRepository
 from app.logging import logger
 from app.registry.constants import EvaluationStatus
@@ -27,7 +27,7 @@ class EvalService:
     async def create_evaluation(
         self,
         trace_id: UUID,
-        org_id: UUID,
+        project_id: UUID,
         metric_names: list[str],
     ) -> Evaluation:
         """Validate the requested metrics, persist the job, and enqueue it.
@@ -38,19 +38,17 @@ class EvalService:
         Raises:
             ValidationError: If any metric name is unrecognised.
         """
-        # Validate all metric names before creating the job.
         available = set(list_metrics())
         unknown = set(metric_names) - available
         if unknown:
             raise ValidationError(
-                f"Unknown metric(s): {', '.join(sorted(unknown))}. "
-                f"Available: {', '.join(sorted(available))}"
+                f"Unknown metric(s): {', '.join(sorted(unknown))}. Available: {', '.join(sorted(available))}"
             )
 
         evaluation = Evaluation(
             id=uuid4(),
             trace_id=trace_id,
-            org_id=org_id,
+            project_id=project_id,
             metric_names=metric_names,
             status=EvaluationStatus.PENDING,
             created_at=datetime.now(timezone.utc),
@@ -58,10 +56,9 @@ class EvalService:
 
         await self._repo.create_evaluation(evaluation)
 
-        # Enqueue background execution.
         from app.infrastructure.queue.tasks import run_evaluation
 
-        run_evaluation.delay(str(evaluation.id), str(org_id))
+        run_evaluation.delay(str(evaluation.id), str(project_id))
         logger.info(
             "evaluation_enqueued",
             evaluation_id=str(evaluation.id),
@@ -71,21 +68,19 @@ class EvalService:
 
         return evaluation
 
-    async def get_evaluation(self, evaluation_id: UUID, org_id: UUID) -> Evaluation:
+    async def get_evaluation(self, evaluation_id: UUID, project_id: UUID) -> Evaluation:
         """Fetch an evaluation or raise ``NotFoundError``."""
-        evaluation = await self._repo.get_evaluation(evaluation_id, org_id)
+        evaluation = await self._repo.get_evaluation(evaluation_id, project_id)
         if evaluation is None:
             raise NotFoundError(f"Evaluation {evaluation_id} not found.")
         return evaluation
 
     async def list_evaluations(
         self,
-        org_id: UUID,
+        project_id: UUID,
         trace_id: UUID | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Evaluation]:
-        """Return paginated evaluations for an organisation."""
-        return await self._repo.list_evaluations(
-            org_id, trace_id=trace_id, limit=limit, offset=offset
-        )
+        """Return paginated evaluations for a project."""
+        return await self._repo.list_evaluations(project_id, trace_id=trace_id, limit=limit, offset=offset)

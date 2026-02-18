@@ -1,15 +1,15 @@
 # OpenTracer
 
-Open-source, modern and multi-tenant agent tracing and evaluation service. Trace agentic workflows from any framework, evaluate them with novel metrics, and query results via a REST API.
+Open-source, multi-tenant agent tracing and evaluation service. Trace agentic workflows from any framework, evaluate them with LLM-as-a-judge metrics, and query results via a REST API.
 
 ## Quick Start
 
 ```bash
 # 1. Copy and configure environment
 cp .env.example .env.development
-# Edit .env.development — add your LLM provider keys
+# Edit .env.development — add your Supabase credentials and LLM provider keys
 
-# 2. Start all services
+# 2. Start services
 make up
 
 # 3. API available at http://localhost:8000
@@ -24,21 +24,28 @@ flowchart TB
         SDK["SDK / HTTP Client"]
     end
 
+    subgraph Auth["Authentication (external)"]
+        SUPABASE["Supabase Auth"]
+        FIREBASE["Firebase Auth"]
+    end
+
     subgraph API["API Layer — FastAPI"]
+        R_AUTH["/v1/auth"]
         R_ORG["/v1/organizations"]
+        R_PROJ["/v1/.../projects"]
         R_TRACE["/v1/traces"]
         R_EVAL["/v1/evaluations"]
-        R_HEALTH["/v1/health"]
     end
 
     subgraph Services["Application Services"]
+        AUTH_SVC["Auth Service"]
         ID_SVC["Identity Service"]
         TR_SVC["Trace Service"]
         EV_SVC["Eval Service"]
     end
 
     subgraph Core["Core Domain"]
-        IDENTITY["Identity\n(Org, API Key)"]
+        IDENTITY["Identity\n(User, Org, Membership,\nProject, API Key)"]
         TRACES["Traces\n(Trace, Span)"]
         EVALS["Evals\n(Metrics, Results)"]
     end
@@ -50,15 +57,19 @@ flowchart TB
         LLM["LLM Engine\n(LiteLLM)"]
     end
 
-    subgraph Providers["LLM Providers"]
-        OAI["OpenAI"]
-        ANT["Anthropic"]
-        VTX["Vertex AI"]
-        GEM["Google GenAI"]
-    end
+    SDK -->|"X-Auth-Token"| R_AUTH
+    SDK -->|"X-Auth-Token"| R_ORG
+    SDK -->|"X-Auth-Token"| R_PROJ
+    SDK -->|"X-API-Key"| R_TRACE
+    SDK -->|"X-API-Key"| R_EVAL
 
-    SDK -->|"X-API-Key"| API
+    R_AUTH --> AUTH_SVC
+    AUTH_SVC --> SUPABASE
+    AUTH_SVC --> FIREBASE
+    AUTH_SVC --> DB
+
     R_ORG --> ID_SVC
+    R_PROJ --> ID_SVC
     R_TRACE --> TR_SVC
     R_EVAL --> EV_SVC
 
@@ -73,44 +84,63 @@ flowchart TB
     CELERY -->|"persist"| DB
     CELERY -->|"judge calls"| LLM
 
-    LLM --> OAI
-    LLM --> ANT
-    LLM --> VTX
-    LLM --> GEM
-
     ID_SVC --> DB
     TR_SVC --> DB
     EV_SVC --> DB
+```
+
+## Multi-Tenant Hierarchy
 
 ```
+User ──(Membership)──> Organization ──> Project ──> Trace / Evaluation
+                                            └──> API Key (scoped to project)
+```
+
+- **Users** authenticate via an external IdP (Supabase or Firebase) and receive an app JWT.
+- **Organizations** contain **Projects**. Users join orgs via **Memberships** (OWNER / ADMIN / MEMBER).
+- **API Keys** are scoped to a single project. Traces and evaluations are routed to the correct project automatically from the key.
+
+## Auth Strategy
+
+| Mode | `AUTH_PROVIDER` | Identity Provider | Required Env Vars |
+|------|----------------|-------------------|--------------------|
+| **Supabase** | `supabase` | Supabase Auth (cloud) | `SUPABASE_URL`, `SUPABASE_KEY` |
+| **Firebase** | `firebase` | Firebase Admin SDK | `GOOGLE_CLOUD_PROJECT_ID` |
+
+**Token flow:**
+1. User authenticates with the external IdP (Supabase or Firebase) and receives an IdP access token.
+2. `POST /v1/auth/login` with `{ "token": "<idp_token>" }` — validates, upserts user, returns an **app JWT**.
+3. Management APIs use `X-Auth-Token: <app_jwt>`.
+4. Data APIs (traces, evals) use `X-API-Key: <project_key>`.
 
 ## Project Structure
 
 ```
 app/
-├── api/v1/routes/       # FastAPI routers (health, orgs, traces, evals)
+├── api/v1/routes/       # FastAPI routers (auth, orgs, projects, traces, evals, health)
 ├── core/
-│   ├── identity/        # Organization & API Key entities
+│   ├── identity/        # User, Org, Membership, Project, API Key entities
 │   ├── traces/          # Trace & Span entities + repository
 │   └── evals/           # Evaluation entities + metric registry
 │       └── metrics/     # BaseMetric, task_completion, ...
-├── registry/            # Settings, constants, exceptions
+├── registry/            # Settings, constants, exceptions, security
 ├── infrastructure/
+│   ├── auth/            # Pluggable auth adapters (Supabase, Firebase, JWT issuer)
 │   ├── db/              # SQLAlchemy models + repositories
 │   ├── queue/           # Celery app + tasks
 │   └── llm/             # Universal LLM engine (LiteLLM)
-├── services/            # Orchestration (identity, trace, eval)
+├── services/            # Orchestration (auth, identity, trace, eval)
 └── main.py
 ```
 
 ## Services (Docker Compose)
 
-| Service      | Description                  | Port  |
-|--------------|------------------------------|-------|
-| **app**      | FastAPI application server   | 8000  |
-| **worker**   | Celery background worker     | —     |
-| **postgres** | PostgreSQL 16                | 5432  |
-| **redis**    | Redis 7 (broker + cache)     | 6379  |
+| Service      | Description                    | Port  |
+|--------------|--------------------------------|-------|
+| **app**      | FastAPI application server     | 8000  |
+| **worker**   | Celery background worker       | —     |
+| **postgres** | PostgreSQL 16                  | 5432  |
+| **redis**    | Redis 7 (broker + cache)       | 6379  |
 
 ## Local Development
 
@@ -126,28 +156,23 @@ make help        # show all commands
 
 ## Key API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/v1/organizations` | Create an organization |
-| `POST` | `/v1/organizations/{id}/api-keys` | Generate API key |
-| `POST` | `/v1/traces` | Ingest a trace (async, 202) |
-| `GET`  | `/v1/traces` | List traces |
-| `GET`  | `/v1/traces/{id}` | Get trace with spans |
-| `POST` | `/v1/evaluations` | Trigger async evaluation |
-| `GET`  | `/v1/evaluations/{id}` | Get evaluation results |
-| `GET`  | `/v1/evaluations/providers` | List available LLM providers |
-| `GET`  | `/v1/evaluations/metrics` | List registered metrics |
-
-## LLM Providers
-
-The evaluation engine uses [LiteLLM](https://github.com/BerriAI/litellm) and supports:
-
-- **OpenAI** — `openai/gpt-4o-mini`
-- **Anthropic** — `anthropic/claude-3-5-sonnet-20241022`
-- **Vertex AI** — `vertex_ai/gemini-2.5-flash` (default)
-- **Google GenAI** — `gemini/gemini-2.5-flash`
-
-Set only the keys for the providers you use. The service reports unavailable providers clearly via `GET /v1/evaluations/providers`.
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/v1/auth/login` | — | Exchange IdP token for app JWT |
+| `GET`  | `/v1/auth/me` | JWT | Current user profile |
+| `POST` | `/v1/organizations` | JWT | Create an organization |
+| `GET`  | `/v1/organizations` | JWT | List user's organizations |
+| `POST` | `/v1/organizations/{id}/members` | JWT | Invite a user |
+| `POST` | `/v1/organizations/{id}/projects` | JWT | Create a project |
+| `GET`  | `/v1/organizations/{id}/projects` | JWT | List projects |
+| `POST` | `/v1/organizations/{id}/api-keys` | JWT | Generate API key (scoped to project) |
+| `POST` | `/v1/traces` | API Key | Ingest a trace (async, 202) |
+| `GET`  | `/v1/traces` | API Key | List traces |
+| `GET`  | `/v1/traces/{id}` | API Key | Get trace with spans |
+| `POST` | `/v1/evaluations` | API Key | Trigger async evaluation |
+| `GET`  | `/v1/evaluations/{id}` | API Key | Get evaluation results |
+| `GET`  | `/v1/evaluations/metrics` | — | List registered metrics |
+| `GET`  | `/v1/evaluations/providers` | — | List available LLM providers |
 
 ## Environment Variables
 
@@ -155,11 +180,13 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 
 | Variable | Description |
 |----------|-------------|
-| `OPENAI_API_KEY` | OpenAI credentials |
-| `ANTHROPIC_API_KEY` | Anthropic credentials |
-| `GOOGLE_CLOUD_PROJECT_ID` | GCP project for Vertex AI |
-| `GEMINI_API_KEY` | Google AI Studio key |
+| `AUTH_PROVIDER` | `supabase` or `firebase` |
+| `APP_SECRET_KEY` | Secret for signing app JWTs (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`) |
+| `SUPABASE_URL` | Supabase project URL (Dashboard → Settings → API → Project URL) |
+| `SUPABASE_KEY` | Supabase anon/public key (Dashboard → Settings → API → `anon` `public` key) |
+| `GOOGLE_CLOUD_PROJECT_ID` | GCP project for Firebase + Vertex AI |
 | `EVAL_LLM_MODEL` | Default eval model (LiteLLM format) |
+| `OPENAI_API_KEY` | OpenAI credentials |
 
 
 # Authors

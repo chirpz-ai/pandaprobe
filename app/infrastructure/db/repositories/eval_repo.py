@@ -24,7 +24,7 @@ class EvalRepository:
         row = EvaluationModel(
             id=evaluation.id,
             trace_id=evaluation.trace_id,
-            org_id=evaluation.org_id,
+            project_id=evaluation.project_id,
             metric_names=evaluation.metric_names,
             status=evaluation.status.value,
         )
@@ -32,12 +32,12 @@ class EvalRepository:
         await self._session.flush()
         return evaluation
 
-    async def get_evaluation(self, evaluation_id: UUID, org_id: UUID) -> Evaluation | None:
+    async def get_evaluation(self, evaluation_id: UUID, project_id: UUID) -> Evaluation | None:
         """Fetch an evaluation with all its results."""
         stmt = (
             select(EvaluationModel)
             .options(selectinload(EvaluationModel.results))
-            .where(EvaluationModel.id == evaluation_id, EvaluationModel.org_id == org_id)
+            .where(EvaluationModel.id == evaluation_id, EvaluationModel.project_id == project_id)
         )
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return self._to_evaluation(row) if row else None
@@ -69,7 +69,7 @@ class EvalRepository:
 
     async def list_evaluations(
         self,
-        org_id: UUID,
+        project_id: UUID,
         trace_id: UUID | None = None,
         limit: int = 50,
         offset: int = 0,
@@ -78,7 +78,7 @@ class EvalRepository:
         stmt = (
             select(EvaluationModel)
             .options(selectinload(EvaluationModel.results))
-            .where(EvaluationModel.org_id == org_id)
+            .where(EvaluationModel.project_id == project_id)
         )
         if trace_id is not None:
             stmt = stmt.where(EvaluationModel.trace_id == trace_id)
@@ -108,7 +108,7 @@ class EvalRepository:
         return Evaluation(
             id=row.id,
             trace_id=row.trace_id,
-            org_id=row.org_id,
+            project_id=row.project_id,
             metric_names=list(row.metric_names),
             status=EvaluationStatus(row.status),
             results=results,

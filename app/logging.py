@@ -47,6 +47,7 @@ def _inject_context(_logger: Any, _method: str, event_dict: dict[str, Any]) -> d
 # JSONL file handler
 # ---------------------------------------------------------------------------
 
+
 class _JsonlFileHandler(logging.Handler):
     """Writes structured JSON-lines to a daily log file."""
 
@@ -78,6 +79,7 @@ class _JsonlFileHandler(logging.Handler):
 # Bootstrap
 # ---------------------------------------------------------------------------
 
+
 def _setup() -> None:
     """Configure structlog + stdlib logging once at import time."""
     log_level = logging.DEBUG if settings.DEBUG else getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
@@ -89,6 +91,10 @@ def _setup() -> None:
     console_handler.setLevel(log_level)
 
     logging.basicConfig(format="%(message)s", level=log_level, handlers=[file_handler, console_handler])
+
+    # Suppress extremely verbose HTTP/2 frame-level logs from the Supabase SDK
+    for noisy_logger in ("httpcore", "httpx", "hpack", "h2", "h11"):
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
 
     shared_processors: list[Any] = [
         structlog.stdlib.filter_by_level,
@@ -114,9 +120,7 @@ def _setup() -> None:
         )
 
     renderer: Any = (
-        structlog.dev.ConsoleRenderer()
-        if settings.LOG_FORMAT == "console"
-        else structlog.processors.JSONRenderer()
+        structlog.dev.ConsoleRenderer() if settings.LOG_FORMAT == "console" else structlog.processors.JSONRenderer()
     )
 
     structlog.configure(

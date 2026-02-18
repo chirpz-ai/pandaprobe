@@ -1,8 +1,8 @@
 """Routes for trace ingestion and retrieval.
 
 ``POST /traces`` accepts the universal Opentracer format, validates
-the schema, injects the organisation ID, and enqueues the trace for
-background persistence.  Read endpoints query the database directly.
+the schema, resolves the project from the API key, and enqueues the
+trace for background persistence.
 """
 
 from datetime import datetime
@@ -13,8 +13,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies import require_org
-from app.core.identity.entities import Organization
+from app.api.v1.dependencies import APIKeyContext, require_api_key
 from app.core.traces.entities import Span, Trace
 from app.infrastructure.db.engine import get_db_session
 from app.registry.constants import SpanKind, SpanStatusCode, TraceStatus
@@ -88,7 +87,7 @@ class TraceResponse(BaseModel):
     """Public trace representation (single-item detail)."""
 
     trace_id: UUID
-    org_id: UUID
+    project_id: UUID
     name: str
     status: TraceStatus
     input: Any | None
@@ -117,17 +116,15 @@ class TraceListItem(BaseModel):
 @router.post("", status_code=202, response_model=TraceAccepted)
 async def ingest_trace(
     body: TraceCreate,
-    org: Organization = Depends(require_org),
+    ctx: APIKeyContext = Depends(require_api_key),
 ) -> TraceAccepted:
     """Accept a trace payload for asynchronous persistence.
 
-    The trace is validated, then pushed onto a Redis-backed task queue.
-    The background worker will persist it to PostgreSQL.  Returns
-    ``202 Accepted`` with the ``trace_id`` and Celery ``task_id``.
+    The project is resolved automatically from the API key.
     """
     trace = Trace(
         trace_id=body.trace_id,
-        org_id=org.id,
+        project_id=ctx.project_id,
         name=body.name,
         status=body.status,
         input=body.input,
@@ -162,25 +159,25 @@ async def ingest_trace(
 @router.get("/{trace_id}", response_model=TraceResponse)
 async def get_trace(
     trace_id: UUID,
-    org: Organization = Depends(require_org),
+    ctx: APIKeyContext = Depends(require_api_key),
     session: AsyncSession = Depends(get_db_session),
 ) -> TraceResponse:
     """Retrieve a single trace with all its spans."""
     svc = TraceService(session)
-    trace = await svc.get_trace(trace_id, org.id)
+    trace = await svc.get_trace(trace_id, ctx.project_id)
     return _trace_to_response(trace)
 
 
 @router.get("", response_model=list[TraceListItem])
 async def list_traces(
-    org: Organization = Depends(require_org),
+    ctx: APIKeyContext = Depends(require_api_key),
     session: AsyncSession = Depends(get_db_session),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[TraceListItem]:
-    """List traces for the authenticated organisation, newest first."""
+    """List traces for the project associated with the API key."""
     svc = TraceService(session)
-    traces = await svc.list_traces(org.id, limit=limit, offset=offset)
+    traces = await svc.list_traces(ctx.project_id, limit=limit, offset=offset)
     return [
         TraceListItem(
             trace_id=t.trace_id,
@@ -201,7 +198,7 @@ async def list_traces(
 def _trace_to_response(trace: Trace) -> TraceResponse:
     return TraceResponse(
         trace_id=trace.trace_id,
-        org_id=trace.org_id,
+        project_id=trace.project_id,
         name=trace.name,
         status=trace.status,
         input=trace.input,

@@ -11,7 +11,7 @@ def test_trace_entity_creation() -> None:
     now = datetime.now(timezone.utc)
     trace = Trace(
         trace_id=uuid4(),
-        org_id=uuid4(),
+        project_id=uuid4(),
         name="test-agent-run",
         status=TraceStatus.COMPLETED,
         started_at=now,
@@ -53,7 +53,7 @@ def test_trace_with_nested_spans() -> None:
 
     trace = Trace(
         trace_id=trace_id,
-        org_id=uuid4(),
+        project_id=uuid4(),
         name="nested-trace",
         status=TraceStatus.COMPLETED,
         started_at=now,
@@ -72,7 +72,7 @@ def test_trace_serialization_roundtrip() -> None:
     now = datetime.now(timezone.utc)
     trace = Trace(
         trace_id=uuid4(),
-        org_id=uuid4(),
+        project_id=uuid4(),
         name="roundtrip-test",
         status=TraceStatus.COMPLETED,
         started_at=now,

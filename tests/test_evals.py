@@ -28,7 +28,7 @@ def test_evaluation_entity_creation() -> None:
     evaluation = Evaluation(
         id=uuid4(),
         trace_id=uuid4(),
-        org_id=uuid4(),
+        project_id=uuid4(),
         metric_names=["task_completion"],
         status=EvaluationStatus.PENDING,
         created_at=datetime.now(timezone.utc),

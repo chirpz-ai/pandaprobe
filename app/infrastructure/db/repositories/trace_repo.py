@@ -26,7 +26,7 @@ class TraceRepository:
         """Persist a trace together with all its spans in a single flush."""
         row = TraceModel(
             trace_id=trace.trace_id,
-            org_id=trace.org_id,
+            project_id=trace.project_id,
             name=trace.name,
             status=trace.status.value,
             input=trace.input,
@@ -57,26 +57,26 @@ class TraceRepository:
         await self._session.flush()
         return trace
 
-    async def get_trace(self, trace_id: UUID, org_id: UUID) -> Trace | None:
-        """Load a trace with its spans, scoped to an organisation."""
+    async def get_trace(self, trace_id: UUID, project_id: UUID) -> Trace | None:
+        """Load a trace with its spans, scoped to a project."""
         stmt = (
             select(TraceModel)
             .options(selectinload(TraceModel.spans))
-            .where(TraceModel.trace_id == trace_id, TraceModel.org_id == org_id)
+            .where(TraceModel.trace_id == trace_id, TraceModel.project_id == project_id)
         )
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return self._to_trace(row) if row else None
 
     async def list_traces(
         self,
-        org_id: UUID,
+        project_id: UUID,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Trace]:
-        """Return the most recent traces for an organisation (without spans)."""
+        """Return the most recent traces for a project (without spans)."""
         stmt = (
             select(TraceModel)
-            .where(TraceModel.org_id == org_id)
+            .where(TraceModel.project_id == project_id)
             .order_by(TraceModel.created_at.desc())
             .offset(offset)
             .limit(limit)
@@ -109,7 +109,7 @@ class TraceRepository:
         spans = [cls._to_span(s) for s in row.spans] if include_spans and row.spans else []
         return Trace(
             trace_id=row.trace_id,
-            org_id=row.org_id,
+            project_id=row.project_id,
             name=row.name,
             status=TraceStatus(row.status),
             input=row.input,

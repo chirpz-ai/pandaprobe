@@ -11,6 +11,8 @@ os.environ["APP_ENV"] = "test"
 os.environ["CELERY_TASK_ALWAYS_EAGER"] = "true"
 os.environ["POSTGRES_HOST"] = "localhost"
 os.environ["REDIS_HOST"] = "localhost"
+os.environ["AUTH_PROVIDER"] = "supabase"
+os.environ["APP_SECRET_KEY"] = "test-secret-key-minimum-32-bytes-long!"
 
 import pytest
 from httpx import ASGITransport, AsyncClient

@@ -45,6 +45,14 @@ class EvaluationStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class MembershipRole(StrEnum):
+    """Role a user holds within an organisation."""
+
+    OWNER = "OWNER"
+    ADMIN = "ADMIN"
+    MEMBER = "MEMBER"
+
+
 # Prefix prepended to every generated API key.
 API_KEY_PREFIX = "otr_"
 
