@@ -107,9 +107,18 @@ class Settings(BaseSettings):
     # -- Evaluation LLM defaults ---------------------------------------------
     # Model string follows LiteLLM format: "<provider>/<model>"
     # e.g. "openai/gpt-4o-mini", "anthropic/claude-3-5-sonnet-20241022",
-    #      "gemini/gemini-2.0-flash", "vertex_ai/gemini-pro"
+    # "gemini/gemini-2.5-flash"
     EVAL_LLM_MODEL: str = "vertex_ai/gemini-2.5-flash"
     EVAL_LLM_TEMPERATURE: float = 0.0
+
+    # -- Authentication -------------------------------------------------------
+    # "supabase" = Supabase Auth (cloud-hosted, uses SUPABASE_URL + anon key)
+    # "firebase" = Firebase Admin SDK (uses GOOGLE_CLOUD_PROJECT_ID + ADC)
+    AUTH_PROVIDER: str = "supabase"
+    APP_SECRET_KEY: str = ""
+    APP_JWT_EXPIRY_HOURS: int = 12
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
 
     # -- Rate limiting --------------------------------------------------------
     RATE_LIMIT_DEFAULT: str = "200/minute"
