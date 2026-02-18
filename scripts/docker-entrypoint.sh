@@ -65,6 +65,13 @@ done
 
 case "$SERVICE_ROLE" in
     app)
+        echo -e "${BOLD}Running database migrations…${NC}"
+        if /app/.venv/bin/python -m alembic upgrade head 2>&1; then
+            ok "Migrations applied"
+        else
+            fail "Migrations failed (see output above)"
+        fi
+        echo ""
         echo -e "${BOLD}Starting:${NC} ${GREEN}App (FastAPI)${NC} on port 8000"
         echo -e "  Swagger UI → http://localhost:8000/docs"
         ;;
