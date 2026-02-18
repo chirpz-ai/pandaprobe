@@ -133,9 +133,7 @@ class LLMEngine:
                 last_error = exc
                 logger.warning("llm_engine_retry", attempt=attempt, model=resolved_model, error=str(exc))
 
-        raise LLMEngineError(
-            f"LLM call to {resolved_model} failed after {MAX_RETRIES} attempts: {last_error}"
-        )
+        raise LLMEngineError(f"LLM call to {resolved_model} failed after {MAX_RETRIES} attempts: {last_error}")
 
     async def _call(
         self,
