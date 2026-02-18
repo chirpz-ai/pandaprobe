@@ -37,7 +37,7 @@ class Evaluation(BaseModel):
 
     id: UUID
     trace_id: UUID
-    org_id: UUID
+    project_id: UUID
     metric_names: list[str]
     status: EvaluationStatus = EvaluationStatus.PENDING
     results: list[EvaluationResult] = Field(default_factory=list)

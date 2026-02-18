@@ -47,7 +47,7 @@ class Trace(BaseModel):
     """
 
     trace_id: UUID
-    org_id: UUID
+    project_id: UUID
     name: str = Field(min_length=1, max_length=512)
     status: TraceStatus = TraceStatus.PENDING
     input: Any | None = None
