@@ -40,18 +40,18 @@ class TraceService:
 
     # -- Read -----------------------------------------------------------------
 
-    async def get_trace(self, trace_id: UUID, org_id: UUID) -> Trace:
+    async def get_trace(self, trace_id: UUID, project_id: UUID) -> Trace:
         """Fetch a single trace or raise ``NotFoundError``."""
-        trace = await self._repo.get_trace(trace_id, org_id)
+        trace = await self._repo.get_trace(trace_id, project_id)
         if trace is None:
             raise NotFoundError(f"Trace {trace_id} not found.")
         return trace
 
     async def list_traces(
         self,
-        org_id: UUID,
+        project_id: UUID,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Trace]:
-        """Return paginated traces for an organisation."""
-        return await self._repo.list_traces(org_id, limit=limit, offset=offset)
+        """Return paginated traces for a project."""
+        return await self._repo.list_traces(project_id, limit=limit, offset=offset)
