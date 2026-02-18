@@ -4,7 +4,7 @@ Validates external IdP tokens, upserts local user records, and
 issues short-lived app JWTs for session management.
 """
 
-from uuid import UUID
+import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,10 +28,10 @@ class AuthService:
         Returns:
             A tuple of (User entity, app_jwt_string).
         """
-        claims = await self._adapter.verify_token(external_token)
+        claims = await asyncio.to_thread(self._adapter.verify_token, external_token)
 
         user = await self._user_repo.upsert_user(
-            user_id=UUID(claims.sub),
+            external_id=claims.sub,
             email=claims.email,
             display_name=claims.display_name,
         )

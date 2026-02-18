@@ -8,26 +8,25 @@ install:  ## Install dependencies via uv
 # -- Local development --------------------------------------------------------
 
 dev:  ## Run the API server locally (outside Docker)
-	APP_ENV=development uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	APP_ENV=development uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 worker:  ## Run the Celery worker locally
-	APP_ENV=development celery -A app.infrastructure.queue.celery_app worker --loglevel=info
+	APP_ENV=development uv run celery -A app.infrastructure.queue.celery_app worker --loglevel=info
 
 # -- Code quality -------------------------------------------------------------
 
 lint:  ## Run ruff linter
-	ruff check app/ tests/
+	uv run ruff check app/ tests/
 
 format:  ## Auto-format code
-	ruff format app/ tests/
+	uv run ruff format app/ tests/
 
 # -- Database -----------------------------------------------------------------
-
-migrate:  ## Run Alembic migrations (head)
-	alembic upgrade head
-
-migration:  ## Auto-generate a new Alembic migration.  Usage: make migration msg="add traces table"
-	alembic revision --autogenerate -m "$(msg)"
+migration:  ## Auto-generate a new migration inside the app container.  Usage: make migration msg="add users external_id"
+	docker compose exec app uv run alembic revision --autogenerate -m "$(msg)"
+	
+migrate:  ## Run Alembic migrations (head) inside the app container
+	docker compose exec app uv run alembic upgrade head
 
 # -- Docker Compose -----------------------------------------------------------
 
@@ -55,7 +54,7 @@ restart:  ## Restart all services
 # -- Testing ------------------------------------------------------------------
 
 test:  ## Run the test suite
-	pytest tests/ -v
+	uv run pytest tests/ -v
 
 # -- Help ---------------------------------------------------------------------
 

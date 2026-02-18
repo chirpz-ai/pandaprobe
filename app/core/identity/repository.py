@@ -35,6 +35,10 @@ class AbstractIdentityRepository(Protocol):
         """Store a new API key record and return the domain entity."""
         ...
 
+    async def get_api_key(self, key_id: UUID) -> APIKey | None:
+        """Fetch an API key by primary key, or ``None``."""
+        ...
+
     async def get_api_key_by_hash(self, key_hash: str) -> APIKey | None:
         """Look up an **active** API key by its SHA-256 hash."""
         ...

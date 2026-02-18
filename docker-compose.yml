@@ -9,6 +9,7 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app/app
+      - ./migrations:/app/migrations
       - ./logs:/app/logs
     env_file:
       - .env.${APP_ENV:-development}

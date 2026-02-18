@@ -70,7 +70,7 @@ def _log_credential_source() -> None:
 class FirebaseAdapter(AuthAdapter):
     """Verify Firebase ID tokens via the Admin SDK."""
 
-    async def verify_token(self, token: str) -> AuthClaims:
+    def verify_token(self, token: str) -> AuthClaims:
         """Validate a Firebase ID token and return normalised claims."""
         app = _ensure_firebase_app()
 

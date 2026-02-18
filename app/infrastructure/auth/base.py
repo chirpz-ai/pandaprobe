@@ -28,7 +28,7 @@ class AuthAdapter(ABC):
     """Contract for validating external identity provider tokens."""
 
     @abstractmethod
-    async def verify_token(self, token: str) -> AuthClaims:
+    def verify_token(self, token: str) -> AuthClaims:
         """Validate a JWT from the external IdP and return normalised claims.
 
         Raises:

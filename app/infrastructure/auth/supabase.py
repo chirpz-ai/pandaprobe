@@ -48,7 +48,7 @@ def _ensure_client() -> Client:
 class SupabaseAdapter(AuthAdapter):
     """Verify access tokens issued by Supabase Auth."""
 
-    async def verify_token(self, token: str) -> AuthClaims:
+    def verify_token(self, token: str) -> AuthClaims:
         """Validate a Supabase access token via ``auth.get_user()``.
 
         The user's own JWT is sent to the Supabase Auth API which

@@ -105,6 +105,11 @@ class IdentityRepository:
         await self._session.flush()
         return self._to_key(row)
 
+    async def get_api_key(self, key_id: UUID) -> APIKey | None:
+        """Look up an API key by primary key."""
+        row = await self._session.get(APIKeyModel, key_id)
+        return self._to_key(row) if row else None
+
     async def get_api_key_by_hash(self, key_hash: str) -> APIKey | None:
         """Look up an active API key by its SHA-256 hash."""
         stmt = select(APIKeyModel).where(
