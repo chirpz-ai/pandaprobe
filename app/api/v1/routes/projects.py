@@ -97,7 +97,7 @@ async def get_project(
     """Retrieve a single project."""
     svc = IdentityService(session)
     await svc.require_membership(user.id, org_id)
-    project = await svc.get_project(project_id)
+    project = await svc.get_project(project_id, org_id=org_id)
     return ProjectResponse(
         id=project.id,
         org_id=project.org_id,

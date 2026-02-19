@@ -115,10 +115,20 @@ class Settings(BaseSettings):
     # "supabase" = Supabase Auth (cloud-hosted, uses SUPABASE_URL + anon key)
     # "firebase" = Firebase Admin SDK (uses GOOGLE_CLOUD_PROJECT_ID + ADC)
     AUTH_PROVIDER: str = "supabase"
-    APP_SECRET_KEY: str = ""
+    APP_SECRET_KEY: str
     APP_JWT_EXPIRY_HOURS: int = 12
     SUPABASE_URL: str = ""
     SUPABASE_KEY: str = ""
+
+    @field_validator("APP_SECRET_KEY", mode="after")
+    @classmethod
+    def _require_secret_key(cls, v: str) -> str:
+        if len(v.strip()) < 16:
+            raise ValueError(
+                "APP_SECRET_KEY must be at least 16 characters. "
+                "Generate one with: python3 -c \"import secrets; print(secrets.token_urlsafe(32))\""
+            )
+        return v
 
     # -- Rate limiting --------------------------------------------------------
     RATE_LIMIT_DEFAULT: str = "200/minute"

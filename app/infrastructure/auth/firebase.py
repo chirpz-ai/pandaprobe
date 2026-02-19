@@ -12,6 +12,7 @@ which automatically resolves the right credential source:
 from __future__ import annotations
 
 import os
+import threading
 
 import firebase_admin
 
@@ -21,6 +22,7 @@ from app.registry.exceptions import AuthenticationError
 from app.registry.settings import settings
 
 _firebase_app: firebase_admin.App | None = None
+_firebase_lock = threading.Lock()
 
 
 def _ensure_firebase_app() -> firebase_admin.App:
@@ -34,24 +36,28 @@ def _ensure_firebase_app() -> firebase_admin.App:
     if _firebase_app is not None:
         return _firebase_app
 
-    project_id = settings.GOOGLE_CLOUD_PROJECT_ID
+    with _firebase_lock:
+        if _firebase_app is not None:
+            return _firebase_app
 
-    try:
-        if project_id:
-            _firebase_app = firebase_admin.initialize_app(
-                options={"projectId": project_id},
-            )
-            logger.info("firebase_initialized", project_id=project_id)
-        else:
-            _firebase_app = firebase_admin.initialize_app()
-            logger.info("firebase_initialized", project_id="auto-detected")
+        project_id = settings.GOOGLE_CLOUD_PROJECT_ID
 
-        _log_credential_source()
-        return _firebase_app
+        try:
+            if project_id:
+                _firebase_app = firebase_admin.initialize_app(
+                    options={"projectId": project_id},
+                )
+                logger.info("firebase_initialized", project_id=project_id)
+            else:
+                _firebase_app = firebase_admin.initialize_app()
+                logger.info("firebase_initialized", project_id="auto-detected")
 
-    except Exception as exc:
-        logger.error("firebase_init_failed", error=str(exc))
-        raise AuthenticationError(f"Firebase SDK failed to initialise: {exc}")
+            _log_credential_source()
+            return _firebase_app
+
+        except Exception as exc:
+            logger.error("firebase_init_failed", error=str(exc))
+            raise AuthenticationError(f"Firebase SDK failed to initialise: {exc}")
 
 
 def _log_credential_source() -> None:
@@ -70,7 +76,7 @@ def _log_credential_source() -> None:
 class FirebaseAdapter(AuthAdapter):
     """Verify Firebase ID tokens via the Admin SDK."""
 
-    async def verify_token(self, token: str) -> AuthClaims:
+    def verify_token(self, token: str) -> AuthClaims:
         """Validate a Firebase ID token and return normalised claims."""
         app = _ensure_firebase_app()
 

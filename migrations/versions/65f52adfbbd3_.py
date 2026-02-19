@@ -1,8 +1,8 @@
-"""initial schema
+"""
 
-Revision ID: 0c7f2c2caa22
+Revision ID: 65f52adfbbd3
 Revises: 
-Create Date: 2026-02-18 01:35:35.891761
+Create Date: 2026-02-18 23:34:03.160968
 """
 from typing import Sequence, Union
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '0c7f2c2caa22'
+revision: str = '65f52adfbbd3'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,6 +29,7 @@ def upgrade() -> None:
     )
     op.create_table('users',
     sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('external_id', sa.String(length=255), nullable=False),
     sa.Column('email', sa.String(length=320), nullable=False),
     sa.Column('display_name', sa.String(length=255), nullable=False),
     sa.Column('avatar_url', sa.String(length=1024), nullable=False),
@@ -37,6 +38,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
     )
+    op.create_index(op.f('ix_users_external_id'), 'users', ['external_id'], unique=True)
     op.create_table('memberships',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -151,6 +153,7 @@ def downgrade() -> None:
     op.drop_index('ix_projects_org_id', table_name='projects')
     op.drop_table('projects')
     op.drop_table('memberships')
+    op.drop_index(op.f('ix_users_external_id'), table_name='users')
     op.drop_table('users')
     op.drop_table('organizations')
     # ### end Alembic commands ###

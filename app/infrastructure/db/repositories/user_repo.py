@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity.entities import User
@@ -17,12 +17,17 @@ class UserRepository:
         """Initialise with an async database session."""
         self._session = session
 
-    async def upsert_user(self, user_id: UUID, email: str, display_name: str = "") -> User:
-        """Create a user or update their last sign-in if they already exist."""
-        row = await self._session.get(UserModel, user_id)
+    async def upsert_user(self, external_id: str, email: str, display_name: str = "") -> User:
+        """Create a user or update their last sign-in if they already exist.
+
+        Lookup is by ``external_id`` (the IdP's native identifier).
+        The internal ``id`` (UUID) is auto-generated for new users.
+        """
+        stmt = select(UserModel).where(UserModel.external_id == external_id)
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
         if row is None:
             row = UserModel(
-                id=user_id,
+                external_id=external_id,
                 email=email,
                 display_name=display_name,
                 last_sign_in_at=datetime.now(timezone.utc),
@@ -50,6 +55,7 @@ class UserRepository:
     def _to_entity(row: UserModel) -> User:
         return User(
             id=row.id,
+            external_id=row.external_id,
             email=row.email,
             display_name=row.display_name,
             avatar_url=row.avatar_url,

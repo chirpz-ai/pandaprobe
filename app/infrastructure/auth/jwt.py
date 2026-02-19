@@ -20,6 +20,16 @@ _ALGORITHM = "HS256"
 _ISSUER = "opentracer"
 
 
+def _get_secret() -> str:
+    key = settings.APP_SECRET_KEY
+    if not key or len(key.strip()) < 16:
+        raise AuthenticationError(
+            "APP_SECRET_KEY is missing or too short. "
+            "Set a strong secret (>=16 chars) before issuing tokens."
+        )
+    return key
+
+
 def issue_app_token(user_id: UUID, email: str) -> str:
     """Create a signed app JWT for the given user.
 
@@ -34,7 +44,7 @@ def issue_app_token(user_id: UUID, email: str) -> str:
         "iat": now,
         "exp": now + timedelta(hours=settings.APP_JWT_EXPIRY_HOURS),
     }
-    return jwt.encode(payload, settings.APP_SECRET_KEY, algorithm=_ALGORITHM)
+    return jwt.encode(payload, _get_secret(), algorithm=_ALGORITHM)
 
 
 def decode_app_token(token: str) -> dict:
@@ -49,7 +59,7 @@ def decode_app_token(token: str) -> dict:
     try:
         return jwt.decode(
             token,
-            settings.APP_SECRET_KEY,
+            _get_secret(),
             algorithms=[_ALGORITHM],
             issuer=_ISSUER,
             options={"require": ["sub", "email", "exp"]},

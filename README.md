@@ -16,6 +16,20 @@ make up
 #    Swagger docs at http://localhost:8000/docs
 ```
 
+> [!NOTE]
+> **When you have db model changes:**
+> 
+> - Generate the migration file:
+>   ```
+>   make migration msg="your message"
+>   ```
+> - (Optional) Manualy apply migration (entrypoint auto applies on `make up`):
+>   ```
+>   make migrate
+>   ```
+
+
+
 ## Architecture
 
 ```mermaid

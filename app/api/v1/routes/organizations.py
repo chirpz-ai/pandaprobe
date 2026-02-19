@@ -215,4 +215,4 @@ async def revoke_api_key(
     """Revoke (soft-delete) an API key. Requires org membership."""
     svc = IdentityService(session)
     await svc.require_admin(user.id, org_id)
-    await svc.revoke_api_key(key_id=key_id)
+    await svc.revoke_api_key(key_id=key_id, org_id=org_id)

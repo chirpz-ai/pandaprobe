@@ -13,7 +13,7 @@ from app.core.identity.entities import APIKey, Membership, Organization, Project
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
 from app.registry.constants import MembershipRole
-from app.registry.exceptions import AuthorizationError, ConflictError, NotFoundError
+from app.registry.exceptions import AuthorizationError, ConflictError, NotFoundError, ValidationError
 from app.registry.security import generate_api_key, hash_api_key, key_prefix
 
 
@@ -38,6 +38,8 @@ class IdentityService:
     async def create_organization(self, name: str, owner_id: UUID) -> Organization:
         """Create a new tenant organisation and assign the owner membership."""
         slug = _slugify(name)
+        if not slug:
+            raise ValidationError("Organisation name must contain at least one alphanumeric character.")
         existing = await self._repo.get_organization_by_slug(slug)
         if existing:
             raise ConflictError(f"Organisation with slug '{slug}' already exists.")
@@ -93,11 +95,17 @@ class IdentityService:
         await self.get_organization(org_id)
         return await self._project_repo.create_project(org_id=org_id, name=name, description=description)
 
-    async def get_project(self, project_id: UUID) -> Project:
-        """Fetch a project or raise ``NotFoundError``."""
+    async def get_project(self, project_id: UUID, *, org_id: UUID | None = None) -> Project:
+        """Fetch a project or raise ``NotFoundError``.
+
+        When *org_id* is supplied the project must belong to that
+        organisation, otherwise ``AuthorizationError`` is raised.
+        """
         project = await self._project_repo.get_project(project_id)
         if project is None:
             raise NotFoundError(f"Project {project_id} not found.")
+        if org_id is not None and project.org_id != org_id:
+            raise AuthorizationError("Project does not belong to this organisation.")
         return project
 
     async def list_projects(self, org_id: UUID) -> list[Project]:
@@ -119,9 +127,7 @@ class IdentityService:
             A tuple of (APIKey entity, raw_key_string).
         """
         await self.get_organization(org_id)
-        project = await self.get_project(project_id)
-        if project.org_id != org_id:
-            raise AuthorizationError("Project does not belong to this organisation.")
+        await self.get_project(project_id, org_id=org_id)
 
         raw_key = generate_api_key()
         hashed = hash_api_key(raw_key)
@@ -146,6 +152,11 @@ class IdentityService:
         """List all API keys for a specific project."""
         return await self._repo.list_project_api_keys(project_id)
 
-    async def revoke_api_key(self, key_id: UUID) -> None:
-        """Deactivate an API key."""
+    async def revoke_api_key(self, key_id: UUID, *, org_id: UUID) -> None:
+        """Deactivate an API key after verifying it belongs to *org_id*."""
+        api_key = await self._repo.get_api_key(key_id)
+        if api_key is None:
+            raise NotFoundError(f"API key {key_id} not found.")
+        if api_key.org_id != org_id:
+            raise AuthorizationError("API key does not belong to this organisation.")
         await self._repo.revoke_api_key(key_id)

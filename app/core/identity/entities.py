@@ -17,6 +17,7 @@ class User(BaseModel):
     """A registered user linked to an external identity provider."""
 
     id: UUID
+    external_id: str
     email: str
     display_name: str = ""
     avatar_url: str = ""
