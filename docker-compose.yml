@@ -11,10 +11,12 @@ services:
       - ./app:/app/app
       - ./migrations:/app/migrations
       - ./logs:/app/logs
+      - ~/.config/gcloud:/home/appuser/.config/gcloud:ro
     env_file:
       - .env.${APP_ENV:-development}
     environment:
       - APP_ENV=${APP_ENV:-development}
+      - GOOGLE_APPLICATION_CREDENTIALS=/home/appuser/.config/gcloud/application_default_credentials.json
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
       interval: 30s
