@@ -48,7 +48,7 @@ def _ensure_client() -> Client:
             )
 
         _supabase_client = create_client(url, key)
-        logger.info("supabase_client_initialized", url=url)
+        logger.info("supabase_initialized", url=url)
         return _supabase_client
 
 
