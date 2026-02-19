@@ -17,13 +17,6 @@ from app.registry.exceptions import AuthorizationError, ConflictError, NotFoundE
 from app.registry.security import generate_api_key, hash_api_key, key_prefix
 
 
-_ROLE_RANK: dict[MembershipRole, int] = {
-    MembershipRole.MEMBER: 0,
-    MembershipRole.ADMIN: 1,
-    MembershipRole.OWNER: 2,
-}
-
-
 def _slugify(name: str) -> str:
     """Convert a name to a URL-safe slug."""
     slug = name.lower().strip()
