@@ -50,7 +50,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
     "vertex_ai": ProviderSpec(
         name="Vertex AI",
         litellm_prefix="vertex_ai/",
-        required_env=["GOOGLE_CLOUD_PROJECT_ID"],
+        required_env=["GOOGLE_CLOUD_PROJECT"],
         optional_env=["VERTEX_AI_LOCATION"],
         description="Google Vertex AI (Gemini, Claude, etc.)",
     ),

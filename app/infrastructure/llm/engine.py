@@ -68,9 +68,9 @@ class LLMEngine:
             "OPENAI_API_KEY": settings.OPENAI_API_KEY,
             "ANTHROPIC_API_KEY": settings.ANTHROPIC_API_KEY,
             "GEMINI_API_KEY": settings.GEMINI_API_KEY,
-            "GOOGLE_CLOUD_PROJECT_ID": settings.GOOGLE_CLOUD_PROJECT_ID,
+            "GOOGLE_CLOUD_PROJECT": settings.GOOGLE_CLOUD_PROJECT,
             "VERTEXAI_LOCATION": settings.VERTEX_AI_LOCATION,
-            "VERTEXAI_PROJECT": settings.GOOGLE_CLOUD_PROJECT_ID,
+            "VERTEXAI_PROJECT": settings.GOOGLE_CLOUD_PROJECT,
         }
         for key, value in env_map.items():
             if value:

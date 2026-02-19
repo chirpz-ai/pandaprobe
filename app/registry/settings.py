@@ -1,11 +1,15 @@
 """Application settings loaded from environment variables.
 
 Uses pydantic-settings to provide typed, validated configuration
-with sensible defaults for local development.
+with sensible defaults for local development.  Environment-specific
+overrides (LOG_LEVEL, LOG_FORMAT, DEBUG) are applied automatically
+unless the corresponding variable is explicitly set in the environment.
 """
 
+import os
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from pydantic import computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -101,7 +105,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
-    GOOGLE_CLOUD_PROJECT_ID: str = ""
+    GOOGLE_CLOUD_PROJECT: str = ""
     VERTEX_AI_LOCATION: str = "us-central1"
 
     # -- Evaluation LLM defaults ---------------------------------------------
@@ -113,7 +117,7 @@ class Settings(BaseSettings):
 
     # -- Authentication -------------------------------------------------------
     # "supabase" = Supabase Auth (cloud-hosted, uses SUPABASE_URL + anon key)
-    # "firebase" = Firebase Admin SDK (uses GOOGLE_CLOUD_PROJECT_ID + ADC)
+    # "firebase" = Firebase Admin SDK (uses GOOGLE_CLOUD_PROJECT + ADC)
     AUTH_PROVIDER: str = "supabase"
     APP_SECRET_KEY: str
     APP_JWT_EXPIRY_HOURS: int = 12
@@ -132,6 +136,41 @@ class Settings(BaseSettings):
 
     # -- Rate limiting --------------------------------------------------------
     RATE_LIMIT_DEFAULT: str = "200/minute"
+
+    # -- Environment-aware defaults -------------------------------------------
+
+    def model_post_init(self, __context: Any) -> None:
+        """Apply environment-specific defaults after model initialization."""
+        self._apply_environment_settings()
+
+    def _apply_environment_settings(self) -> None:
+        """Override settings per environment when the env var is not explicitly set."""
+        _ENV_DEFAULTS: dict[Environment, dict[str, object]] = {
+            Environment.DEVELOPMENT: {
+                "DEBUG": True,
+                "LOG_LEVEL": "DEBUG",
+                "LOG_FORMAT": "console",
+            },
+            Environment.STAGING: {
+                "DEBUG": False,
+                "LOG_LEVEL": "INFO",
+                "LOG_FORMAT": "json",
+            },
+            Environment.PRODUCTION: {
+                "DEBUG": False,
+                "LOG_LEVEL": "WARNING",
+                "LOG_FORMAT": "json",
+            },
+            Environment.TEST: {
+                "DEBUG": True,
+                "LOG_LEVEL": "DEBUG",
+                "LOG_FORMAT": "console",
+            },
+        }
+
+        for key, value in _ENV_DEFAULTS.get(self.APP_ENV, {}).items():
+            if key not in os.environ:
+                object.__setattr__(self, key, value)
 
 
 settings = Settings()
