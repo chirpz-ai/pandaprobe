@@ -79,7 +79,7 @@ class OrganizationModel(Base):
 
 
 class MembershipModel(Base):
-    """Join table linking users to organisations with a role."""
+    """Join table linking users to organizations with a role."""
 
     __tablename__ = "memberships"
 

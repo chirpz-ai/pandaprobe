@@ -1,7 +1,7 @@
 """Orchestration logic for the Identity domain.
 
 Coordinates between API key generation, persistence, and domain
-validation for organisations, memberships, projects, and API keys.
+validation for organizations, memberships, projects, and API keys.
 """
 
 import re
@@ -33,23 +33,23 @@ class IdentityService:
         self._repo = IdentityRepository(session)
         self._project_repo = ProjectRepository(session)
 
-    # -- Organisation ---------------------------------------------------------
+    # -- organization ---------------------------------------------------------
 
     async def create_organization(self, name: str, owner_id: UUID) -> Organization:
-        """Create a new tenant organisation and assign the owner membership."""
+        """Create a new tenant organization and assign the owner membership."""
         slug = _slugify(name)
         if not slug:
-            raise ValidationError("Organisation name must contain at least one alphanumeric character.")
+            raise ValidationError("organization name must contain at least one alphanumeric character.")
         existing = await self._repo.get_organization_by_slug(slug)
         if existing:
-            raise ConflictError(f"Organisation with slug '{slug}' already exists.")
+            raise ConflictError(f"organization with slug '{slug}' already exists.")
 
         org = await self._repo.create_organization(name=name, slug=slug)
         await self._repo.create_membership(user_id=owner_id, org_id=org.id, role=MembershipRole.OWNER)
         return org
 
     async def get_organization(self, org_id: UUID) -> Organization:
-        """Retrieve an organisation or raise ``NotFoundError``."""
+        """Retrieve an organization or raise ``NotFoundError``."""
         org = await self._repo.get_organization(org_id)
         if org is None:
             raise NotFoundError(f"Organization {org_id} not found.")
@@ -61,7 +61,7 @@ class IdentityService:
         """Ensure the user belongs to the org, or raise ``AuthorizationError``."""
         membership = await self._repo.get_membership(user_id, org_id)
         if membership is None:
-            raise AuthorizationError("You are not a member of this organisation.")
+            raise AuthorizationError("You are not a member of this organization.")
         return membership
 
     async def require_admin(self, user_id: UUID, org_id: UUID) -> Membership:
@@ -74,10 +74,10 @@ class IdentityService:
     async def add_member(
         self, org_id: UUID, user_id: UUID, role: MembershipRole = MembershipRole.MEMBER
     ) -> Membership:
-        """Add a user to an organisation."""
+        """Add a user to an organization."""
         existing = await self._repo.get_membership(user_id, org_id)
         if existing:
-            raise ConflictError("User is already a member of this organisation.")
+            raise ConflictError("User is already a member of this organization.")
         return await self._repo.create_membership(user_id=user_id, org_id=org_id, role=role)
 
     async def list_user_orgs(self, user_id: UUID) -> list[Membership]:
@@ -85,13 +85,13 @@ class IdentityService:
         return await self._repo.list_user_orgs(user_id)
 
     async def list_org_members(self, org_id: UUID) -> list[Membership]:
-        """Return all members of an organisation."""
+        """Return all members of an organization."""
         return await self._repo.list_org_members(org_id)
 
     # -- Project --------------------------------------------------------------
 
     async def create_project(self, org_id: UUID, name: str, description: str = "") -> Project:
-        """Create a new project within an organisation."""
+        """Create a new project within an organization."""
         await self.get_organization(org_id)
         return await self._project_repo.create_project(org_id=org_id, name=name, description=description)
 
@@ -99,17 +99,17 @@ class IdentityService:
         """Fetch a project or raise ``NotFoundError``.
 
         When *org_id* is supplied the project must belong to that
-        organisation, otherwise ``AuthorizationError`` is raised.
+        organization, otherwise ``AuthorizationError`` is raised.
         """
         project = await self._project_repo.get_project(project_id)
         if project is None:
             raise NotFoundError(f"Project {project_id} not found.")
         if org_id is not None and project.org_id != org_id:
-            raise AuthorizationError("Project does not belong to this organisation.")
+            raise AuthorizationError("Project does not belong to this organization.")
         return project
 
     async def list_projects(self, org_id: UUID) -> list[Project]:
-        """List all projects for an organisation."""
+        """List all projects for an organization."""
         return await self._project_repo.list_projects(org_id)
 
     # -- API Keys -------------------------------------------------------------
@@ -144,7 +144,7 @@ class IdentityService:
         return api_key, raw_key
 
     async def list_api_keys(self, org_id: UUID) -> list[APIKey]:
-        """List all API keys for an organisation."""
+        """List all API keys for an organization."""
         await self.get_organization(org_id)
         return await self._repo.list_api_keys(org_id)
 
@@ -158,5 +158,5 @@ class IdentityService:
         if api_key is None:
             raise NotFoundError(f"API key {key_id} not found.")
         if api_key.org_id != org_id:
-            raise AuthorizationError("API key does not belong to this organisation.")
+            raise AuthorizationError("API key does not belong to this organization.")
         await self._repo.revoke_api_key(key_id)

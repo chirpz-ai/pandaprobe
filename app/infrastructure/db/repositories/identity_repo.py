@@ -1,6 +1,6 @@
 """PostgreSQL implementation of the Identity repository.
 
-All database access for organisations, memberships, and API keys
+All database access for organizations, memberships, and API keys
 flows through this class.
 """
 
@@ -22,22 +22,22 @@ class IdentityRepository:
         """Initialise with an async database session."""
         self._session = session
 
-    # -- Organisation ---------------------------------------------------------
+    # -- organization ---------------------------------------------------------
 
     async def create_organization(self, name: str, slug: str) -> Organization:
-        """Insert a new organisation row and return the domain entity."""
+        """Insert a new organization row and return the domain entity."""
         row = OrganizationModel(name=name, slug=slug)
         self._session.add(row)
         await self._session.flush()
         return self._to_org(row)
 
     async def get_organization(self, org_id: UUID) -> Organization | None:
-        """Fetch an organisation by primary key."""
+        """Fetch an organization by primary key."""
         row = await self._session.get(OrganizationModel, org_id)
         return self._to_org(row) if row else None
 
     async def get_organization_by_slug(self, slug: str) -> Organization | None:
-        """Fetch an organisation by unique slug."""
+        """Fetch an organization by unique slug."""
         stmt = select(OrganizationModel).where(OrganizationModel.slug == slug)
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return self._to_org(row) if row else None
@@ -50,7 +50,7 @@ class IdentityRepository:
         org_id: UUID,
         role: MembershipRole = MembershipRole.MEMBER,
     ) -> Membership:
-        """Add a user to an organisation with the given role."""
+        """Add a user to an organization with the given role."""
         row = MembershipModel(user_id=user_id, org_id=org_id, role=role.value)
         self._session.add(row)
         await self._session.flush()
@@ -76,7 +76,7 @@ class IdentityRepository:
         return [self._to_membership(r) for r in rows]
 
     async def list_org_members(self, org_id: UUID) -> list[Membership]:
-        """Return all memberships for an organisation."""
+        """Return all memberships for an organization."""
         stmt = select(MembershipModel).where(MembershipModel.org_id == org_id).order_by(MembershipModel.created_at)
         rows = (await self._session.execute(stmt)).scalars().all()
         return [self._to_membership(r) for r in rows]
@@ -130,7 +130,7 @@ class IdentityRepository:
         await self._session.execute(stmt)
 
     async def list_api_keys(self, org_id: UUID) -> list[APIKey]:
-        """Return every API key for an organisation (active and revoked)."""
+        """Return every API key for an organization (active and revoked)."""
         stmt = select(APIKeyModel).where(APIKeyModel.org_id == org_id).order_by(APIKeyModel.created_at.desc())
         rows = (await self._session.execute(stmt)).scalars().all()
         return [self._to_key(r) for r in rows]

@@ -2,7 +2,7 @@
 
 These models carry **no** infrastructure dependencies (no SQLAlchemy,
 no FastAPI).  They are the canonical representation of users,
-organisations, memberships, projects, and API keys.
+organizations, memberships, projects, and API keys.
 """
 
 from datetime import datetime
@@ -35,7 +35,7 @@ class Organization(BaseModel):
 
 
 class Membership(BaseModel):
-    """A user's role within an organisation."""
+    """A user's role within an organization."""
 
     id: UUID
     user_id: UUID
@@ -45,7 +45,7 @@ class Membership(BaseModel):
 
 
 class Project(BaseModel):
-    """A workspace within an organisation that groups traces and evals."""
+    """A workspace within an organization that groups traces and evals."""
 
     id: UUID
     org_id: UUID
