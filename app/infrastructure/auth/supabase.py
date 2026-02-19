@@ -15,6 +15,8 @@ because the user's JWT authenticates the request.
 
 from __future__ import annotations
 
+import threading
+
 from supabase import Client, create_client
 
 from app.infrastructure.auth.base import AuthAdapter, AuthClaims
@@ -23,6 +25,7 @@ from app.registry.exceptions import AuthenticationError
 from app.registry.settings import settings
 
 _supabase_client: Client | None = None
+_supabase_lock = threading.Lock()
 
 
 def _ensure_client() -> Client:
@@ -32,17 +35,21 @@ def _ensure_client() -> Client:
     if _supabase_client is not None:
         return _supabase_client
 
-    url = settings.SUPABASE_URL
-    key = settings.SUPABASE_KEY
+    with _supabase_lock:
+        if _supabase_client is not None:
+            return _supabase_client
 
-    if not url or not key:
-        raise AuthenticationError(
-            "SUPABASE_URL and SUPABASE_KEY must be configured."
-        )
+        url = settings.SUPABASE_URL
+        key = settings.SUPABASE_KEY
 
-    _supabase_client = create_client(url, key)
-    logger.info("supabase_client_initialized", url=url)
-    return _supabase_client
+        if not url or not key:
+            raise AuthenticationError(
+                "SUPABASE_URL and SUPABASE_KEY must be configured."
+            )
+
+        _supabase_client = create_client(url, key)
+        logger.info("supabase_client_initialized", url=url)
+        return _supabase_client
 
 
 class SupabaseAdapter(AuthAdapter):
