@@ -19,7 +19,7 @@ engine = create_async_engine(
     settings.DATABASE_URL,
     pool_size=settings.POSTGRES_POOL_SIZE,
     max_overflow=settings.POSTGRES_MAX_OVERFLOW,
-    echo=settings.DEBUG,
+    echo=False,
 )
 
 async_session_factory = async_sessionmaker(

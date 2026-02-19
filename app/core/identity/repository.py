@@ -13,14 +13,14 @@ from app.core.identity.entities import APIKey, Organization
 class AbstractIdentityRepository(Protocol):
     """Port that any identity persistence adapter must implement."""
 
-    # -- Organisation ---------------------------------------------------------
+    # -- organization ---------------------------------------------------------
 
     async def create_organization(self, name: str) -> Organization:
-        """Persist a new organisation and return its domain entity."""
+        """Persist a new organization and return its domain entity."""
         ...
 
     async def get_organization(self, org_id: UUID) -> Organization | None:
-        """Fetch an organisation by primary key, or ``None``."""
+        """Fetch an organization by primary key, or ``None``."""
         ...
 
     # -- API Keys -------------------------------------------------------------
@@ -52,5 +52,5 @@ class AbstractIdentityRepository(Protocol):
         ...
 
     async def list_api_keys(self, org_id: UUID) -> list[APIKey]:
-        """Return all API keys belonging to an organisation."""
+        """Return all API keys belonging to an organization."""
         ...

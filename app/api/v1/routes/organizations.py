@@ -1,7 +1,7 @@
-"""Routes for managing organisations, memberships, and API keys.
+"""Routes for managing organizations, memberships, and API keys.
 
 All endpoints require a valid app JWT via the ``X-Auth-Token`` header.
-Organisation mutations are restricted to admins/owners.
+organization mutations are restricted to admins/owners.
 """
 
 from uuid import UUID
@@ -25,13 +25,13 @@ router = APIRouter(prefix="/organizations", tags=["organizations"])
 
 
 class CreateOrganizationRequest(BaseModel):
-    """Payload for creating a new organisation."""
+    """Payload for creating a new organization."""
 
     name: str = Field(min_length=1, max_length=255)
 
 
 class OrganizationResponse(BaseModel):
-    """Public representation of an organisation."""
+    """Public representation of an organization."""
 
     id: UUID
     name: str
@@ -98,7 +98,7 @@ async def list_my_organizations(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[OrganizationResponse]:
-    """List organisations the current user belongs to."""
+    """List organizations the current user belongs to."""
     svc = IdentityService(session)
     memberships = await svc.list_user_orgs(user.id)
     result: list[OrganizationResponse] = []
@@ -119,7 +119,7 @@ async def list_members(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[MembershipResponse]:
-    """List all members of an organisation."""
+    """List all members of an organization."""
     svc = IdentityService(session)
     await svc.require_membership(user.id, org_id)
     members = await svc.list_org_members(org_id)
@@ -138,7 +138,7 @@ async def add_member(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> MembershipResponse:
-    """Invite a user to an organisation. Requires ADMIN or OWNER role."""
+    """Invite a user to an organization. Requires ADMIN or OWNER role."""
     svc = IdentityService(session)
     await svc.require_admin(user.id, org_id)
     m = await svc.add_member(org_id, body.user_id, body.role)
@@ -187,7 +187,7 @@ async def list_api_keys(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[APIKeyResponse]:
-    """List all API keys belonging to an organisation."""
+    """List all API keys belonging to an organization."""
     svc = IdentityService(session)
     await svc.require_membership(user.id, org_id)
     keys = await svc.list_api_keys(org_id=org_id)

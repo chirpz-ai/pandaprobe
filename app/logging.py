@@ -1,15 +1,18 @@
 """Structured logging configuration using structlog.
 
-Provides environment-aware formatters: pretty console output for
-development, JSON lines for production.  A JSONL file handler writes
-every log entry to a daily rotating file under ``LOG_DIR``.
+Provides environment-aware formatters:
+- **development / test**: pretty coloured console output with callsite info
+- **staging / production**: compact JSON lines for log aggregation
+
+A JSONL file handler writes every log entry to a daily rotating file
+under ``LOG_DIR`` regardless of the console format.
 """
 
 import json
 import logging
 import sys
 from contextvars import ContextVar
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,11 +20,13 @@ import structlog
 
 from app.registry.settings import Environment, settings
 
-# Ensure log directory exists.
-settings.LOG_DIR.mkdir(parents=True, exist_ok=True)
+# ---------------------------------------------------------------------------
+# Per-request context (org_id, trace_id, …) attached to every log line
+# ---------------------------------------------------------------------------
 
-# Per-request context (org_id, trace_id, etc.) attached to every log line.
-_request_context: ContextVar[dict[str, Any] | None] = ContextVar("request_context", default=None)
+_request_context: ContextVar[dict[str, Any] | None] = ContextVar(
+    "request_context", default=None
+)
 
 
 def bind_context(**kwargs: Any) -> None:
@@ -35,7 +40,9 @@ def clear_context() -> None:
     _request_context.set(None)
 
 
-def _inject_context(_logger: Any, _method: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+def _inject_context(
+    _logger: Any, _method: str, event_dict: dict[str, Any]
+) -> dict[str, Any]:
     """Structlog processor that merges request context into the event dict."""
     ctx = _request_context.get()
     if ctx:
@@ -44,7 +51,7 @@ def _inject_context(_logger: Any, _method: str, event_dict: dict[str, Any]) -> d
 
 
 # ---------------------------------------------------------------------------
-# JSONL file handler
+# JSONL file handler — always writes structured JSON regardless of console fmt
 # ---------------------------------------------------------------------------
 
 
@@ -54,20 +61,25 @@ class _JsonlFileHandler(logging.Handler):
     def __init__(self, directory: Path) -> None:
         super().__init__()
         self._dir = directory
+        self._dir.mkdir(parents=True, exist_ok=True)
 
     def _path(self) -> Path:
         env = settings.APP_ENV.value
         return self._dir / f"{env}-{datetime.now().strftime('%Y-%m-%d')}.jsonl"
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Serialise *record* as JSON and append to the log file."""
         try:
             entry = {
-                "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+                "ts": datetime.fromtimestamp(
+                    record.created, tz=timezone.utc
+                ).isoformat(),
                 "level": record.levelname,
-                "message": record.getMessage(),
+                "logger": record.name,
+                "msg": record.getMessage(),
                 "module": record.module,
-                "environment": settings.APP_ENV.value,
+                "func": record.funcName,
+                "line": record.lineno,
+                "env": settings.APP_ENV.value,
             }
             with open(self._path(), "a", encoding="utf-8") as fh:
                 fh.write(json.dumps(entry) + "\n")
@@ -82,21 +94,24 @@ class _JsonlFileHandler(logging.Handler):
 
 def _setup() -> None:
     """Configure structlog + stdlib logging once at import time."""
-    log_level = logging.DEBUG if settings.DEBUG else getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+    log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
 
+    # ---- stdlib root logger ------------------------------------------------
     file_handler = _JsonlFileHandler(settings.LOG_DIR)
     file_handler.setLevel(log_level)
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(log_level)
 
-    logging.basicConfig(format="%(message)s", level=log_level, handlers=[file_handler, console_handler])
+    logging.basicConfig(
+        format="%(message)s",
+        level=log_level,
+        handlers=[file_handler, console_handler],
+    )
 
-    # Suppress extremely verbose HTTP/2 frame-level logs from the Supabase SDK
-    for noisy_logger in ("httpcore", "httpx", "hpack", "h2", "h11"):
-        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
-
+    # ---- structlog processors ----------------------------------------------
     shared_processors: list[Any] = [
+        structlog.contextvars.merge_contextvars,
         structlog.stdlib.filter_by_level,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
@@ -120,7 +135,9 @@ def _setup() -> None:
         )
 
     renderer: Any = (
-        structlog.dev.ConsoleRenderer() if settings.LOG_FORMAT == "console" else structlog.processors.JSONRenderer()
+        structlog.dev.ConsoleRenderer()
+        if settings.LOG_FORMAT == "console"
+        else structlog.processors.JSONRenderer()
     )
 
     structlog.configure(

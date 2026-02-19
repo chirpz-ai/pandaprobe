@@ -46,7 +46,7 @@ class EvaluationStatus(StrEnum):
 
 
 class MembershipRole(StrEnum):
-    """Role a user holds within an organisation."""
+    """Role a user holds within an organization."""
 
     OWNER = "OWNER"
     ADMIN = "ADMIN"

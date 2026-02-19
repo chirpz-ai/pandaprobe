@@ -119,7 +119,7 @@ User ──(Membership)──> Organization ──> Project ──> Trace / Eval
 | Mode | `AUTH_PROVIDER` | Identity Provider | Required Env Vars |
 |------|----------------|-------------------|--------------------|
 | **Supabase** | `supabase` | Supabase Auth (cloud) | `SUPABASE_URL`, `SUPABASE_KEY` |
-| **Firebase** | `firebase` | Firebase Admin SDK | `GOOGLE_CLOUD_PROJECT_ID` |
+| **Firebase** | `firebase` | Firebase Admin SDK | `GOOGLE_CLOUD_PROJECT` |
 
 **Token flow:**
 1. User authenticates with the external IdP (Supabase or Firebase) and receives an IdP access token.
@@ -198,7 +198,7 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 | `APP_SECRET_KEY` | Secret for signing app JWTs (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`) |
 | `SUPABASE_URL` | Supabase project URL (Dashboard → Settings → API → Project URL) |
 | `SUPABASE_KEY` | Supabase anon/public key (Dashboard → Settings → API → `anon` `public` key) |
-| `GOOGLE_CLOUD_PROJECT_ID` | GCP project for Firebase + Vertex AI |
+| `GOOGLE_CLOUD_PROJECT` | GCP project for Firebase + Vertex AI |
 | `EVAL_LLM_MODEL` | Default eval model (LiteLLM format) |
 | `OPENAI_API_KEY` | OpenAI credentials |
 

@@ -1,7 +1,7 @@
 """App-level JWT issuer and validator.
 
 Issues short-lived JWTs (signed with APP_SECRET_KEY) that protect
-management APIs (organisations, projects, users).  These tokens are
+management APIs (organizations, projects, users).  These tokens are
 separate from the external IdP tokens -- they represent an
 authenticated Opentracer session.
 """

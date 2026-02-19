@@ -27,5 +27,5 @@ class AbstractTraceRepository(Protocol):
         limit: int = 50,
         offset: int = 0,
     ) -> list[Trace]:
-        """Return traces belonging to an organisation, newest first."""
+        """Return traces belonging to an organization, newest first."""
         ...

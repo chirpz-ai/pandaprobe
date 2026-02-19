@@ -29,7 +29,7 @@ class ProjectRepository:
         return self._to_entity(row) if row else None
 
     async def list_projects(self, org_id: UUID) -> list[Project]:
-        """Return all projects for an organisation."""
+        """Return all projects for an organization."""
         stmt = select(ProjectModel).where(ProjectModel.org_id == org_id).order_by(ProjectModel.created_at.desc())
         rows = (await self._session.execute(stmt)).scalars().all()
         return [self._to_entity(r) for r in rows]
