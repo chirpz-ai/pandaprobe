@@ -91,6 +91,7 @@ class IdentityRepository:
         key_prefix: str,
         name: str,
         created_by: UUID | None = None,
+        expires_at: datetime | None = None,
     ) -> APIKey:
         """Persist a new API key record and return the domain entity."""
         row = APIKeyModel(
@@ -100,6 +101,7 @@ class IdentityRepository:
             key_prefix=key_prefix,
             name=name,
             created_by=created_by,
+            expires_at=expires_at,
         )
         self._session.add(row)
         await self._session.flush()
@@ -168,6 +170,7 @@ class IdentityRepository:
             name=row.name,
             is_active=row.is_active,
             created_at=row.created_at,
+            expires_at=row.expires_at,
             last_used_at=row.last_used_at,
             created_by=row.created_by,
         )

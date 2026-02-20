@@ -20,7 +20,6 @@ class User(BaseModel):
     external_id: str
     email: str
     display_name: str = ""
-    avatar_url: str = ""
     created_at: datetime
     last_sign_in_at: datetime | None = None
 
@@ -70,5 +69,6 @@ class APIKey(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     is_active: bool = True
     created_at: datetime
+    expires_at: datetime | None = None
     last_used_at: datetime | None = None
     created_by: UUID | None = None
