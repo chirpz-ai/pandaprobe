@@ -1,19 +1,24 @@
 """Routes for trace ingestion and retrieval.
 
 ``POST /traces`` accepts the universal Opentracer format, validates
-the schema, resolves the project from the API key, and enqueues the
-trace for background persistence.
+the schema, resolves the project, and enqueues the trace for
+background persistence.
+
+Authentication: Bearer JWT (with ``X-Project-ID`` header) **or**
+a project-scoped ``X-API-Key``.
 """
 
 from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies import APIKeyContext, require_api_key
+from app.api.context import ApiContext
+from app.api.dependencies import require_project
+from app.api.rate_limit import limiter
 from app.core.traces.entities import Span, Trace
 from app.infrastructure.db.engine import get_db_session
 from app.registry.constants import SpanKind, SpanStatusCode, TraceStatus
@@ -114,17 +119,21 @@ class TraceListItem(BaseModel):
 
 
 @router.post("", status_code=202, response_model=TraceAccepted)
+@limiter.limit("100/minute")
 async def ingest_trace(
+    request: Request,
     body: TraceCreate,
-    ctx: APIKeyContext = Depends(require_api_key),
+    ctx: ApiContext = Depends(require_project),
 ) -> TraceAccepted:
     """Accept a trace payload for asynchronous persistence.
 
-    The project is resolved automatically from the API key.
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key`
+
+    Rate limit: `100/min`
     """
     trace = Trace(
         trace_id=body.trace_id,
-        project_id=ctx.project_id,
+        project_id=ctx.project.id,
         name=body.name,
         status=body.status,
         input=body.input,
@@ -159,25 +168,31 @@ async def ingest_trace(
 @router.get("/{trace_id}", response_model=TraceResponse)
 async def get_trace(
     trace_id: UUID,
-    ctx: APIKeyContext = Depends(require_api_key),
+    ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
 ) -> TraceResponse:
-    """Retrieve a single trace with all its spans."""
+    """Retrieve a single trace with all its spans.
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key`
+    """
     svc = TraceService(session)
-    trace = await svc.get_trace(trace_id, ctx.project_id)
+    trace = await svc.get_trace(trace_id, ctx.project.id)
     return _trace_to_response(trace)
 
 
 @router.get("", response_model=list[TraceListItem])
 async def list_traces(
-    ctx: APIKeyContext = Depends(require_api_key),
+    ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> list[TraceListItem]:
-    """List traces for the project associated with the API key."""
+    """List traces for the current project.
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key`
+    """
     svc = TraceService(session)
-    traces = await svc.list_traces(ctx.project_id, limit=limit, offset=offset)
+    traces = await svc.list_traces(ctx.project.id, limit=limit, offset=offset)
     return [
         TraceListItem(
             trace_id=t.trace_id,
