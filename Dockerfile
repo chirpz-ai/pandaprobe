@@ -23,9 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && pip install uv \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies (cached unless pyproject.toml changes)
-COPY pyproject.toml .
-RUN uv venv && . .venv/bin/activate && uv pip install -e .
+# Install Python dependencies from lockfile (cached unless either file changes)
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application code
 COPY . .
