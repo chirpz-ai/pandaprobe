@@ -1,8 +1,8 @@
-"""
+"""intitial schema
 
-Revision ID: 65f52adfbbd3
+Revision ID: 1a6a4ba593f5
 Revises: 
-Create Date: 2026-02-18 23:34:03.160968
+Create Date: 2026-02-20 17:50:19.451606
 """
 from typing import Sequence, Union
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '65f52adfbbd3'
+revision: str = '1a6a4ba593f5'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -32,7 +32,6 @@ def upgrade() -> None:
     sa.Column('external_id', sa.String(length=255), nullable=False),
     sa.Column('email', sa.String(length=320), nullable=False),
     sa.Column('display_name', sa.String(length=255), nullable=False),
-    sa.Column('avatar_url', sa.String(length=1024), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('last_sign_in_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id'),
@@ -69,6 +68,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('last_used_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_by', sa.UUID(), nullable=True),
     sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
