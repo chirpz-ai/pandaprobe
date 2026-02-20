@@ -1,0 +1,213 @@
+"""Unified request-context dependencies for all API routes.
+
+Management endpoints depend on ``get_api_context`` (Bearer JWT only).
+Data-plane endpoints depend on ``require_project``, which accepts
+either a Bearer JWT with ``X-Project-ID`` or a project-scoped API key.
+"""
+
+import asyncio
+import re
+from datetime import datetime, timezone
+from uuid import UUID
+
+import structlog
+from fastapi import Depends, Header, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.context import ApiContext, AuthMethod
+from app.infrastructure.auth.adapters import get_auth_adapter
+from app.infrastructure.db.engine import get_db_session
+from app.infrastructure.db.repositories.identity_repo import IdentityRepository
+from app.infrastructure.db.repositories.project_repo import ProjectRepository
+from app.infrastructure.db.repositories.user_repo import UserRepository
+from app.registry.constants import MembershipRole
+from app.registry.exceptions import AuthenticationError, ValidationError
+from app.registry.security import hash_api_key
+
+_bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _slugify(name: str) -> str:
+    """Convert a name to a URL-safe slug."""
+    slug = name.lower().strip()
+    slug = re.sub(r"[^\w\s-]", "", slug)
+    slug = re.sub(r"[\s_]+", "-", slug)
+    return re.sub(r"-+", "-", slug).strip("-")
+
+
+async def get_api_context(
+    request: Request,
+    bearer: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+    session: AsyncSession = Depends(get_db_session),
+) -> ApiContext:
+    """Dependency for management routes — Bearer JWT only.
+
+    Resolves user and organization from the external IdP token.
+    """
+    request_id: str = getattr(request.state, "request_id", "unknown")
+
+    if not bearer:
+        raise AuthenticationError("Bearer token required. Provide Authorization: Bearer <token>.")
+
+    ctx = await _resolve_jwt(bearer.credentials, request, session, request_id)
+    request.state.api_context = ctx
+    return ctx
+
+
+async def get_data_plane_context(
+    request: Request,
+    bearer: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+    x_project_id: str | None = Header(None, alias="X-Project-ID"),
+    session: AsyncSession = Depends(get_db_session),
+) -> ApiContext:
+    """Dependency for data-plane routes — Bearer JWT **or** API key.
+
+    When using a Bearer JWT, the caller must also provide the
+    ``X-Project-ID`` header to scope the request to a specific project.
+    When using an API key, the project is resolved from the key itself.
+    """
+    request_id: str = getattr(request.state, "request_id", "unknown")
+
+    if bearer:
+        ctx = await _resolve_jwt(
+            bearer.credentials, request, session, request_id, project_id_raw=x_project_id,
+        )
+    elif x_api_key:
+        ctx = await _resolve_api_key(x_api_key, session, request_id)
+    else:
+        raise AuthenticationError(
+            "Missing credentials. Provide Authorization: Bearer <token> (with X-Project-ID) or X-API-Key header."
+        )
+
+    request.state.api_context = ctx
+    return ctx
+
+
+def require_project(ctx: ApiContext = Depends(get_data_plane_context)) -> ApiContext:
+    """Thin wrapper that guarantees ``ctx.project`` is present."""
+    if ctx.project is None:
+        raise ValidationError(
+            "Project scope required. Provide X-Project-ID header with your Bearer token, or use a project-scoped API key."
+        )
+    return ctx
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+async def _resolve_jwt(
+    token: str,
+    request: Request,
+    session: AsyncSession,
+    request_id: str,
+    *,
+    project_id_raw: str | None = None,
+) -> ApiContext:
+    """Verify the external IdP JWT, JIT-provision user/org, and optionally resolve a project."""
+    adapter = get_auth_adapter()
+    claims = await asyncio.to_thread(adapter.verify_token, token)
+
+    user_repo = UserRepository(session)
+    identity_repo = IdentityRepository(session)
+
+    user = await user_repo.upsert_user(
+        external_id=claims.sub,
+        email=claims.email,
+        display_name=claims.display_name,
+    )
+
+    memberships = await identity_repo.list_user_orgs(user.id)
+
+    if not memberships:
+        org_name = f"{user.email}'s Organization"
+        org = await identity_repo.create_organization(name=org_name, slug=_slugify(org_name))
+        await identity_repo.create_membership(user_id=user.id, org_id=org.id, role=MembershipRole.OWNER)
+        memberships = await identity_repo.list_user_orgs(user.id)
+
+    org_id_header = request.headers.get("X-Organization-ID")
+    if org_id_header:
+        try:
+            target_org_id = UUID(org_id_header)
+        except ValueError:
+            raise ValidationError("X-Organization-ID must be a valid UUID.")
+
+        matched = next((m for m in memberships if m.org_id == target_org_id), None)
+        if matched is None:
+            raise AuthenticationError("You are not a member of the specified organization.")
+        organization = await identity_repo.get_organization(target_org_id)
+    else:
+        organization = await identity_repo.get_organization(memberships[0].org_id)
+
+    if organization is None:
+        raise AuthenticationError("Organization could not be resolved.")
+
+    project = None
+    if project_id_raw:
+        try:
+            project_id = UUID(project_id_raw)
+        except ValueError:
+            raise ValidationError("X-Project-ID must be a valid UUID.")
+        project_repo = ProjectRepository(session)
+        project = await project_repo.get_project(project_id)
+        if project is None or project.org_id != organization.id:
+            raise ValidationError("Project not found or does not belong to your organization.")
+
+    log = structlog.get_logger().bind(
+        request_id=request_id,
+        org_id=str(organization.id),
+        **({"project_id": str(project.id)} if project else {}),
+    )
+
+    return ApiContext(
+        request_id=request_id,
+        auth_method=AuthMethod.JWT,
+        organization=organization,
+        project=project,
+        user=user,
+        logger=log,
+    )
+
+
+async def _resolve_api_key(
+    raw_key: str,
+    session: AsyncSession,
+    request_id: str,
+) -> ApiContext:
+    """Validate an API key and resolve the associated project and org."""
+    key_hash = hash_api_key(raw_key)
+    identity_repo = IdentityRepository(session)
+    project_repo = ProjectRepository(session)
+
+    api_key = await identity_repo.get_api_key_by_hash(key_hash)
+    if api_key is None:
+        raise AuthenticationError("Invalid or revoked API key.")
+
+    if api_key.expires_at is not None and api_key.expires_at < datetime.now(timezone.utc):
+        raise AuthenticationError("API key has expired. Please generate a new one.")
+
+    await identity_repo.touch_api_key(api_key.id)
+
+    organization = await identity_repo.get_organization(api_key.org_id)
+    if organization is None:
+        raise AuthenticationError("Organization associated with API key not found.")
+
+    project = await project_repo.get_project(api_key.project_id)
+
+    log = structlog.get_logger().bind(
+        request_id=request_id,
+        org_id=str(organization.id),
+        project_id=str(api_key.project_id),
+    )
+
+    return ApiContext(
+        request_id=request_id,
+        auth_method=AuthMethod.API_KEY,
+        organization=organization,
+        project=project,
+        user=None,
+        logger=log,
+    )
