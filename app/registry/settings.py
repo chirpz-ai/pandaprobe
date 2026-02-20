@@ -43,8 +43,10 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     DESCRIPTION: str = "Open-source agent engineering service"
     DEBUG: bool = False
-    API_V1_PREFIX: str = "/v1"
-    ALLOWED_ORIGINS: list[str] = ["*"]
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
@@ -119,20 +121,8 @@ class Settings(BaseSettings):
     # "supabase" = Supabase Auth (cloud-hosted, uses SUPABASE_URL + anon key)
     # "firebase" = Firebase Admin SDK (uses GOOGLE_CLOUD_PROJECT + ADC)
     AUTH_PROVIDER: str = "supabase"
-    APP_SECRET_KEY: str
-    APP_JWT_EXPIRY_HOURS: int = 12
     SUPABASE_URL: str = ""
     SUPABASE_KEY: str = ""
-
-    @field_validator("APP_SECRET_KEY", mode="after")
-    @classmethod
-    def _require_secret_key(cls, v: str) -> str:
-        if len(v.strip()) < 16:
-            raise ValueError(
-                "APP_SECRET_KEY must be at least 16 characters. "
-                "Generate one with: python3 -c \"import secrets; print(secrets.token_urlsafe(32))\""
-            )
-        return v
 
     # -- Rate limiting --------------------------------------------------------
     RATE_LIMIT_DEFAULT: str = "200/minute"
