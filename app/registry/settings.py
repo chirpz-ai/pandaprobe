@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def _parse_origins(cls, v: object) -> list[str]:
-        """Accept both JSON arrays and comma-separated strings."""
+        """Normalize origins. Env vars must use JSON array format: '["http://..."]'."""
         if isinstance(v, str):
             return [s.strip() for s in v.split(",") if s.strip()]
         return v  # type: ignore[return-value]

@@ -21,9 +21,9 @@ def _identity_key(request: Request) -> str:
     (e.g. unauthenticated endpoints like /health).
     """
     auth = request.headers.get("Authorization", "")
-    if auth.lower().startswith("bearer "):
-        token = auth.split(None, 1)[1]
-        return f"jwt:{hashlib.sha256(token.encode()).hexdigest()[:16]}"
+    parts = auth.split(None, 1)
+    if len(parts) == 2 and parts[0].lower() == "bearer":
+        return f"jwt:{hashlib.sha256(parts[1].encode()).hexdigest()[:16]}"
 
     api_key = request.headers.get("X-API-Key", "")
     if api_key:
