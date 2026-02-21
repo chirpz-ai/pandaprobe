@@ -1,8 +1,7 @@
-"""Routes for user profile retrieval.
+"""Routes for the authenticated user's profile.
 
-The ``/auth/me`` endpoint returns the currently authenticated user's
-profile.  Authentication is handled by the unified ``ApiContext``
-dependency which validates external IdP JWTs directly.
+All endpoints require a valid external IdP JWT via the
+``Authorization: Bearer`` header.
 """
 
 from uuid import UUID
@@ -14,7 +13,12 @@ from app.api.context import ApiContext
 from app.api.dependencies import get_api_context
 from app.registry.exceptions import AuthenticationError
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/user", tags=["user"])
+
+
+def _require_user(ctx: ApiContext) -> None:
+    if ctx.user is None:
+        raise AuthenticationError("This endpoint requires user authentication (Bearer token).")
 
 
 # ---------------------------------------------------------------------------
@@ -22,7 +26,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # ---------------------------------------------------------------------------
 
 
-class MeResponse(BaseModel):
+class UserProfileResponse(BaseModel):
     """Current authenticated user profile."""
 
     id: UUID
@@ -37,17 +41,16 @@ class MeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.get("/me", response_model=MeResponse)
+@router.get("", response_model=UserProfileResponse)
 async def get_me(
     ctx: ApiContext = Depends(get_api_context),
-) -> MeResponse:
+) -> UserProfileResponse:
     """Return the profile of the currently authenticated user.
 
     Auth: `Bearer`
     """
-    if ctx.user is None:
-        raise AuthenticationError("This endpoint requires user authentication (Bearer token).")
-    return MeResponse(
+    _require_user(ctx)
+    return UserProfileResponse(
         id=ctx.user.id,
         email=ctx.user.email,
         display_name=ctx.user.display_name,

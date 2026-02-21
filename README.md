@@ -44,7 +44,7 @@ flowchart TB
     end
 
     subgraph API["API Layer — FastAPI"]
-        R_AUTH["/auth"]
+        R_USER["/user"]
         R_ORG["/organizations"]
         R_PROJ["/.../projects"]
         R_TRACE["/traces"]
@@ -71,13 +71,13 @@ flowchart TB
         LLM["LLM Engine\n(LiteLLM)"]
     end
 
-    SDK -->|"Authorization: Bearer"| R_AUTH
+    SDK -->|"Authorization: Bearer"| R_USER
     SDK -->|"Authorization: Bearer"| R_ORG
     SDK -->|"Authorization: Bearer"| R_PROJ
     SDK -->|"X-API-Key"| R_TRACE
     SDK -->|"X-API-Key"| R_EVAL
 
-    R_AUTH --> AUTH_SVC
+    R_USER --> AUTH_SVC
     AUTH_SVC --> SUPABASE
     AUTH_SVC --> FIREBASE
     AUTH_SVC --> DB
@@ -171,7 +171,7 @@ make help        # show all commands
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET`  | `/auth/me` | Bearer | Current user profile |
+| `GET`  | `/user` | Bearer | Current user profile |
 | `POST` | `/organizations` | Bearer | Create an organization |
 | `GET`  | `/organizations` | Bearer | List user's organizations |
 | `POST` | `/organizations/{id}/members` | Bearer | Invite a user |
