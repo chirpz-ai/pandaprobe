@@ -162,8 +162,9 @@ class IdentityService:
         await self.get_organization(org_id)
         return await self._repo.list_api_keys(org_id)
 
-    async def list_project_api_keys(self, project_id: UUID) -> list[APIKey]:
-        """List all API keys for a specific project."""
+    async def list_project_api_keys(self, project_id: UUID, *, org_id: UUID) -> list[APIKey]:
+        """List all API keys for a project after verifying it belongs to *org_id*."""
+        await self.get_project(project_id, org_id=org_id)
         return await self._repo.list_project_api_keys(project_id)
 
     async def revoke_api_key(self, key_id: UUID, *, org_id: UUID) -> None:

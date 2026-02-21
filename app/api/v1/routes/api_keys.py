@@ -128,7 +128,7 @@ async def list_api_keys(
     _require_user(ctx)
     svc = IdentityService(session)
     await svc.require_membership(ctx.user.id, org_id)
-    keys = await svc.list_project_api_keys(project_id)
+    keys = await svc.list_project_api_keys(project_id, org_id=org_id)
     return [
         APIKeyResponse(
             id=k.id,
