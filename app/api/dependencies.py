@@ -123,7 +123,11 @@ async def _resolve_jwt(
     memberships = await identity_repo.list_user_orgs(user.id)
 
     if not memberships:
-        org_name = f"{user.email}'s Organization"
+        if user.display_name and user.display_name.strip():
+            first_name = user.display_name.strip().split()[0]
+            org_name = f"{first_name}'s Organization"
+        else:
+            org_name = "Personal Organization"
         org = await identity_repo.create_organization(name=org_name, slug=_slugify(org_name))
         await identity_repo.create_membership(user_id=user.id, org_id=org.id, role=MembershipRole.OWNER)
         memberships = await identity_repo.list_user_orgs(user.id)

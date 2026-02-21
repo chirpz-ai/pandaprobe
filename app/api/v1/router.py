@@ -2,12 +2,12 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.routes import api_keys, auth, evaluations, health, organizations, projects, traces
+from app.api.v1.routes import api_keys, evaluations, health, organizations, projects, traces, user
 
 v1_router = APIRouter()
 
 v1_router.include_router(health.router)
-v1_router.include_router(auth.router)
+v1_router.include_router(user.router)
 v1_router.include_router(organizations.router)
 v1_router.include_router(projects.router)
 v1_router.include_router(api_keys.router)

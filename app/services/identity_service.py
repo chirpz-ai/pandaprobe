@@ -139,7 +139,12 @@ class IdentityService:
         await self.get_organization(org_id)
         await self.get_project(project_id, org_id=org_id)
 
-        delta = self._EXPIRATION_DELTAS.get(expiration)
+        if expiration not in self._EXPIRATION_DELTAS:
+            raise ValidationError(
+                f"Unsupported expiration value '{expiration}'. "
+                f"Allowed: {', '.join(sorted(self._EXPIRATION_DELTAS))}."
+            )
+        delta = self._EXPIRATION_DELTAS[expiration]
         expires_at: datetime | None = datetime.now(timezone.utc) + delta if delta else None
 
         raw_key = generate_api_key()
