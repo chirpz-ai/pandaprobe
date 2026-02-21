@@ -58,7 +58,6 @@ class UserRepository:
             external_id=row.external_id,
             email=row.email,
             display_name=row.display_name,
-            avatar_url=row.avatar_url,
             created_at=row.created_at,
             last_sign_in_at=row.last_sign_in_at,
         )

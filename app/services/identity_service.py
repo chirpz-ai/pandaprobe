@@ -5,6 +5,7 @@ validation for organizations, memberships, projects, and API keys.
 """
 
 import re
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -114,20 +115,32 @@ class IdentityService:
 
     # -- API Keys -------------------------------------------------------------
 
+    _EXPIRATION_DELTAS: dict[str, timedelta | None] = {
+        "never": None,
+        "90d": timedelta(days=90),
+    }
+
     async def create_api_key(
         self,
         org_id: UUID,
         project_id: UUID,
         name: str,
         created_by: UUID | None = None,
+        expiration: str = "never",
     ) -> tuple[APIKey, str]:
         """Generate a new API key scoped to a project.
+
+        Args:
+            expiration: ``"never"`` (no expiry, default) or ``"90d"`` (90-day TTL).
 
         Returns:
             A tuple of (APIKey entity, raw_key_string).
         """
         await self.get_organization(org_id)
         await self.get_project(project_id, org_id=org_id)
+
+        delta = self._EXPIRATION_DELTAS.get(expiration)
+        expires_at: datetime | None = datetime.now(timezone.utc) + delta if delta else None
 
         raw_key = generate_api_key()
         hashed = hash_api_key(raw_key)
@@ -140,6 +153,7 @@ class IdentityService:
             key_prefix=prefix,
             name=name,
             created_by=created_by,
+            expires_at=expires_at,
         )
         return api_key, raw_key
 
@@ -148,8 +162,9 @@ class IdentityService:
         await self.get_organization(org_id)
         return await self._repo.list_api_keys(org_id)
 
-    async def list_project_api_keys(self, project_id: UUID) -> list[APIKey]:
-        """List all API keys for a specific project."""
+    async def list_project_api_keys(self, project_id: UUID, *, org_id: UUID) -> list[APIKey]:
+        """List all API keys for a project after verifying it belongs to *org_id*."""
+        await self.get_project(project_id, org_id=org_id)
         return await self._repo.list_project_api_keys(project_id)
 
     async def revoke_api_key(self, key_id: UUID, *, org_id: UUID) -> None:

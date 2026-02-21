@@ -2,8 +2,8 @@
 
 # -- Installation & environment -----------------------------------------------
 
-install:  ## Install dependencies via uv
-	pip install uv && uv sync
+install:  ## Install locked dependencies via uv
+	pip install uv && uv sync --frozen
 
 # -- Local development --------------------------------------------------------
 
@@ -22,11 +22,11 @@ format:  ## Auto-format code
 	uv run ruff format app/ tests/
 
 # -- Database -----------------------------------------------------------------
-migration:  ## Auto-generate a new migration inside the app container.  Usage: make migration msg="add users external_id"
-	docker compose exec app uv run alembic revision --autogenerate -m "$(msg)"
-	
-migrate:  ## Run Alembic migrations (head) inside the app container
-	docker compose exec app uv run alembic upgrade head
+migration:  ## Auto-generate a new Alembic migration.  Usage: make migration msg="add users external_id"
+	POSTGRES_HOST=localhost uv run alembic revision --autogenerate -m "$(msg)"
+
+migrate:  ## Run Alembic migrations (head) against local Postgres
+	POSTGRES_HOST=localhost uv run alembic upgrade head
 
 # -- Docker Compose -----------------------------------------------------------
 
@@ -54,7 +54,7 @@ restart:  ## Restart all services
 # -- Testing ------------------------------------------------------------------
 
 test:  ## Run the test suite
-	uv run pytest tests/ -v
+	uv run --group test pytest tests/ -v
 
 # -- Help ---------------------------------------------------------------------
 

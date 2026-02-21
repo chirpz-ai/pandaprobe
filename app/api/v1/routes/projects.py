@@ -1,7 +1,8 @@
 """Routes for managing projects within an organization.
 
-All endpoints require a valid app JWT via the ``X-Auth-Token`` header
-and verify the caller's membership in the target organization.
+All endpoints require a valid external IdP JWT via the
+``Authorization: Bearer`` header and verify the caller's
+membership in the target organization.
 """
 
 from uuid import UUID
@@ -10,9 +11,10 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies import get_current_user
-from app.core.identity.entities import User
+from app.api.context import ApiContext
+from app.api.dependencies import get_api_context
 from app.infrastructure.db.engine import get_db_session
+from app.registry.exceptions import AuthenticationError
 from app.services.identity_service import IdentityService
 
 router = APIRouter(prefix="/organizations/{org_id}/projects", tags=["projects"])
@@ -40,6 +42,11 @@ class ProjectResponse(BaseModel):
     created_at: str
 
 
+def _require_user(ctx: ApiContext) -> None:
+    if ctx.user is None:
+        raise AuthenticationError("This endpoint requires user authentication (Bearer token).")
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -49,12 +56,16 @@ class ProjectResponse(BaseModel):
 async def create_project(
     org_id: UUID,
     body: CreateProjectRequest,
-    user: User = Depends(get_current_user),
+    ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
 ) -> ProjectResponse:
-    """Create a new project within the organization."""
+    """Create a new project within the organization.
+
+    Auth: `Bearer`
+    """
+    _require_user(ctx)
     svc = IdentityService(session)
-    await svc.require_membership(user.id, org_id)
+    await svc.require_membership(ctx.user.id, org_id)
     project = await svc.create_project(org_id=org_id, name=body.name, description=body.description)
     return ProjectResponse(
         id=project.id,
@@ -68,12 +79,16 @@ async def create_project(
 @router.get("", response_model=list[ProjectResponse])
 async def list_projects(
     org_id: UUID,
-    user: User = Depends(get_current_user),
+    ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ProjectResponse]:
-    """List all projects for the organization."""
+    """List all projects for the organization.
+
+    Auth: `Bearer`
+    """
+    _require_user(ctx)
     svc = IdentityService(session)
-    await svc.require_membership(user.id, org_id)
+    await svc.require_membership(ctx.user.id, org_id)
     projects = await svc.list_projects(org_id)
     return [
         ProjectResponse(
@@ -91,12 +106,16 @@ async def list_projects(
 async def get_project(
     org_id: UUID,
     project_id: UUID,
-    user: User = Depends(get_current_user),
+    ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
 ) -> ProjectResponse:
-    """Retrieve a single project."""
+    """Retrieve a single project.
+
+    Auth: `Bearer`
+    """
+    _require_user(ctx)
     svc = IdentityService(session)
-    await svc.require_membership(user.id, org_id)
+    await svc.require_membership(ctx.user.id, org_id)
     project = await svc.get_project(project_id, org_id=org_id)
     return ProjectResponse(
         id=project.id,

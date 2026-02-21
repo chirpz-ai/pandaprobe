@@ -16,7 +16,10 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health")
 async def health_check() -> dict[str, Any]:
-    """Return service health status and version metadata."""
+    """Return service health status and version metadata.
+
+    Auth: `public`
+    """
     return {
         "status": "healthy",
         "version": settings.VERSION,

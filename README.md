@@ -44,11 +44,11 @@ flowchart TB
     end
 
     subgraph API["API Layer — FastAPI"]
-        R_AUTH["/v1/auth"]
-        R_ORG["/v1/organizations"]
-        R_PROJ["/v1/.../projects"]
-        R_TRACE["/v1/traces"]
-        R_EVAL["/v1/evaluations"]
+        R_AUTH["/auth"]
+        R_ORG["/organizations"]
+        R_PROJ["/.../projects"]
+        R_TRACE["/traces"]
+        R_EVAL["/evaluations"]
     end
 
     subgraph Services["Application Services"]
@@ -71,9 +71,9 @@ flowchart TB
         LLM["LLM Engine\n(LiteLLM)"]
     end
 
-    SDK -->|"X-Auth-Token"| R_AUTH
-    SDK -->|"X-Auth-Token"| R_ORG
-    SDK -->|"X-Auth-Token"| R_PROJ
+    SDK -->|"Authorization: Bearer"| R_AUTH
+    SDK -->|"Authorization: Bearer"| R_ORG
+    SDK -->|"Authorization: Bearer"| R_PROJ
     SDK -->|"X-API-Key"| R_TRACE
     SDK -->|"X-API-Key"| R_EVAL
 
@@ -123,9 +123,8 @@ User ──(Membership)──> Organization ──> Project ──> Trace / Eval
 
 **Token flow:**
 1. User authenticates with the external IdP (Supabase or Firebase) and receives an IdP access token.
-2. `POST /v1/auth/login` with `{ "token": "<idp_token>" }` — validates, upserts user, returns an **app JWT**.
-3. Management APIs use `X-Auth-Token: <app_jwt>`.
-4. Data APIs (traces, evals) use `X-API-Key: <project_key>`.
+2. Management APIs use `Authorization: Bearer <idp_token>`. Users and default organizations are provisioned automatically on first request (JIT).
+3. Data APIs (traces, evals) use `X-API-Key: <project_key>`.
 
 ## Project Structure
 
@@ -172,21 +171,20 @@ make help        # show all commands
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/v1/auth/login` | — | Exchange IdP token for app JWT |
-| `GET`  | `/v1/auth/me` | JWT | Current user profile |
-| `POST` | `/v1/organizations` | JWT | Create an organization |
-| `GET`  | `/v1/organizations` | JWT | List user's organizations |
-| `POST` | `/v1/organizations/{id}/members` | JWT | Invite a user |
-| `POST` | `/v1/organizations/{id}/projects` | JWT | Create a project |
-| `GET`  | `/v1/organizations/{id}/projects` | JWT | List projects |
-| `POST` | `/v1/organizations/{id}/api-keys` | JWT | Generate API key (scoped to project) |
-| `POST` | `/v1/traces` | API Key | Ingest a trace (async, 202) |
-| `GET`  | `/v1/traces` | API Key | List traces |
-| `GET`  | `/v1/traces/{id}` | API Key | Get trace with spans |
-| `POST` | `/v1/evaluations` | API Key | Trigger async evaluation |
-| `GET`  | `/v1/evaluations/{id}` | API Key | Get evaluation results |
-| `GET`  | `/v1/evaluations/metrics` | — | List registered metrics |
-| `GET`  | `/v1/evaluations/providers` | — | List available LLM providers |
+| `GET`  | `/auth/me` | Bearer | Current user profile |
+| `POST` | `/organizations` | Bearer | Create an organization |
+| `GET`  | `/organizations` | Bearer | List user's organizations |
+| `POST` | `/organizations/{id}/members` | Bearer | Invite a user |
+| `POST` | `/organizations/{id}/projects` | Bearer | Create a project |
+| `GET`  | `/organizations/{id}/projects` | Bearer | List projects |
+| `POST` | `/organizations/{id}/api-keys` | Bearer | Generate API key (scoped to project) |
+| `POST` | `/traces` | API Key | Ingest a trace (async, 202) |
+| `GET`  | `/traces` | API Key | List traces |
+| `GET`  | `/traces/{id}` | API Key | Get trace with spans |
+| `POST` | `/evaluations` | API Key | Trigger async evaluation |
+| `GET`  | `/evaluations/{id}` | API Key | Get evaluation results |
+| `GET`  | `/evaluations/metrics` | — | List registered metrics |
+| `GET`  | `/evaluations/providers` | — | List available LLM providers |
 
 ## Environment Variables
 
@@ -195,7 +193,6 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 | Variable | Description |
 |----------|-------------|
 | `AUTH_PROVIDER` | `supabase` or `firebase` |
-| `APP_SECRET_KEY` | Secret for signing app JWTs (generate with `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`) |
 | `SUPABASE_URL` | Supabase project URL (Dashboard → Settings → API → Project URL) |
 | `SUPABASE_KEY` | Supabase anon/public key (Dashboard → Settings → API → `anon` `public` key) |
 | `GOOGLE_CLOUD_PROJECT` | GCP project for Firebase + Vertex AI |
