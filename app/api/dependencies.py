@@ -6,7 +6,6 @@ either a Bearer JWT with ``X-Project-ID`` or a project-scoped API key.
 """
 
 import asyncio
-import re
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -26,14 +25,6 @@ from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 
 _bearer_scheme = HTTPBearer(auto_error=False)
-
-
-def _slugify(name: str) -> str:
-    """Convert a name to a URL-safe slug."""
-    slug = name.lower().strip()
-    slug = re.sub(r"[^\w\s-]", "", slug)
-    slug = re.sub(r"[\s_]+", "-", slug)
-    return re.sub(r"-+", "-", slug).strip("-")
 
 
 async def get_api_context(
@@ -128,7 +119,7 @@ async def _resolve_jwt(
             org_name = f"{first_name}'s Organization"
         else:
             org_name = "Personal Organization"
-        org = await identity_repo.create_organization(name=org_name, slug=_slugify(org_name))
+        org = await identity_repo.create_organization(name=org_name)
         await identity_repo.create_membership(user_id=user.id, org_id=org.id, role=MembershipRole.OWNER)
         memberships = await identity_repo.list_user_orgs(user.id)
 

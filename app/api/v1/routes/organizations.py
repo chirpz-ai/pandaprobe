@@ -42,7 +42,6 @@ class OrganizationResponse(BaseModel):
 
     id: UUID
     name: str
-    slug: str
     created_at: str
 
 
@@ -81,7 +80,7 @@ async def create_organization(
     _require_user(ctx)
     svc = IdentityService(session)
     org = await svc.create_organization(name=body.name, owner_id=ctx.user.id)
-    return OrganizationResponse(id=org.id, name=org.name, slug=org.slug, created_at=org.created_at.isoformat())
+    return OrganizationResponse(id=org.id, name=org.name, created_at=org.created_at.isoformat())
 
 
 @router.get("", response_model=list[OrganizationResponse])
@@ -100,7 +99,7 @@ async def list_my_organizations(
     for m in memberships:
         org = await svc.get_organization(m.org_id)
         result.append(
-            OrganizationResponse(id=org.id, name=org.name, slug=org.slug, created_at=org.created_at.isoformat())
+            OrganizationResponse(id=org.id, name=org.name, created_at=org.created_at.isoformat())
         )
     return result
 
