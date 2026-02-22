@@ -97,6 +97,20 @@ class IdentityRepository:
         rows = (await self._session.execute(stmt)).unique().scalars().all()
         return [self._to_membership(r) for r in rows]
 
+    async def update_membership_role(self, user_id: UUID, org_id: UUID, role: MembershipRole) -> Membership | None:
+        """Change a member's role and return the updated membership."""
+        stmt = (
+            select(MembershipModel)
+            .options(joinedload(MembershipModel.user))
+            .where(MembershipModel.user_id == user_id, MembershipModel.org_id == org_id)
+        )
+        row = (await self._session.execute(stmt)).unique().scalar_one_or_none()
+        if row is None:
+            return None
+        row.role = role.value
+        await self._session.flush()
+        return self._to_membership(row)
+
     async def delete_membership(self, user_id: UUID, org_id: UUID) -> None:
         """Remove a user from an organization."""
         stmt = delete(MembershipModel).where(
