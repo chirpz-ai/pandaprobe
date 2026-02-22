@@ -4,7 +4,6 @@ Coordinates between API key generation, persistence, and domain
 validation for organizations, memberships, projects, and API keys.
 """
 
-import re
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -16,14 +15,6 @@ from app.infrastructure.db.repositories.project_repo import ProjectRepository
 from app.registry.constants import MembershipRole
 from app.registry.exceptions import AuthorizationError, ConflictError, NotFoundError, ValidationError
 from app.registry.security import generate_api_key, hash_api_key, key_prefix
-
-
-def _slugify(name: str) -> str:
-    """Convert a name to a URL-safe slug."""
-    slug = name.lower().strip()
-    slug = re.sub(r"[^\w\s-]", "", slug)
-    slug = re.sub(r"[\s_]+", "-", slug)
-    return re.sub(r"-+", "-", slug).strip("-")
 
 
 class IdentityService:
@@ -38,14 +29,10 @@ class IdentityService:
 
     async def create_organization(self, name: str, owner_id: UUID) -> Organization:
         """Create a new tenant organization and assign the owner membership."""
-        slug = _slugify(name)
-        if not slug:
-            raise ValidationError("organization name must contain at least one alphanumeric character.")
-        existing = await self._repo.get_organization_by_slug(slug)
-        if existing:
-            raise ConflictError(f"organization with slug '{slug}' already exists.")
+        if not name or not name.strip():
+            raise ValidationError("Organization name must not be empty.")
 
-        org = await self._repo.create_organization(name=name, slug=slug)
+        org = await self._repo.create_organization(name=name.strip())
         await self._repo.create_membership(user_id=owner_id, org_id=org.id, role=MembershipRole.OWNER)
         return org
 

@@ -24,9 +24,9 @@ class IdentityRepository:
 
     # -- organization ---------------------------------------------------------
 
-    async def create_organization(self, name: str, slug: str) -> Organization:
+    async def create_organization(self, name: str) -> Organization:
         """Insert a new organization row and return the domain entity."""
-        row = OrganizationModel(name=name, slug=slug)
+        row = OrganizationModel(name=name)
         self._session.add(row)
         await self._session.flush()
         return self._to_org(row)
@@ -34,12 +34,6 @@ class IdentityRepository:
     async def get_organization(self, org_id: UUID) -> Organization | None:
         """Fetch an organization by primary key."""
         row = await self._session.get(OrganizationModel, org_id)
-        return self._to_org(row) if row else None
-
-    async def get_organization_by_slug(self, slug: str) -> Organization | None:
-        """Fetch an organization by unique slug."""
-        stmt = select(OrganizationModel).where(OrganizationModel.slug == slug)
-        row = (await self._session.execute(stmt)).scalar_one_or_none()
         return self._to_org(row) if row else None
 
     # -- Memberships ----------------------------------------------------------
@@ -147,7 +141,7 @@ class IdentityRepository:
 
     @staticmethod
     def _to_org(row: OrganizationModel) -> Organization:
-        return Organization(id=row.id, name=row.name, slug=row.slug, created_at=row.created_at)
+        return Organization(id=row.id, name=row.name, created_at=row.created_at)
 
     @staticmethod
     def _to_membership(row: MembershipModel) -> Membership:

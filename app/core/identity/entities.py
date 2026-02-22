@@ -29,7 +29,6 @@ class Organization(BaseModel):
 
     id: UUID
     name: str = Field(min_length=1, max_length=255)
-    slug: str = Field(max_length=128)
     created_at: datetime
 
 
