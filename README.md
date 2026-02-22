@@ -114,6 +114,21 @@ User ──(Membership)──> Organization ──> Project ──> Trace / Eval
 - **Organizations** contain **Projects**. Users join orgs via **Memberships** (OWNER / ADMIN / MEMBER).
 - **API Keys** are scoped to a single project. Traces and evaluations are routed to the correct project automatically from the key.
 
+### Role Permissions
+
+| Action | OWNER | ADMIN | MEMBER |
+|--------|:-----:|:-----:|:------:|
+| Add member as any role | Yes | — | — |
+| Add member as MEMBER | Yes | Yes | — |
+| Change member role | Non-OWNERs | — | — |
+| Remove ADMIN | Yes | — | — |
+| Remove MEMBER | Yes | Yes | — |
+| Remove OWNER | — | — | — |
+| Update organization | Yes | Yes | — |
+| Delete organization | Yes | — | — |
+
+> Self-role changes are not allowed. OWNERs are peers and cannot modify each other.
+
 ## Auth Strategy
 
 | Mode | `AUTH_PROVIDER` | Identity Provider | Required Env Vars |
