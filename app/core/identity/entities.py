@@ -40,6 +40,8 @@ class Membership(BaseModel):
     org_id: UUID
     role: MembershipRole = MembershipRole.MEMBER
     created_at: datetime
+    display_name: str = ""
+    email: str = ""
 
 
 class Project(BaseModel):
