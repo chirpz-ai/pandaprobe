@@ -76,6 +76,12 @@ class AddMemberRequest(BaseModel):
     role: MembershipRole = MembershipRole.MEMBER
 
 
+class UpdateMemberRoleRequest(BaseModel):
+    """Payload for changing a member's role."""
+
+    role: MembershipRole
+
+
 # ---------------------------------------------------------------------------
 # Organization CRUD
 # ---------------------------------------------------------------------------
@@ -213,12 +219,47 @@ async def add_member(
 ) -> MembershipResponse:
     """Invite a user to an organization.
 
-    Auth: `Bearer` · role: `ADMIN` or `OWNER`
+    Auth: `Bearer` · hierarchy: `OWNER` > `ADMIN` > `MEMBER`
+
+    - **OWNER** can assign any role
+    - **ADMIN** can assign MEMBER only
+    - **MEMBER** cannot add anyone
     """
     _require_user(ctx)
     svc = IdentityService(session)
-    await svc.require_admin(ctx.user.id, org_id)
-    m = await svc.add_member(org_id, body.user_id, body.role)
+    m = await svc.add_member(actor_id=ctx.user.id, org_id=org_id, user_id=body.user_id, role=body.role)
+    return MembershipResponse(
+        id=m.id,
+        user_id=m.user_id,
+        org_id=m.org_id,
+        role=m.role,
+        display_name=m.display_name,
+        email=m.email,
+        created_at=m.created_at.isoformat(),
+    )
+
+
+@router.patch("/{org_id}/members/{user_id}", response_model=MembershipResponse)
+async def update_member_role(
+    org_id: UUID,
+    user_id: UUID,
+    body: UpdateMemberRoleRequest,
+    ctx: ApiContext = Depends(get_api_context),
+    session: AsyncSession = Depends(get_db_session),
+) -> MembershipResponse:
+    """Change a member's role within an organization.
+
+    Auth: `Bearer` · role: `OWNER`
+
+    - **OWNER** can change any non-OWNER to any role
+    - Cannot change another OWNER's role
+    - Cannot change your own role
+    """
+    _require_user(ctx)
+    svc = IdentityService(session)
+    m = await svc.update_member_role(
+        actor_id=ctx.user.id, org_id=org_id, target_user_id=user_id, new_role=body.role,
+    )
     return MembershipResponse(
         id=m.id,
         user_id=m.user_id,
