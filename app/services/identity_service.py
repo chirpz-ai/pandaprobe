@@ -43,6 +43,20 @@ class IdentityService:
             raise NotFoundError(f"Organization {org_id} not found.")
         return org
 
+    async def update_organization(self, org_id: UUID, name: str) -> Organization:
+        """Update an organization's name."""
+        if not name or not name.strip():
+            raise ValidationError("Organization name must not be empty.")
+        org = await self._repo.update_organization(org_id, name=name.strip())
+        if org is None:
+            raise NotFoundError(f"Organization {org_id} not found.")
+        return org
+
+    async def delete_organization(self, org_id: UUID) -> None:
+        """Hard-delete an organization and all related data (CASCADE)."""
+        await self.get_organization(org_id)
+        await self._repo.delete_organization(org_id)
+
     # -- Membership -----------------------------------------------------------
 
     async def require_membership(self, user_id: UUID, org_id: UUID) -> Membership:
@@ -59,6 +73,13 @@ class IdentityService:
             raise AuthorizationError("Admin or Owner role required.")
         return m
 
+    async def require_owner(self, user_id: UUID, org_id: UUID) -> Membership:
+        """Ensure the user is OWNER in the org."""
+        m = await self.require_membership(user_id, org_id)
+        if m.role != MembershipRole.OWNER:
+            raise AuthorizationError("Owner role required.")
+        return m
+
     async def add_member(
         self, org_id: UUID, user_id: UUID, role: MembershipRole = MembershipRole.MEMBER
     ) -> Membership:
@@ -67,6 +88,29 @@ class IdentityService:
         if existing:
             raise ConflictError("User is already a member of this organization.")
         return await self._repo.create_membership(user_id=user_id, org_id=org_id, role=role)
+
+    async def remove_member(self, actor_id: UUID, org_id: UUID, target_user_id: UUID) -> None:
+        """Remove a member from an organization, respecting role hierarchy.
+
+        - OWNER can remove ADMIN and MEMBER (not other OWNERs).
+        - ADMIN can remove MEMBER only.
+        - MEMBER cannot remove anyone.
+        """
+        actor = await self.require_membership(actor_id, org_id)
+        target = await self._repo.get_membership(target_user_id, org_id)
+        if target is None:
+            raise NotFoundError("Target user is not a member of this organization.")
+
+        if target.role == MembershipRole.OWNER:
+            raise AuthorizationError("Cannot remove an OWNER from the organization.")
+
+        if actor.role == MembershipRole.MEMBER:
+            raise AuthorizationError("Members cannot remove other members.")
+
+        if actor.role == MembershipRole.ADMIN and target.role != MembershipRole.MEMBER:
+            raise AuthorizationError("Admins can only remove members with MEMBER role.")
+
+        await self._repo.delete_membership(target_user_id, org_id)
 
     async def list_user_orgs(self, user_id: UUID) -> list[Membership]:
         """Return all memberships for a user."""
