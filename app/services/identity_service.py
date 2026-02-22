@@ -81,13 +81,58 @@ class IdentityService:
         return m
 
     async def add_member(
-        self, org_id: UUID, user_id: UUID, role: MembershipRole = MembershipRole.MEMBER
+        self,
+        actor_id: UUID,
+        org_id: UUID,
+        user_id: UUID,
+        role: MembershipRole = MembershipRole.MEMBER,
     ) -> Membership:
-        """Add a user to an organization."""
+        """Add a user to an organization, respecting role hierarchy.
+
+        - OWNER can add with any role (OWNER, ADMIN, MEMBER).
+        - ADMIN can add with MEMBER role only.
+        - MEMBER cannot add anyone.
+        """
+        actor = await self.require_membership(actor_id, org_id)
+
+        if actor.role == MembershipRole.MEMBER:
+            raise AuthorizationError("Members cannot add users to the organization.")
+
+        if actor.role == MembershipRole.ADMIN and role != MembershipRole.MEMBER:
+            raise AuthorizationError("Admins can only add users with MEMBER role.")
+
         existing = await self._repo.get_membership(user_id, org_id)
         if existing:
             raise ConflictError("User is already a member of this organization.")
         return await self._repo.create_membership(user_id=user_id, org_id=org_id, role=role)
+
+    async def update_member_role(
+        self, actor_id: UUID, org_id: UUID, target_user_id: UUID, new_role: MembershipRole
+    ) -> Membership:
+        """Change a member's role, respecting hierarchy.
+
+        - Cannot change your own role.
+        - OWNER can change any non-OWNER to any role (including OWNER).
+        - ADMIN and MEMBER cannot change roles.
+        """
+        if actor_id == target_user_id:
+            raise AuthorizationError("Cannot change your own role.")
+
+        actor = await self.require_membership(actor_id, org_id)
+        if actor.role != MembershipRole.OWNER:
+            raise AuthorizationError("Only owners can change member roles.")
+
+        target = await self._repo.get_membership(target_user_id, org_id)
+        if target is None:
+            raise NotFoundError("Target user is not a member of this organization.")
+
+        if target.role == MembershipRole.OWNER:
+            raise AuthorizationError("Cannot change the role of another owner.")
+
+        updated = await self._repo.update_membership_role(target_user_id, org_id, new_role)
+        if updated is None:
+            raise NotFoundError("Target user is not a member of this organization.")
+        return updated
 
     async def remove_member(self, actor_id: UUID, org_id: UUID, target_user_id: UUID) -> None:
         """Remove a member from an organization, respecting role hierarchy.
