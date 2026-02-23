@@ -55,7 +55,11 @@ class Project(BaseModel):
 
 
 class APIKey(BaseModel):
-    """An authentication credential scoped to one project.
+    """An authentication credential scoped to an organization.
+
+    The caller specifies the target project at runtime via the
+    ``X-Project-Name`` header.  If the project doesn't exist it is
+    auto-created within the org.
 
     The raw key is never persisted; only its SHA-256 hash is stored.
     ``key_prefix`` keeps the first 8 characters (e.g. ``otr_a1b2``)
@@ -64,7 +68,6 @@ class APIKey(BaseModel):
 
     id: UUID
     org_id: UUID
-    project_id: UUID
     key_hash: str
     key_prefix: str = Field(max_length=12)
     name: str = Field(min_length=1, max_length=255)

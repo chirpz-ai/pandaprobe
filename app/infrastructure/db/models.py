@@ -109,21 +109,22 @@ class ProjectModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     organization: Mapped["OrganizationModel"] = relationship(back_populates="projects")
-    api_keys: Mapped[list["APIKeyModel"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     traces: Mapped[list["TraceModel"]] = relationship(back_populates="project", passive_deletes=True)
     evaluations: Mapped[list["EvaluationModel"]] = relationship(back_populates="project", passive_deletes=True)
 
-    __table_args__ = (Index("ix_projects_org_id", "org_id"),)
+    __table_args__ = (
+        UniqueConstraint("org_id", "name", name="uq_project_org_name"),
+        Index("ix_projects_org_id", "org_id"),
+    )
 
 
 class APIKeyModel(Base):
-    """Hashed API key scoped to a project."""
+    """Hashed API key scoped to an organization."""
 
     __tablename__ = "api_keys"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
-    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
     key_hash: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
     key_prefix: Mapped[str] = mapped_column(String(12), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -134,7 +135,6 @@ class APIKeyModel(Base):
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     organization: Mapped["OrganizationModel"] = relationship(back_populates="api_keys")
-    project: Mapped["ProjectModel"] = relationship(back_populates="api_keys")
 
 
 # ---------------------------------------------------------------------------
