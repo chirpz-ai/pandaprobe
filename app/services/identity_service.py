@@ -207,7 +207,7 @@ class IdentityService:
         return updated
 
     async def delete_project(self, org_id: UUID, project_id: UUID) -> None:
-        """Delete a project and all associated data (traces, evaluations, API keys).
+        """Delete a project and all associated data (traces, evaluations).
 
         PostgreSQL ``ON DELETE CASCADE`` handles child records.
         """
@@ -228,12 +228,11 @@ class IdentityService:
     async def create_api_key(
         self,
         org_id: UUID,
-        project_id: UUID,
         name: str,
         created_by: UUID | None = None,
         expiration: str = "never",
     ) -> tuple[APIKey, str]:
-        """Generate a new API key scoped to a project.
+        """Generate a new org-scoped API key.
 
         Args:
             expiration: ``"never"`` (no expiry, default) or ``"90d"`` (90-day TTL).
@@ -242,7 +241,6 @@ class IdentityService:
             A tuple of (APIKey entity, raw_key_string).
         """
         await self.get_organization(org_id)
-        await self.get_project(project_id, org_id=org_id)
 
         if expiration not in self._EXPIRATION_DELTAS:
             raise ValidationError(
@@ -258,7 +256,6 @@ class IdentityService:
 
         api_key = await self._repo.create_api_key(
             org_id=org_id,
-            project_id=project_id,
             key_hash=hashed,
             key_prefix=prefix,
             name=name,
@@ -271,11 +268,6 @@ class IdentityService:
         """List all API keys for an organization."""
         await self.get_organization(org_id)
         return await self._repo.list_api_keys(org_id)
-
-    async def list_project_api_keys(self, project_id: UUID, *, org_id: UUID) -> list[APIKey]:
-        """List all API keys for a project after verifying it belongs to *org_id*."""
-        await self.get_project(project_id, org_id=org_id)
-        return await self._repo.list_project_api_keys(project_id)
 
     async def revoke_api_key(self, key_id: UUID, *, org_id: UUID) -> None:
         """Deactivate an API key after verifying it belongs to *org_id*."""
