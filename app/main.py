@@ -58,6 +58,7 @@ app.add_middleware(
         "X-API-Key",
         "X-Organization-ID",
         "X-Project-ID",
+        "X-Project-Name",
         "X-Request-ID",
         "Content-Type",
         "Accept",
