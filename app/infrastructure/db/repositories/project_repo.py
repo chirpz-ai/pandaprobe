@@ -3,10 +3,12 @@
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity.entities import Project
 from app.infrastructure.db.models import ProjectModel
+from app.registry.exceptions import ConflictError
 
 
 class ProjectRepository:
@@ -17,10 +19,18 @@ class ProjectRepository:
         self._session = session
 
     async def create_project(self, org_id: UUID, name: str, description: str = "") -> Project:
-        """Insert a new project row and return the domain entity."""
+        """Insert a new project row and return the domain entity.
+
+        Raises ``ConflictError`` if a project with the same name
+        already exists in the organization.
+        """
         row = ProjectModel(org_id=org_id, name=name, description=description)
         self._session.add(row)
-        await self._session.flush()
+        try:
+            await self._session.flush()
+        except IntegrityError:
+            await self._session.rollback()
+            raise ConflictError(f"A project named '{name}' already exists in this organization.")
         return self._to_entity(row)
 
     async def get_project(self, project_id: UUID) -> Project | None:
@@ -28,10 +38,42 @@ class ProjectRepository:
         row = await self._session.get(ProjectModel, project_id)
         return self._to_entity(row) if row else None
 
+    async def get_project_by_name(self, org_id: UUID, name: str) -> Project | None:
+        """Fetch a project by (org_id, name) pair. Returns ``None`` if not found."""
+        stmt = select(ProjectModel).where(ProjectModel.org_id == org_id, ProjectModel.name == name)
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        return self._to_entity(row) if row else None
+
+    async def get_or_create_project(self, org_id: UUID, name: str) -> Project:
+        """Resolve a project by name within an org, auto-creating it if missing.
+
+        Handles the race condition where two concurrent requests attempt
+        to create the same project: the loser of the unique-constraint
+        race re-fetches the winner's row.
+        """
+        existing = await self.get_project_by_name(org_id, name)
+        if existing:
+            return existing
+        row = ProjectModel(org_id=org_id, name=name)
+        self._session.add(row)
+        try:
+            await self._session.flush()
+        except IntegrityError:
+            await self._session.rollback()
+            existing = await self.get_project_by_name(org_id, name)
+            if existing:
+                return existing
+            raise
+        return self._to_entity(row)
+
     async def update_project(
         self, project_id: UUID, *, name: str | None = None, description: str | None = None
     ) -> Project | None:
-        """Update mutable project fields (name, description)."""
+        """Update mutable project fields (name, description).
+
+        Raises ``ConflictError`` if the new name collides with another
+        project in the same organization.
+        """
         row = await self._session.get(ProjectModel, project_id)
         if row is None:
             return None
@@ -39,11 +81,15 @@ class ProjectRepository:
             row.name = name
         if description is not None:
             row.description = description
-        await self._session.flush()
+        try:
+            await self._session.flush()
+        except IntegrityError:
+            await self._session.rollback()
+            raise ConflictError(f"A project named '{name}' already exists in this organization.")
         return self._to_entity(row)
 
     async def delete_project(self, project_id: UUID) -> None:
-        """Hard-delete a project (DB CASCADE removes traces, evaluations, API keys)."""
+        """Hard-delete a project (DB CASCADE removes traces and evaluations)."""
         row = await self._session.get(ProjectModel, project_id)
         if row:
             await self._session.delete(row)
