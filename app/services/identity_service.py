@@ -264,16 +264,43 @@ class IdentityService:
         )
         return api_key, raw_key
 
-    async def list_api_keys(self, org_id: UUID) -> list[APIKey]:
-        """List all API keys for an organization."""
-        await self.get_organization(org_id)
-        return await self._repo.list_api_keys(org_id)
-
-    async def revoke_api_key(self, key_id: UUID, *, org_id: UUID) -> None:
-        """Deactivate an API key after verifying it belongs to *org_id*."""
+    async def get_api_key(self, key_id: UUID, *, org_id: UUID) -> APIKey:
+        """Fetch a single API key, verifying it belongs to *org_id*."""
         api_key = await self._repo.get_api_key(key_id)
         if api_key is None:
             raise NotFoundError(f"API key {key_id} not found.")
         if api_key.org_id != org_id:
             raise AuthorizationError("API key does not belong to this organization.")
+        return api_key
+
+    async def list_api_keys(self, org_id: UUID) -> list[APIKey]:
+        """List all API keys for an organization."""
+        await self.get_organization(org_id)
+        return await self._repo.list_api_keys(org_id)
+
+    async def rotate_api_key(
+        self, key_id: UUID, *, org_id: UUID, created_by: UUID | None = None,
+    ) -> tuple[APIKey, str]:
+        """Create a replacement key with a fresh 90-day expiration.
+
+        The old key remains active until its original expiration.
+        Only keys that have an expiration date can be rotated.
+        """
+        old_key = await self.get_api_key(key_id, org_id=org_id)
+        if old_key.expires_at is None:
+            raise ValidationError(
+                "Only keys with an expiration can be rotated. "
+                "Production keys (never expire) should be revoked and re-created instead."
+            )
+
+        return await self.create_api_key(
+            org_id=org_id,
+            name=old_key.name,
+            created_by=created_by,
+            expiration="90d",
+        )
+
+    async def revoke_api_key(self, key_id: UUID, *, org_id: UUID) -> None:
+        """Deactivate an API key after verifying it belongs to *org_id*."""
+        await self.get_api_key(key_id, org_id=org_id)
         await self._repo.revoke_api_key(key_id)
