@@ -43,11 +43,12 @@ class IdentityService:
             raise NotFoundError(f"Organization {org_id} not found.")
         return org
 
-    async def update_organization(self, org_id: UUID, name: str) -> Organization:
-        """Update an organization's name."""
-        if not name or not name.strip():
+    async def update_organization(self, org_id: UUID, *, name: str | None = None) -> Organization:
+        """Update mutable organization fields."""
+        final_name = name.strip() if name is not None else None
+        if final_name is not None and not final_name:
             raise ValidationError("Organization name must not be empty.")
-        org = await self._repo.update_organization(org_id, name=name.strip())
+        org = await self._repo.update_organization(org_id, name=final_name)
         if org is None:
             raise NotFoundError(f"Organization {org_id} not found.")
         return org
@@ -184,6 +185,34 @@ class IdentityService:
         if org_id is not None and project.org_id != org_id:
             raise AuthorizationError("Project does not belong to this organization.")
         return project
+
+    async def update_project(
+        self,
+        org_id: UUID,
+        project_id: UUID,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Project:
+        """Update a project's name and/or description."""
+        project = await self.get_project(project_id, org_id=org_id)
+        final_name = name.strip() if name is not None else None
+        if final_name is not None and not final_name:
+            raise ValidationError("Project name must not be empty.")
+        updated = await self._project_repo.update_project(
+            project.id, name=final_name, description=description,
+        )
+        if updated is None:
+            raise NotFoundError(f"Project {project_id} not found.")
+        return updated
+
+    async def delete_project(self, org_id: UUID, project_id: UUID) -> None:
+        """Delete a project and all associated data (traces, evaluations, API keys).
+
+        PostgreSQL ``ON DELETE CASCADE`` handles child records.
+        """
+        await self.get_project(project_id, org_id=org_id)
+        await self._project_repo.delete_project(project_id)
 
     async def list_projects(self, org_id: UUID) -> list[Project]:
         """List all projects for an organization."""
