@@ -303,6 +303,8 @@ class IdentityService:
         Only keys that have an expiration date can be rotated.
         """
         old_key = await self.get_api_key(key_id, org_id=org_id)
+        if not old_key.is_active:
+            raise ValidationError("Cannot rotate a revoked API key.")
         if old_key.expires_at is None:
             raise ValidationError(
                 "Only keys with an expiration can be rotated. "
