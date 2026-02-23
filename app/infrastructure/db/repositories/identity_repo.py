@@ -37,12 +37,13 @@ class IdentityRepository:
         row = await self._session.get(OrganizationModel, org_id)
         return self._to_org(row) if row else None
 
-    async def update_organization(self, org_id: UUID, name: str) -> Organization | None:
-        """Update an organization's name."""
+    async def update_organization(self, org_id: UUID, *, name: str | None = None) -> Organization | None:
+        """Update mutable organization fields."""
         row = await self._session.get(OrganizationModel, org_id)
         if row is None:
             return None
-        row.name = name
+        if name is not None:
+            row.name = name
         await self._session.flush()
         return self._to_org(row)
 
