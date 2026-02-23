@@ -11,7 +11,7 @@ from uuid import UUID
 
 import structlog
 from fastapi import Depends, Header, Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.context import ApiContext, AuthMethod
@@ -25,6 +25,7 @@ from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 
 _bearer_scheme = HTTPBearer(auto_error=False)
+_api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 async def get_api_context(
@@ -49,7 +50,7 @@ async def get_api_context(
 async def get_data_plane_context(
     request: Request,
     bearer: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
-    x_api_key: str | None = Header(None, alias="X-API-Key"),
+    x_api_key: str | None = Depends(_api_key_scheme),
     x_project_id: str | None = Header(None, alias="X-Project-ID"),
     session: AsyncSession = Depends(get_db_session),
 ) -> ApiContext:
