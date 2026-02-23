@@ -38,9 +38,9 @@ class CreateOrganizationRequest(BaseModel):
 
 
 class UpdateOrganizationRequest(BaseModel):
-    """Payload for updating an organization."""
+    """Payload for updating an organization. Only provided fields are changed."""
 
-    name: str = Field(min_length=1, max_length=255)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 class OrganizationResponse(BaseModel):
@@ -143,14 +143,14 @@ async def get_organization(
     return OrganizationResponse(id=org.id, name=org.name, created_at=org.created_at.isoformat())
 
 
-@router.put("/{org_id}", response_model=OrganizationResponse)
+@router.patch("/{org_id}", response_model=OrganizationResponse)
 async def update_organization(
     org_id: UUID,
     body: UpdateOrganizationRequest,
     ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
 ) -> OrganizationResponse:
-    """Update an organization's name.
+    """Update an organization. Only provided fields are changed.
 
     Auth: `Bearer` · role: `ADMIN` or `OWNER`
     """
