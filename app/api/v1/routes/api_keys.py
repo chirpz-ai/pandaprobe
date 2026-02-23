@@ -112,6 +112,38 @@ async def create_api_key(
 
 
 @router.get(
+    "/organizations/{org_id}/api-keys",
+    response_model=list[APIKeyResponse],
+)
+async def list_org_api_keys(
+    org_id: UUID,
+    ctx: ApiContext = Depends(get_api_context),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[APIKeyResponse]:
+    """List all API keys across every project in the organization.
+
+    Auth: `Bearer` · role: any member
+    """
+    _require_user(ctx)
+    svc = IdentityService(session)
+    await svc.require_membership(ctx.user.id, org_id)
+    keys = await svc.list_api_keys(org_id)
+    return [
+        APIKeyResponse(
+            id=k.id,
+            org_id=k.org_id,
+            project_id=k.project_id,
+            key_prefix=k.key_prefix,
+            name=k.name,
+            is_active=k.is_active,
+            created_at=k.created_at.isoformat(),
+            expires_at=k.expires_at.isoformat() if k.expires_at else None,
+        )
+        for k in keys
+    ]
+
+
+@router.get(
     "/organizations/{org_id}/projects/{project_id}/api-keys",
     response_model=list[APIKeyResponse],
 )
