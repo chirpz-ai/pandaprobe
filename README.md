@@ -118,14 +118,16 @@ User ──(Membership)──> Organization ──> Project ──> Trace / Eval
 
 | Action | OWNER | ADMIN | MEMBER |
 |--------|:-----:|:-----:|:------:|
-| Add member as any role | Yes | — | — |
-| Add member as MEMBER | Yes | Yes | — |
+| Update / delete organization | Yes | Update | — |
+| Create / update project | Yes | Yes | — |
+| Delete project | Yes | — | — |
+| View projects | Yes | Yes | Yes |
+| Add member (any role) | Yes | — | — |
+| Add member (MEMBER) | Yes | Yes | — |
 | Change member role | Non-OWNERs | — | — |
 | Remove ADMIN | Yes | — | — |
 | Remove MEMBER | Yes | Yes | — |
-| Remove OWNER | — | — | — |
-| Update organization | Yes | Yes | — |
-| Delete organization | Yes | — | — |
+| Remove / change OWNER | — | — | — |
 
 > Self-role changes are not allowed. OWNERs are peers and cannot modify each other.
 
