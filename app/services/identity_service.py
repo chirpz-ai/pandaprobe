@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.identity.entities import APIKey, Membership, Organization, Project
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
-from app.registry.constants import MembershipRole
+from app.registry.constants import MembershipRole, sanitize_text, validate_resource_name
 from app.registry.exceptions import AuthorizationError, ConflictError, NotFoundError, ValidationError
 from app.registry.security import generate_api_key, hash_api_key, key_prefix
 
@@ -29,10 +29,12 @@ class IdentityService:
 
     async def create_organization(self, name: str, owner_id: UUID) -> Organization:
         """Create a new tenant organization and assign the owner membership."""
-        if not name or not name.strip():
-            raise ValidationError("Organization name must not be empty.")
+        try:
+            clean = validate_resource_name(name, "Organization name")
+        except ValueError as exc:
+            raise ValidationError(str(exc))
 
-        org = await self._repo.create_organization(name=name.strip())
+        org = await self._repo.create_organization(name=clean)
         await self._repo.create_membership(user_id=owner_id, org_id=org.id, role=MembershipRole.OWNER)
         return org
 
@@ -45,9 +47,12 @@ class IdentityService:
 
     async def update_organization(self, org_id: UUID, *, name: str | None = None) -> Organization:
         """Update mutable organization fields."""
-        final_name = name.strip() if name is not None else None
-        if final_name is not None and not final_name:
-            raise ValidationError("Organization name must not be empty.")
+        final_name = None
+        if name is not None:
+            try:
+                final_name = validate_resource_name(name, "Organization name")
+            except ValueError as exc:
+                raise ValidationError(str(exc))
         org = await self._repo.update_organization(org_id, name=final_name)
         if org is None:
             raise NotFoundError(f"Organization {org_id} not found.")
@@ -170,8 +175,13 @@ class IdentityService:
 
     async def create_project(self, org_id: UUID, name: str, description: str = "") -> Project:
         """Create a new project within an organization."""
+        try:
+            clean = validate_resource_name(name, "Project name")
+            clean_desc = sanitize_text(description, "Project description")
+        except ValueError as exc:
+            raise ValidationError(str(exc))
         await self.get_organization(org_id)
-        return await self._project_repo.create_project(org_id=org_id, name=name, description=description)
+        return await self._project_repo.create_project(org_id=org_id, name=clean, description=clean_desc)
 
     async def get_project(self, project_id: UUID, *, org_id: UUID | None = None) -> Project:
         """Fetch a project or raise ``NotFoundError``.
@@ -196,11 +206,17 @@ class IdentityService:
     ) -> Project:
         """Update a project's name and/or description."""
         project = await self.get_project(project_id, org_id=org_id)
-        final_name = name.strip() if name is not None else None
-        if final_name is not None and not final_name:
-            raise ValidationError("Project name must not be empty.")
+        final_name = None
+        final_desc = None
+        try:
+            if name is not None:
+                final_name = validate_resource_name(name, "Project name")
+            if description is not None:
+                final_desc = sanitize_text(description, "Project description")
+        except ValueError as exc:
+            raise ValidationError(str(exc))
         updated = await self._project_repo.update_project(
-            project.id, name=final_name, description=description,
+            project.id, name=final_name, description=final_desc,
         )
         if updated is None:
             raise NotFoundError(f"Project {project_id} not found.")
