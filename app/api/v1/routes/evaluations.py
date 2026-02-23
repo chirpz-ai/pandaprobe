@@ -6,7 +6,7 @@ the metrics and persists the results.  Use the GET endpoints to poll
 for completion or retrieve scores.
 
 Authentication: Bearer JWT (with ``X-Project-ID`` header) **or**
-a project-scoped ``X-API-Key``.
+``X-API-Key`` with ``X-Project-Name``.
 """
 
 from typing import Any
@@ -126,7 +126,7 @@ async def create_evaluation(
 ) -> EvaluationAccepted:
     """Trigger an asynchronous evaluation of a trace.
 
-    Auth: `Bearer` + `X-Project-ID` | `X-API-Key`
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
 
     Rate limit: `50/min`
     """
@@ -152,7 +152,7 @@ async def get_evaluation(
 ) -> EvaluationResponse:
     """Retrieve an evaluation with all its metric results.
 
-    Auth: `Bearer` + `X-Project-ID` | `X-API-Key`
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
     svc = EvalService(session)
     evaluation = await svc.get_evaluation(evaluation_id, ctx.project.id)
@@ -169,7 +169,7 @@ async def list_evaluations(
 ) -> list[EvaluationResponse]:
     """List evaluations for the current project.
 
-    Auth: `Bearer` + `X-Project-ID` | `X-API-Key`
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
     svc = EvalService(session)
     evaluations = await svc.list_evaluations(ctx.project.id, trace_id=trace_id, limit=limit, offset=offset)

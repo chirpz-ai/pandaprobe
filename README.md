@@ -107,12 +107,12 @@ flowchart TB
 
 ```
 User ──(Membership)──> Organization ──> Project ──> Trace / Evaluation
-                                            └──> API Key (scoped to project)
+                                   └──> API Key (org-scoped)
 ```
 
-- **Users** authenticate via an external IdP (Supabase or Firebase) and receive an app JWT.
+- **Users** authenticate via an external IdP (Supabase or Firebase).
 - **Organizations** contain **Projects**. Users join orgs via **Memberships** (OWNER / ADMIN / MEMBER).
-- **API Keys** are scoped to a single project. Traces and evaluations are routed to the correct project automatically from the key.
+- **API Keys** are org-scoped. The SDK specifies the target project at runtime via `OPENTRACER_PROJECT` (→ `X-Project-Name` header). Projects are auto-created on first trace if they don't exist. Project names must be unique within an organization.
 
 ### Role Permissions
 
@@ -141,7 +141,7 @@ User ──(Membership)──> Organization ──> Project ──> Trace / Eval
 **Token flow:**
 1. User authenticates with the external IdP (Supabase or Firebase) and receives an IdP access token.
 2. Management APIs use `Authorization: Bearer <idp_token>`. Users and default organizations are provisioned automatically on first request (JIT).
-3. Data APIs (traces, evals) use `X-API-Key: <project_key>`.
+3. Data APIs (traces, evals) use `X-API-Key` + `X-Project-Name: <project_name>`. Projects are auto-created on first use.
 
 ## Project Structure
 
@@ -194,12 +194,12 @@ make help        # show all commands
 | `POST` | `/organizations/{id}/members` | Bearer | Invite a user |
 | `POST` | `/organizations/{id}/projects` | Bearer | Create a project |
 | `GET`  | `/organizations/{id}/projects` | Bearer | List projects |
-| `POST` | `/organizations/{id}/api-keys` | Bearer | Generate API key (scoped to project) |
-| `POST` | `/traces` | API Key | Ingest a trace (async, 202) |
-| `GET`  | `/traces` | API Key | List traces |
-| `GET`  | `/traces/{id}` | API Key | Get trace with spans |
-| `POST` | `/evaluations` | API Key | Trigger async evaluation |
-| `GET`  | `/evaluations/{id}` | API Key | Get evaluation results |
+| `POST` | `/organizations/{id}/api-keys` | Bearer | Generate API key (org-scoped) |
+| `POST` | `/traces` | API Key + `X-Project-Name` | Ingest a trace (async, 202) |
+| `GET`  | `/traces` | API Key + `X-Project-Name` | List traces |
+| `GET`  | `/traces/{id}` | API Key + `X-Project-Name` | Get trace with spans |
+| `POST` | `/evaluations` | API Key + `X-Project-Name` | Trigger async evaluation |
+| `GET`  | `/evaluations/{id}` | API Key + `X-Project-Name` | Get evaluation results |
 | `GET`  | `/evaluations/metrics` | — | List registered metrics |
 | `GET`  | `/evaluations/providers` | — | List available LLM providers |
 

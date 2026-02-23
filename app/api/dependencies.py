@@ -2,7 +2,12 @@
 
 Management endpoints depend on ``get_api_context`` (Bearer JWT only).
 Data-plane endpoints depend on ``require_project``, which accepts
-either a Bearer JWT with ``X-Project-ID`` or a project-scoped API key.
+either a Bearer JWT with ``X-Project-ID`` or an org-scoped API key
+with ``X-Project-Name``.
+
+API keys are org-scoped.  The caller provides ``X-Project-Name`` at
+runtime; the server resolves the project by name within the org and
+auto-creates it if it doesn't exist.
 """
 
 import asyncio
@@ -21,6 +26,7 @@ from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
 from app.infrastructure.db.repositories.user_repo import UserRepository
 from app.registry.constants import MembershipRole
+from app.registry.constants import validate_resource_name
 from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 
@@ -52,13 +58,15 @@ async def get_data_plane_context(
     bearer: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     x_api_key: str | None = Depends(_api_key_scheme),
     x_project_id: str | None = Header(None, alias="X-Project-ID"),
+    x_project_name: str | None = Header(None, alias="X-Project-Name"),
     session: AsyncSession = Depends(get_db_session),
 ) -> ApiContext:
     """Dependency for data-plane routes — Bearer JWT **or** API key.
 
-    When using a Bearer JWT, the caller must also provide the
-    ``X-Project-ID`` header to scope the request to a specific project.
-    When using an API key, the project is resolved from the key itself.
+    **Bearer JWT**: also provide ``X-Project-ID`` to scope the request.
+
+    **API key**: provide ``X-Project-Name`` to select (or auto-create)
+    the target project by human-readable name.
     """
     request_id: str = getattr(request.state, "request_id", "unknown")
 
@@ -67,7 +75,9 @@ async def get_data_plane_context(
             bearer.credentials, request, session, request_id, project_id_raw=x_project_id,
         )
     elif x_api_key:
-        ctx = await _resolve_api_key(x_api_key, session, request_id)
+        ctx = await _resolve_api_key(
+            x_api_key, session, request_id, project_name=x_project_name,
+        )
     else:
         raise AuthenticationError(
             "Missing credentials. Provide Authorization: Bearer <token> (with X-Project-ID) or X-API-Key header."
@@ -81,7 +91,7 @@ def require_project(ctx: ApiContext = Depends(get_data_plane_context)) -> ApiCon
     """Thin wrapper that guarantees ``ctx.project`` is present."""
     if ctx.project is None:
         raise ValidationError(
-            "Project scope required. Provide X-Project-ID header with your Bearer token, or use a project-scoped API key."
+            "Project scope required. Provide X-Project-ID (Bearer) or X-Project-Name (API key)."
         )
     return ctx
 
@@ -172,8 +182,15 @@ async def _resolve_api_key(
     raw_key: str,
     session: AsyncSession,
     request_id: str,
+    *,
+    project_name: str | None = None,
 ) -> ApiContext:
-    """Validate an API key and resolve the associated project and org."""
+    """Validate an API key and resolve the associated org and project.
+
+    The caller supplies ``project_name`` via the ``X-Project-Name``
+    header.  The project is resolved by name within the org and
+    auto-created if it doesn't exist.
+    """
     key_hash = hash_api_key(raw_key)
     identity_repo = IdentityRepository(session)
     project_repo = ProjectRepository(session)
@@ -191,12 +208,20 @@ async def _resolve_api_key(
     if organization is None:
         raise AuthenticationError("Organization associated with API key not found.")
 
-    project = await project_repo.get_project(api_key.project_id)
+    project = None
+    if project_name and project_name.strip():
+        try:
+            clean_name = validate_resource_name(project_name, "X-Project-Name")
+        except ValueError as exc:
+            raise ValidationError(str(exc))
+        project = await project_repo.get_or_create_project(
+            org_id=api_key.org_id, name=clean_name,
+        )
 
     log = structlog.get_logger().bind(
         request_id=request_id,
         org_id=str(organization.id),
-        project_id=str(api_key.project_id),
+        **({"project_id": str(project.id)} if project else {}),
     )
 
     return ApiContext(

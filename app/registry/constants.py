@@ -4,6 +4,7 @@ Enums in this module follow OpenTelemetry naming conventions where
 applicable so that exported data can be correlated with OTel tooling.
 """
 
+import re
 from enum import StrEnum
 
 
@@ -58,3 +59,54 @@ API_KEY_PREFIX = "otr_"
 
 # Length of the random portion of an API key (bytes, hex-encoded).
 API_KEY_RANDOM_BYTES = 32
+
+# ---------------------------------------------------------------------------
+# Resource name validation
+# ---------------------------------------------------------------------------
+
+_SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9 _.'-]{0,253}[a-zA-Z0-9]$")
+_MAX_NAME_LEN = 255
+_CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def validate_resource_name(value: str, label: str = "Name") -> str:
+    """Sanitize and validate a user-supplied resource name.
+
+    Allowed characters: letters, digits, spaces, hyphens, underscores,
+    dots, and apostrophes.  Must start and end with an alphanumeric
+    character and be 1–255 characters long.
+
+    Returns the stripped name on success; raises ``ValueError`` with a
+    human-readable message on failure.
+    """
+    name = value.strip()
+    if not name:
+        raise ValueError(f"{label} must not be empty.")
+    if len(name) > _MAX_NAME_LEN:
+        raise ValueError(f"{label} must be at most {_MAX_NAME_LEN} characters.")
+    if len(name) == 1:
+        if not name.isalnum():
+            raise ValueError(f"{label} must start and end with a letter or digit.")
+        return name
+    if not _SAFE_NAME_RE.match(name):
+        raise ValueError(
+            f"{label} must start and end with a letter or digit and contain "
+            f"only letters, digits, spaces, hyphens, underscores, dots, or apostrophes."
+        )
+    return name
+
+
+def sanitize_text(value: str, label: str = "Field", *, max_length: int = 2000) -> str:
+    """Sanitize a free-text field (e.g. descriptions, notes).
+
+    Strips leading/trailing whitespace, rejects control characters
+    (except ``\\n`` and ``\\t``), and enforces a maximum length.
+
+    Returns the cleaned string; raises ``ValueError`` on failure.
+    """
+    text = value.strip()
+    if len(text) > max_length:
+        raise ValueError(f"{label} must be at most {max_length} characters.")
+    if _CONTROL_CHAR_RE.search(text):
+        raise ValueError(f"{label} contains invalid control characters.")
+    return text

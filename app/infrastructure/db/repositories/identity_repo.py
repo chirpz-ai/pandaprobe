@@ -126,7 +126,6 @@ class IdentityRepository:
     async def create_api_key(
         self,
         org_id: UUID,
-        project_id: UUID,
         key_hash: str,
         key_prefix: str,
         name: str,
@@ -136,7 +135,6 @@ class IdentityRepository:
         """Persist a new API key record and return the domain entity."""
         row = APIKeyModel(
             org_id=org_id,
-            project_id=project_id,
             key_hash=key_hash,
             key_prefix=key_prefix,
             name=name,
@@ -177,12 +175,6 @@ class IdentityRepository:
         rows = (await self._session.execute(stmt)).scalars().all()
         return [self._to_key(r) for r in rows]
 
-    async def list_project_api_keys(self, project_id: UUID) -> list[APIKey]:
-        """Return every API key for a specific project."""
-        stmt = select(APIKeyModel).where(APIKeyModel.project_id == project_id).order_by(APIKeyModel.created_at.desc())
-        rows = (await self._session.execute(stmt)).scalars().all()
-        return [self._to_key(r) for r in rows]
-
     # -- Mappers --------------------------------------------------------------
 
     @staticmethod
@@ -209,7 +201,6 @@ class IdentityRepository:
         return APIKey(
             id=row.id,
             org_id=row.org_id,
-            project_id=row.project_id,
             key_hash=row.key_hash,
             key_prefix=row.key_prefix,
             name=row.name,

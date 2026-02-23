@@ -69,6 +69,9 @@ async def create_project(
     """Create a new project within the organization.
 
     Auth: `Bearer` · role: `ADMIN` or `OWNER`
+
+    Project names must be unique within the organization. Returns `409`
+    if the name is already taken.
     """
     _require_user(ctx)
     svc = IdentityService(session)
@@ -145,7 +148,7 @@ async def update_project(
 
     Auth: `Bearer` · role: `ADMIN` or `OWNER`
 
-    The `project_id` is immutable (API keys are scoped to it).
+    Project names must be unique within the organization.
     """
     _require_user(ctx)
     svc = IdentityService(session)
@@ -173,7 +176,8 @@ async def delete_project(
 
     Auth: `Bearer` · role: `OWNER`
 
-    Cascade deletes: traces, spans, evaluations, evaluation results, and API keys.
+    Cascade deletes: traces, spans, evaluations, and evaluation results.
+    API keys are org-scoped and are not affected.
     """
     _require_user(ctx)
     svc = IdentityService(session)

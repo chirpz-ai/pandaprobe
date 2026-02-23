@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.identity.entities import APIKey, Membership, Organization, Project
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
-from app.registry.constants import MembershipRole
+from app.registry.constants import MembershipRole, sanitize_text, validate_resource_name
 from app.registry.exceptions import AuthorizationError, ConflictError, NotFoundError, ValidationError
 from app.registry.security import generate_api_key, hash_api_key, key_prefix
 
@@ -29,10 +29,12 @@ class IdentityService:
 
     async def create_organization(self, name: str, owner_id: UUID) -> Organization:
         """Create a new tenant organization and assign the owner membership."""
-        if not name or not name.strip():
-            raise ValidationError("Organization name must not be empty.")
+        try:
+            clean = validate_resource_name(name, "Organization name")
+        except ValueError as exc:
+            raise ValidationError(str(exc))
 
-        org = await self._repo.create_organization(name=name.strip())
+        org = await self._repo.create_organization(name=clean)
         await self._repo.create_membership(user_id=owner_id, org_id=org.id, role=MembershipRole.OWNER)
         return org
 
@@ -45,9 +47,12 @@ class IdentityService:
 
     async def update_organization(self, org_id: UUID, *, name: str | None = None) -> Organization:
         """Update mutable organization fields."""
-        final_name = name.strip() if name is not None else None
-        if final_name is not None and not final_name:
-            raise ValidationError("Organization name must not be empty.")
+        final_name = None
+        if name is not None:
+            try:
+                final_name = validate_resource_name(name, "Organization name")
+            except ValueError as exc:
+                raise ValidationError(str(exc))
         org = await self._repo.update_organization(org_id, name=final_name)
         if org is None:
             raise NotFoundError(f"Organization {org_id} not found.")
@@ -170,8 +175,13 @@ class IdentityService:
 
     async def create_project(self, org_id: UUID, name: str, description: str = "") -> Project:
         """Create a new project within an organization."""
+        try:
+            clean = validate_resource_name(name, "Project name")
+            clean_desc = sanitize_text(description, "Project description")
+        except ValueError as exc:
+            raise ValidationError(str(exc))
         await self.get_organization(org_id)
-        return await self._project_repo.create_project(org_id=org_id, name=name, description=description)
+        return await self._project_repo.create_project(org_id=org_id, name=clean, description=clean_desc)
 
     async def get_project(self, project_id: UUID, *, org_id: UUID | None = None) -> Project:
         """Fetch a project or raise ``NotFoundError``.
@@ -196,18 +206,24 @@ class IdentityService:
     ) -> Project:
         """Update a project's name and/or description."""
         project = await self.get_project(project_id, org_id=org_id)
-        final_name = name.strip() if name is not None else None
-        if final_name is not None and not final_name:
-            raise ValidationError("Project name must not be empty.")
+        final_name = None
+        final_desc = None
+        try:
+            if name is not None:
+                final_name = validate_resource_name(name, "Project name")
+            if description is not None:
+                final_desc = sanitize_text(description, "Project description")
+        except ValueError as exc:
+            raise ValidationError(str(exc))
         updated = await self._project_repo.update_project(
-            project.id, name=final_name, description=description,
+            project.id, name=final_name, description=final_desc,
         )
         if updated is None:
             raise NotFoundError(f"Project {project_id} not found.")
         return updated
 
     async def delete_project(self, org_id: UUID, project_id: UUID) -> None:
-        """Delete a project and all associated data (traces, evaluations, API keys).
+        """Delete a project and all associated data (traces, evaluations).
 
         PostgreSQL ``ON DELETE CASCADE`` handles child records.
         """
@@ -228,12 +244,11 @@ class IdentityService:
     async def create_api_key(
         self,
         org_id: UUID,
-        project_id: UUID,
         name: str,
         created_by: UUID | None = None,
         expiration: str = "never",
     ) -> tuple[APIKey, str]:
-        """Generate a new API key scoped to a project.
+        """Generate a new org-scoped API key.
 
         Args:
             expiration: ``"never"`` (no expiry, default) or ``"90d"`` (90-day TTL).
@@ -242,7 +257,6 @@ class IdentityService:
             A tuple of (APIKey entity, raw_key_string).
         """
         await self.get_organization(org_id)
-        await self.get_project(project_id, org_id=org_id)
 
         if expiration not in self._EXPIRATION_DELTAS:
             raise ValidationError(
@@ -258,7 +272,6 @@ class IdentityService:
 
         api_key = await self._repo.create_api_key(
             org_id=org_id,
-            project_id=project_id,
             key_hash=hashed,
             key_prefix=prefix,
             name=name,
@@ -267,21 +280,45 @@ class IdentityService:
         )
         return api_key, raw_key
 
-    async def list_api_keys(self, org_id: UUID) -> list[APIKey]:
-        """List all API keys for an organization."""
-        await self.get_organization(org_id)
-        return await self._repo.list_api_keys(org_id)
-
-    async def list_project_api_keys(self, project_id: UUID, *, org_id: UUID) -> list[APIKey]:
-        """List all API keys for a project after verifying it belongs to *org_id*."""
-        await self.get_project(project_id, org_id=org_id)
-        return await self._repo.list_project_api_keys(project_id)
-
-    async def revoke_api_key(self, key_id: UUID, *, org_id: UUID) -> None:
-        """Deactivate an API key after verifying it belongs to *org_id*."""
+    async def get_api_key(self, key_id: UUID, *, org_id: UUID) -> APIKey:
+        """Fetch a single API key, verifying it belongs to *org_id*."""
         api_key = await self._repo.get_api_key(key_id)
         if api_key is None:
             raise NotFoundError(f"API key {key_id} not found.")
         if api_key.org_id != org_id:
             raise AuthorizationError("API key does not belong to this organization.")
+        return api_key
+
+    async def list_api_keys(self, org_id: UUID) -> list[APIKey]:
+        """List all API keys for an organization."""
+        await self.get_organization(org_id)
+        return await self._repo.list_api_keys(org_id)
+
+    async def rotate_api_key(
+        self, key_id: UUID, *, org_id: UUID, created_by: UUID | None = None,
+    ) -> tuple[APIKey, str]:
+        """Create a replacement key with a fresh 90-day expiration.
+
+        The old key remains active until its original expiration.
+        Only keys that have an expiration date can be rotated.
+        """
+        old_key = await self.get_api_key(key_id, org_id=org_id)
+        if not old_key.is_active:
+            raise ValidationError("Cannot rotate a revoked API key.")
+        if old_key.expires_at is None:
+            raise ValidationError(
+                "Only keys with an expiration can be rotated. "
+                "Production keys (never expire) should be revoked and re-created instead."
+            )
+
+        return await self.create_api_key(
+            org_id=org_id,
+            name=old_key.name,
+            created_by=created_by,
+            expiration="90d",
+        )
+
+    async def revoke_api_key(self, key_id: UUID, *, org_id: UUID) -> None:
+        """Deactivate an API key after verifying it belongs to *org_id*."""
+        await self.get_api_key(key_id, org_id=org_id)
         await self._repo.revoke_api_key(key_id)
