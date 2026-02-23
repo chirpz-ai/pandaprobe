@@ -32,6 +32,13 @@ class CreateProjectRequest(BaseModel):
     description: str = Field(default="", max_length=2000)
 
 
+class UpdateProjectRequest(BaseModel):
+    """Payload for updating a project. Only provided fields are changed."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+
+
 class ProjectResponse(BaseModel):
     """Public representation of a project."""
 
@@ -61,11 +68,11 @@ async def create_project(
 ) -> ProjectResponse:
     """Create a new project within the organization.
 
-    Auth: `Bearer`
+    Auth: `Bearer` · role: `ADMIN` or `OWNER`
     """
     _require_user(ctx)
     svc = IdentityService(session)
-    await svc.require_membership(ctx.user.id, org_id)
+    await svc.require_admin(ctx.user.id, org_id)
     project = await svc.create_project(org_id=org_id, name=body.name, description=body.description)
     return ProjectResponse(
         id=project.id,
@@ -84,7 +91,7 @@ async def list_projects(
 ) -> list[ProjectResponse]:
     """List all projects for the organization.
 
-    Auth: `Bearer`
+    Auth: `Bearer` · role: any member
     """
     _require_user(ctx)
     svc = IdentityService(session)
@@ -111,7 +118,7 @@ async def get_project(
 ) -> ProjectResponse:
     """Retrieve a single project.
 
-    Auth: `Bearer`
+    Auth: `Bearer` · role: any member
     """
     _require_user(ctx)
     svc = IdentityService(session)
@@ -124,3 +131,51 @@ async def get_project(
         description=project.description,
         created_at=project.created_at.isoformat(),
     )
+
+
+@router.patch("/{project_id}", response_model=ProjectResponse)
+async def update_project(
+    org_id: UUID,
+    project_id: UUID,
+    body: UpdateProjectRequest,
+    ctx: ApiContext = Depends(get_api_context),
+    session: AsyncSession = Depends(get_db_session),
+) -> ProjectResponse:
+    """Update a project's name and/or description.
+
+    Auth: `Bearer` · role: `ADMIN` or `OWNER`
+
+    The `project_id` is immutable (API keys are scoped to it).
+    """
+    _require_user(ctx)
+    svc = IdentityService(session)
+    await svc.require_admin(ctx.user.id, org_id)
+    project = await svc.update_project(
+        org_id, project_id, name=body.name, description=body.description,
+    )
+    return ProjectResponse(
+        id=project.id,
+        org_id=project.org_id,
+        name=project.name,
+        description=project.description,
+        created_at=project.created_at.isoformat(),
+    )
+
+
+@router.delete("/{project_id}", status_code=204)
+async def delete_project(
+    org_id: UUID,
+    project_id: UUID,
+    ctx: ApiContext = Depends(get_api_context),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Permanently delete a project and all associated data.
+
+    Auth: `Bearer` · role: `OWNER`
+
+    Cascade deletes: traces, spans, evaluations, evaluation results, and API keys.
+    """
+    _require_user(ctx)
+    svc = IdentityService(session)
+    await svc.require_owner(ctx.user.id, org_id)
+    await svc.delete_project(org_id, project_id)

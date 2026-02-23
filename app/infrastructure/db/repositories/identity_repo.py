@@ -7,11 +7,12 @@ flows through this class.
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, inspect as sa_inspect, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.core.identity.entities import APIKey, Membership, Organization
-from app.infrastructure.db.models import APIKeyModel, MembershipModel, OrganizationModel
+from app.infrastructure.db.models import APIKeyModel, MembershipModel, OrganizationModel, UserModel
 from app.registry.constants import MembershipRole
 
 
@@ -36,6 +37,23 @@ class IdentityRepository:
         row = await self._session.get(OrganizationModel, org_id)
         return self._to_org(row) if row else None
 
+    async def update_organization(self, org_id: UUID, *, name: str | None = None) -> Organization | None:
+        """Update mutable organization fields."""
+        row = await self._session.get(OrganizationModel, org_id)
+        if row is None:
+            return None
+        if name is not None:
+            row.name = name
+        await self._session.flush()
+        return self._to_org(row)
+
+    async def delete_organization(self, org_id: UUID) -> None:
+        """Hard-delete an organization (CASCADE removes related records)."""
+        row = await self._session.get(OrganizationModel, org_id)
+        if row:
+            await self._session.delete(row)
+            await self._session.flush()
+
     # -- Memberships ----------------------------------------------------------
 
     async def create_membership(
@@ -48,6 +66,7 @@ class IdentityRepository:
         row = MembershipModel(user_id=user_id, org_id=org_id, role=role.value)
         self._session.add(row)
         await self._session.flush()
+        await self._session.refresh(row, ["user"])
         return self._to_membership(row)
 
     async def get_membership(self, user_id: UUID, org_id: UUID) -> Membership | None:
@@ -70,10 +89,37 @@ class IdentityRepository:
         return [self._to_membership(r) for r in rows]
 
     async def list_org_members(self, org_id: UUID) -> list[Membership]:
-        """Return all memberships for an organization."""
-        stmt = select(MembershipModel).where(MembershipModel.org_id == org_id).order_by(MembershipModel.created_at)
-        rows = (await self._session.execute(stmt)).scalars().all()
+        """Return all memberships for an organization with user display info."""
+        stmt = (
+            select(MembershipModel)
+            .options(joinedload(MembershipModel.user))
+            .where(MembershipModel.org_id == org_id)
+            .order_by(MembershipModel.created_at)
+        )
+        rows = (await self._session.execute(stmt)).unique().scalars().all()
         return [self._to_membership(r) for r in rows]
+
+    async def update_membership_role(self, user_id: UUID, org_id: UUID, role: MembershipRole) -> Membership | None:
+        """Change a member's role and return the updated membership."""
+        stmt = (
+            select(MembershipModel)
+            .options(joinedload(MembershipModel.user))
+            .where(MembershipModel.user_id == user_id, MembershipModel.org_id == org_id)
+        )
+        row = (await self._session.execute(stmt)).unique().scalar_one_or_none()
+        if row is None:
+            return None
+        row.role = role.value
+        await self._session.flush()
+        return self._to_membership(row)
+
+    async def delete_membership(self, user_id: UUID, org_id: UUID) -> None:
+        """Remove a user from an organization."""
+        stmt = delete(MembershipModel).where(
+            MembershipModel.user_id == user_id,
+            MembershipModel.org_id == org_id,
+        )
+        await self._session.execute(stmt)
 
     # -- API Keys -------------------------------------------------------------
 
@@ -145,12 +191,17 @@ class IdentityRepository:
 
     @staticmethod
     def _to_membership(row: MembershipModel) -> Membership:
+        user: UserModel | None = None
+        if "user" not in sa_inspect(row).unloaded:
+            user = row.user
         return Membership(
             id=row.id,
             user_id=row.user_id,
             org_id=row.org_id,
             role=MembershipRole(row.role),
             created_at=row.created_at,
+            display_name=user.display_name if user else "",
+            email=user.email if user else "",
         )
 
     @staticmethod

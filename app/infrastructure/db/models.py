@@ -110,6 +110,8 @@ class ProjectModel(Base):
 
     organization: Mapped["OrganizationModel"] = relationship(back_populates="projects")
     api_keys: Mapped[list["APIKeyModel"]] = relationship(back_populates="project", cascade="all, delete-orphan")
+    traces: Mapped[list["TraceModel"]] = relationship(back_populates="project", passive_deletes=True)
+    evaluations: Mapped[list["EvaluationModel"]] = relationship(back_populates="project", passive_deletes=True)
 
     __table_args__ = (Index("ix_projects_org_id", "org_id"),)
 
@@ -146,7 +148,9 @@ class TraceModel(Base):
     __tablename__ = "traces"
 
     trace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False,
+    )
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[str] = mapped_column(
         SAEnum(TraceStatus, name="trace_status", create_constraint=False, native_enum=False, length=20),
@@ -160,6 +164,7 @@ class TraceModel(Base):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
+    project: Mapped["ProjectModel"] = relationship(back_populates="traces")
     spans: Mapped[list["SpanModel"]] = relationship(back_populates="trace", cascade="all, delete-orphan")
 
     __table_args__ = (Index("ix_traces_project_id_created", "project_id", "created_at"),)
@@ -171,7 +176,9 @@ class SpanModel(Base):
     __tablename__ = "spans"
 
     span_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    trace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("traces.trace_id"), nullable=False)
+    trace_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("traces.trace_id", ondelete="CASCADE"), nullable=False,
+    )
     parent_span_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     kind: Mapped[str] = mapped_column(
@@ -208,8 +215,12 @@ class EvaluationModel(Base):
     __tablename__ = "evaluations"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    trace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("traces.trace_id"), nullable=False)
-    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    trace_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("traces.trace_id", ondelete="CASCADE"), nullable=False,
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False,
+    )
     metric_names: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
     status: Mapped[str] = mapped_column(
         SAEnum(EvaluationStatus, name="evaluation_status", create_constraint=False, native_enum=False, length=20),
@@ -219,6 +230,7 @@ class EvaluationModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    project: Mapped["ProjectModel"] = relationship(back_populates="evaluations")
     results: Mapped[list["EvaluationResultModel"]] = relationship(
         back_populates="evaluation", cascade="all, delete-orphan"
     )
@@ -232,7 +244,9 @@ class EvaluationResultModel(Base):
     __tablename__ = "evaluation_results"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    evaluation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("evaluations.id"), nullable=False)
+    evaluation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("evaluations.id", ondelete="CASCADE"), nullable=False,
+    )
     metric_name: Mapped[str] = mapped_column(String(255), nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     threshold: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)

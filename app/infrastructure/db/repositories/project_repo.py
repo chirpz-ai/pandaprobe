@@ -28,6 +28,27 @@ class ProjectRepository:
         row = await self._session.get(ProjectModel, project_id)
         return self._to_entity(row) if row else None
 
+    async def update_project(
+        self, project_id: UUID, *, name: str | None = None, description: str | None = None
+    ) -> Project | None:
+        """Update mutable project fields (name, description)."""
+        row = await self._session.get(ProjectModel, project_id)
+        if row is None:
+            return None
+        if name is not None:
+            row.name = name
+        if description is not None:
+            row.description = description
+        await self._session.flush()
+        return self._to_entity(row)
+
+    async def delete_project(self, project_id: UUID) -> None:
+        """Hard-delete a project (DB CASCADE removes traces, evaluations, API keys)."""
+        row = await self._session.get(ProjectModel, project_id)
+        if row:
+            await self._session.delete(row)
+            await self._session.flush()
+
     async def list_projects(self, org_id: UUID) -> list[Project]:
         """Return all projects for an organization."""
         stmt = select(ProjectModel).where(ProjectModel.org_id == org_id).order_by(ProjectModel.created_at.desc())

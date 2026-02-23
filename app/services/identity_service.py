@@ -43,6 +43,21 @@ class IdentityService:
             raise NotFoundError(f"Organization {org_id} not found.")
         return org
 
+    async def update_organization(self, org_id: UUID, *, name: str | None = None) -> Organization:
+        """Update mutable organization fields."""
+        final_name = name.strip() if name is not None else None
+        if final_name is not None and not final_name:
+            raise ValidationError("Organization name must not be empty.")
+        org = await self._repo.update_organization(org_id, name=final_name)
+        if org is None:
+            raise NotFoundError(f"Organization {org_id} not found.")
+        return org
+
+    async def delete_organization(self, org_id: UUID) -> None:
+        """Hard-delete an organization and all related data (CASCADE)."""
+        await self.get_organization(org_id)
+        await self._repo.delete_organization(org_id)
+
     # -- Membership -----------------------------------------------------------
 
     async def require_membership(self, user_id: UUID, org_id: UUID) -> Membership:
@@ -59,14 +74,89 @@ class IdentityService:
             raise AuthorizationError("Admin or Owner role required.")
         return m
 
+    async def require_owner(self, user_id: UUID, org_id: UUID) -> Membership:
+        """Ensure the user is OWNER in the org."""
+        m = await self.require_membership(user_id, org_id)
+        if m.role != MembershipRole.OWNER:
+            raise AuthorizationError("Owner role required.")
+        return m
+
     async def add_member(
-        self, org_id: UUID, user_id: UUID, role: MembershipRole = MembershipRole.MEMBER
+        self,
+        actor_id: UUID,
+        org_id: UUID,
+        user_id: UUID,
+        role: MembershipRole = MembershipRole.MEMBER,
     ) -> Membership:
-        """Add a user to an organization."""
+        """Add a user to an organization, respecting role hierarchy.
+
+        - OWNER can add with any role (OWNER, ADMIN, MEMBER).
+        - ADMIN can add with MEMBER role only.
+        - MEMBER cannot add anyone.
+        """
+        actor = await self.require_membership(actor_id, org_id)
+
+        if actor.role == MembershipRole.MEMBER:
+            raise AuthorizationError("Members cannot add users to the organization.")
+
+        if actor.role == MembershipRole.ADMIN and role != MembershipRole.MEMBER:
+            raise AuthorizationError("Admins can only add users with MEMBER role.")
+
         existing = await self._repo.get_membership(user_id, org_id)
         if existing:
             raise ConflictError("User is already a member of this organization.")
         return await self._repo.create_membership(user_id=user_id, org_id=org_id, role=role)
+
+    async def update_member_role(
+        self, actor_id: UUID, org_id: UUID, target_user_id: UUID, new_role: MembershipRole
+    ) -> Membership:
+        """Change a member's role, respecting hierarchy.
+
+        - Cannot change your own role.
+        - OWNER can change any non-OWNER to any role (including OWNER).
+        - ADMIN and MEMBER cannot change roles.
+        """
+        if actor_id == target_user_id:
+            raise AuthorizationError("Cannot change your own role.")
+
+        actor = await self.require_membership(actor_id, org_id)
+        if actor.role != MembershipRole.OWNER:
+            raise AuthorizationError("Only owners can change member roles.")
+
+        target = await self._repo.get_membership(target_user_id, org_id)
+        if target is None:
+            raise NotFoundError("Target user is not a member of this organization.")
+
+        if target.role == MembershipRole.OWNER:
+            raise AuthorizationError("Cannot change the role of another owner.")
+
+        updated = await self._repo.update_membership_role(target_user_id, org_id, new_role)
+        if updated is None:
+            raise NotFoundError("Target user is not a member of this organization.")
+        return updated
+
+    async def remove_member(self, actor_id: UUID, org_id: UUID, target_user_id: UUID) -> None:
+        """Remove a member from an organization, respecting role hierarchy.
+
+        - OWNER can remove ADMIN and MEMBER (not other OWNERs).
+        - ADMIN can remove MEMBER only.
+        - MEMBER cannot remove anyone.
+        """
+        actor = await self.require_membership(actor_id, org_id)
+        target = await self._repo.get_membership(target_user_id, org_id)
+        if target is None:
+            raise NotFoundError("Target user is not a member of this organization.")
+
+        if target.role == MembershipRole.OWNER:
+            raise AuthorizationError("Cannot remove an OWNER from the organization.")
+
+        if actor.role == MembershipRole.MEMBER:
+            raise AuthorizationError("Members cannot remove other members.")
+
+        if actor.role == MembershipRole.ADMIN and target.role != MembershipRole.MEMBER:
+            raise AuthorizationError("Admins can only remove members with MEMBER role.")
+
+        await self._repo.delete_membership(target_user_id, org_id)
 
     async def list_user_orgs(self, user_id: UUID) -> list[Membership]:
         """Return all memberships for a user."""
@@ -95,6 +185,34 @@ class IdentityService:
         if org_id is not None and project.org_id != org_id:
             raise AuthorizationError("Project does not belong to this organization.")
         return project
+
+    async def update_project(
+        self,
+        org_id: UUID,
+        project_id: UUID,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Project:
+        """Update a project's name and/or description."""
+        project = await self.get_project(project_id, org_id=org_id)
+        final_name = name.strip() if name is not None else None
+        if final_name is not None and not final_name:
+            raise ValidationError("Project name must not be empty.")
+        updated = await self._project_repo.update_project(
+            project.id, name=final_name, description=description,
+        )
+        if updated is None:
+            raise NotFoundError(f"Project {project_id} not found.")
+        return updated
+
+    async def delete_project(self, org_id: UUID, project_id: UUID) -> None:
+        """Delete a project and all associated data (traces, evaluations, API keys).
+
+        PostgreSQL ``ON DELETE CASCADE`` handles child records.
+        """
+        await self.get_project(project_id, org_id=org_id)
+        await self._project_repo.delete_project(project_id)
 
     async def list_projects(self, org_id: UUID) -> list[Project]:
         """List all projects for an organization."""
