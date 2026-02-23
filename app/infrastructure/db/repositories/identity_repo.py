@@ -66,6 +66,7 @@ class IdentityRepository:
         row = MembershipModel(user_id=user_id, org_id=org_id, role=role.value)
         self._session.add(row)
         await self._session.flush()
+        await self._session.refresh(row, ["user"])
         return self._to_membership(row)
 
     async def get_membership(self, user_id: UUID, org_id: UUID) -> Membership | None:
