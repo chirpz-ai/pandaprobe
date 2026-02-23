@@ -26,6 +26,7 @@ from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
 from app.infrastructure.db.repositories.user_repo import UserRepository
 from app.registry.constants import MembershipRole
+from app.registry.constants import validate_resource_name
 from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 
@@ -208,10 +209,13 @@ async def _resolve_api_key(
         raise AuthenticationError("Organization associated with API key not found.")
 
     project = None
-    stripped_name = project_name.strip() if project_name else ""
-    if stripped_name:
+    if project_name and project_name.strip():
+        try:
+            clean_name = validate_resource_name(project_name, "X-Project-Name")
+        except ValueError as exc:
+            raise ValidationError(str(exc))
         project = await project_repo.get_or_create_project(
-            org_id=api_key.org_id, name=stripped_name,
+            org_id=api_key.org_id, name=clean_name,
         )
 
     log = structlog.get_logger().bind(
