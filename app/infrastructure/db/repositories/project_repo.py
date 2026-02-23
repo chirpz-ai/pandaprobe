@@ -27,9 +27,9 @@ class ProjectRepository:
         row = ProjectModel(org_id=org_id, name=name, description=description)
         self._session.add(row)
         try:
-            await self._session.flush()
+            async with self._session.begin_nested():
+                await self._session.flush()
         except IntegrityError:
-            await self._session.rollback()
             raise ConflictError(f"A project named '{name}' already exists in this organization.")
         return self._to_entity(row)
 
@@ -47,9 +47,8 @@ class ProjectRepository:
     async def get_or_create_project(self, org_id: UUID, name: str) -> Project:
         """Resolve a project by name within an org, auto-creating it if missing.
 
-        Handles the race condition where two concurrent requests attempt
-        to create the same project: the loser of the unique-constraint
-        race re-fetches the winner's row.
+        Uses a SAVEPOINT so that a unique-constraint race only rolls
+        back the failed INSERT, not the entire transaction.
         """
         existing = await self.get_project_by_name(org_id, name)
         if existing:
@@ -57,9 +56,9 @@ class ProjectRepository:
         row = ProjectModel(org_id=org_id, name=name)
         self._session.add(row)
         try:
-            await self._session.flush()
+            async with self._session.begin_nested():
+                await self._session.flush()
         except IntegrityError:
-            await self._session.rollback()
             existing = await self.get_project_by_name(org_id, name)
             if existing:
                 return existing
@@ -82,9 +81,9 @@ class ProjectRepository:
         if description is not None:
             row.description = description
         try:
-            await self._session.flush()
+            async with self._session.begin_nested():
+                await self._session.flush()
         except IntegrityError:
-            await self._session.rollback()
             raise ConflictError(f"A project named '{name}' already exists in this organization.")
         return self._to_entity(row)
 
