@@ -208,9 +208,10 @@ async def _resolve_api_key(
         raise AuthenticationError("Organization associated with API key not found.")
 
     project = None
-    if project_name:
+    stripped_name = project_name.strip() if project_name else ""
+    if stripped_name:
         project = await project_repo.get_or_create_project(
-            org_id=api_key.org_id, name=project_name.strip(),
+            org_id=api_key.org_id, name=stripped_name,
         )
 
     log = structlog.get_logger().bind(
