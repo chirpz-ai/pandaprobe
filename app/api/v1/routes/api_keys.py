@@ -1,8 +1,9 @@
-"""Routes for managing project-scoped API keys.
+"""Routes for managing API keys.
 
 API keys are the primary authentication method for the data-plane
-(trace ingestion and evaluation triggers).  Each key is scoped to
-exactly one project within an organization.
+(trace ingestion and evaluation triggers).  Keys are scoped to an
+**organization**; the SDK specifies the target project at runtime
+via the ``X-Project-Name`` header.
 
 All endpoints require a valid external IdP JWT via the
 ``Authorization: Bearer`` header.
@@ -56,7 +57,6 @@ class APIKeyResponse(BaseModel):
 
     id: UUID
     org_id: UUID
-    project_id: UUID
     key_prefix: str
     name: str
     is_active: bool
@@ -71,20 +71,23 @@ class APIKeyResponse(BaseModel):
 
 
 @router.post(
-    "/organizations/{org_id}/projects/{project_id}/api-keys",
+    "/organizations/{org_id}/api-keys",
     status_code=201,
     response_model=APIKeyResponse,
 )
 async def create_api_key(
     org_id: UUID,
-    project_id: UUID,
     body: CreateAPIKeyRequest,
     ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
 ) -> APIKeyResponse:
-    """Generate a new API key scoped to a project. The raw key is shown **only once**.
+    """Generate a new org-scoped API key. The raw key is shown **only once**.
 
     Auth: `Bearer`
+
+    The key is org-scoped — the SDK specifies the target project at
+    runtime via the `X-Project-Name` header.
+    Projects are auto-created on first use.
 
     Expiration: `never` (default, production) · `90d` (90-day TTL, development)
     """
@@ -93,7 +96,6 @@ async def create_api_key(
     await svc.require_membership(ctx.user.id, org_id)
     api_key, raw_key = await svc.create_api_key(
         org_id=org_id,
-        project_id=project_id,
         name=body.name,
         created_by=ctx.user.id,
         expiration=body.expiration.value,
@@ -101,7 +103,6 @@ async def create_api_key(
     return APIKeyResponse(
         id=api_key.id,
         org_id=api_key.org_id,
-        project_id=api_key.project_id,
         key_prefix=api_key.key_prefix,
         name=api_key.name,
         is_active=api_key.is_active,
@@ -120,7 +121,7 @@ async def list_org_api_keys(
     ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[APIKeyResponse]:
-    """List all API keys across every project in the organization.
+    """List all API keys in the organization.
 
     Auth: `Bearer` · role: any member
     """
@@ -132,40 +133,6 @@ async def list_org_api_keys(
         APIKeyResponse(
             id=k.id,
             org_id=k.org_id,
-            project_id=k.project_id,
-            key_prefix=k.key_prefix,
-            name=k.name,
-            is_active=k.is_active,
-            created_at=k.created_at.isoformat(),
-            expires_at=k.expires_at.isoformat() if k.expires_at else None,
-        )
-        for k in keys
-    ]
-
-
-@router.get(
-    "/organizations/{org_id}/projects/{project_id}/api-keys",
-    response_model=list[APIKeyResponse],
-)
-async def list_api_keys(
-    org_id: UUID,
-    project_id: UUID,
-    ctx: ApiContext = Depends(get_api_context),
-    session: AsyncSession = Depends(get_db_session),
-) -> list[APIKeyResponse]:
-    """List all API keys for a specific project.
-
-    Auth: `Bearer`
-    """
-    _require_user(ctx)
-    svc = IdentityService(session)
-    await svc.require_membership(ctx.user.id, org_id)
-    keys = await svc.list_project_api_keys(project_id, org_id=org_id)
-    return [
-        APIKeyResponse(
-            id=k.id,
-            org_id=k.org_id,
-            project_id=k.project_id,
             key_prefix=k.key_prefix,
             name=k.name,
             is_active=k.is_active,

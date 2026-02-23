@@ -5,7 +5,7 @@ the schema, resolves the project, and enqueues the trace for
 background persistence.
 
 Authentication: Bearer JWT (with ``X-Project-ID`` header) **or**
-a project-scoped ``X-API-Key``.
+``X-API-Key`` with ``X-Project-Name``.
 """
 
 from datetime import datetime
@@ -127,7 +127,7 @@ async def ingest_trace(
 ) -> TraceAccepted:
     """Accept a trace payload for asynchronous persistence.
 
-    Auth: `Bearer` + `X-Project-ID` | `X-API-Key`
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
 
     Rate limit: `100/min`
     """
@@ -173,7 +173,7 @@ async def get_trace(
 ) -> TraceResponse:
     """Retrieve a single trace with all its spans.
 
-    Auth: `Bearer` + `X-Project-ID` | `X-API-Key`
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
     svc = TraceService(session)
     trace = await svc.get_trace(trace_id, ctx.project.id)
@@ -189,7 +189,7 @@ async def list_traces(
 ) -> list[TraceListItem]:
     """List traces for the current project.
 
-    Auth: `Bearer` + `X-Project-ID` | `X-API-Key`
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
     svc = TraceService(session)
     traces = await svc.list_traces(ctx.project.id, limit=limit, offset=offset)
