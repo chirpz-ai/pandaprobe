@@ -1,4 +1,4 @@
-"""Universal LLM engine for Opentracer.
+"""Universal LLM engine for PandaProbe.
 
 Provides a single entry point (``LLMEngine``) that routes requests to
 any supported provider via LiteLLM.  The engine validates credentials

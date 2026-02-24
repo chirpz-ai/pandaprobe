@@ -18,4 +18,4 @@ async def test_root_returns_200(client: AsyncClient) -> None:
     resp = await client.get("/")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["name"] == "Opentracer"
+    assert body["name"] == "PandaProbe"

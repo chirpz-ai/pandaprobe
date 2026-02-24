@@ -55,7 +55,7 @@ class MembershipRole(StrEnum):
 
 
 # Prefix prepended to every generated API key.
-API_KEY_PREFIX = "otr_"
+API_KEY_PREFIX = "sk_pp_"
 
 # Length of the random portion of an API key (bytes, hex-encoded).
 API_KEY_RANDOM_BYTES = 32

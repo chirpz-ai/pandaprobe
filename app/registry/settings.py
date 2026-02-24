@@ -25,7 +25,7 @@ class Environment(str, Enum):
 
 
 class Settings(BaseSettings):
-    """Central configuration for the Opentracer service.
+    """Central configuration for the PandaProbe service.
 
     Values are read from environment variables. A `.env.*` file matching
     the current ``APP_ENV`` is loaded automatically when present.
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     # -- Application ----------------------------------------------------------
     APP_ENV: Environment = Environment.DEVELOPMENT
-    PROJECT_NAME: str = "Opentracer"
+    PROJECT_NAME: str = "PandaProbe"
     VERSION: str = "0.1.0"
     DESCRIPTION: str = "Open-source agent engineering service"
     DEBUG: bool = False
@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     # -- PostgreSQL -----------------------------------------------------------
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "opentracer_db"
+    POSTGRES_DB: str = "pandaprobe_db"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_POOL_SIZE: int = 20

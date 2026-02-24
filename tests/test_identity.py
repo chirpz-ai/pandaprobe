@@ -5,12 +5,12 @@ from app.registry.security import generate_api_key, hash_api_key, key_prefix
 
 def test_generate_api_key_format() -> None:
     key = generate_api_key()
-    assert key.startswith("otr_")
-    assert len(key) == 4 + 64  # prefix + 32 bytes hex
+    assert key.startswith("sk_pp_")
+    assert len(key) == 6 + 64  # prefix + 32 bytes hex
 
 
 def test_hash_api_key_deterministic() -> None:
-    key = "otr_abc123"
+    key = "sk_pp_abc123"
     h1 = hash_api_key(key)
     h2 = hash_api_key(key)
     assert h1 == h2
@@ -18,6 +18,6 @@ def test_hash_api_key_deterministic() -> None:
 
 
 def test_key_prefix_extraction() -> None:
-    key = "otr_abcdef1234567890"
+    key = "sk_pp_abcdef1234567890"
     prefix = key_prefix(key)
-    assert prefix == "otr_abcd"
+    assert prefix == "sk_pp_abcd"

@@ -1,5 +1,5 @@
 [project]
-name = "opentracer"
+name = "pandaprobe"
 version = "0.1.0"
 description = "Open-source agent tracing and evaluation service"
 readme = "README.md"

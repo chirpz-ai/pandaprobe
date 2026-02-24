@@ -3,11 +3,11 @@ message: If you use this software, please cite it as below.
 authors:
   - family-names: Tayebati
     given-names: Sina
-title: opentracer
+title: pandaprobe
 version: 0.1.0
 date-released: "2026-02-16"
-url: https://opentracer.ai
-repository-code: https://github.com/chirpz-ai/opentracer
+url: https://pandaprobe.com
+repository-code: https://github.com/chirpz-ai/pandaprobe
 license: Apache-2.0
 type: software
 description: The Open-Source Agent Tracing and Evaluation Service
