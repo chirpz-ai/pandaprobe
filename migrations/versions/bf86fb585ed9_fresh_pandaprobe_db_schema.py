@@ -1,8 +1,8 @@
-"""intitial schema
+"""fresh pandaprobe db schema
 
-Revision ID: 1a6a4ba593f5
+Revision ID: bf86fb585ed9
 Revises: 
-Create Date: 2026-02-20 17:50:19.451606
+Create Date: 2026-02-23 23:13:46.722492
 """
 from typing import Sequence, Union
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '1a6a4ba593f5'
+revision: str = 'bf86fb585ed9'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -22,10 +22,8 @@ def upgrade() -> None:
     op.create_table('organizations',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('slug', sa.String(length=128), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('slug')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('users',
     sa.Column('id', sa.UUID(), nullable=False),
@@ -38,6 +36,22 @@ def upgrade() -> None:
     sa.UniqueConstraint('email')
     )
     op.create_index(op.f('ix_users_external_id'), 'users', ['external_id'], unique=True)
+    op.create_table('api_keys',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('org_id', sa.UUID(), nullable=False),
+    sa.Column('key_hash', sa.String(length=128), nullable=False),
+    sa.Column('key_prefix', sa.String(length=12), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_used_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.UUID(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['org_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_api_keys_key_hash'), 'api_keys', ['key_hash'], unique=True)
     op.create_table('memberships',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -56,27 +70,10 @@ def upgrade() -> None:
     sa.Column('description', sa.Text(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['org_id'], ['organizations.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('org_id', 'name', name='uq_project_org_name')
     )
     op.create_index('ix_projects_org_id', 'projects', ['org_id'], unique=False)
-    op.create_table('api_keys',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('org_id', sa.UUID(), nullable=False),
-    sa.Column('project_id', sa.UUID(), nullable=False),
-    sa.Column('key_hash', sa.String(length=128), nullable=False),
-    sa.Column('key_prefix', sa.String(length=12), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('last_used_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.UUID(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['org_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_api_keys_key_hash'), 'api_keys', ['key_hash'], unique=True)
     op.create_table('traces',
     sa.Column('trace_id', sa.UUID(), nullable=False),
     sa.Column('project_id', sa.UUID(), nullable=False),
@@ -87,11 +84,16 @@ def upgrade() -> None:
     sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('started_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('ended_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('session_id', sa.String(length=255), nullable=True),
+    sa.Column('user_id', sa.String(length=255), nullable=True),
+    sa.Column('tags', postgresql.ARRAY(sa.String()), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('trace_id')
     )
     op.create_index('ix_traces_project_id_created', 'traces', ['project_id', 'created_at'], unique=False)
+    op.create_index('ix_traces_session_id', 'traces', ['project_id', 'session_id'], unique=False)
+    op.create_index('ix_traces_tags', 'traces', ['tags'], unique=False, postgresql_using='gin')
     op.create_table('evaluations',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('trace_id', sa.UUID(), nullable=False),
@@ -100,8 +102,8 @@ def upgrade() -> None:
     sa.Column('status', sa.Enum('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', name='evaluation_status', native_enum=False, length=20), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
-    sa.ForeignKeyConstraint(['trace_id'], ['traces.trace_id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['trace_id'], ['traces.trace_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_evaluations_project_trace', 'evaluations', ['project_id', 'trace_id'], unique=False)
@@ -119,7 +121,11 @@ def upgrade() -> None:
     sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('started_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('ended_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['trace_id'], ['traces.trace_id'], ),
+    sa.Column('error', sa.Text(), nullable=True),
+    sa.Column('completion_start_time', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('model_parameters', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('cost', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.ForeignKeyConstraint(['trace_id'], ['traces.trace_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('span_id')
     )
     op.create_index('ix_spans_trace_id', 'spans', ['trace_id'], unique=False)
@@ -133,7 +139,7 @@ def upgrade() -> None:
     sa.Column('reason', sa.Text(), nullable=True),
     sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('evaluated_at', sa.DateTime(timezone=True), nullable=False),
-    sa.ForeignKeyConstraint(['evaluation_id'], ['evaluations.id'], ),
+    sa.ForeignKeyConstraint(['evaluation_id'], ['evaluations.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
@@ -146,13 +152,15 @@ def downgrade() -> None:
     op.drop_table('spans')
     op.drop_index('ix_evaluations_project_trace', table_name='evaluations')
     op.drop_table('evaluations')
+    op.drop_index('ix_traces_tags', table_name='traces', postgresql_using='gin')
+    op.drop_index('ix_traces_session_id', table_name='traces')
     op.drop_index('ix_traces_project_id_created', table_name='traces')
     op.drop_table('traces')
-    op.drop_index(op.f('ix_api_keys_key_hash'), table_name='api_keys')
-    op.drop_table('api_keys')
     op.drop_index('ix_projects_org_id', table_name='projects')
     op.drop_table('projects')
     op.drop_table('memberships')
+    op.drop_index(op.f('ix_api_keys_key_hash'), table_name='api_keys')
+    op.drop_table('api_keys')
     op.drop_index(op.f('ix_users_external_id'), table_name='users')
     op.drop_table('users')
     op.drop_table('organizations')
