@@ -5,8 +5,10 @@ via Celery so the API can return 202 immediately.  Read operations
 go directly to the database through the repository.
 """
 
+from typing import Any
 from uuid import UUID
 
+from sqlalchemy import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.traces.entities import Trace
@@ -52,6 +54,36 @@ class TraceService:
         project_id: UUID,
         limit: int = 50,
         offset: int = 0,
+        *,
+        session_id: str | None = None,
     ) -> list[Trace]:
         """Return paginated traces for a project."""
-        return await self._repo.list_traces(project_id, limit=limit, offset=offset)
+        return await self._repo.list_traces(
+            project_id, limit=limit, offset=offset, session_id=session_id,
+        )
+
+    # -- Sessions -------------------------------------------------------------
+
+    async def list_sessions(
+        self,
+        project_id: UUID,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Row[Any]]:
+        """Return aggregated session summaries for a project."""
+        return await self._repo.list_sessions(project_id, limit=limit, offset=offset)
+
+    async def get_session_traces(
+        self,
+        project_id: UUID,
+        session_id: str,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[Trace]:
+        """Return all traces for a session, or raise ``NotFoundError``."""
+        traces = await self._repo.get_session_traces(
+            project_id, session_id, limit=limit, offset=offset,
+        )
+        if not traces:
+            raise NotFoundError(f"No traces found for session '{session_id}'.")
+        return traces

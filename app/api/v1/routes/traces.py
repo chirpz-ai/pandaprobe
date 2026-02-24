@@ -1,6 +1,6 @@
 """Routes for trace ingestion and retrieval.
 
-``POST /traces`` accepts the universal Opentracer format, validates
+``POST /traces`` accepts the universal PandaProbe format, validates
 the schema, resolves the project, and enqueues the trace for
 background persistence.
 
@@ -47,6 +47,9 @@ class SpanCreate(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime
     ended_at: datetime | None = None
+    error: str | None = None
+    completion_start_time: datetime | None = None
+    model_parameters: dict[str, Any] | None = None
 
 
 class TraceCreate(BaseModel):
@@ -60,6 +63,9 @@ class TraceCreate(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime
     ended_at: datetime | None = None
+    session_id: str | None = None
+    user_id: str | None = None
+    tags: list[str] = Field(default_factory=list)
     spans: list[SpanCreate] = Field(default_factory=list)
 
 
@@ -86,6 +92,10 @@ class SpanResponse(BaseModel):
     metadata: dict[str, Any]
     started_at: str
     ended_at: str | None
+    error: str | None
+    completion_start_time: str | None
+    model_parameters: dict[str, Any] | None
+    cost: dict[str, float] | None
 
 
 class TraceResponse(BaseModel):
@@ -100,6 +110,9 @@ class TraceResponse(BaseModel):
     metadata: dict[str, Any]
     started_at: str
     ended_at: str | None
+    session_id: str | None
+    user_id: str | None
+    tags: list[str]
     spans: list[SpanResponse] = Field(default_factory=list)
 
 
@@ -111,6 +124,9 @@ class TraceListItem(BaseModel):
     status: TraceStatus
     started_at: str
     ended_at: str | None
+    session_id: str | None
+    user_id: str | None
+    tags: list[str]
 
 
 # ---------------------------------------------------------------------------
@@ -141,6 +157,9 @@ async def ingest_trace(
         metadata=body.metadata,
         started_at=body.started_at,
         ended_at=body.ended_at,
+        session_id=body.session_id,
+        user_id=body.user_id,
+        tags=body.tags,
         spans=[
             Span(
                 span_id=s.span_id,
@@ -156,6 +175,9 @@ async def ingest_trace(
                 metadata=s.metadata,
                 started_at=s.started_at,
                 ended_at=s.ended_at,
+                error=s.error,
+                completion_start_time=s.completion_start_time,
+                model_parameters=s.model_parameters,
             )
             for s in body.spans
         ],
@@ -186,28 +208,35 @@ async def list_traces(
     session: AsyncSession = Depends(get_db_session),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    session_id: str | None = Query(default=None),
 ) -> list[TraceListItem]:
     """List traces for the current project.
 
     Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
     svc = TraceService(session)
-    traces = await svc.list_traces(ctx.project.id, limit=limit, offset=offset)
-    return [
-        TraceListItem(
-            trace_id=t.trace_id,
-            name=t.name,
-            status=t.status,
-            started_at=t.started_at.isoformat(),
-            ended_at=t.ended_at.isoformat() if t.ended_at else None,
-        )
-        for t in traces
-    ]
+    traces = await svc.list_traces(
+        ctx.project.id, limit=limit, offset=offset, session_id=session_id,
+    )
+    return [_trace_to_list_item(t) for t in traces]
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _trace_to_list_item(t: Trace) -> TraceListItem:
+    return TraceListItem(
+        trace_id=t.trace_id,
+        name=t.name,
+        status=t.status,
+        started_at=t.started_at.isoformat(),
+        ended_at=t.ended_at.isoformat() if t.ended_at else None,
+        session_id=t.session_id,
+        user_id=t.user_id,
+        tags=t.tags,
+    )
 
 
 def _trace_to_response(trace: Trace) -> TraceResponse:
@@ -221,6 +250,9 @@ def _trace_to_response(trace: Trace) -> TraceResponse:
         metadata=trace.metadata,
         started_at=trace.started_at.isoformat(),
         ended_at=trace.ended_at.isoformat() if trace.ended_at else None,
+        session_id=trace.session_id,
+        user_id=trace.user_id,
+        tags=trace.tags,
         spans=[
             SpanResponse(
                 span_id=s.span_id,
@@ -236,6 +268,12 @@ def _trace_to_response(trace: Trace) -> TraceResponse:
                 metadata=s.metadata,
                 started_at=s.started_at.isoformat(),
                 ended_at=s.ended_at.isoformat() if s.ended_at else None,
+                error=s.error,
+                completion_start_time=(
+                    s.completion_start_time.isoformat() if s.completion_start_time else None
+                ),
+                model_parameters=s.model_parameters,
+                cost=s.cost,
             )
             for s in trace.spans
         ],

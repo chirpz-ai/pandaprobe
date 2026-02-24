@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for Opentracer.
+"""SQLAlchemy ORM models for PandaProbe.
 
 All table definitions live here so that Alembic can discover them via
 ``Base.metadata`` for auto-generated migrations.
@@ -162,12 +162,19 @@ class TraceModel(Base):
     metadata_: Mapped[dict] = mapped_column("metadata", JSONB, default=dict, nullable=False)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=list, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     project: Mapped["ProjectModel"] = relationship(back_populates="traces")
     spans: Mapped[list["SpanModel"]] = relationship(back_populates="trace", cascade="all, delete-orphan")
 
-    __table_args__ = (Index("ix_traces_project_id_created", "project_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_traces_project_id_created", "project_id", "created_at"),
+        Index("ix_traces_session_id", "project_id", "session_id"),
+        Index("ix_traces_tags", "tags", postgresql_using="gin"),
+    )
 
 
 class SpanModel(Base):
@@ -198,6 +205,10 @@ class SpanModel(Base):
     metadata_: Mapped[dict] = mapped_column("metadata", JSONB, default=dict, nullable=False)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completion_start_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    model_parameters: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    cost: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     trace: Mapped["TraceModel"] = relationship(back_populates="spans")
 

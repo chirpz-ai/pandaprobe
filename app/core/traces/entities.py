@@ -37,6 +37,10 @@ class Span(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime
     ended_at: datetime | None = None
+    error: str | None = None
+    completion_start_time: datetime | None = None
+    model_parameters: dict[str, Any] | None = None
+    cost: dict[str, float] | None = None
 
 
 class Trace(BaseModel):
@@ -55,4 +59,7 @@ class Trace(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime
     ended_at: datetime | None = None
+    session_id: str | None = None
+    user_id: str | None = None
+    tags: list[str] = Field(default_factory=list)
     spans: list[Span] = Field(default_factory=list)
