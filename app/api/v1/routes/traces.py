@@ -19,9 +19,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.context import ApiContext
 from app.api.dependencies import require_project
 from app.api.rate_limit import limiter
+from app.api.v1.schemas import PaginatedResponse
 from app.core.traces.entities import Span, Trace
 from app.infrastructure.db.engine import get_db_session
-from app.registry.constants import SpanKind, SpanStatusCode, TraceStatus
+from app.registry.constants import (
+    AnalyticsGranularity,
+    AnalyticsMetric,
+    SortOrder,
+    SpanKind,
+    SpanStatusCode,
+    TraceSortBy,
+    TraceStatus,
+)
 from app.services.trace_service import TraceService
 
 router = APIRouter(prefix="/traces", tags=["traces"])
@@ -52,6 +61,24 @@ class SpanCreate(BaseModel):
     model_parameters: dict[str, Any] | None = None
 
 
+class SpanUpdate(BaseModel):
+    """Partial-update schema for a span (all fields optional)."""
+
+    name: str | None = None
+    kind: SpanKind | None = None
+    status: SpanStatusCode | None = None
+    input: Any | None = Field(default=None)
+    output: Any | None = Field(default=None)
+    model: str | None = None
+    token_usage: dict[str, int] | None = None
+    metadata: dict[str, Any] | None = None
+    ended_at: datetime | None = None
+    error: str | None = None
+    completion_start_time: datetime | None = None
+    model_parameters: dict[str, Any] | None = None
+    cost: dict[str, float] | None = None
+
+
 class TraceCreate(BaseModel):
     """Schema for the ``POST /traces`` request body."""
 
@@ -67,6 +94,20 @@ class TraceCreate(BaseModel):
     user_id: str | None = None
     tags: list[str] = Field(default_factory=list)
     spans: list[SpanCreate] = Field(default_factory=list)
+
+
+class TraceUpdate(BaseModel):
+    """Partial-update schema for a trace (all fields optional)."""
+
+    name: str | None = None
+    status: TraceStatus | None = None
+    input: Any | None = Field(default=None)
+    output: Any | None = Field(default=None)
+    metadata: dict[str, Any] | None = None
+    ended_at: datetime | None = None
+    session_id: str | None = None
+    user_id: str | None = None
+    tags: list[str] | None = None
 
 
 class TraceAccepted(BaseModel):
@@ -127,6 +168,67 @@ class TraceListItem(BaseModel):
     session_id: str | None
     user_id: str | None
     tags: list[str]
+    latency_ms: float | None = None
+    span_count: int = 0
+    total_tokens: int = 0
+    total_cost: float = 0.0
+
+
+class SpansAccepted(BaseModel):
+    """Response body for successfully added spans."""
+
+    span_ids: list[UUID]
+
+
+class BatchDeleteRequest(BaseModel):
+    trace_ids: list[UUID] = Field(min_length=1, max_length=500)
+
+
+class BatchDeleteResponse(BaseModel):
+    deleted: int
+
+
+class BatchTagsRequest(BaseModel):
+    trace_ids: list[UUID] = Field(min_length=1, max_length=500)
+    add_tags: list[str] = Field(default_factory=list)
+    remove_tags: list[str] = Field(default_factory=list)
+
+
+class BatchTagsResponse(BaseModel):
+    updated: int
+
+
+class AnalyticsBucket(BaseModel):
+    bucket: str
+    trace_count: int = 0
+    error_count: int = 0
+    avg_latency_ms: float | None = None
+    p50_latency_ms: float | None = None
+    p90_latency_ms: float | None = None
+    p99_latency_ms: float | None = None
+
+
+class TokenCostBucket(BaseModel):
+    bucket: str
+    total_tokens: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_cost: float = 0.0
+
+
+class TopModel(BaseModel):
+    model: str
+    call_count: int
+    total_tokens: int = 0
+    total_cost: float = 0.0
+
+
+class UserSummary(BaseModel):
+    user_id: str
+    trace_count: int
+    first_seen: str
+    last_seen: str
+    error_count: int
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +243,7 @@ async def ingest_trace(
     body: TraceCreate,
     ctx: ApiContext = Depends(require_project),
 ) -> TraceAccepted:
-    """Accept a trace payload for asynchronous persistence.
+    """Accept a trace payload for asynchronous persistence (upsert).
 
     Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
 
@@ -187,6 +289,256 @@ async def ingest_trace(
     return TraceAccepted(trace_id=trace.trace_id, task_id=task_id)
 
 
+@router.get("", response_model=PaginatedResponse[TraceListItem])
+async def list_traces(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    session_id: str | None = Query(default=None),
+    status: TraceStatus | None = Query(default=None),
+    user_id: str | None = Query(default=None),
+    tags: list[str] | None = Query(default=None),
+    name: str | None = Query(default=None),
+    started_after: datetime | None = Query(default=None),
+    started_before: datetime | None = Query(default=None),
+    sort_by: TraceSortBy = Query(default=TraceSortBy.STARTED_AT),
+    sort_order: SortOrder = Query(default=SortOrder.DESC),
+) -> PaginatedResponse[TraceListItem]:
+    """List traces for the current project with filtering, sorting, and stats.
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
+    """
+    svc = TraceService(session)
+    rows, total = await svc.list_traces(
+        ctx.project.id,
+        limit=limit,
+        offset=offset,
+        session_id=session_id,
+        status=status,
+        user_id=user_id,
+        tags=tags,
+        name=name,
+        started_after=started_after,
+        started_before=started_before,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+    items = [_row_to_list_item(r) for r in rows]
+    return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
+
+
+@router.get("/analytics", response_model=list[AnalyticsBucket] | list[TokenCostBucket] | list[TopModel])
+async def get_analytics(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    metric: AnalyticsMetric = Query(default=AnalyticsMetric.VOLUME),
+    granularity: AnalyticsGranularity = Query(default=AnalyticsGranularity.DAY),
+    started_after: datetime = Query(...),
+    started_before: datetime = Query(...),
+) -> list[AnalyticsBucket] | list[TokenCostBucket] | list[TopModel]:
+    """Time-series analytics for traces.
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
+    """
+    svc = TraceService(session)
+
+    if metric in (AnalyticsMetric.VOLUME, AnalyticsMetric.ERRORS, AnalyticsMetric.LATENCY):
+        rows = await svc.get_trace_analytics(
+            ctx.project.id, granularity, started_after, started_before,
+        )
+        return [
+            AnalyticsBucket(
+                bucket=r.bucket.isoformat() if r.bucket else "",
+                trace_count=r.trace_count or 0,
+                error_count=r.error_count or 0,
+                avg_latency_ms=float(r.avg_latency_ms) if r.avg_latency_ms else None,
+                p50_latency_ms=float(r.p50_latency_ms) if r.p50_latency_ms else None,
+                p90_latency_ms=float(r.p90_latency_ms) if r.p90_latency_ms else None,
+                p99_latency_ms=float(r.p99_latency_ms) if r.p99_latency_ms else None,
+            )
+            for r in rows
+        ]
+
+    if metric in (AnalyticsMetric.COST, AnalyticsMetric.TOKENS):
+        rows = await svc.get_token_cost_analytics(
+            ctx.project.id, granularity, started_after, started_before,
+        )
+        return [
+            TokenCostBucket(
+                bucket=r.bucket.isoformat() if r.bucket else "",
+                total_tokens=int(r.total_tokens or 0),
+                prompt_tokens=int(r.prompt_tokens or 0),
+                completion_tokens=int(r.completion_tokens or 0),
+                total_cost=float(r.total_cost or 0),
+            )
+            for r in rows
+        ]
+
+    # metric == MODELS
+    rows = await svc.get_top_models(
+        ctx.project.id, started_after, started_before,
+    )
+    return [
+        TopModel(
+            model=r.model,
+            call_count=r.call_count or 0,
+            total_tokens=int(r.total_tokens or 0),
+            total_cost=float(r.total_cost or 0),
+        )
+        for r in rows
+    ]
+
+
+@router.get("/users", response_model=PaginatedResponse[UserSummary])
+async def list_trace_users(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> PaginatedResponse[UserSummary]:
+    """List unique user_ids with trace statistics.
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
+    """
+    svc = TraceService(session)
+    rows, total = await svc.list_trace_users(ctx.project.id, limit=limit, offset=offset)
+    items = [
+        UserSummary(
+            user_id=r.user_id,
+            trace_count=r.trace_count,
+            first_seen=r.first_seen.isoformat(),
+            last_seen=r.last_seen.isoformat(),
+            error_count=r.error_count or 0,
+        )
+        for r in rows
+    ]
+    return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
+
+
+@router.post("/batch/delete", response_model=BatchDeleteResponse)
+async def batch_delete(
+    body: BatchDeleteRequest,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> BatchDeleteResponse:
+    """Delete multiple traces at once.
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
+    """
+    svc = TraceService(session)
+    count = await svc.batch_delete_traces(ctx.project.id, body.trace_ids)
+    return BatchDeleteResponse(deleted=count)
+
+
+@router.post("/batch/tags", response_model=BatchTagsResponse)
+async def batch_tags(
+    body: BatchTagsRequest,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> BatchTagsResponse:
+    """Add or remove tags on multiple traces.
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
+    """
+    svc = TraceService(session)
+    count = await svc.batch_update_tags(
+        ctx.project.id, body.trace_ids,
+        add_tags=body.add_tags or None,
+        remove_tags=body.remove_tags or None,
+    )
+    return BatchTagsResponse(updated=count)
+
+
+# -- Parameterised /{trace_id} routes -----------------------------------------
+
+
+@router.patch("/{trace_id}", response_model=TraceResponse)
+async def update_trace(
+    trace_id: UUID,
+    body: TraceUpdate,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> TraceResponse:
+    """Partially update a trace.
+
+    Only provided (non-null) fields are updated.  ``metadata`` is
+    shallow-merged with existing values.
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
+    """
+    from app.infrastructure.db.repositories.trace_repo import _UNSET
+
+    fields: dict[str, Any] = {}
+    for key, value in body.model_dump(exclude_unset=True).items():
+        fields[key] = value if value is not None else _UNSET
+
+    svc = TraceService(session)
+    trace = await svc.update_trace(trace_id, ctx.project.id, **fields)
+    return _trace_to_response(trace)
+
+
+@router.post("/{trace_id}/spans", status_code=201, response_model=SpansAccepted)
+async def add_spans(
+    trace_id: UUID,
+    body: list[SpanCreate],
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> SpansAccepted:
+    """Add one or more spans to an existing trace (upsert).
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
+    """
+    spans = [
+        Span(
+            span_id=s.span_id,
+            trace_id=trace_id,
+            parent_span_id=s.parent_span_id,
+            name=s.name,
+            kind=s.kind,
+            status=s.status,
+            input=s.input,
+            output=s.output,
+            model=s.model,
+            token_usage=s.token_usage,
+            metadata=s.metadata,
+            started_at=s.started_at,
+            ended_at=s.ended_at,
+            error=s.error,
+            completion_start_time=s.completion_start_time,
+            model_parameters=s.model_parameters,
+        )
+        for s in body
+    ]
+
+    svc = TraceService(session)
+    await svc.add_spans(trace_id, ctx.project.id, spans)
+    return SpansAccepted(span_ids=[s.span_id for s in spans])
+
+
+@router.patch("/{trace_id}/spans/{span_id}", response_model=SpanResponse)
+async def update_span(
+    trace_id: UUID,
+    span_id: UUID,
+    body: SpanUpdate,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> SpanResponse:
+    """Partially update a span on a trace.
+
+    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
+    """
+    from app.infrastructure.db.repositories.trace_repo import _UNSET
+
+    fields: dict[str, Any] = {}
+    for key, value in body.model_dump(exclude_unset=True).items():
+        fields[key] = value if value is not None else _UNSET
+
+    svc = TraceService(session)
+    span = await svc.update_span(span_id, trace_id, ctx.project.id, **fields)
+    return _span_to_response(span)
+
+
 @router.get("/{trace_id}", response_model=TraceResponse)
 async def get_trace(
     trace_id: UUID,
@@ -202,23 +554,18 @@ async def get_trace(
     return _trace_to_response(trace)
 
 
-@router.get("", response_model=list[TraceListItem])
-async def list_traces(
+@router.delete("/{trace_id}", status_code=204)
+async def delete_trace(
+    trace_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    session_id: str | None = Query(default=None),
-) -> list[TraceListItem]:
-    """List traces for the current project.
+) -> None:
+    """Delete a trace and all its spans.
 
     Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
     svc = TraceService(session)
-    traces = await svc.list_traces(
-        ctx.project.id, limit=limit, offset=offset, session_id=session_id,
-    )
-    return [_trace_to_list_item(t) for t in traces]
+    await svc.delete_trace(trace_id, ctx.project.id)
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +573,52 @@ async def list_traces(
 # ---------------------------------------------------------------------------
 
 
+def _span_to_response(s: Any) -> SpanResponse:
+    return SpanResponse(
+        span_id=s.span_id,
+        trace_id=s.trace_id,
+        parent_span_id=s.parent_span_id,
+        name=s.name,
+        kind=s.kind,
+        status=s.status,
+        input=s.input,
+        output=s.output,
+        model=s.model,
+        token_usage=s.token_usage,
+        metadata=s.metadata,
+        started_at=s.started_at.isoformat(),
+        ended_at=s.ended_at.isoformat() if s.ended_at else None,
+        error=s.error,
+        completion_start_time=(
+            s.completion_start_time.isoformat() if s.completion_start_time else None
+        ),
+        model_parameters=s.model_parameters,
+        cost=s.cost,
+    )
+
+
+def _row_to_list_item(r: Any) -> TraceListItem:
+    """Map a joined Row (trace + span_stats) to a TraceListItem."""
+    return TraceListItem(
+        trace_id=r.trace_id,
+        name=r.name,
+        status=TraceStatus(r.status),
+        started_at=r.started_at.isoformat(),
+        ended_at=r.ended_at.isoformat() if r.ended_at else None,
+        session_id=r.session_id,
+        user_id=r.user_id,
+        tags=list(r.tags) if r.tags else [],
+        latency_ms=float(r.latency_ms) if r.latency_ms is not None else None,
+        span_count=int(r.span_count) if r.span_count else 0,
+        total_tokens=int(r.total_tokens) if r.total_tokens else 0,
+        total_cost=float(r.total_cost) if r.total_cost else 0.0,
+    )
+
+
 def _trace_to_list_item(t: Trace) -> TraceListItem:
+    latency = None
+    if t.ended_at:
+        latency = (t.ended_at - t.started_at).total_seconds() * 1000
     return TraceListItem(
         trace_id=t.trace_id,
         name=t.name,
@@ -236,6 +628,7 @@ def _trace_to_list_item(t: Trace) -> TraceListItem:
         session_id=t.session_id,
         user_id=t.user_id,
         tags=t.tags,
+        latency_ms=latency,
     )
 
 
@@ -253,28 +646,5 @@ def _trace_to_response(trace: Trace) -> TraceResponse:
         session_id=trace.session_id,
         user_id=trace.user_id,
         tags=trace.tags,
-        spans=[
-            SpanResponse(
-                span_id=s.span_id,
-                trace_id=s.trace_id,
-                parent_span_id=s.parent_span_id,
-                name=s.name,
-                kind=s.kind,
-                status=s.status,
-                input=s.input,
-                output=s.output,
-                model=s.model,
-                token_usage=s.token_usage,
-                metadata=s.metadata,
-                started_at=s.started_at.isoformat(),
-                ended_at=s.ended_at.isoformat() if s.ended_at else None,
-                error=s.error,
-                completion_start_time=(
-                    s.completion_start_time.isoformat() if s.completion_start_time else None
-                ),
-                model_parameters=s.model_parameters,
-                cost=s.cost,
-            )
-            for s in trace.spans
-        ],
+        spans=[_span_to_response(s) for s in trace.spans],
     )
