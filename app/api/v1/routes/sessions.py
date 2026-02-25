@@ -60,10 +60,14 @@ class SessionDetail(SessionSummary):
 
 
 class SessionDeleteResponse(BaseModel):
+    """Response for session deletion (count of traces removed)."""
+
     deleted: int
 
 
 class SessionAnalyticsBucket(BaseModel):
+    """Time-bucketed session statistics."""
+
     bucket: str
     session_count: int = 0
     avg_traces_per_session: float | None = None
@@ -126,7 +130,10 @@ async def get_session_analytics(
     """
     svc = TraceService(session)
     rows = await svc.get_session_analytics(
-        ctx.project.id, granularity, started_after, started_before,
+        ctx.project.id,
+        granularity,
+        started_after,
+        started_before,
     )
     return [
         SessionAnalyticsBucket(
@@ -163,7 +170,10 @@ async def get_session(
     svc = TraceService(session)
     summary = await svc.get_session_summary(ctx.project.id, session_id)
     trace_rows, _total = await svc.list_session_traces_with_stats(
-        ctx.project.id, session_id, limit=limit, offset=offset,
+        ctx.project.id,
+        session_id,
+        limit=limit,
+        offset=offset,
     )
 
     return SessionDetail(

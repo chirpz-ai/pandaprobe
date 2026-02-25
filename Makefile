@@ -16,10 +16,10 @@ worker:  ## Run the Celery worker locally
 # -- Code quality -------------------------------------------------------------
 
 lint:  ## Run ruff linter
-	uv run ruff check app/ tests/
+	uv run --group dev ruff check app/ tests/
 
 format:  ## Auto-format code
-	uv run ruff format app/ tests/
+	uv run --group dev ruff format app/ tests/
 
 # -- Database -----------------------------------------------------------------
 migration:  ## Auto-generate a new Alembic migration.  Usage: make migration msg="add users external_id"

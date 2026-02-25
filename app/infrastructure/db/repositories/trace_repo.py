@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Row,cast, delete, func, select, text, update
+from sqlalchemy import Row, cast, delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,20 +71,18 @@ class TraceRepository:
                 status=stmt.excluded.status,
                 input=func.coalesce(stmt.excluded.input, t.c.input),
                 output=func.coalesce(stmt.excluded.output, t.c.output),
-                metadata=func.coalesce(t.c.metadata, text("'{}'::jsonb")) + func.coalesce(stmt.excluded.metadata, text("'{}'::jsonb")),
+                metadata=func.coalesce(t.c.metadata, text("'{}'::jsonb"))
+                + func.coalesce(stmt.excluded.metadata, text("'{}'::jsonb")),
                 started_at=stmt.excluded.started_at,
                 ended_at=func.coalesce(stmt.excluded.ended_at, t.c.ended_at),
                 session_id=func.coalesce(stmt.excluded.session_id, t.c.session_id),
                 user_id=func.coalesce(stmt.excluded.user_id, t.c.user_id),
                 tags=func.coalesce(
                     cast(
-                        select(
-                            func.array_agg(func.distinct(text("unnest_val")))
-                        ).select_from(
-                            func.unnest(
-                                t.c.tags + stmt.excluded.tags
-                            ).alias("unnest_val")
-                        ).correlate(t).scalar_subquery(),
+                        select(func.array_agg(func.distinct(text("unnest_val"))))
+                        .select_from(func.unnest(t.c.tags + stmt.excluded.tags).alias("unnest_val"))
+                        .correlate(t)
+                        .scalar_subquery(),
                         PG_ARRAY(String),
                     ),
                     stmt.excluded.tags,
@@ -133,7 +131,8 @@ class TraceRepository:
                 output=func.coalesce(stmt.excluded.output, s.c.output),
                 model=func.coalesce(stmt.excluded.model, s.c.model),
                 token_usage=func.coalesce(stmt.excluded.token_usage, s.c.token_usage),
-                metadata=func.coalesce(s.c.metadata, text("'{}'::jsonb")) + func.coalesce(stmt.excluded.metadata, text("'{}'::jsonb")),
+                metadata=func.coalesce(s.c.metadata, text("'{}'::jsonb"))
+                + func.coalesce(stmt.excluded.metadata, text("'{}'::jsonb")),
                 started_at=stmt.excluded.started_at,
                 ended_at=func.coalesce(stmt.excluded.ended_at, s.c.ended_at),
                 error=func.coalesce(stmt.excluded.error, s.c.error),
@@ -281,9 +280,7 @@ class TraceRepository:
                     func.coalesce(cast(SpanModel.token_usage["prompt_tokens"].astext, Integer), 0)
                     + func.coalesce(cast(SpanModel.token_usage["completion_tokens"].astext, Integer), 0)
                 ).label("total_tokens"),
-                func.sum(
-                    func.coalesce(cast(SpanModel.cost["total"].astext, Float), 0)
-                ).label("total_cost"),
+                func.sum(func.coalesce(cast(SpanModel.cost["total"].astext, Float), 0)).label("total_cost"),
             )
             .group_by(SpanModel.trace_id)
             .subquery("span_stats")
@@ -304,15 +301,18 @@ class TraceRepository:
         )
 
         base = self._apply_trace_filters(
-            base, t,
-            session_id=session_id, status=status, user_id=user_id,
-            tags=tags, name=name,
-            started_after=started_after, started_before=started_before,
+            base,
+            t,
+            session_id=session_id,
+            status=status,
+            user_id=user_id,
+            tags=tags,
+            name=name,
+            started_after=started_after,
+            started_before=started_before,
         )
 
-        count_stmt = select(func.count()).select_from(
-            base.with_only_columns(t.c.trace_id).subquery()
-        )
+        count_stmt = select(func.count()).select_from(base.with_only_columns(t.c.trace_id).subquery())
         total = (await self._session.execute(count_stmt)).scalar_one()
 
         sort_col = self._resolve_sort_column(sort_by, t, latency_expr)
@@ -338,7 +338,9 @@ class TraceRepository:
     # -- Batch ops --------------------------------------------------------
 
     async def batch_delete_traces(
-        self, project_id: UUID, trace_ids: list[UUID],
+        self,
+        project_id: UUID,
+        trace_ids: list[UUID],
     ) -> int:
         """Delete multiple traces.  Returns the number of rows removed."""
         result = await self._session.execute(
@@ -357,12 +359,9 @@ class TraceRepository:
         remove_tags: list[str] | None = None,
     ) -> int:
         """Add and/or remove tags on multiple traces.  Returns rows affected."""
-        stmt = (
-            select(TraceModel)
-            .where(
-                TraceModel.project_id == project_id,
-                TraceModel.trace_id.in_(trace_ids),
-            )
+        stmt = select(TraceModel).where(
+            TraceModel.project_id == project_id,
+            TraceModel.trace_id.in_(trace_ids),
         )
         rows = (await self._session.execute(stmt)).scalars().all()
         count = 0
@@ -391,9 +390,7 @@ class TraceRepository:
                     func.coalesce(cast(SpanModel.token_usage["prompt_tokens"].astext, Integer), 0)
                     + func.coalesce(cast(SpanModel.token_usage["completion_tokens"].astext, Integer), 0)
                 ).label("total_tokens"),
-                func.sum(
-                    func.coalesce(cast(SpanModel.cost["total"].astext, Float), 0)
-                ).label("total_cost"),
+                func.sum(func.coalesce(cast(SpanModel.cost["total"].astext, Float), 0)).label("total_cost"),
             )
             .group_by(SpanModel.trace_id)
             .subquery("span_stats")
@@ -433,9 +430,7 @@ class TraceRepository:
         total_tokens_expr = func.coalesce(func.sum(span_stats.c.total_tokens), 0)
         total_cost_expr = func.coalesce(func.sum(span_stats.c.total_cost), 0.0)
         total_span_count_expr = func.coalesce(func.sum(span_stats.c.span_count), 0)
-        total_latency_expr = func.sum(
-            func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000
-        )
+        total_latency_expr = func.sum(func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000)
 
         agg_stmt = (
             select(
@@ -460,9 +455,7 @@ class TraceRepository:
                 ),
                 func.coalesce(
                     cast(
-                        select(
-                            func.array_agg(func.distinct(func.unnest(TraceModel.tags)))
-                        )
+                        select(func.array_agg(func.distinct(func.unnest(TraceModel.tags))))
                         .where(
                             TraceModel.project_id == project_id,
                             TraceModel.session_id == t.c.session_id,
@@ -545,9 +538,7 @@ class TraceRepository:
                 func.count(t.c.trace_id).label("trace_count"),
                 func.min(t.c.started_at).label("first_trace_at"),
                 func.max(t.c.ended_at).label("last_trace_at"),
-                func.sum(
-                    func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000
-                ).label("total_latency_ms"),
+                func.sum(func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000).label("total_latency_ms"),
                 func.bool_or(t.c.status == TraceStatus.ERROR.value).label("has_error"),
                 (
                     select(TraceModel.user_id)
@@ -564,9 +555,7 @@ class TraceRepository:
                 ),
                 func.coalesce(
                     cast(
-                        select(
-                            func.array_agg(func.distinct(func.unnest(TraceModel.tags)))
-                        )
+                        select(func.array_agg(func.distinct(func.unnest(TraceModel.tags))))
                         .where(
                             TraceModel.project_id == project_id,
                             TraceModel.session_id == session_id,
@@ -617,9 +606,7 @@ class TraceRepository:
             .where(t.c.project_id == project_id, t.c.session_id == session_id)
         )
 
-        count_stmt = select(func.count()).select_from(
-            base.with_only_columns(t.c.trace_id).subquery()
-        )
+        count_stmt = select(func.count()).select_from(base.with_only_columns(t.c.trace_id).subquery())
         total = (await self._session.execute(count_stmt)).scalar_one()
 
         data_stmt = base.order_by(t.c.started_at.asc()).offset(offset).limit(limit)
@@ -655,9 +642,7 @@ class TraceRepository:
                 t.c.session_id,
                 func.min(t.c.started_at).label("first_trace_at"),
                 func.count(t.c.trace_id).label("trace_count"),
-                func.sum(
-                    func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000
-                ).label("duration_ms"),
+                func.sum(func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000).label("duration_ms"),
             )
             .where(
                 t.c.project_id == project_id,
@@ -698,9 +683,7 @@ class TraceRepository:
             select(
                 func.date_trunc(granularity.value, t.c.started_at).label("bucket"),
                 func.count().label("trace_count"),
-                func.count().filter(
-                    t.c.status == TraceStatus.ERROR.value
-                ).label("error_count"),
+                func.count().filter(t.c.status == TraceStatus.ERROR.value).label("error_count"),
                 (func.avg(latency_secs) * 1000).label("avg_latency_ms"),
                 func.percentile_cont(0.5).within_group(latency_secs).op("*")(1000).label("p50_latency_ms"),
                 func.percentile_cont(0.9).within_group(latency_secs).op("*")(1000).label("p90_latency_ms"),
@@ -734,15 +717,13 @@ class TraceRepository:
                     func.coalesce(cast(s.c.token_usage["prompt_tokens"].astext, Integer), 0)
                     + func.coalesce(cast(s.c.token_usage["completion_tokens"].astext, Integer), 0)
                 ).label("total_tokens"),
-                func.sum(
-                    func.coalesce(cast(s.c.token_usage["prompt_tokens"].astext, Integer), 0)
-                ).label("prompt_tokens"),
-                func.sum(
-                    func.coalesce(cast(s.c.token_usage["completion_tokens"].astext, Integer), 0)
-                ).label("completion_tokens"),
-                func.sum(
-                    func.coalesce(cast(s.c.cost["total"].astext, Float), 0)
-                ).label("total_cost"),
+                func.sum(func.coalesce(cast(s.c.token_usage["prompt_tokens"].astext, Integer), 0)).label(
+                    "prompt_tokens"
+                ),
+                func.sum(func.coalesce(cast(s.c.token_usage["completion_tokens"].astext, Integer), 0)).label(
+                    "completion_tokens"
+                ),
+                func.sum(func.coalesce(cast(s.c.cost["total"].astext, Float), 0)).label("total_cost"),
             )
             .join(t, s.c.trace_id == t.c.trace_id)
             .where(
@@ -774,9 +755,7 @@ class TraceRepository:
                     func.coalesce(cast(s.c.token_usage["prompt_tokens"].astext, Integer), 0)
                     + func.coalesce(cast(s.c.token_usage["completion_tokens"].astext, Integer), 0)
                 ).label("total_tokens"),
-                func.sum(
-                    func.coalesce(cast(s.c.cost["total"].astext, Float), 0)
-                ).label("total_cost"),
+                func.sum(func.coalesce(cast(s.c.cost["total"].astext, Float), 0)).label("total_cost"),
             )
             .join(t, s.c.trace_id == t.c.trace_id)
             .where(
@@ -808,9 +787,7 @@ class TraceRepository:
                 func.count().label("trace_count"),
                 func.min(t.c.started_at).label("first_seen"),
                 func.max(t.c.started_at).label("last_seen"),
-                func.count().filter(
-                    t.c.status == TraceStatus.ERROR.value
-                ).label("error_count"),
+                func.count().filter(t.c.status == TraceStatus.ERROR.value).label("error_count"),
             )
             .where(t.c.project_id == project_id, t.c.user_id.isnot(None))
             .group_by(t.c.user_id)

@@ -216,7 +216,9 @@ class IdentityService:
         except ValueError as exc:
             raise ValidationError(str(exc))
         updated = await self._project_repo.update_project(
-            project.id, name=final_name, description=final_desc,
+            project.id,
+            name=final_name,
+            description=final_desc,
         )
         if updated is None:
             raise NotFoundError(f"Project {project_id} not found.")
@@ -251,6 +253,9 @@ class IdentityService:
         """Generate a new org-scoped API key.
 
         Args:
+            org_id: Organization to scope the key to.
+            name: Human-readable label for the key.
+            created_by: UUID of the user creating the key, if available.
             expiration: ``"never"`` (no expiry, default) or ``"90d"`` (90-day TTL).
 
         Returns:
@@ -260,8 +265,7 @@ class IdentityService:
 
         if expiration not in self._EXPIRATION_DELTAS:
             raise ValidationError(
-                f"Unsupported expiration value '{expiration}'. "
-                f"Allowed: {', '.join(sorted(self._EXPIRATION_DELTAS))}."
+                f"Unsupported expiration value '{expiration}'. Allowed: {', '.join(sorted(self._EXPIRATION_DELTAS))}."
             )
         delta = self._EXPIRATION_DELTAS[expiration]
         expires_at: datetime | None = datetime.now(timezone.utc) + delta if delta else None
@@ -295,7 +299,11 @@ class IdentityService:
         return await self._repo.list_api_keys(org_id)
 
     async def rotate_api_key(
-        self, key_id: UUID, *, org_id: UUID, created_by: UUID | None = None,
+        self,
+        key_id: UUID,
+        *,
+        org_id: UUID,
+        created_by: UUID | None = None,
     ) -> tuple[APIKey, str]:
         """Create a replacement key with a fresh 90-day expiration.
 

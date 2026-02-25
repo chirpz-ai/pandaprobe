@@ -154,7 +154,10 @@ async def update_project(
     svc = IdentityService(session)
     await svc.require_admin(ctx.user.id, org_id)
     project = await svc.update_project(
-        org_id, project_id, name=body.name, description=body.description,
+        org_id,
+        project_id,
+        name=body.name,
+        description=body.description,
     )
     return ProjectResponse(
         id=project.id,

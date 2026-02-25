@@ -286,11 +286,7 @@ def test_session_latency_computation() -> None:
         _make_trace(started_at=now, ended_at=None),  # incomplete trace
     ]
 
-    durations = [
-        (t.ended_at - t.started_at).total_seconds() * 1000
-        for t in traces
-        if t.ended_at is not None
-    ]
+    durations = [(t.ended_at - t.started_at).total_seconds() * 1000 for t in traces if t.ended_at is not None]
     total_ms = sum(durations) if durations else None
 
     assert total_ms == 2000.0
@@ -303,11 +299,7 @@ def test_session_latency_all_incomplete() -> None:
         _make_trace(ended_at=None),
     ]
 
-    durations = [
-        (t.ended_at - t.started_at).total_seconds() * 1000
-        for t in traces
-        if t.ended_at is not None
-    ]
+    durations = [(t.ended_at - t.started_at).total_seconds() * 1000 for t in traces if t.ended_at is not None]
     total_ms = sum(durations) if durations else None
 
     assert total_ms is None

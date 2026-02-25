@@ -191,7 +191,9 @@ async def rotate_api_key(
     svc = IdentityService(session)
     await svc.require_admin(ctx.user.id, org_id)
     new_key, raw_key = await svc.rotate_api_key(
-        key_id, org_id=org_id, created_by=ctx.user.id,
+        key_id,
+        org_id=org_id,
+        created_by=ctx.user.id,
     )
     return _key_response(new_key, raw_key=raw_key)
 

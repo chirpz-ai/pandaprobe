@@ -50,7 +50,10 @@ class TraceService:
     # -- Update ----------------------------------------------------------
 
     async def update_trace(
-        self, trace_id: UUID, project_id: UUID, **fields: Any,
+        self,
+        trace_id: UUID,
+        project_id: UUID,
+        **fields: Any,
     ) -> Trace:
         """Update trace fields or raise ``NotFoundError``."""
         row = await self._repo.update_trace(trace_id, project_id, **fields)
@@ -134,8 +137,11 @@ class TraceService:
     # -- Batch -----------------------------------------------------------
 
     async def batch_delete_traces(
-        self, project_id: UUID, trace_ids: list[UUID],
+        self,
+        project_id: UUID,
+        trace_ids: list[UUID],
     ) -> int:
+        """Delete multiple traces at once.  Returns count removed."""
         return await self._repo.batch_delete_traces(project_id, trace_ids)
 
     async def batch_update_tags(
@@ -145,8 +151,12 @@ class TraceService:
         add_tags: list[str] | None = None,
         remove_tags: list[str] | None = None,
     ) -> int:
+        """Add/remove tags on multiple traces.  Returns count affected."""
         return await self._repo.batch_update_tags(
-            project_id, trace_ids, add_tags=add_tags, remove_tags=remove_tags,
+            project_id,
+            trace_ids,
+            add_tags=add_tags,
+            remove_tags=remove_tags,
         )
 
     # -- Sessions -------------------------------------------------------------
@@ -166,6 +176,7 @@ class TraceService:
         sort_by: SessionSortBy = SessionSortBy.RECENT,
         sort_order: SortOrder = SortOrder.DESC,
     ) -> tuple[list[Row[Any]], int]:
+        """Return paginated session summaries with total count."""
         return await self._repo.list_sessions(
             project_id,
             limit=limit,
@@ -200,7 +211,10 @@ class TraceService:
     ) -> tuple[list[Row[Any]], int]:
         """Return paginated session traces with span stats, or raise ``NotFoundError``."""
         rows, total = await self._repo.list_session_traces_with_stats(
-            project_id, session_id, limit=limit, offset=offset,
+            project_id,
+            session_id,
+            limit=limit,
+            offset=offset,
         )
         if total == 0:
             raise NotFoundError(f"No traces found for session '{session_id}'.")
@@ -220,8 +234,12 @@ class TraceService:
         started_after: datetime,
         started_before: datetime,
     ) -> list[Row[Any]]:
+        """Return time-bucketed session statistics."""
         return await self._repo.get_session_analytics(
-            project_id, granularity, started_after, started_before,
+            project_id,
+            granularity,
+            started_after,
+            started_before,
         )
 
     # -- Analytics -------------------------------------------------------
@@ -233,8 +251,12 @@ class TraceService:
         started_after: datetime,
         started_before: datetime,
     ) -> list[Row[Any]]:
+        """Return time-bucketed trace statistics (volume, errors, latency)."""
         return await self._repo.get_trace_analytics(
-            project_id, granularity, started_after, started_before,
+            project_id,
+            granularity,
+            started_after,
+            started_before,
         )
 
     async def get_token_cost_analytics(
@@ -244,8 +266,12 @@ class TraceService:
         started_after: datetime,
         started_before: datetime,
     ) -> list[Row[Any]]:
+        """Return time-bucketed token usage and cost from spans."""
         return await self._repo.get_token_cost_analytics(
-            project_id, granularity, started_after, started_before,
+            project_id,
+            granularity,
+            started_after,
+            started_before,
         )
 
     async def get_top_models(
@@ -255,8 +281,12 @@ class TraceService:
         started_before: datetime,
         limit: int = 10,
     ) -> list[Row[Any]]:
+        """Return the most-used LLM models within a time window."""
         return await self._repo.get_top_models(
-            project_id, started_after, started_before, limit=limit,
+            project_id,
+            started_after,
+            started_before,
+            limit=limit,
         )
 
     # -- User aggregation ------------------------------------------------
@@ -267,4 +297,5 @@ class TraceService:
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[Row[Any]], int]:
+        """Return user-level trace aggregation with total count."""
         return await self._repo.list_trace_users(project_id, limit=limit, offset=offset)

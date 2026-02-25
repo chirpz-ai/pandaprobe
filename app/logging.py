@@ -24,9 +24,7 @@ from app.registry.settings import Environment, settings
 # Per-request context (org_id, trace_id, …) attached to every log line
 # ---------------------------------------------------------------------------
 
-_request_context: ContextVar[dict[str, Any] | None] = ContextVar(
-    "request_context", default=None
-)
+_request_context: ContextVar[dict[str, Any] | None] = ContextVar("request_context", default=None)
 
 
 def bind_context(**kwargs: Any) -> None:
@@ -40,9 +38,7 @@ def clear_context() -> None:
     _request_context.set(None)
 
 
-def _inject_context(
-    _logger: Any, _method: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+def _inject_context(_logger: Any, _method: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """Structlog processor that merges request context into the event dict."""
     ctx = _request_context.get()
     if ctx:
@@ -70,9 +66,7 @@ class _JsonlFileHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         try:
             entry = {
-                "ts": datetime.fromtimestamp(
-                    record.created, tz=timezone.utc
-                ).isoformat(),
+                "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
                 "level": record.levelname,
                 "logger": record.name,
                 "msg": record.getMessage(),
@@ -135,9 +129,7 @@ def _setup() -> None:
         )
 
     renderer: Any = (
-        structlog.dev.ConsoleRenderer()
-        if settings.LOG_FORMAT == "console"
-        else structlog.processors.JSONRenderer()
+        structlog.dev.ConsoleRenderer() if settings.LOG_FORMAT == "console" else structlog.processors.JSONRenderer()
     )
 
     structlog.configure(

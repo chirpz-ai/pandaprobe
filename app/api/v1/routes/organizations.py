@@ -120,7 +120,10 @@ async def list_my_organizations(
         org = await svc.get_organization(m.org_id)
         result.append(
             MyOrganizationResponse(
-                id=org.id, name=org.name, created_at=org.created_at.isoformat(), role=m.role,
+                id=org.id,
+                name=org.name,
+                created_at=org.created_at.isoformat(),
+                role=m.role,
             )
         )
     return result
@@ -258,7 +261,10 @@ async def update_member_role(
     _require_user(ctx)
     svc = IdentityService(session)
     m = await svc.update_member_role(
-        actor_id=ctx.user.id, org_id=org_id, target_user_id=user_id, new_role=body.role,
+        actor_id=ctx.user.id,
+        org_id=org_id,
+        target_user_id=user_id,
+        new_role=body.role,
     )
     return MembershipResponse(
         id=m.id,

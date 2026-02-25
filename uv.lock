@@ -1664,12 +1664,10 @@ dependencies = [
     { name = "uvloop" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "ruff" },
 ]
-
-[package.dev-dependencies]
 test = [
     { name = "httpx" },
     { name = "pytest" },
@@ -1692,7 +1690,6 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "redis", specifier = ">=5.2.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36" },
     { name = "structlog", specifier = ">=24.4.0" },
@@ -1700,9 +1697,9 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.34.0" },
     { name = "uvloop", specifier = ">=0.21.0" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
+dev = [{ name = "ruff", specifier = ">=0.8.0" }]
 test = [
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "pytest", specifier = ">=8.3.0" },

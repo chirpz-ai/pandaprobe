@@ -72,11 +72,18 @@ async def get_data_plane_context(
 
     if bearer:
         ctx = await _resolve_jwt(
-            bearer.credentials, request, session, request_id, project_id_raw=x_project_id,
+            bearer.credentials,
+            request,
+            session,
+            request_id,
+            project_id_raw=x_project_id,
         )
     elif x_api_key:
         ctx = await _resolve_api_key(
-            x_api_key, session, request_id, project_name=x_project_name,
+            x_api_key,
+            session,
+            request_id,
+            project_name=x_project_name,
         )
     else:
         raise AuthenticationError(
@@ -90,9 +97,7 @@ async def get_data_plane_context(
 def require_project(ctx: ApiContext = Depends(get_data_plane_context)) -> ApiContext:
     """Thin wrapper that guarantees ``ctx.project`` is present."""
     if ctx.project is None:
-        raise ValidationError(
-            "Project scope required. Provide X-Project-ID (Bearer) or X-Project-Name (API key)."
-        )
+        raise ValidationError("Project scope required. Provide X-Project-ID (Bearer) or X-Project-Name (API key).")
     return ctx
 
 
@@ -215,7 +220,8 @@ async def _resolve_api_key(
         except ValueError as exc:
             raise ValidationError(str(exc))
         project = await project_repo.get_or_create_project(
-            org_id=api_key.org_id, name=clean_name,
+            org_id=api_key.org_id,
+            name=clean_name,
         )
 
     log = structlog.get_logger().bind(

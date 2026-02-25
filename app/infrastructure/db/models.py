@@ -149,7 +149,9 @@ class TraceModel(Base):
 
     trace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
     )
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[str] = mapped_column(
@@ -187,7 +189,9 @@ class SpanModel(Base):
 
     span_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     trace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("traces.trace_id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("traces.trace_id", ondelete="CASCADE"),
+        nullable=False,
     )
     parent_span_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     name: Mapped[str] = mapped_column(String(512), nullable=False)
@@ -230,10 +234,14 @@ class EvaluationModel(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     trace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("traces.trace_id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("traces.trace_id", ondelete="CASCADE"),
+        nullable=False,
     )
     project_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
     )
     metric_names: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
     status: Mapped[str] = mapped_column(
@@ -259,7 +267,9 @@ class EvaluationResultModel(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     evaluation_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("evaluations.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        ForeignKey("evaluations.id", ondelete="CASCADE"),
+        nullable=False,
     )
     metric_name: Mapped[str] = mapped_column(String(255), nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)

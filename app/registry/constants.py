@@ -142,10 +142,10 @@ def validate_resource_name(value: str, label: str = "Name") -> str:
 
 
 def sanitize_text(value: str, label: str = "Field", *, max_length: int = 2000) -> str:
-    """Sanitize a free-text field (e.g. descriptions, notes).
+    r"""Sanitize a free-text field (e.g. descriptions, notes).
 
     Strips leading/trailing whitespace, rejects control characters
-    (except ``\\n`` and ``\\t``), and enforces a maximum length.
+    (except ``\n`` and ``\t``), and enforces a maximum length.
 
     Returns the cleaned string; raises ``ValueError`` on failure.
     """

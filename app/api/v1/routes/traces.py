@@ -181,24 +181,34 @@ class SpansAccepted(BaseModel):
 
 
 class BatchDeleteRequest(BaseModel):
+    """Request body for bulk trace deletion."""
+
     trace_ids: list[UUID] = Field(min_length=1, max_length=500)
 
 
 class BatchDeleteResponse(BaseModel):
+    """Response for bulk trace deletion (count removed)."""
+
     deleted: int
 
 
 class BatchTagsRequest(BaseModel):
+    """Request body for bulk tag manipulation on traces."""
+
     trace_ids: list[UUID] = Field(min_length=1, max_length=500)
     add_tags: list[str] = Field(default_factory=list)
     remove_tags: list[str] = Field(default_factory=list)
 
 
 class BatchTagsResponse(BaseModel):
+    """Response for bulk tag update (count of traces affected)."""
+
     updated: int
 
 
 class AnalyticsBucket(BaseModel):
+    """Time-bucketed trace volume, error, and latency statistics."""
+
     bucket: str
     trace_count: int = 0
     error_count: int = 0
@@ -209,6 +219,8 @@ class AnalyticsBucket(BaseModel):
 
 
 class TokenCostBucket(BaseModel):
+    """Time-bucketed token usage and cost aggregation."""
+
     bucket: str
     total_tokens: int = 0
     prompt_tokens: int = 0
@@ -217,6 +229,8 @@ class TokenCostBucket(BaseModel):
 
 
 class TopModel(BaseModel):
+    """LLM model ranked by call count within a time window."""
+
     model: str
     call_count: int
     total_tokens: int = 0
@@ -224,6 +238,8 @@ class TopModel(BaseModel):
 
 
 class UserSummary(BaseModel):
+    """Aggregated trace statistics for a single end-user."""
+
     user_id: str
     trace_count: int
     first_seen: str
@@ -345,7 +361,10 @@ async def get_analytics(
 
     if metric in (AnalyticsMetric.VOLUME, AnalyticsMetric.ERRORS, AnalyticsMetric.LATENCY):
         rows = await svc.get_trace_analytics(
-            ctx.project.id, granularity, started_after, started_before,
+            ctx.project.id,
+            granularity,
+            started_after,
+            started_before,
         )
         return [
             AnalyticsBucket(
@@ -362,7 +381,10 @@ async def get_analytics(
 
     if metric in (AnalyticsMetric.COST, AnalyticsMetric.TOKENS):
         rows = await svc.get_token_cost_analytics(
-            ctx.project.id, granularity, started_after, started_before,
+            ctx.project.id,
+            granularity,
+            started_after,
+            started_before,
         )
         return [
             TokenCostBucket(
@@ -375,9 +397,10 @@ async def get_analytics(
             for r in rows
         ]
 
-    # metric == MODELS
     rows = await svc.get_top_models(
-        ctx.project.id, started_after, started_before,
+        ctx.project.id,
+        started_after,
+        started_before,
     )
     return [
         TopModel(
@@ -443,7 +466,8 @@ async def batch_tags(
     """
     svc = TraceService(session)
     count = await svc.batch_update_tags(
-        ctx.project.id, body.trace_ids,
+        ctx.project.id,
+        body.trace_ids,
         add_tags=body.add_tags or None,
         remove_tags=body.remove_tags or None,
     )
@@ -589,9 +613,7 @@ def _span_to_response(s: Any) -> SpanResponse:
         started_at=s.started_at.isoformat(),
         ended_at=s.ended_at.isoformat() if s.ended_at else None,
         error=s.error,
-        completion_start_time=(
-            s.completion_start_time.isoformat() if s.completion_start_time else None
-        ),
+        completion_start_time=(s.completion_start_time.isoformat() if s.completion_start_time else None),
         model_parameters=s.model_parameters,
         cost=s.cost,
     )
