@@ -59,9 +59,9 @@ class Trace(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime
     ended_at: datetime | None = None
-    session_id: str | None = None
-    user_id: str | None = None
+    session_id: str | None = Field(default=None, max_length=255)
+    user_id: str | None = Field(default=None, max_length=255)
     tags: list[str] = Field(default_factory=list)
-    environment: str | None = None
-    release: str | None = None
+    environment: str | None = Field(default=None, max_length=255)
+    release: str | None = Field(default=None, max_length=255)
     spans: list[Span] = Field(default_factory=list)

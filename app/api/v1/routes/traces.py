@@ -51,7 +51,7 @@ class SpanCreate(BaseModel):
     status: SpanStatusCode = SpanStatusCode.UNSET
     input: Any | None = None
     output: Any | None = None
-    model: str | None = None
+    model: str | None = Field(default=None, max_length=255)
     token_usage: dict[str, int] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime
@@ -64,12 +64,12 @@ class SpanCreate(BaseModel):
 class SpanUpdate(BaseModel):
     """Partial-update schema for a span (all fields optional)."""
 
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=512)
     kind: SpanKind | None = None
     status: SpanStatusCode | None = None
     input: Any | None = Field(default=None)
     output: Any | None = Field(default=None)
-    model: str | None = None
+    model: str | None = Field(default=None, max_length=255)
     token_usage: dict[str, int] | None = None
     metadata: dict[str, Any] | None = None
     ended_at: datetime | None = None
@@ -90,28 +90,28 @@ class TraceCreate(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime
     ended_at: datetime | None = None
-    session_id: str | None = None
-    user_id: str | None = None
+    session_id: str | None = Field(default=None, max_length=255)
+    user_id: str | None = Field(default=None, max_length=255)
     tags: list[str] = Field(default_factory=list)
-    environment: str | None = None
-    release: str | None = None
+    environment: str | None = Field(default=None, max_length=255)
+    release: str | None = Field(default=None, max_length=255)
     spans: list[SpanCreate] = Field(default_factory=list)
 
 
 class TraceUpdate(BaseModel):
     """Partial-update schema for a trace (all fields optional)."""
 
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=512)
     status: TraceStatus | None = None
     input: Any | None = Field(default=None)
     output: Any | None = Field(default=None)
     metadata: dict[str, Any] | None = None
     ended_at: datetime | None = None
-    session_id: str | None = None
-    user_id: str | None = None
+    session_id: str | None = Field(default=None, max_length=255)
+    user_id: str | None = Field(default=None, max_length=255)
     tags: list[str] | None = None
-    environment: str | None = None
-    release: str | None = None
+    environment: str | None = Field(default=None, max_length=255)
+    release: str | None = Field(default=None, max_length=255)
 
 
 class TraceAccepted(BaseModel):
@@ -498,16 +498,14 @@ async def update_trace(
 ) -> TraceResponse:
     """Partially update a trace.
 
-    Only provided (non-null) fields are updated.  ``metadata`` is
+    Only fields present in the request body are touched.  Sending
+    ``"session_id": null`` explicitly clears the field; omitting
+    ``session_id`` entirely leaves it unchanged.  ``metadata`` is
     shallow-merged with existing values.
 
     Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
-    from app.infrastructure.db.repositories.trace_repo import _UNSET
-
-    fields: dict[str, Any] = {}
-    for key, value in body.model_dump(exclude_unset=True).items():
-        fields[key] = value if value is not None else _UNSET
+    fields = body.model_dump(exclude_unset=True)
 
     svc = TraceService(session)
     trace = await svc.update_trace(trace_id, ctx.project.id, **fields)
@@ -564,11 +562,7 @@ async def update_span(
 
     Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
-    from app.infrastructure.db.repositories.trace_repo import _UNSET
-
-    fields: dict[str, Any] = {}
-    for key, value in body.model_dump(exclude_unset=True).items():
-        fields[key] = value if value is not None else _UNSET
+    fields = body.model_dump(exclude_unset=True)
 
     svc = TraceService(session)
     span = await svc.update_span(span_id, trace_id, ctx.project.id, **fields)
