@@ -61,6 +61,8 @@ class TraceRepository:
             session_id=trace.session_id,
             user_id=trace.user_id,
             tags=trace.tags,
+            environment=trace.environment,
+            release=trace.release,
         )
 
         stmt = pg_insert(t).values(**vals)
@@ -87,6 +89,8 @@ class TraceRepository:
                     ),
                     stmt.excluded.tags,
                 ),
+                environment=func.coalesce(stmt.excluded.environment, t.c.environment),
+                release=func.coalesce(stmt.excluded.release, t.c.release),
             ),
         )
         await self._session.execute(stmt)
@@ -882,5 +886,7 @@ class TraceRepository:
             session_id=row.session_id,
             user_id=row.user_id,
             tags=row.tags,
+            environment=row.environment,
+            release=row.release,
             spans=spans,
         )
