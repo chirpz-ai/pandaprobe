@@ -139,8 +139,8 @@ async def get_session_analytics(
         SessionAnalyticsBucket(
             bucket=r.bucket.isoformat() if r.bucket else "",
             session_count=r.session_count or 0,
-            avg_traces_per_session=float(r.avg_traces_per_session) if r.avg_traces_per_session else None,
-            avg_session_duration_ms=float(r.avg_session_duration_ms) if r.avg_session_duration_ms else None,
+            avg_traces_per_session=float(r.avg_traces_per_session) if r.avg_traces_per_session is not None else None,
+            avg_session_duration_ms=float(r.avg_session_duration_ms) if r.avg_session_duration_ms is not None else None,
         )
         for r in rows
     ]

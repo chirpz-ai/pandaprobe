@@ -383,10 +383,10 @@ async def get_analytics(
                 bucket=r.bucket.isoformat() if r.bucket else "",
                 trace_count=r.trace_count or 0,
                 error_count=r.error_count or 0,
-                avg_latency_ms=float(r.avg_latency_ms) if r.avg_latency_ms else None,
-                p50_latency_ms=float(r.p50_latency_ms) if r.p50_latency_ms else None,
-                p90_latency_ms=float(r.p90_latency_ms) if r.p90_latency_ms else None,
-                p99_latency_ms=float(r.p99_latency_ms) if r.p99_latency_ms else None,
+                avg_latency_ms=float(r.avg_latency_ms) if r.avg_latency_ms is not None else None,
+                p50_latency_ms=float(r.p50_latency_ms) if r.p50_latency_ms is not None else None,
+                p90_latency_ms=float(r.p90_latency_ms) if r.p90_latency_ms is not None else None,
+                p99_latency_ms=float(r.p99_latency_ms) if r.p99_latency_ms is not None else None,
             )
             for r in rows
         ]
@@ -658,25 +658,6 @@ def _row_to_list_item(r: Any) -> TraceListItem:
         span_count=int(r.span_count) if r.span_count else 0,
         total_tokens=int(r.total_tokens) if r.total_tokens else 0,
         total_cost=float(r.total_cost) if r.total_cost else 0.0,
-    )
-
-
-def _trace_to_list_item(t: Trace) -> TraceListItem:
-    latency = None
-    if t.ended_at:
-        latency = (t.ended_at - t.started_at).total_seconds() * 1000
-    return TraceListItem(
-        trace_id=t.trace_id,
-        name=t.name,
-        status=t.status,
-        started_at=t.started_at.isoformat(),
-        ended_at=t.ended_at.isoformat() if t.ended_at else None,
-        session_id=t.session_id,
-        user_id=t.user_id,
-        tags=t.tags,
-        environment=t.environment,
-        release=t.release,
-        latency_ms=latency,
     )
 
 
