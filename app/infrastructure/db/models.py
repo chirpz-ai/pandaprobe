@@ -167,6 +167,8 @@ class TraceModel(Base):
     session_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=list, nullable=False)
+    environment: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    release: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     project: Mapped["ProjectModel"] = relationship(back_populates="traces")
