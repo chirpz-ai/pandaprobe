@@ -445,10 +445,14 @@ class TraceRepository:
                 ),
                 func.coalesce(
                     cast(
-                        select(func.array_agg(func.distinct(func.unnest(TraceModel.tags))))
-                        .where(
-                            TraceModel.project_id == project_id,
-                            TraceModel.session_id == t.c.session_id,
+                        select(func.array_agg(func.distinct(text("unnest_val"))))
+                        .select_from(
+                            select(func.unnest(TraceModel.tags).label("unnest_val"))
+                            .where(
+                                TraceModel.project_id == project_id,
+                                TraceModel.session_id == t.c.session_id,
+                            )
+                            .subquery()
                         )
                         .correlate(t)
                         .scalar_subquery(),
@@ -545,10 +549,14 @@ class TraceRepository:
                 ),
                 func.coalesce(
                     cast(
-                        select(func.array_agg(func.distinct(func.unnest(TraceModel.tags))))
-                        .where(
-                            TraceModel.project_id == project_id,
-                            TraceModel.session_id == session_id,
+                        select(func.array_agg(func.distinct(text("unnest_val"))))
+                        .select_from(
+                            select(func.unnest(TraceModel.tags).label("unnest_val"))
+                            .where(
+                                TraceModel.project_id == project_id,
+                                TraceModel.session_id == session_id,
+                            )
+                            .subquery()
                         )
                         .correlate(t)
                         .scalar_subquery(),
