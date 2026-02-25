@@ -93,6 +93,8 @@ class TraceCreate(BaseModel):
     session_id: str | None = None
     user_id: str | None = None
     tags: list[str] = Field(default_factory=list)
+    environment: str | None = None
+    release: str | None = None
     spans: list[SpanCreate] = Field(default_factory=list)
 
 
@@ -108,6 +110,8 @@ class TraceUpdate(BaseModel):
     session_id: str | None = None
     user_id: str | None = None
     tags: list[str] | None = None
+    environment: str | None = None
+    release: str | None = None
 
 
 class TraceAccepted(BaseModel):
@@ -137,6 +141,8 @@ class SpanResponse(BaseModel):
     completion_start_time: str | None
     model_parameters: dict[str, Any] | None
     cost: dict[str, float] | None
+    latency_ms: float | None = None
+    time_to_first_token_ms: float | None = None
 
 
 class TraceResponse(BaseModel):
@@ -154,6 +160,8 @@ class TraceResponse(BaseModel):
     session_id: str | None
     user_id: str | None
     tags: list[str]
+    environment: str | None = None
+    release: str | None = None
     spans: list[SpanResponse] = Field(default_factory=list)
 
 
@@ -168,6 +176,8 @@ class TraceListItem(BaseModel):
     session_id: str | None
     user_id: str | None
     tags: list[str]
+    environment: str | None = None
+    release: str | None = None
     latency_ms: float | None = None
     span_count: int = 0
     total_tokens: int = 0
@@ -278,6 +288,8 @@ async def ingest_trace(
         session_id=body.session_id,
         user_id=body.user_id,
         tags=body.tags,
+        environment=body.environment,
+        release=body.release,
         spans=[
             Span(
                 span_id=s.span_id,
@@ -598,6 +610,14 @@ async def delete_trace(
 
 
 def _span_to_response(s: Any) -> SpanResponse:
+    latency = None
+    if s.started_at and s.ended_at:
+        latency = (s.ended_at - s.started_at).total_seconds() * 1000
+
+    ttft = None
+    if s.started_at and s.completion_start_time:
+        ttft = (s.completion_start_time - s.started_at).total_seconds() * 1000
+
     return SpanResponse(
         span_id=s.span_id,
         trace_id=s.trace_id,
@@ -616,6 +636,8 @@ def _span_to_response(s: Any) -> SpanResponse:
         completion_start_time=(s.completion_start_time.isoformat() if s.completion_start_time else None),
         model_parameters=s.model_parameters,
         cost=s.cost,
+        latency_ms=latency,
+        time_to_first_token_ms=ttft,
     )
 
 
@@ -630,6 +652,8 @@ def _row_to_list_item(r: Any) -> TraceListItem:
         session_id=r.session_id,
         user_id=r.user_id,
         tags=list(r.tags) if r.tags else [],
+        environment=r.environment if hasattr(r, "environment") else None,
+        release=r.release if hasattr(r, "release") else None,
         latency_ms=float(r.latency_ms) if r.latency_ms is not None else None,
         span_count=int(r.span_count) if r.span_count else 0,
         total_tokens=int(r.total_tokens) if r.total_tokens else 0,
@@ -650,6 +674,8 @@ def _trace_to_list_item(t: Trace) -> TraceListItem:
         session_id=t.session_id,
         user_id=t.user_id,
         tags=t.tags,
+        environment=t.environment,
+        release=t.release,
         latency_ms=latency,
     )
 
@@ -668,5 +694,7 @@ def _trace_to_response(trace: Trace) -> TraceResponse:
         session_id=trace.session_id,
         user_id=trace.user_id,
         tags=trace.tags,
+        environment=trace.environment,
+        release=trace.release,
         spans=[_span_to_response(s) for s in trace.spans],
     )
