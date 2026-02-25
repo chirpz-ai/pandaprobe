@@ -174,6 +174,9 @@ class TraceModel(Base):
         Index("ix_traces_project_id_created", "project_id", "created_at"),
         Index("ix_traces_session_id", "project_id", "session_id"),
         Index("ix_traces_tags", "tags", postgresql_using="gin"),
+        Index("ix_traces_project_status", "project_id", "status"),
+        Index("ix_traces_project_user_id", "project_id", "user_id"),
+        Index("ix_traces_project_started", "project_id", "started_at"),
     )
 
 
