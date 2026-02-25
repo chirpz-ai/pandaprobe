@@ -275,21 +275,7 @@ class TraceRepository:
         span_count, total_tokens, total_cost, latency_ms.
         """
         t = TraceModel.__table__
-
-        span_stats = (
-            select(
-                SpanModel.trace_id.label("_trace_id"),
-                func.count(SpanModel.span_id).label("span_count"),
-                func.sum(
-                    func.coalesce(cast(SpanModel.token_usage["prompt_tokens"].astext, Integer), 0)
-                    + func.coalesce(cast(SpanModel.token_usage["completion_tokens"].astext, Integer), 0)
-                ).label("total_tokens"),
-                func.sum(func.coalesce(cast(SpanModel.cost["total"].astext, Float), 0)).label("total_cost"),
-            )
-            .group_by(SpanModel.trace_id)
-            .subquery("span_stats")
-        )
-
+        span_stats = self._span_stats_subquery()
         latency_expr = func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000
 
         base = (
@@ -384,8 +370,8 @@ class TraceRepository:
 
     # -- Session aggregation ---------------------------------------------------
 
-    def _session_span_stats_subquery(self) -> Any:
-        """Subquery: span-level stats grouped by trace_id (reusable)."""
+    def _span_stats_subquery(self) -> Any:
+        """Subquery: span-level stats (count, tokens, cost) grouped by trace_id."""
         return (
             select(
                 SpanModel.trace_id.label("_trace_id"),
@@ -417,7 +403,7 @@ class TraceRepository:
     ) -> tuple[list[Row[Any]], int]:
         """Return aggregated session summaries with total count."""
         t = TraceModel.__table__.alias("t")
-        span_stats = self._session_span_stats_subquery()
+        span_stats = self._span_stats_subquery()
 
         base_where = [t.c.project_id == project_id, t.c.session_id.isnot(None)]
         if started_after is not None:
@@ -512,7 +498,7 @@ class TraceRepository:
         I/O (first trace input, last trace output).
         """
         t = TraceModel.__table__.alias("t")
-        span_stats = self._session_span_stats_subquery()
+        span_stats = self._span_stats_subquery()
 
         input_subq = (
             select(TraceModel.input)
@@ -595,7 +581,7 @@ class TraceRepository:
         total_cost, latency_ms — matching the shape of ``list_traces``.
         """
         t = TraceModel.__table__
-        span_stats = self._session_span_stats_subquery()
+        span_stats = self._span_stats_subquery()
         latency_expr = func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000
 
         base = (
