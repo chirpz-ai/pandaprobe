@@ -50,7 +50,7 @@ async def _persist_trace(payload: dict[str, Any]) -> dict[str, str]:
 
     async with async_session_factory() as session:
         repo = TraceRepository(session)
-        await repo.create_trace(trace)
+        await repo.upsert_trace(trace)
         await session.commit()
 
     logger.info("trace_persisted", trace_id=str(trace.trace_id))
