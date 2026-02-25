@@ -186,27 +186,6 @@ make lint        # ruff linter
 make help        # show all commands
 ```
 
-## Key API Endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET`  | `/user` | Bearer | Current user profile |
-| `POST` | `/organizations` | Bearer | Create an organization |
-| `GET`  | `/organizations` | Bearer | List user's organizations |
-| `POST` | `/organizations/{id}/members` | Bearer | Invite a user |
-| `POST` | `/organizations/{id}/projects` | Bearer | Create a project |
-| `GET`  | `/organizations/{id}/projects` | Bearer | List projects |
-| `POST` | `/organizations/{id}/api-keys` | Bearer | Generate API key (org-scoped) |
-| `POST` | `/traces` | API Key + `X-Project-Name` | Ingest a trace (async, 202) |
-| `GET`  | `/traces` | API Key + `X-Project-Name` | List traces (filter by `session_id`) |
-| `GET`  | `/traces/{id}` | API Key + `X-Project-Name` | Get trace with spans |
-| `GET`  | `/sessions` | API Key + `X-Project-Name` | List sessions |
-| `GET`  | `/sessions/{session_id}` | API Key + `X-Project-Name` | Get session with traces |
-| `POST` | `/evaluations` | API Key + `X-Project-Name` | Trigger async evaluation |
-| `GET`  | `/evaluations/{id}` | API Key + `X-Project-Name` | Get evaluation results |
-| `GET`  | `/evaluations/metrics` | — | List registered metrics |
-| `GET`  | `/evaluations/providers` | — | List available LLM providers |
-
 ## Environment Variables
 
 See [`.env.example`](.env.example) for the full list. Key variables:
@@ -223,10 +202,10 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 
 # Authors
 
-Built by the founder of Chirpz AI. Contact sina@chirpz.ai for all enquiries.
+Built by Chirpz AI team. Contact sina@chirpz.ai for all enquiries.
 
 <br />
 
 # License
 
-PandaProbe is licensed under Apache 2.0 - see the [LICENSE.md](https://github.com/chirpz-ai/pandaprobe/LICENSE) file for details.
+PandaProbe is licensed under Apache 2.0 - see the [LICENSE.md](https://github.com/chirpz-ai/pandaprobe/blob/main/LICENSE) file for details.
