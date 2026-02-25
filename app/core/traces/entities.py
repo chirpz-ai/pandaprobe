@@ -62,4 +62,6 @@ class Trace(BaseModel):
     session_id: str | None = None
     user_id: str | None = None
     tags: list[str] = Field(default_factory=list)
+    environment: str | None = None
+    release: str | None = None
     spans: list[Span] = Field(default_factory=list)
