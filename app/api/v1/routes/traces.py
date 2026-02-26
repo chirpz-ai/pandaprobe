@@ -478,6 +478,9 @@ async def batch_tags(
 
     Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
+    if not body.add_tags and not body.remove_tags:
+        return BatchTagsResponse(updated=0)
+
     svc = TraceService(session)
     count = await svc.batch_update_tags(
         ctx.project.id,
