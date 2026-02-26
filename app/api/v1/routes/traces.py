@@ -59,6 +59,7 @@ class SpanCreate(BaseModel):
     error: str | None = None
     completion_start_time: datetime | None = None
     model_parameters: dict[str, Any] | None = None
+    cost: dict[str, float] | None = None
 
 
 class SpanUpdate(BaseModel):
@@ -308,6 +309,7 @@ async def ingest_trace(
                 error=s.error,
                 completion_start_time=s.completion_start_time,
                 model_parameters=s.model_parameters,
+                cost=s.cost,
             )
             for s in body.spans
         ],
@@ -541,6 +543,7 @@ async def add_spans(
             error=s.error,
             completion_start_time=s.completion_start_time,
             model_parameters=s.model_parameters,
+            cost=s.cost,
         )
         for s in body
     ]
