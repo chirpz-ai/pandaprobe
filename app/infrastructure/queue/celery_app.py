@@ -10,7 +10,7 @@ from celery import Celery
 from app.registry.settings import settings
 
 celery = Celery(
-    "opentracer",
+    "pandaprobe",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
 )

@@ -62,7 +62,7 @@ class APIKey(BaseModel):
     auto-created within the org.
 
     The raw key is never persisted; only its SHA-256 hash is stored.
-    ``key_prefix`` keeps the first 8 characters (e.g. ``otr_a1b2``)
+    ``key_prefix`` keeps the first 8 characters (e.g. ``pp_a1b2c``)
     so that users can identify which key is which in the UI.
     """
 

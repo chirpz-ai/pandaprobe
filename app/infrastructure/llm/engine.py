@@ -23,7 +23,7 @@ from app.infrastructure.llm.providers import (
     resolve_model_string,
 )
 from app.logging import logger
-from app.registry.exceptions import OpentracerError
+from app.registry.exceptions import PandaProbeError
 from app.registry.settings import settings
 
 T = TypeVar("T", bound=BaseModel)
@@ -31,14 +31,14 @@ T = TypeVar("T", bound=BaseModel)
 MAX_RETRIES = 3
 
 
-class LLMEngineError(OpentracerError):
+class LLMEngineError(PandaProbeError):
     """Raised when an LLM call fails after retries."""
 
     status_code = 502
     detail = "LLM engine request failed."
 
 
-class ProviderNotConfiguredError(OpentracerError):
+class ProviderNotConfiguredError(PandaProbeError):
     """Raised when the requested provider's credentials are missing."""
 
     status_code = 422

@@ -1,5 +1,5 @@
 [project]
-name = "opentracer"
+name = "pandaprobe"
 version = "0.1.0"
 description = "Open-source agent tracing and evaluation service"
 readme = "README.md"
@@ -27,10 +27,8 @@ dependencies = [
     "supabase>=2.0.0",
 ]
 
-[project.optional-dependencies]
-dev = ["ruff>=0.8.0"]
-
 [dependency-groups]
+dev = ["ruff>=0.8.0"]
 test = [
     "httpx>=0.28.0",
     "pytest>=8.3.0",
@@ -48,7 +46,7 @@ exclude = ["migrations", "*.ipynb", ".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "ERA", "D"]
-ignore = ["E501", "F401", "D203", "D213", "B904", "B008"]
+ignore = ["E501", "F401", "D203", "D213", "B904", "B008", "D107"]
 unfixable = ["B"]
 
 [tool.ruff.lint.pydocstyle]

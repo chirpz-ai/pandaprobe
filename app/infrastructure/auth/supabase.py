@@ -43,9 +43,7 @@ def _ensure_client() -> Client:
         key = settings.SUPABASE_KEY
 
         if not url or not key:
-            raise AuthenticationError(
-                "SUPABASE_URL and SUPABASE_KEY must be configured."
-            )
+            raise AuthenticationError("SUPABASE_URL and SUPABASE_KEY must be configured.")
 
         _supabase_client = create_client(url, key)
         logger.info("supabase_initialized", url=url)

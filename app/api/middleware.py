@@ -13,7 +13,7 @@ from app.logging import bind_context, clear_context, logger
 class RequestContextMiddleware(BaseHTTPMiddleware):
     """Attach a unique request ID and log request lifecycle metrics."""
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:  # noqa: D102
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request.state.request_id = request_id
 

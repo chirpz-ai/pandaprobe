@@ -16,7 +16,7 @@ info() { echo -e "  ${CYAN}ℹ${NC} $1"; }
 # ── Banner ──────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${CYAN}║         Opentracer Service v0.1.0        ║${NC}"
+echo -e "${BOLD}${CYAN}║        PandaProbe Service v0.1.0         ║${NC}"
 echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${BOLD}Environment:${NC} ${APP_ENV:-development}"
@@ -41,7 +41,7 @@ echo -e "\n${BOLD}Service connectivity:${NC}"
 
 # PostgreSQL
 if pg_isready -h "${POSTGRES_HOST:-localhost}" -p "${POSTGRES_PORT:-5432}" -U "${POSTGRES_USER:-postgres}" -q 2>/dev/null; then
-    ok "PostgreSQL  → ${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-opentracer_db}"
+    ok "PostgreSQL  → ${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-pandaprobe_db}"
 else
     fail "PostgreSQL  → ${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432} (unreachable)"
 fi

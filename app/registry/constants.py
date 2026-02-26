@@ -54,8 +54,53 @@ class MembershipRole(StrEnum):
     MEMBER = "MEMBER"
 
 
+class TraceSortBy(StrEnum):
+    """Columns available for sorting trace list results."""
+
+    STARTED_AT = "started_at"
+    ENDED_AT = "ended_at"
+    NAME = "name"
+    LATENCY = "latency"
+    STATUS = "status"
+
+
+class SortOrder(StrEnum):
+    """Generic ascending / descending sort direction."""
+
+    ASC = "asc"
+    DESC = "desc"
+
+
+class AnalyticsMetric(StrEnum):
+    """Available metric types for the analytics endpoint."""
+
+    VOLUME = "volume"
+    ERRORS = "errors"
+    LATENCY = "latency"
+    COST = "cost"
+    TOKENS = "tokens"
+    MODELS = "models"
+
+
+class SessionSortBy(StrEnum):
+    """Columns available for sorting session list results."""
+
+    RECENT = "recent"
+    TRACE_COUNT = "trace_count"
+    LATENCY = "latency"
+    COST = "cost"
+
+
+class AnalyticsGranularity(StrEnum):
+    """Time-bucket granularity for analytics queries."""
+
+    HOUR = "hour"
+    DAY = "day"
+    WEEK = "week"
+
+
 # Prefix prepended to every generated API key.
-API_KEY_PREFIX = "otr_"
+API_KEY_PREFIX = "sk_pp_"
 
 # Length of the random portion of an API key (bytes, hex-encoded).
 API_KEY_RANDOM_BYTES = 32
@@ -97,10 +142,10 @@ def validate_resource_name(value: str, label: str = "Name") -> str:
 
 
 def sanitize_text(value: str, label: str = "Field", *, max_length: int = 2000) -> str:
-    """Sanitize a free-text field (e.g. descriptions, notes).
+    r"""Sanitize a free-text field (e.g. descriptions, notes).
 
     Strips leading/trailing whitespace, rejects control characters
-    (except ``\\n`` and ``\\t``), and enforces a maximum length.
+    (except ``\n`` and ``\t``), and enforces a maximum length.
 
     Returns the cleaned string; raises ``ValueError`` on failure.
     """

@@ -1,4 +1,4 @@
-"""FastAPI application entry point for Opentracer."""
+"""FastAPI application entry point for PandaProbe."""
 
 from contextlib import asynccontextmanager
 from typing import Any
@@ -15,7 +15,7 @@ from app.api.middleware import RequestContextMiddleware
 from app.api.rate_limit import limiter
 from app.api.v1.router import v1_router
 from app.logging import logger
-from app.registry.exceptions import OpentracerError
+from app.registry.exceptions import PandaProbeError
 from app.registry.settings import settings
 
 
@@ -70,8 +70,8 @@ app.add_middleware(
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-@app.exception_handler(OpentracerError)
-async def domain_exception_handler(_request: Request, exc: OpentracerError) -> JSONResponse:
+@app.exception_handler(PandaProbeError)
+async def domain_exception_handler(_request: Request, exc: PandaProbeError) -> JSONResponse:
     """Translate domain exceptions into structured JSON error responses."""
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 

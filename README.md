@@ -1,4 +1,4 @@
-# OpenTracer
+# PandaProbe
 
 Open-source, multi-tenant agent tracing and evaluation service. Trace agentic workflows from any framework, evaluate them with LLM-as-a-judge metrics, and query results via a REST API.
 
@@ -108,11 +108,13 @@ flowchart TB
 ```
 User ──(Membership)──> Organization ──> Project ──> Trace / Evaluation
                                    └──> API Key (org-scoped)
+
+Trace ──(session_id)──> Session (implicit grouping, no dedicated table)
 ```
 
 - **Users** authenticate via an external IdP (Supabase or Firebase).
 - **Organizations** contain **Projects**. Users join orgs via **Memberships** (OWNER / ADMIN / MEMBER).
-- **API Keys** are org-scoped. The SDK specifies the target project at runtime via `OPENTRACER_PROJECT` (→ `X-Project-Name` header). Projects are auto-created on first trace if they don't exist. Project names must be unique within an organization.
+- **API Keys** are org-scoped. The SDK specifies the target project at runtime via `PANDAPROBE_PROJECT` (→ `X-Project-Name` header). Projects are auto-created on first trace if they don't exist. Project names must be unique within an organization.
 
 ### Role Permissions
 
@@ -184,25 +186,6 @@ make lint        # ruff linter
 make help        # show all commands
 ```
 
-## Key API Endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET`  | `/user` | Bearer | Current user profile |
-| `POST` | `/organizations` | Bearer | Create an organization |
-| `GET`  | `/organizations` | Bearer | List user's organizations |
-| `POST` | `/organizations/{id}/members` | Bearer | Invite a user |
-| `POST` | `/organizations/{id}/projects` | Bearer | Create a project |
-| `GET`  | `/organizations/{id}/projects` | Bearer | List projects |
-| `POST` | `/organizations/{id}/api-keys` | Bearer | Generate API key (org-scoped) |
-| `POST` | `/traces` | API Key + `X-Project-Name` | Ingest a trace (async, 202) |
-| `GET`  | `/traces` | API Key + `X-Project-Name` | List traces |
-| `GET`  | `/traces/{id}` | API Key + `X-Project-Name` | Get trace with spans |
-| `POST` | `/evaluations` | API Key + `X-Project-Name` | Trigger async evaluation |
-| `GET`  | `/evaluations/{id}` | API Key + `X-Project-Name` | Get evaluation results |
-| `GET`  | `/evaluations/metrics` | — | List registered metrics |
-| `GET`  | `/evaluations/providers` | — | List available LLM providers |
-
 ## Environment Variables
 
 See [`.env.example`](.env.example) for the full list. Key variables:
@@ -219,10 +202,10 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 
 # Authors
 
-Built by the founder of Chirpz AI. Contact sina@chirpz.ai for all enquiries.
+Built by Chirpz AI team. Contact sina@chirpz.ai for all enquiries.
 
 <br />
 
 # License
 
-OpenTracer is licensed under Apache 2.0 - see the [LICENSE.md](https://github.com/chirpz-ai/opentracer/LICENSE) file for details.
+PandaProbe is licensed under Apache 2.0 - see the [LICENSE.md](https://github.com/chirpz-ai/pandaprobe/blob/main/LICENSE) file for details.
