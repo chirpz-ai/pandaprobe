@@ -209,16 +209,18 @@ class TraceService:
         limit: int = 200,
         offset: int = 0,
     ) -> tuple[list[Row[Any]], int]:
-        """Return paginated session traces with span stats, or raise ``NotFoundError``."""
-        rows, total = await self._repo.list_session_traces_with_stats(
+        """Return paginated session traces with span stats.
+
+        Returns ``([], 0)`` when the session has no traces.  Callers
+        that need existence validation should check via
+        ``get_session_summary`` first.
+        """
+        return await self._repo.list_session_traces_with_stats(
             project_id,
             session_id,
             limit=limit,
             offset=offset,
         )
-        if total == 0:
-            raise NotFoundError(f"No traces found for session '{session_id}'.")
-        return rows, total
 
     async def delete_session(self, project_id: UUID, session_id: str) -> int:
         """Delete all traces in a session.  Raises ``NotFoundError`` if none found."""
