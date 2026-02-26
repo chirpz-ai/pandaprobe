@@ -652,9 +652,9 @@ def _row_to_list_item(r: Any) -> TraceListItem:
         environment=r.environment if hasattr(r, "environment") else None,
         release=r.release if hasattr(r, "release") else None,
         latency_ms=float(r.latency_ms) if r.latency_ms is not None else None,
-        span_count=int(r.span_count) if r.span_count else 0,
-        total_tokens=int(r.total_tokens) if r.total_tokens else 0,
-        total_cost=float(r.total_cost) if r.total_cost else 0.0,
+        span_count=int(r.span_count) if r.span_count is not None else 0,
+        total_tokens=int(r.total_tokens) if r.total_tokens is not None else 0,
+        total_cost=float(r.total_cost) if r.total_cost is not None else 0.0,
     )
 
 
