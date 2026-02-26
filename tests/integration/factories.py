@@ -93,27 +93,6 @@ def build_trace_with_spans(span_count: int = 3, **overrides) -> dict:
     return build_trace_payload(trace_id=trace_id, spans=spans, **overrides)
 
 
-def build_session_traces(session_id: str, count: int = 3, **overrides) -> list[dict]:
-    """Return *count* trace payloads sharing the same ``session_id``.
-
-    Traces are spread across a time range so ordering tests work.
-    """
-    base_time = datetime.now(timezone.utc) - timedelta(hours=count)
-    traces = []
-    for i in range(count):
-        started = base_time + timedelta(hours=i)
-        ended = started + timedelta(seconds=2)
-        trace = build_trace_payload(
-            session_id=session_id,
-            name=f"session-trace-{i}",
-            started_at=started,
-            ended_at=ended,
-            **overrides,
-        )
-        traces.append(trace)
-    return traces
-
-
 def _serialize_payload(payload: dict) -> dict:
     """Convert a factory payload dict to JSON-ready format for API submission."""
     result = dict(payload)
