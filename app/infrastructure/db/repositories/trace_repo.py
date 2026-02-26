@@ -82,8 +82,9 @@ class TraceRepository:
                 status=stmt.excluded.status,
                 input=func.coalesce(stmt.excluded.input, t.c.input),
                 output=func.coalesce(stmt.excluded.output, t.c.output),
-                metadata=func.coalesce(t.c.metadata, text("'{}'::jsonb"))
-                + func.coalesce(stmt.excluded.metadata, text("'{}'::jsonb")),
+                metadata=func.coalesce(t.c.metadata, text("'{}'::jsonb")).op("||")(
+                    func.coalesce(stmt.excluded.metadata, text("'{}'::jsonb"))
+                ),
                 started_at=stmt.excluded.started_at,
                 ended_at=func.coalesce(stmt.excluded.ended_at, t.c.ended_at),
                 session_id=func.coalesce(stmt.excluded.session_id, t.c.session_id),
@@ -144,8 +145,9 @@ class TraceRepository:
                 output=func.coalesce(stmt.excluded.output, s.c.output),
                 model=func.coalesce(stmt.excluded.model, s.c.model),
                 token_usage=func.coalesce(stmt.excluded.token_usage, s.c.token_usage),
-                metadata=func.coalesce(s.c.metadata, text("'{}'::jsonb"))
-                + func.coalesce(stmt.excluded.metadata, text("'{}'::jsonb")),
+                metadata=func.coalesce(s.c.metadata, text("'{}'::jsonb")).op("||")(
+                    func.coalesce(stmt.excluded.metadata, text("'{}'::jsonb"))
+                ),
                 started_at=stmt.excluded.started_at,
                 ended_at=func.coalesce(stmt.excluded.ended_at, s.c.ended_at),
                 error=func.coalesce(stmt.excluded.error, s.c.error),
