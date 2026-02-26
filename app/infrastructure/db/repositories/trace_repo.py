@@ -363,25 +363,36 @@ class TraceRepository:
         add_tags: list[str] | None = None,
         remove_tags: list[str] | None = None,
     ) -> int:
-        """Add and/or remove tags on multiple traces.  Returns rows affected."""
-        stmt = select(TraceModel).where(
-            TraceModel.project_id == project_id,
-            TraceModel.trace_id.in_(trace_ids),
+        """Atomically add and/or remove tags on multiple traces.
+
+        Uses SQL-level array operations in a single UPDATE to avoid
+        lost-update races under concurrent access.
+        """
+        t = TraceModel.__table__
+
+        # Start from current tags
+        expr: Any = t.c.tags
+
+        # Remove first (so adds take precedence if a tag is in both lists)
+        for tag in remove_tags or []:
+            expr = func.array_remove(expr, tag)
+
+        # Then add — concatenate and deduplicate
+        if add_tags:
+            combined = func.array_cat(expr, cast(add_tags, PG_ARRAY(String)))
+            expr = cast(
+                select(func.array_agg(func.distinct(text("unnest_val"))))
+                .select_from(func.unnest(combined).alias("unnest_val"))
+                .scalar_subquery(),
+                PG_ARRAY(String),
+            )
+
+        result = await self._session.execute(
+            update(t)
+            .where(t.c.project_id == project_id, t.c.trace_id.in_(trace_ids))
+            .values(tags=expr)
         )
-        rows = (await self._session.execute(stmt)).scalars().all()
-        count = 0
-        for row in rows:
-            current: list[str] = list(row.tags or [])
-            if add_tags:
-                for tag in add_tags:
-                    if tag not in current:
-                        current.append(tag)
-            if remove_tags:
-                current = [t for t in current if t not in remove_tags]
-            row.tags = current
-            count += 1
-        await self._session.flush()
-        return count
+        return result.rowcount  # type: ignore[union-attr]
 
     # -- Session aggregation ---------------------------------------------------
 
