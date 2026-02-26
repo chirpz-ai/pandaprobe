@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Body, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -96,7 +96,7 @@ class TraceCreate(BaseModel):
     tags: list[str] = Field(default_factory=list)
     environment: str | None = Field(default=None, max_length=255)
     release: str | None = Field(default=None, max_length=255)
-    spans: list[SpanCreate] = Field(default_factory=list)
+    spans: list[SpanCreate] = Field(default_factory=list, max_length=500)
 
 
 class TraceUpdate(BaseModel):
@@ -517,7 +517,7 @@ async def update_trace(
 @router.post("/{trace_id}/spans", status_code=201, response_model=SpansAccepted)
 async def add_spans(
     trace_id: UUID,
-    body: list[SpanCreate],
+    body: list[SpanCreate] = Body(..., min_length=1, max_length=500),
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
 ) -> SpansAccepted:
