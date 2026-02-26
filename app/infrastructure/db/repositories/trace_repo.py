@@ -439,16 +439,27 @@ class TraceRepository:
         span_stats = self._span_stats_subquery(project_id)
 
         base_where = [t.c.project_id == project_id, t.c.session_id.isnot(None)]
+
+        # Shared filter conditions applied to both the main query (via `t`)
+        # and the correlated subqueries (via `TraceModel`) so that user_id
+        # and tags are consistent with the aggregated stats.
+        subq_where: list[Any] = [TraceModel.project_id == project_id]
         if started_after is not None:
             base_where.append(t.c.started_at >= started_after)
+            subq_where.append(TraceModel.started_at >= started_after)
         if started_before is not None:
             base_where.append(t.c.started_at < started_before)
+            subq_where.append(TraceModel.started_at < started_before)
         if user_id is not None:
             base_where.append(t.c.user_id == user_id)
+            subq_where.append(TraceModel.user_id == user_id)
         if tags:
             base_where.append(t.c.tags.overlap(tags))
+            subq_where.append(TraceModel.tags.overlap(tags))
         if query:
-            base_where.append(t.c.session_id.ilike(f"%{_escape_like(query)}%"))
+            pattern = f"%{_escape_like(query)}%"
+            base_where.append(t.c.session_id.ilike(pattern))
+            subq_where.append(TraceModel.session_id.ilike(pattern))
 
         total_tokens_expr = func.coalesce(func.sum(span_stats.c.total_tokens), 0)
         total_cost_expr = func.coalesce(func.sum(span_stats.c.total_cost), 0.0)
@@ -466,7 +477,7 @@ class TraceRepository:
                 (
                     select(TraceModel.user_id)
                     .where(
-                        TraceModel.project_id == project_id,
+                        *subq_where,
                         TraceModel.session_id == t.c.session_id,
                         TraceModel.user_id.isnot(None),
                     )
@@ -482,7 +493,7 @@ class TraceRepository:
                         .select_from(
                             select(func.unnest(TraceModel.tags).label("unnest_val"))
                             .where(
-                                TraceModel.project_id == project_id,
+                                *subq_where,
                                 TraceModel.session_id == t.c.session_id,
                             )
                             .subquery()
