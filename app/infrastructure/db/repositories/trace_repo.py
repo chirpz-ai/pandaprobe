@@ -30,6 +30,15 @@ from app.registry.constants import (
 # Sentinel to distinguish "field not provided" from "field set to None"
 _UNSET = object()
 
+# Fields that are NOT NULL in the DB — ignore explicit None to avoid constraint violations.
+_TRACE_NOT_NULL = frozenset({"name", "status", "tags"})
+_SPAN_NOT_NULL = frozenset({"name", "kind", "status"})
+
+
+def _escape_like(value: str) -> str:
+    """Escape ``%`` and ``_`` so they are treated as literals in ILIKE patterns."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
 
 class TraceRepository:
     """Concrete trace repository backed by PostgreSQL + SQLAlchemy."""
@@ -168,10 +177,12 @@ class TraceRepository:
         for key, value in fields.items():
             if value is _UNSET:
                 continue
+            if value is None and key in _TRACE_NOT_NULL:
+                continue
             if key == "metadata":
                 existing = row.metadata_ or {}
                 row.metadata_ = {**existing, **(value or {})}
-            elif key == "status" and value is not None:
+            elif key == "status":
                 row.status = value.value if hasattr(value, "value") else value
             else:
                 setattr(row, key, value)
@@ -203,12 +214,14 @@ class TraceRepository:
         for key, value in fields.items():
             if value is _UNSET:
                 continue
+            if value is None and key in _SPAN_NOT_NULL:
+                continue
             if key == "metadata":
                 existing = row.metadata_ or {}
                 row.metadata_ = {**existing, **(value or {})}
-            elif key == "status" and value is not None:
+            elif key == "status":
                 row.status = value.value if hasattr(value, "value") else value
-            elif key == "kind" and value is not None:
+            elif key == "kind":
                 row.kind = value.value if hasattr(value, "value") else value
             else:
                 setattr(row, key, value)
@@ -415,7 +428,7 @@ class TraceRepository:
         if tags:
             base_where.append(t.c.tags.overlap(tags))
         if query:
-            base_where.append(t.c.session_id.ilike(f"%{query}%"))
+            base_where.append(t.c.session_id.ilike(f"%{_escape_like(query)}%"))
 
         total_tokens_expr = func.coalesce(func.sum(span_stats.c.total_tokens), 0)
         total_cost_expr = func.coalesce(func.sum(span_stats.c.total_cost), 0.0)
@@ -822,7 +835,7 @@ class TraceRepository:
         if tags:
             stmt = stmt.where(t.c.tags.overlap(tags))
         if name:
-            stmt = stmt.where(t.c.name.ilike(f"%{name}%"))
+            stmt = stmt.where(t.c.name.ilike(f"%{_escape_like(name)}%"))
         if started_after is not None:
             stmt = stmt.where(t.c.started_at >= started_after)
         if started_before is not None:
