@@ -27,9 +27,6 @@ from app.registry.constants import (
     TraceStatus,
 )
 
-# Sentinel to distinguish "field not provided" from "field set to None"
-_UNSET = object()
-
 # Fields that are NOT NULL in the DB — ignore explicit None to avoid constraint violations.
 _TRACE_NOT_NULL = frozenset({"name", "status", "tags"})
 _SPAN_NOT_NULL = frozenset({"name", "kind", "status"})
@@ -177,8 +174,6 @@ class TraceRepository:
             return None
 
         for key, value in fields.items():
-            if value is _UNSET:
-                continue
             if value is None and key in _TRACE_NOT_NULL:
                 continue
             if key == "metadata":
@@ -214,8 +209,6 @@ class TraceRepository:
             return None
 
         for key, value in fields.items():
-            if value is _UNSET:
-                continue
             if value is None and key in _SPAN_NOT_NULL:
                 continue
             if key == "metadata":
