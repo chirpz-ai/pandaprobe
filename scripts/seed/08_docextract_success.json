@@ -1,0 +1,141 @@
+{
+  "trace_id": "a1b2c3d4-0008-4000-8000-000000000001",
+  "name": "financial-data-extraction",
+  "status": "COMPLETED",
+  "input": {
+    "document_url": "s3://acme-docs/invoices/INV-2026-00892.pdf",
+    "extraction_schema": "invoice-v2",
+    "requested_fields": ["vendor_name", "invoice_number", "line_items", "total_amount", "due_date"]
+  },
+  "output": {
+    "extracted_data": {
+      "vendor_name": "CloudServe Technologies Inc.",
+      "invoice_number": "INV-2026-00892",
+      "line_items": [
+        {"description": "Enterprise Cloud Hosting (Feb 2026)", "quantity": 1, "unit_price": 2400.00, "amount": 2400.00},
+        {"description": "Additional Storage (500GB)", "quantity": 1, "unit_price": 150.00, "amount": 150.00},
+        {"description": "Premium Support Plan", "quantity": 1, "unit_price": 499.00, "amount": 499.00}
+      ],
+      "total_amount": 3049.00,
+      "due_date": "2026-03-15"
+    },
+    "confidence": 0.95
+  },
+  "metadata": {
+    "sdk_name": "pandaprobe-python",
+    "sdk_version": "0.3.1",
+    "pipeline": "document-extraction-v1",
+    "batch_id": "batch-20260223-invoices"
+  },
+  "started_at": "2026-02-23T09:23:00.000Z",
+  "ended_at": "2026-02-23T09:23:09.800Z",
+  "session_id": "session-docextract-batch-20260223",
+  "user_id": "user-sarah-chen-1104",
+  "tags": ["document-extraction", "invoice", "production"],
+  "environment": "production",
+  "release": "v2.4.1",
+  "spans": [
+    {
+      "span_id": "b8000001-0001-4000-8000-000000000001",
+      "parent_span_id": null,
+      "name": "extraction-pipeline",
+      "kind": "CHAIN",
+      "status": "OK",
+      "input": {"document_url": "s3://acme-docs/invoices/INV-2026-00892.pdf"},
+      "output": {"status": "completed", "confidence": 0.95},
+      "metadata": {"pipeline_stage_reached": "completed"},
+      "started_at": "2026-02-23T09:23:00.050Z",
+      "ended_at": "2026-02-23T09:23:09.750Z"
+    },
+    {
+      "span_id": "b8000001-0001-4000-8000-000000000002",
+      "parent_span_id": "b8000001-0001-4000-8000-000000000001",
+      "name": "document-fetch",
+      "kind": "TOOL",
+      "status": "OK",
+      "input": {"bucket": "acme-docs", "key": "invoices/INV-2026-00892.pdf"},
+      "output": {"content_type": "application/pdf", "size_bytes": 198200, "pages": 2},
+      "metadata": {"tool_name": "s3-client", "region": "us-east-1"},
+      "started_at": "2026-02-23T09:23:00.100Z",
+      "ended_at": "2026-02-23T09:23:01.200Z"
+    },
+    {
+      "span_id": "b8000001-0001-4000-8000-000000000003",
+      "parent_span_id": "b8000001-0001-4000-8000-000000000001",
+      "name": "pdf-to-text-ocr",
+      "kind": "TOOL",
+      "status": "OK",
+      "input": {"pages": 2, "ocr_engine": "tesseract-v5"},
+      "output": {"text_length": 2840, "confidence": 0.99, "tables_detected": 1},
+      "metadata": {"tool_name": "ocr-service", "processing_time_ms": 1900},
+      "started_at": "2026-02-23T09:23:01.250Z",
+      "ended_at": "2026-02-23T09:23:03.150Z"
+    },
+    {
+      "span_id": "b8000001-0001-4000-8000-000000000004",
+      "parent_span_id": "b8000001-0001-4000-8000-000000000001",
+      "name": "structured-extraction",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Extract structured invoice data from the following text. Return JSON matching the schema: {vendor_name, invoice_number, line_items: [{description, quantity, unit_price, amount}], total_amount, due_date}"},
+          {"role": "user", "content": "INVOICE\nCloudServe Technologies Inc.\n100 Tech Park Drive, Austin TX 78701\n\nInvoice #: INV-2026-00892\nDate: February 1, 2026\nDue Date: March 15, 2026\n\nBill To:\nAcme Corp\n500 Innovation Way\nSan Francisco, CA 94105\n\nDescription | Qty | Unit Price | Amount\nEnterprise Cloud Hosting (Feb 2026) | 1 | $2,400.00 | $2,400.00\nAdditional Storage (500GB) | 1 | $150.00 | $150.00\nPremium Support Plan | 1 | $499.00 | $499.00\n\nSubtotal: $3,049.00\nTax (0%): $0.00\nTotal: $3,049.00\n\nPayment Terms: Net 30"}
+        ]
+      },
+      "output": {
+        "vendor_name": "CloudServe Technologies Inc.",
+        "invoice_number": "INV-2026-00892",
+        "line_items": [
+          {"description": "Enterprise Cloud Hosting (Feb 2026)", "quantity": 1, "unit_price": 2400.00, "amount": 2400.00},
+          {"description": "Additional Storage (500GB)", "quantity": 1, "unit_price": 150.00, "amount": 150.00},
+          {"description": "Premium Support Plan", "quantity": 1, "unit_price": 499.00, "amount": 499.00}
+        ],
+        "total_amount": 3049.00,
+        "due_date": "2026-03-15"
+      },
+      "model": "claude-3-5-sonnet-20241022",
+      "token_usage": {"prompt_tokens": 310, "completion_tokens": 185, "total_tokens": 495},
+      "metadata": {"provider": "anthropic"},
+      "started_at": "2026-02-23T09:23:03.200Z",
+      "ended_at": "2026-02-23T09:23:07.800Z",
+      "completion_start_time": "2026-02-23T09:23:04.100Z",
+      "model_parameters": {"temperature": 0.0, "max_tokens": 2000},
+      "cost": {"input_cost": 0.00093, "output_cost": 0.002775, "total_cost": 0.003705}
+    },
+    {
+      "span_id": "b8000001-0001-4000-8000-000000000005",
+      "parent_span_id": "b8000001-0001-4000-8000-000000000001",
+      "name": "schema-validation",
+      "kind": "TOOL",
+      "status": "OK",
+      "input": {"schema": "invoice-v2", "data": {"vendor_name": "CloudServe Technologies Inc.", "invoice_number": "INV-2026-00892", "total_amount": 3049.00}},
+      "output": {"valid": true, "warnings": [], "completeness_score": 1.0},
+      "metadata": {"tool_name": "json-schema-validator"},
+      "started_at": "2026-02-23T09:23:07.850Z",
+      "ended_at": "2026-02-23T09:23:08.100Z"
+    },
+    {
+      "span_id": "b8000001-0001-4000-8000-000000000006",
+      "parent_span_id": "b8000001-0001-4000-8000-000000000001",
+      "name": "confidence-scoring",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Compare the extracted data against the original text. Score overall confidence 0-1. Flag any fields where extraction may be uncertain."},
+          {"role": "user", "content": "Original text: [invoice text...]\nExtracted: {vendor_name: 'CloudServe Technologies Inc.', ...}"}
+        ]
+      },
+      "output": {"confidence": 0.95, "uncertain_fields": [], "notes": "All fields clearly visible in source document."},
+      "model": "gpt-4o-mini",
+      "token_usage": {"prompt_tokens": 520, "completion_tokens": 35, "total_tokens": 555},
+      "metadata": {"provider": "openai"},
+      "started_at": "2026-02-23T09:23:08.150Z",
+      "ended_at": "2026-02-23T09:23:09.700Z",
+      "completion_start_time": "2026-02-23T09:23:08.600Z",
+      "model_parameters": {"temperature": 0.0, "max_tokens": 200},
+      "cost": {"input_cost": 0.000078, "output_cost": 0.0000105, "total_cost": 0.0000885}
+    }
+  ]
+}

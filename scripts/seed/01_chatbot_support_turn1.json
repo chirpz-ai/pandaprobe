@@ -1,0 +1,140 @@
+{
+  "trace_id": "a1b2c3d4-0001-4000-8000-000000000001",
+  "name": "customer-support-agent",
+  "status": "COMPLETED",
+  "input": {
+    "messages": [
+      {"role": "user", "content": "Hi, I placed an order yesterday (order #ORD-78432) and I still haven't received a confirmation email. Can you check the status?"}
+    ]
+  },
+  "output": {
+    "messages": [
+      {"role": "assistant", "content": "I found your order #ORD-78432. It was placed yesterday at 3:42 PM and is currently being processed. The confirmation email was sent to j.martinez@email.com — please check your spam folder. Your estimated delivery date is February 28th. Would you like me to resend the confirmation email?"}
+    ]
+  },
+  "metadata": {
+    "sdk_name": "pandaprobe-python",
+    "sdk_version": "0.3.1",
+    "runtime": "python3.12",
+    "pipeline": "customer-support-v2"
+  },
+  "started_at": "2026-02-23T10:00:00.000Z",
+  "ended_at": "2026-02-23T10:00:04.320Z",
+  "session_id": "session-cs-20260223-jmartinez",
+  "user_id": "user-j-martinez-8821",
+  "tags": ["customer-support", "order-status", "production"],
+  "environment": "production",
+  "release": "v2.4.1",
+  "spans": [
+    {
+      "span_id": "b1000001-0001-4000-8000-000000000001",
+      "parent_span_id": null,
+      "name": "support-agent-orchestrator",
+      "kind": "AGENT",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "user", "content": "Hi, I placed an order yesterday (order #ORD-78432) and I still haven't received a confirmation email. Can you check the status?"}
+        ]
+      },
+      "output": {
+        "decision": "route_to_order_lookup",
+        "confidence": 0.96
+      },
+      "metadata": {"agent_version": "2.4.1", "routing_strategy": "intent-classifier"},
+      "started_at": "2026-02-23T10:00:00.050Z",
+      "ended_at": "2026-02-23T10:00:04.280Z"
+    },
+    {
+      "span_id": "b1000001-0001-4000-8000-000000000002",
+      "parent_span_id": "b1000001-0001-4000-8000-000000000001",
+      "name": "intent-classification",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Classify the user intent. Return one of: order_status, returns, billing, general_inquiry, complaint."},
+          {"role": "user", "content": "Hi, I placed an order yesterday (order #ORD-78432) and I still haven't received a confirmation email. Can you check the status?"}
+        ]
+      },
+      "output": {
+        "intent": "order_status",
+        "confidence": 0.96,
+        "entities": {"order_id": "ORD-78432"}
+      },
+      "model": "gpt-4o-mini",
+      "token_usage": {"prompt_tokens": 82, "completion_tokens": 24, "total_tokens": 106},
+      "metadata": {"provider": "openai"},
+      "started_at": "2026-02-23T10:00:00.100Z",
+      "ended_at": "2026-02-23T10:00:00.780Z",
+      "completion_start_time": "2026-02-23T10:00:00.420Z",
+      "model_parameters": {"temperature": 0.0, "max_tokens": 100},
+      "cost": {"input_cost": 0.0000123, "output_cost": 0.0000072, "total_cost": 0.0000195}
+    },
+    {
+      "span_id": "b1000001-0001-4000-8000-000000000003",
+      "parent_span_id": "b1000001-0001-4000-8000-000000000001",
+      "name": "order-lookup",
+      "kind": "TOOL",
+      "status": "OK",
+      "input": {"order_id": "ORD-78432"},
+      "output": {
+        "order_id": "ORD-78432",
+        "status": "processing",
+        "placed_at": "2026-02-22T15:42:00Z",
+        "email": "j.martinez@email.com",
+        "estimated_delivery": "2026-02-28",
+        "items": [
+          {"name": "Wireless Bluetooth Headphones", "qty": 1, "price": 79.99},
+          {"name": "USB-C Charging Cable", "qty": 2, "price": 12.49}
+        ],
+        "total": 104.97
+      },
+      "metadata": {"tool_name": "order-management-api", "api_version": "v3"},
+      "started_at": "2026-02-23T10:00:00.800Z",
+      "ended_at": "2026-02-23T10:00:01.450Z"
+    },
+    {
+      "span_id": "b1000001-0001-4000-8000-000000000004",
+      "parent_span_id": "b1000001-0001-4000-8000-000000000001",
+      "name": "email-status-check",
+      "kind": "TOOL",
+      "status": "OK",
+      "input": {"order_id": "ORD-78432", "check_type": "confirmation_email"},
+      "output": {
+        "email_sent": true,
+        "sent_at": "2026-02-22T15:43:12Z",
+        "recipient": "j.martinez@email.com",
+        "delivery_status": "delivered"
+      },
+      "metadata": {"tool_name": "email-service-api"},
+      "started_at": "2026-02-23T10:00:01.500Z",
+      "ended_at": "2026-02-23T10:00:02.100Z"
+    },
+    {
+      "span_id": "b1000001-0001-4000-8000-000000000005",
+      "parent_span_id": "b1000001-0001-4000-8000-000000000001",
+      "name": "response-generation",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "You are a friendly customer support agent for an e-commerce store. Use the provided context to answer the customer's question concisely."},
+          {"role": "user", "content": "Hi, I placed an order yesterday (order #ORD-78432) and I still haven't received a confirmation email. Can you check the status?"},
+          {"role": "system", "content": "Context: Order ORD-78432 found. Status: processing. Placed: 2026-02-22T15:42:00Z. Email j.martinez@email.com. Confirmation email sent and delivered at 2026-02-22T15:43:12Z. Estimated delivery: 2026-02-28."}
+        ]
+      },
+      "output": {
+        "content": "I found your order #ORD-78432. It was placed yesterday at 3:42 PM and is currently being processed. The confirmation email was sent to j.martinez@email.com — please check your spam folder. Your estimated delivery date is February 28th. Would you like me to resend the confirmation email?"
+      },
+      "model": "gpt-4o",
+      "token_usage": {"prompt_tokens": 195, "completion_tokens": 68, "total_tokens": 263},
+      "metadata": {"provider": "openai"},
+      "started_at": "2026-02-23T10:00:02.150Z",
+      "ended_at": "2026-02-23T10:00:04.250Z",
+      "completion_start_time": "2026-02-23T10:00:02.680Z",
+      "model_parameters": {"temperature": 0.3, "max_tokens": 300},
+      "cost": {"input_cost": 0.000975, "output_cost": 0.00102, "total_cost": 0.001995}
+    }
+  ]
+}

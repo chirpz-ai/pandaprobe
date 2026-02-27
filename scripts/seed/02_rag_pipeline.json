@@ -1,0 +1,164 @@
+{
+  "trace_id": "a1b2c3d4-0002-4000-8000-000000000001",
+  "name": "rag-knowledge-base-qa",
+  "status": "COMPLETED",
+  "input": {
+    "query": "What is PandaProbe's approach to handling trace ingestion at scale? How does it ensure data consistency?"
+  },
+  "output": {
+    "answer": "PandaProbe handles trace ingestion at scale through an asynchronous architecture. When a trace is submitted via the POST /traces endpoint, it is validated synchronously and immediately enqueued to a Celery task queue backed by Redis. The Celery worker then persists the trace to PostgreSQL using an upsert (INSERT ... ON CONFLICT DO UPDATE) strategy, which ensures idempotency — sending the same trace_id twice updates rather than duplicates. For data consistency, PandaProbe uses database transactions with automatic rollback on failure, and the Celery task includes retry logic (up to 3 retries with a 5-second delay). JSONB metadata fields are merged using PostgreSQL's || operator to preserve existing keys during upserts.",
+    "sources": [
+      {"document": "architecture-overview.md", "chunk_id": "arch-014", "relevance_score": 0.94},
+      {"document": "api-reference.md", "chunk_id": "api-042", "relevance_score": 0.89},
+      {"document": "deployment-guide.md", "chunk_id": "deploy-007", "relevance_score": 0.82}
+    ]
+  },
+  "metadata": {
+    "sdk_name": "pandaprobe-python",
+    "sdk_version": "0.3.1",
+    "pipeline": "docs-qa-rag-v1",
+    "retrieval_strategy": "hybrid-search",
+    "reranker": "cohere-rerank-v3"
+  },
+  "started_at": "2026-02-23T11:15:00.000Z",
+  "ended_at": "2026-02-23T11:15:08.450Z",
+  "session_id": "session-docsqa-20260223-akim",
+  "user_id": "user-alex-kim-3347",
+  "tags": ["rag", "knowledge-base", "documentation", "staging"],
+  "environment": "staging",
+  "release": "v2.5.0-rc1",
+  "spans": [
+    {
+      "span_id": "b2000001-0001-4000-8000-000000000001",
+      "parent_span_id": null,
+      "name": "rag-orchestrator",
+      "kind": "CHAIN",
+      "status": "OK",
+      "input": {"query": "What is PandaProbe's approach to handling trace ingestion at scale? How does it ensure data consistency?"},
+      "output": {"status": "completed", "source_count": 3, "answer_length": 547},
+      "metadata": {"chain_type": "retrieval-augmented-generation"},
+      "started_at": "2026-02-23T11:15:00.050Z",
+      "ended_at": "2026-02-23T11:15:08.400Z"
+    },
+    {
+      "span_id": "b2000001-0001-4000-8000-000000000002",
+      "parent_span_id": "b2000001-0001-4000-8000-000000000001",
+      "name": "query-expansion",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Generate 3 alternative phrasings of the user's query to improve retrieval coverage. Return as JSON array."},
+          {"role": "user", "content": "What is PandaProbe's approach to handling trace ingestion at scale? How does it ensure data consistency?"}
+        ]
+      },
+      "output": {
+        "alternatives": [
+          "How does PandaProbe scale its trace data pipeline?",
+          "What mechanisms does PandaProbe use for reliable trace storage?",
+          "PandaProbe trace ingestion architecture and consistency guarantees"
+        ]
+      },
+      "model": "gpt-4o-mini",
+      "token_usage": {"prompt_tokens": 65, "completion_tokens": 52, "total_tokens": 117},
+      "metadata": {"provider": "openai"},
+      "started_at": "2026-02-23T11:15:00.100Z",
+      "ended_at": "2026-02-23T11:15:01.200Z",
+      "completion_start_time": "2026-02-23T11:15:00.550Z",
+      "model_parameters": {"temperature": 0.7, "max_tokens": 150},
+      "cost": {"input_cost": 0.0000098, "output_cost": 0.0000156, "total_cost": 0.0000254}
+    },
+    {
+      "span_id": "b2000001-0001-4000-8000-000000000003",
+      "parent_span_id": "b2000001-0001-4000-8000-000000000001",
+      "name": "vector-search",
+      "kind": "RETRIEVER",
+      "status": "OK",
+      "input": {
+        "queries": [
+          "What is PandaProbe's approach to handling trace ingestion at scale?",
+          "How does PandaProbe scale its trace data pipeline?",
+          "What mechanisms does PandaProbe use for reliable trace storage?",
+          "PandaProbe trace ingestion architecture and consistency guarantees"
+        ],
+        "top_k": 10,
+        "collection": "pandaprobe-docs"
+      },
+      "output": {
+        "total_results": 10,
+        "unique_chunks": 8,
+        "top_score": 0.94,
+        "documents": [
+          {"chunk_id": "arch-014", "score": 0.94, "text": "PandaProbe uses an async-first ingestion pipeline. Traces are validated at the API gateway and enqueued to Celery..."},
+          {"chunk_id": "api-042", "score": 0.89, "text": "The POST /traces endpoint accepts a TraceCreate payload and returns 202 Accepted with a task_id..."},
+          {"chunk_id": "deploy-007", "score": 0.82, "text": "For high-throughput deployments, increase the Celery concurrency and PostgreSQL pool size..."}
+        ]
+      },
+      "metadata": {"vector_db": "pgvector", "embedding_model": "text-embedding-3-small", "search_type": "hybrid"},
+      "started_at": "2026-02-23T11:15:01.250Z",
+      "ended_at": "2026-02-23T11:15:02.800Z"
+    },
+    {
+      "span_id": "b2000001-0001-4000-8000-000000000004",
+      "parent_span_id": "b2000001-0001-4000-8000-000000000003",
+      "name": "embedding-generation",
+      "kind": "EMBEDDING",
+      "status": "OK",
+      "input": {"texts": ["What is PandaProbe's approach to handling trace ingestion at scale?", "How does PandaProbe scale its trace data pipeline?", "What mechanisms does PandaProbe use for reliable trace storage?", "PandaProbe trace ingestion architecture and consistency guarantees"], "model": "text-embedding-3-small"},
+      "output": {"dimensions": 1536, "vectors_generated": 4},
+      "model": "text-embedding-3-small",
+      "token_usage": {"prompt_tokens": 58, "completion_tokens": 0, "total_tokens": 58},
+      "metadata": {"provider": "openai"},
+      "started_at": "2026-02-23T11:15:01.300Z",
+      "ended_at": "2026-02-23T11:15:01.850Z",
+      "cost": {"input_cost": 0.0000012, "output_cost": 0.0, "total_cost": 0.0000012}
+    },
+    {
+      "span_id": "b2000001-0001-4000-8000-000000000005",
+      "parent_span_id": "b2000001-0001-4000-8000-000000000001",
+      "name": "cohere-reranker",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "query": "What is PandaProbe's approach to handling trace ingestion at scale? How does it ensure data consistency?",
+        "documents": 8
+      },
+      "output": {
+        "reranked_count": 3,
+        "top_score": 0.97,
+        "selected_chunks": ["arch-014", "api-042", "deploy-007"]
+      },
+      "model": "rerank-english-v3.0",
+      "token_usage": {"prompt_tokens": 1240, "completion_tokens": 0, "total_tokens": 1240},
+      "metadata": {"provider": "cohere", "reranker_type": "cross-encoder"},
+      "started_at": "2026-02-23T11:15:02.850Z",
+      "ended_at": "2026-02-23T11:15:03.900Z",
+      "cost": {"input_cost": 0.000248, "output_cost": 0.0, "total_cost": 0.000248}
+    },
+    {
+      "span_id": "b2000001-0001-4000-8000-000000000006",
+      "parent_span_id": "b2000001-0001-4000-8000-000000000001",
+      "name": "answer-generation",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "You are a technical documentation assistant. Answer the user's question based solely on the provided context. Cite sources using [source:chunk_id] format. If the context doesn't contain enough information, say so."},
+          {"role": "user", "content": "What is PandaProbe's approach to handling trace ingestion at scale? How does it ensure data consistency?"},
+          {"role": "system", "content": "Context:\n[arch-014]: PandaProbe uses an async-first ingestion pipeline. Traces are validated at the API gateway and enqueued to Celery backed by Redis. Workers persist to PostgreSQL using upsert semantics.\n[api-042]: The POST /traces endpoint accepts a TraceCreate payload and returns 202 Accepted with a task_id. The Celery worker handles persistence with retry logic (3 retries, 5s delay).\n[deploy-007]: For high-throughput deployments, increase Celery concurrency and PostgreSQL pool size. JSONB metadata is merged with the || operator."}
+        ]
+      },
+      "output": {
+        "content": "PandaProbe handles trace ingestion at scale through an asynchronous architecture. When a trace is submitted via the POST /traces endpoint, it is validated synchronously and immediately enqueued to a Celery task queue backed by Redis. The Celery worker then persists the trace to PostgreSQL using an upsert (INSERT ... ON CONFLICT DO UPDATE) strategy, which ensures idempotency — sending the same trace_id twice updates rather than duplicates. For data consistency, PandaProbe uses database transactions with automatic rollback on failure, and the Celery task includes retry logic (up to 3 retries with a 5-second delay). JSONB metadata fields are merged using PostgreSQL's || operator to preserve existing keys during upserts."
+      },
+      "model": "claude-3-5-sonnet-20241022",
+      "token_usage": {"prompt_tokens": 342, "completion_tokens": 128, "total_tokens": 470},
+      "metadata": {"provider": "anthropic"},
+      "started_at": "2026-02-23T11:15:04.000Z",
+      "ended_at": "2026-02-23T11:15:08.350Z",
+      "completion_start_time": "2026-02-23T11:15:04.820Z",
+      "model_parameters": {"temperature": 0.1, "max_tokens": 500},
+      "cost": {"input_cost": 0.001026, "output_cost": 0.00192, "total_cost": 0.002946}
+    }
+  ]
+}
