@@ -62,8 +62,8 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "pandaprobe_db"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_POOL_SIZE: int = 20
-    POSTGRES_MAX_OVERFLOW: int = 10
+    POSTGRES_POOL_SIZE: int = 5
+    POSTGRES_MAX_OVERFLOW: int = 5
 
     @computed_field  # type: ignore[prop-decorator]
     @property
