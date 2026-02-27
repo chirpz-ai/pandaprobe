@@ -63,6 +63,9 @@ async def get_data_plane_context(
 ) -> ApiContext:
     """Dependency for data-plane routes — Bearer JWT **or** API key.
 
+    When both are present, **API key wins**.  This avoids failures when
+    a client (or Swagger UI) sends a stale JWT alongside a valid key.
+
     **Bearer JWT**: also provide ``X-Project-ID`` to scope the request.
 
     **API key**: provide ``X-Project-Name`` to select (or auto-create)
@@ -70,7 +73,7 @@ async def get_data_plane_context(
     """
     request_id: str = getattr(request.state, "request_id", "unknown")
 
-    if bearer:
+    if bearer and not x_api_key:
         ctx = await _resolve_jwt(
             bearer.credentials,
             request,
