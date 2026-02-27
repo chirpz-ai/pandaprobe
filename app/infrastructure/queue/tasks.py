@@ -8,13 +8,44 @@ Two task families:
 - **process_trace** -- persist an ingested trace to PostgreSQL.
 - **run_evaluation** -- execute metrics against a stored trace using
   an LLM judge and persist the results.
+
+**Why NullPool?**  Each ``asyncio.run()`` call creates a new event loop.
+A pooled engine holds connections bound to the previous loop, causing
+``"attached to a different loop"`` errors on the next task.  ``NullPool``
+creates a fresh connection per session and discards it immediately,
+avoiding cross-loop contamination.
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from typing import Any
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.infrastructure.queue.celery_app import celery
 from app.logging import logger
+from app.registry.settings import settings
+
+_worker_engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
+_worker_session_factory = async_sessionmaker(
+    bind=_worker_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+
+@asynccontextmanager
+async def _worker_session() -> AsyncGenerator:
+    """Yield an async session safe for Celery workers.
+
+    Uses a module-level ``NullPool`` engine — safe across event loops
+    because NullPool holds zero idle connections.  Each session opens
+    a fresh TCP connection and closes it on exit.
+    """
+    async with _worker_session_factory() as session:
+        yield session
 
 
 # ---------------------------------------------------------------------------
@@ -43,12 +74,11 @@ def process_trace(self: Any, payload: dict[str, Any]) -> dict[str, str]:
 async def _persist_trace(payload: dict[str, Any]) -> dict[str, str]:
     """Async helper that opens a DB session and saves the trace."""
     from app.core.traces.entities import Trace
-    from app.infrastructure.db.engine import async_session_factory
     from app.infrastructure.db.repositories.trace_repo import TraceRepository
 
     trace = Trace.model_validate(payload)
 
-    async with async_session_factory() as session:
+    async with _worker_session() as session:
         repo = TraceRepository(session)
         await repo.upsert_trace(trace)
         await session.commit()
@@ -94,7 +124,6 @@ async def _execute_evaluation(evaluation_id: str, project_id: str) -> dict[str, 
     from app.core.evals.entities import EvaluationResult
     from app.core.evals.metrics import get_metric
     from app.core.evals.metrics.base import MetricResult
-    from app.infrastructure.db.engine import async_session_factory
     from app.infrastructure.db.repositories.eval_repo import EvalRepository
     from app.infrastructure.db.repositories.trace_repo import TraceRepository
     from app.infrastructure.llm.engine import LLMEngine
@@ -105,7 +134,7 @@ async def _execute_evaluation(evaluation_id: str, project_id: str) -> dict[str, 
 
     llm = LLMEngine()
 
-    async with async_session_factory() as session:
+    async with _worker_session() as session:
         eval_repo = EvalRepository(session)
         trace_repo = TraceRepository(session)
 
@@ -181,12 +210,11 @@ async def _fail_evaluation(evaluation_id: str) -> None:
     """Mark an evaluation as FAILED on unrecoverable errors."""
     from uuid import UUID
 
-    from app.infrastructure.db.engine import async_session_factory
     from app.infrastructure.db.repositories.eval_repo import EvalRepository
     from app.registry.constants import EvaluationStatus
 
     try:
-        async with async_session_factory() as session:
+        async with _worker_session() as session:
             repo = EvalRepository(session)
             await repo.update_status(UUID(evaluation_id), EvaluationStatus.FAILED)
             await session.commit()

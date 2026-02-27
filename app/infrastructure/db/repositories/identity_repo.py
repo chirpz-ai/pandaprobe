@@ -169,6 +169,11 @@ class IdentityRepository:
         stmt = update(APIKeyModel).where(APIKeyModel.id == key_id).values(is_active=False)
         await self._session.execute(stmt)
 
+    async def delete_api_key(self, key_id: UUID) -> None:
+        """Hard-delete an API key row from the database."""
+        stmt = delete(APIKeyModel).where(APIKeyModel.id == key_id)
+        await self._session.execute(stmt)
+
     async def list_api_keys(self, org_id: UUID) -> list[APIKey]:
         """Return every API key for an organization (active and revoked)."""
         stmt = select(APIKeyModel).where(APIKeyModel.org_id == org_id).order_by(APIKeyModel.created_at.desc())

@@ -330,3 +330,8 @@ class IdentityService:
         """Deactivate an API key after verifying it belongs to *org_id*."""
         await self.get_api_key(key_id, org_id=org_id)
         await self._repo.revoke_api_key(key_id)
+
+    async def delete_api_key(self, key_id: UUID, *, org_id: UUID) -> None:
+        """Permanently remove an API key after verifying it belongs to *org_id*."""
+        await self.get_api_key(key_id, org_id=org_id)
+        await self._repo.delete_api_key(key_id)

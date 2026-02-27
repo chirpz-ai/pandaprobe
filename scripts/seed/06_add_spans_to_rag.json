@@ -1,0 +1,64 @@
+[
+  {
+    "span_id": "b2000001-0001-4000-8000-000000000007",
+    "parent_span_id": "b2000001-0001-4000-8000-000000000001",
+    "name": "citation-verification",
+    "kind": "LLM",
+    "status": "OK",
+    "input": {
+      "messages": [
+        {"role": "system", "content": "Verify that each claim in the answer is supported by the cited source. Return a JSON object with 'verified_claims' and 'unsupported_claims' arrays."},
+        {"role": "user", "content": "Answer: 'PandaProbe handles trace ingestion at scale through an asynchronous architecture...'\nSources: [arch-014], [api-042], [deploy-007]"}
+      ]
+    },
+    "output": {
+      "verified_claims": [
+        {"claim": "Traces are validated synchronously and enqueued to Celery", "source": "arch-014", "supported": true},
+        {"claim": "Returns 202 Accepted with a task_id", "source": "api-042", "supported": true},
+        {"claim": "Upsert with ON CONFLICT DO UPDATE for idempotency", "source": "arch-014", "supported": true},
+        {"claim": "3 retries with 5-second delay", "source": "api-042", "supported": true},
+        {"claim": "JSONB merged with || operator", "source": "deploy-007", "supported": true}
+      ],
+      "unsupported_claims": [],
+      "verification_score": 1.0
+    },
+    "model": "gpt-4o-mini",
+    "token_usage": {"prompt_tokens": 420, "completion_tokens": 165, "total_tokens": 585},
+    "metadata": {"provider": "openai", "verification_type": "claim-source-matching"},
+    "started_at": "2026-02-23T11:15:08.500Z",
+    "ended_at": "2026-02-23T11:15:11.200Z",
+    "completion_start_time": "2026-02-23T11:15:09.100Z",
+    "model_parameters": {"temperature": 0.0, "max_tokens": 500},
+    "cost": {"input_cost": 0.000063, "output_cost": 0.0000495, "total_cost": 0.0001125}
+  },
+  {
+    "span_id": "b2000001-0001-4000-8000-000000000008",
+    "parent_span_id": "b2000001-0001-4000-8000-000000000001",
+    "name": "response-quality-scoring",
+    "kind": "LLM",
+    "status": "OK",
+    "input": {
+      "messages": [
+        {"role": "system", "content": "Rate the response quality on a scale of 1-5 for: relevance, completeness, accuracy, and clarity. Return JSON with scores and brief justifications."},
+        {"role": "user", "content": "Query: 'What is PandaProbe's approach to handling trace ingestion at scale?'\nAnswer: 'PandaProbe handles trace ingestion at scale through an asynchronous architecture...'"}
+      ]
+    },
+    "output": {
+      "scores": {
+        "relevance": {"score": 5, "reason": "Directly addresses both parts of the question"},
+        "completeness": {"score": 4, "reason": "Covers ingestion and consistency but doesn't mention monitoring or failure alerting"},
+        "accuracy": {"score": 5, "reason": "All technical details verified against sources"},
+        "clarity": {"score": 5, "reason": "Well-structured explanation with technical precision"}
+      },
+      "overall_score": 4.75
+    },
+    "model": "gpt-4o-mini",
+    "token_usage": {"prompt_tokens": 380, "completion_tokens": 142, "total_tokens": 522},
+    "metadata": {"provider": "openai", "evaluation_type": "quality-scoring"},
+    "started_at": "2026-02-23T11:15:11.250Z",
+    "ended_at": "2026-02-23T11:15:13.900Z",
+    "completion_start_time": "2026-02-23T11:15:11.800Z",
+    "model_parameters": {"temperature": 0.0, "max_tokens": 400},
+    "cost": {"input_cost": 0.000057, "output_cost": 0.0000426, "total_cost": 0.0000996}
+  }
+]

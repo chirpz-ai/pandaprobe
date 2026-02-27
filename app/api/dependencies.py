@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import structlog
-from fastapi import Depends, Header, Request
+from fastapi import Depends, Request
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +31,9 @@ from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 
 _bearer_scheme = HTTPBearer(auto_error=False)
-_api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
+_api_key_scheme = APIKeyHeader(name="X-API-Key", scheme_name="ApiKey", auto_error=False)
+_project_id_scheme = APIKeyHeader(name="X-Project-ID", scheme_name="ProjectID", auto_error=False)
+_project_name_scheme = APIKeyHeader(name="X-Project-Name", scheme_name="ProjectName", auto_error=False)
 
 
 async def get_api_context(
@@ -57,11 +59,14 @@ async def get_data_plane_context(
     request: Request,
     bearer: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     x_api_key: str | None = Depends(_api_key_scheme),
-    x_project_id: str | None = Header(None, alias="X-Project-ID"),
-    x_project_name: str | None = Header(None, alias="X-Project-Name"),
+    x_project_id: str | None = Depends(_project_id_scheme),
+    x_project_name: str | None = Depends(_project_name_scheme),
     session: AsyncSession = Depends(get_db_session),
 ) -> ApiContext:
     """Dependency for data-plane routes — Bearer JWT **or** API key.
+
+    When both are present, **API key wins**.  This avoids failures when
+    a client (or Swagger UI) sends a stale JWT alongside a valid key.
 
     **Bearer JWT**: also provide ``X-Project-ID`` to scope the request.
 
@@ -70,7 +75,7 @@ async def get_data_plane_context(
     """
     request_id: str = getattr(request.state, "request_id", "unknown")
 
-    if bearer:
+    if bearer and not x_api_key:
         ctx = await _resolve_jwt(
             bearer.credentials,
             request,

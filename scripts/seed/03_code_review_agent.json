@@ -1,0 +1,227 @@
+{
+  "trace_id": "a1b2c3d4-0003-4000-8000-000000000001",
+  "name": "multi-agent-code-review",
+  "status": "COMPLETED",
+  "input": {
+    "pull_request": {
+      "repo": "chirpz-ai/pandaprobe",
+      "pr_number": 47,
+      "title": "Add batch tag operations for traces",
+      "files_changed": 3,
+      "diff_lines_added": 85,
+      "diff_lines_removed": 12
+    }
+  },
+  "output": {
+    "review_summary": "Overall the PR looks good. The atomic SQL UPDATE approach for batch tag operations is well-designed and avoids concurrency issues. Two minor suggestions: (1) add an index on the tags array column for GIN queries, and (2) consider adding a max_length constraint on individual tag strings to prevent abuse.",
+    "verdict": "APPROVE_WITH_SUGGESTIONS",
+    "issues_found": 2,
+    "severity_breakdown": {"critical": 0, "warning": 1, "suggestion": 1}
+  },
+  "metadata": {
+    "sdk_name": "pandaprobe-python",
+    "sdk_version": "0.3.1",
+    "pipeline": "code-review-agent-v1",
+    "trigger": "github-webhook"
+  },
+  "started_at": "2026-02-23T14:30:00.000Z",
+  "ended_at": "2026-02-23T14:30:18.750Z",
+  "session_id": "session-codereview-pr47",
+  "user_id": "user-ci-bot",
+  "tags": ["code-review", "github", "multi-agent", "production"],
+  "environment": "production",
+  "release": "v2.4.1",
+  "spans": [
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000001",
+      "parent_span_id": null,
+      "name": "code-review-orchestrator",
+      "kind": "AGENT",
+      "status": "OK",
+      "input": {"pr_number": 47, "repo": "chirpz-ai/pandaprobe"},
+      "output": {"verdict": "APPROVE_WITH_SUGGESTIONS", "agents_invoked": 3},
+      "metadata": {"orchestration_pattern": "fan-out-fan-in"},
+      "started_at": "2026-02-23T14:30:00.050Z",
+      "ended_at": "2026-02-23T14:30:18.700Z"
+    },
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000002",
+      "parent_span_id": "b3000001-0001-4000-8000-000000000001",
+      "name": "fetch-pr-diff",
+      "kind": "TOOL",
+      "status": "OK",
+      "input": {"repo": "chirpz-ai/pandaprobe", "pr_number": 47},
+      "output": {
+        "files": [
+          {"path": "app/api/v1/routes/traces.py", "additions": 45, "deletions": 3},
+          {"path": "app/infrastructure/db/repositories/trace_repo.py", "additions": 32, "deletions": 8},
+          {"path": "tests/test_traces.py", "additions": 8, "deletions": 1}
+        ],
+        "total_diff_size_bytes": 4820
+      },
+      "metadata": {"tool_name": "github-api", "api_version": "2022-11-28"},
+      "started_at": "2026-02-23T14:30:00.100Z",
+      "ended_at": "2026-02-23T14:30:01.350Z"
+    },
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000003",
+      "parent_span_id": "b3000001-0001-4000-8000-000000000001",
+      "name": "security-review-agent",
+      "kind": "AGENT",
+      "status": "OK",
+      "input": {
+        "focus": "security",
+        "files": ["app/api/v1/routes/traces.py", "app/infrastructure/db/repositories/trace_repo.py"]
+      },
+      "output": {
+        "findings": [
+          {"severity": "warning", "file": "app/infrastructure/db/repositories/trace_repo.py", "line": 142, "message": "Tag values from user input are passed directly to array_cat. Consider sanitizing or limiting tag string length to prevent storage abuse."}
+        ]
+      },
+      "metadata": {"agent_type": "security-reviewer", "ruleset": "owasp-top10-llm"},
+      "started_at": "2026-02-23T14:30:01.400Z",
+      "ended_at": "2026-02-23T14:30:07.200Z"
+    },
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000004",
+      "parent_span_id": "b3000001-0001-4000-8000-000000000003",
+      "name": "security-analysis-llm",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "You are a security-focused code reviewer. Analyze the code diff for SQL injection, input validation issues, authorization bypasses, and data exposure risks. Return findings as JSON."},
+          {"role": "user", "content": "[diff content for trace_repo.py batch_update_tags method...]"}
+        ]
+      },
+      "output": {
+        "findings": [{"severity": "warning", "description": "Tag values not length-limited", "cwe": "CWE-400"}]
+      },
+      "model": "claude-3-5-sonnet-20241022",
+      "token_usage": {"prompt_tokens": 1850, "completion_tokens": 245, "total_tokens": 2095},
+      "metadata": {"provider": "anthropic"},
+      "started_at": "2026-02-23T14:30:01.450Z",
+      "ended_at": "2026-02-23T14:30:07.100Z",
+      "completion_start_time": "2026-02-23T14:30:02.900Z",
+      "model_parameters": {"temperature": 0.0, "max_tokens": 1000},
+      "cost": {"input_cost": 0.00555, "output_cost": 0.003675, "total_cost": 0.009225}
+    },
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000005",
+      "parent_span_id": "b3000001-0001-4000-8000-000000000001",
+      "name": "performance-review-agent",
+      "kind": "AGENT",
+      "status": "OK",
+      "input": {
+        "focus": "performance",
+        "files": ["app/infrastructure/db/repositories/trace_repo.py"]
+      },
+      "output": {
+        "findings": [
+          {"severity": "suggestion", "file": "app/infrastructure/db/repositories/trace_repo.py", "line": 15, "message": "Consider adding a GIN index on traces.tags column to speed up array containment queries (@> operator) used in filtering."}
+        ]
+      },
+      "metadata": {"agent_type": "performance-reviewer"},
+      "started_at": "2026-02-23T14:30:01.400Z",
+      "ended_at": "2026-02-23T14:30:09.800Z"
+    },
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000006",
+      "parent_span_id": "b3000001-0001-4000-8000-000000000005",
+      "name": "performance-analysis-llm",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Analyze this PostgreSQL-backed code for performance issues. Focus on N+1 queries, missing indexes, unbounded queries, and inefficient aggregations."},
+          {"role": "user", "content": "[diff content for trace_repo.py...]"}
+        ]
+      },
+      "output": {
+        "findings": [{"severity": "suggestion", "description": "Missing GIN index on tags array column"}]
+      },
+      "model": "gpt-4o",
+      "token_usage": {"prompt_tokens": 2100, "completion_tokens": 310, "total_tokens": 2410},
+      "metadata": {"provider": "openai"},
+      "started_at": "2026-02-23T14:30:01.450Z",
+      "ended_at": "2026-02-23T14:30:09.700Z",
+      "completion_start_time": "2026-02-23T14:30:03.200Z",
+      "model_parameters": {"temperature": 0.0, "max_tokens": 1500},
+      "cost": {"input_cost": 0.0105, "output_cost": 0.0093, "total_cost": 0.0198}
+    },
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000007",
+      "parent_span_id": "b3000001-0001-4000-8000-000000000001",
+      "name": "style-review-agent",
+      "kind": "AGENT",
+      "status": "OK",
+      "input": {
+        "focus": "code-style",
+        "files": ["app/api/v1/routes/traces.py", "tests/test_traces.py"]
+      },
+      "output": {"findings": [], "comment": "Code follows project conventions. No style issues found."},
+      "metadata": {"agent_type": "style-reviewer"},
+      "started_at": "2026-02-23T14:30:01.400Z",
+      "ended_at": "2026-02-23T14:30:06.100Z"
+    },
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000008",
+      "parent_span_id": "b3000001-0001-4000-8000-000000000007",
+      "name": "style-analysis-llm",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Review this Python code for style consistency, naming conventions, docstring completeness, and adherence to PEP 8. The project uses ruff with line-length=119."},
+          {"role": "user", "content": "[diff content for traces.py and test_traces.py...]"}
+        ]
+      },
+      "output": {"findings": [], "summary": "All changes follow project conventions."},
+      "model": "gpt-4o-mini",
+      "token_usage": {"prompt_tokens": 980, "completion_tokens": 45, "total_tokens": 1025},
+      "metadata": {"provider": "openai"},
+      "started_at": "2026-02-23T14:30:01.500Z",
+      "ended_at": "2026-02-23T14:30:06.000Z",
+      "completion_start_time": "2026-02-23T14:30:02.100Z",
+      "model_parameters": {"temperature": 0.0, "max_tokens": 800},
+      "cost": {"input_cost": 0.000147, "output_cost": 0.0000135, "total_cost": 0.0001605}
+    },
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000009",
+      "parent_span_id": "b3000001-0001-4000-8000-000000000001",
+      "name": "synthesize-review",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "You are a senior engineering lead. Synthesize the findings from security, performance, and style reviews into a single PR review comment. Assign a verdict: APPROVE, APPROVE_WITH_SUGGESTIONS, or REQUEST_CHANGES."},
+          {"role": "user", "content": "Security findings: 1 warning (tag length not limited). Performance findings: 1 suggestion (add GIN index). Style findings: none."}
+        ]
+      },
+      "output": {
+        "review_comment": "Overall the PR looks good. The atomic SQL UPDATE approach for batch tag operations is well-designed and avoids concurrency issues. Two minor suggestions: (1) add an index on the tags array column for GIN queries, and (2) consider adding a max_length constraint on individual tag strings to prevent abuse.",
+        "verdict": "APPROVE_WITH_SUGGESTIONS"
+      },
+      "model": "gpt-4o",
+      "token_usage": {"prompt_tokens": 320, "completion_tokens": 95, "total_tokens": 415},
+      "metadata": {"provider": "openai"},
+      "started_at": "2026-02-23T14:30:09.900Z",
+      "ended_at": "2026-02-23T14:30:13.400Z",
+      "completion_start_time": "2026-02-23T14:30:10.600Z",
+      "model_parameters": {"temperature": 0.2, "max_tokens": 500},
+      "cost": {"input_cost": 0.0016, "output_cost": 0.001425, "total_cost": 0.003025}
+    },
+    {
+      "span_id": "b3000001-0001-4000-8000-000000000010",
+      "parent_span_id": "b3000001-0001-4000-8000-000000000001",
+      "name": "post-github-review",
+      "kind": "TOOL",
+      "status": "OK",
+      "input": {"repo": "chirpz-ai/pandaprobe", "pr_number": 47, "event": "COMMENT", "body": "...review text..."},
+      "output": {"review_id": 198234567, "posted": true},
+      "metadata": {"tool_name": "github-api"},
+      "started_at": "2026-02-23T14:30:13.450Z",
+      "ended_at": "2026-02-23T14:30:14.200Z"
+    }
+  ]
+}

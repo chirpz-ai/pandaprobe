@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -199,17 +199,28 @@ async def rotate_api_key(
 
 
 @router.delete("/organizations/{org_id}/api-keys/{key_id}", status_code=204)
-async def revoke_api_key(
+async def delete_api_key(
     org_id: UUID,
     key_id: UUID,
+    permanent: bool = Query(
+        default=False,
+        description="If true, permanently removes the key record. Otherwise revokes (soft-delete).",
+    ),
     ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
 ) -> None:
-    """Revoke (soft-delete) an API key.
+    """Delete an API key (revoke or permanent removal).
 
     Auth: `Bearer` · role: `ADMIN` or `OWNER`
+
+    By default the key is **revoked** (``is_active`` set to ``false``)
+    but remains in the database for audit purposes.
+    Pass ``?permanent=true`` to hard-delete the record entirely.
     """
     _require_user(ctx)
     svc = IdentityService(session)
     await svc.require_admin(ctx.user.id, org_id)
-    await svc.revoke_api_key(key_id=key_id, org_id=org_id)
+    if permanent:
+        await svc.delete_api_key(key_id=key_id, org_id=org_id)
+    else:
+        await svc.revoke_api_key(key_id=key_id, org_id=org_id)

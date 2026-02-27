@@ -1,0 +1,51 @@
+{
+  "trace_id": "a1b2c3d4-0007-4000-8000-000000000001",
+  "name": "article-summarization",
+  "status": "COMPLETED",
+  "input": {
+    "article_url": "https://techblog.example.com/2026/02/scaling-observability-platforms",
+    "article_text": "Observability platforms have evolved significantly in the past two years. Modern approaches combine distributed tracing, metrics, and logs into unified backends. Companies like Datadog, Grafana Labs, and emerging open-source projects are pushing the boundaries of what's possible with OpenTelemetry-native architectures. Key challenges include handling high-cardinality data, maintaining sub-second query latency over petabyte-scale datasets, and providing meaningful AI-powered insights rather than just dashboards. The trend toward LLM-powered observability — where AI agents automatically detect anomalies, correlate incidents, and suggest remediations — is accelerating rapidly.",
+    "max_length": 100
+  },
+  "output": {
+    "summary": "Modern observability platforms unify tracing, metrics, and logs with OpenTelemetry-native backends. Key challenges include high-cardinality data handling and sub-second queries at scale. The industry is rapidly adopting LLM-powered agents for automated anomaly detection and incident correlation."
+  },
+  "metadata": {
+    "sdk_name": "pandaprobe-python",
+    "sdk_version": "0.3.1",
+    "pipeline": "content-tools-v1"
+  },
+  "started_at": "2026-02-23T16:45:00.000Z",
+  "ended_at": "2026-02-23T16:45:03.200Z",
+  "session_id": null,
+  "user_id": "user-dev-testing",
+  "tags": ["summarization", "content", "development"],
+  "environment": "development",
+  "release": "v2.5.0-dev",
+  "spans": [
+    {
+      "span_id": "b7000001-0001-4000-8000-000000000001",
+      "parent_span_id": null,
+      "name": "summarize",
+      "kind": "LLM",
+      "status": "OK",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Summarize the following article in 2-3 sentences. Focus on key takeaways and trends."},
+          {"role": "user", "content": "Observability platforms have evolved significantly in the past two years. Modern approaches combine distributed tracing, metrics, and logs into unified backends..."}
+        ]
+      },
+      "output": {
+        "content": "Modern observability platforms unify tracing, metrics, and logs with OpenTelemetry-native backends. Key challenges include high-cardinality data handling and sub-second queries at scale. The industry is rapidly adopting LLM-powered agents for automated anomaly detection and incident correlation."
+      },
+      "model": "gemini-2.5-flash",
+      "token_usage": {"prompt_tokens": 145, "completion_tokens": 52, "total_tokens": 197},
+      "metadata": {"provider": "google"},
+      "started_at": "2026-02-23T16:45:00.100Z",
+      "ended_at": "2026-02-23T16:45:03.150Z",
+      "completion_start_time": "2026-02-23T16:45:01.200Z",
+      "model_parameters": {"temperature": 0.2, "max_tokens": 200},
+      "cost": {"input_cost": 0.0000109, "output_cost": 0.0000156, "total_cost": 0.0000265}
+    }
+  ]
+}

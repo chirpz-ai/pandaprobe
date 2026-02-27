@@ -1,0 +1,130 @@
+{
+  "trace_id": "a1b2c3d4-0004-4000-8000-000000000001",
+  "name": "financial-data-extraction",
+  "status": "ERROR",
+  "input": {
+    "document_url": "s3://acme-docs/invoices/INV-2026-00891.pdf",
+    "extraction_schema": "invoice-v2",
+    "requested_fields": ["vendor_name", "invoice_number", "line_items", "total_amount", "due_date"]
+  },
+  "output": null,
+  "metadata": {
+    "sdk_name": "pandaprobe-python",
+    "sdk_version": "0.3.1",
+    "pipeline": "document-extraction-v1",
+    "error_category": "upstream_timeout",
+    "retry_count": 2
+  },
+  "started_at": "2026-02-23T09:22:00.000Z",
+  "ended_at": "2026-02-23T09:22:35.120Z",
+  "session_id": "session-docextract-batch-20260223",
+  "user_id": "user-sarah-chen-1104",
+  "tags": ["document-extraction", "invoice", "error", "production"],
+  "environment": "production",
+  "release": "v2.4.1",
+  "spans": [
+    {
+      "span_id": "b4000001-0001-4000-8000-000000000001",
+      "parent_span_id": null,
+      "name": "extraction-pipeline",
+      "kind": "CHAIN",
+      "status": "ERROR",
+      "input": {"document_url": "s3://acme-docs/invoices/INV-2026-00891.pdf"},
+      "output": null,
+      "error": "Pipeline failed: upstream LLM provider returned 503 after 3 attempts. Last error: anthropic.APIStatusError: 503 Service temporarily unavailable",
+      "metadata": {"pipeline_stage_reached": "structured-extraction"},
+      "started_at": "2026-02-23T09:22:00.050Z",
+      "ended_at": "2026-02-23T09:22:35.080Z"
+    },
+    {
+      "span_id": "b4000001-0001-4000-8000-000000000002",
+      "parent_span_id": "b4000001-0001-4000-8000-000000000001",
+      "name": "document-fetch",
+      "kind": "TOOL",
+      "status": "OK",
+      "input": {"bucket": "acme-docs", "key": "invoices/INV-2026-00891.pdf"},
+      "output": {"content_type": "application/pdf", "size_bytes": 284500, "pages": 3},
+      "metadata": {"tool_name": "s3-client", "region": "us-east-1"},
+      "started_at": "2026-02-23T09:22:00.100Z",
+      "ended_at": "2026-02-23T09:22:01.650Z"
+    },
+    {
+      "span_id": "b4000001-0001-4000-8000-000000000003",
+      "parent_span_id": "b4000001-0001-4000-8000-000000000001",
+      "name": "pdf-to-text-ocr",
+      "kind": "TOOL",
+      "status": "OK",
+      "input": {"pages": 3, "ocr_engine": "tesseract-v5"},
+      "output": {"text_length": 4280, "confidence": 0.97, "tables_detected": 1},
+      "metadata": {"tool_name": "ocr-service", "processing_time_ms": 2800},
+      "started_at": "2026-02-23T09:22:01.700Z",
+      "ended_at": "2026-02-23T09:22:04.500Z"
+    },
+    {
+      "span_id": "b4000001-0001-4000-8000-000000000004",
+      "parent_span_id": "b4000001-0001-4000-8000-000000000001",
+      "name": "structured-extraction-attempt-1",
+      "kind": "LLM",
+      "status": "ERROR",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Extract structured invoice data from the following text. Return JSON matching the schema: {vendor_name, invoice_number, line_items: [{description, quantity, unit_price, amount}], total_amount, due_date}"},
+          {"role": "user", "content": "[OCR text from INV-2026-00891.pdf, 4280 characters...]"}
+        ]
+      },
+      "output": null,
+      "error": "anthropic.APIStatusError: Error code: 503 - {'type': 'error', 'error': {'type': 'overloaded_error', 'message': 'Overloaded'}}",
+      "model": "claude-3-5-sonnet-20241022",
+      "token_usage": null,
+      "metadata": {"provider": "anthropic", "attempt": 1, "http_status": 503},
+      "started_at": "2026-02-23T09:22:04.600Z",
+      "ended_at": "2026-02-23T09:22:14.600Z",
+      "model_parameters": {"temperature": 0.0, "max_tokens": 2000},
+      "cost": null
+    },
+    {
+      "span_id": "b4000001-0001-4000-8000-000000000005",
+      "parent_span_id": "b4000001-0001-4000-8000-000000000001",
+      "name": "structured-extraction-attempt-2",
+      "kind": "LLM",
+      "status": "ERROR",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Extract structured invoice data from the following text. Return JSON matching the schema: {vendor_name, invoice_number, line_items: [{description, quantity, unit_price, amount}], total_amount, due_date}"},
+          {"role": "user", "content": "[OCR text from INV-2026-00891.pdf, 4280 characters...]"}
+        ]
+      },
+      "output": null,
+      "error": "anthropic.APIStatusError: Error code: 503 - {'type': 'error', 'error': {'type': 'overloaded_error', 'message': 'Overloaded'}}",
+      "model": "claude-3-5-sonnet-20241022",
+      "token_usage": null,
+      "metadata": {"provider": "anthropic", "attempt": 2, "http_status": 503, "retry_delay_ms": 5000},
+      "started_at": "2026-02-23T09:22:19.650Z",
+      "ended_at": "2026-02-23T09:22:29.650Z",
+      "model_parameters": {"temperature": 0.0, "max_tokens": 2000},
+      "cost": null
+    },
+    {
+      "span_id": "b4000001-0001-4000-8000-000000000006",
+      "parent_span_id": "b4000001-0001-4000-8000-000000000001",
+      "name": "structured-extraction-attempt-3",
+      "kind": "LLM",
+      "status": "ERROR",
+      "input": {
+        "messages": [
+          {"role": "system", "content": "Extract structured invoice data from the following text. Return JSON matching the schema: {vendor_name, invoice_number, line_items: [{description, quantity, unit_price, amount}], total_amount, due_date}"},
+          {"role": "user", "content": "[OCR text from INV-2026-00891.pdf, 4280 characters...]"}
+        ]
+      },
+      "output": null,
+      "error": "anthropic.APIStatusError: Error code: 503 - {'type': 'error', 'error': {'type': 'overloaded_error', 'message': 'Overloaded'}}",
+      "model": "claude-3-5-sonnet-20241022",
+      "token_usage": null,
+      "metadata": {"provider": "anthropic", "attempt": 3, "http_status": 503, "retry_delay_ms": 10000, "final_attempt": true},
+      "started_at": "2026-02-23T09:22:29.700Z",
+      "ended_at": "2026-02-23T09:22:35.050Z",
+      "model_parameters": {"temperature": 0.0, "max_tokens": 2000},
+      "cost": null
+    }
+  ]
+}
