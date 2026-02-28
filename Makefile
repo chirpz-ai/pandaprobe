@@ -1,32 +1,37 @@
-.PHONY: install dev lint format migrate up down logs worker test-unit test-integration test-all test-db-up test-db-down help
+.PHONY: install dev worker lint format migration migrate \
+       up down logs logs-app logs-worker ps restart \
+       test-unit-backend test-unit \
+       test-integration-backend test-integration \
+       test-all test-db-up test-db-down help
 
-# -- Installation & environment -----------------------------------------------
+# =============================================================================
+#  PandaProbe Monorepo Makefile
+#  Delegates backend-specific tasks to backend/Makefile.
+#  Docker Compose orchestration lives here at the repo root.
+# =============================================================================
 
-install:  ## Install locked dependencies via uv
-	pip install uv && uv sync --frozen
+# -- Backend delegates --------------------------------------------------------
 
-# -- Local development --------------------------------------------------------
+install:  ## Install backend dependencies
+	$(MAKE) -C backend install
 
-dev:  ## Run the API server locally (outside Docker)
-	APP_ENV=development uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+dev:  ## Run the backend API server locally
+	$(MAKE) -C backend dev
 
-worker:  ## Run the Celery worker locally
-	APP_ENV=development uv run celery -A app.infrastructure.queue.celery_app worker --loglevel=info
+worker:  ## Run the backend Celery worker locally
+	$(MAKE) -C backend worker
 
-# -- Code quality -------------------------------------------------------------
+lint:  ## Run backend linter
+	$(MAKE) -C backend lint
 
-lint:  ## Run ruff linter
-	uv run --group dev ruff check app/ tests/
+format:  ## Auto-format backend code
+	$(MAKE) -C backend format
 
-format:  ## Auto-format code
-	uv run --group dev ruff format app/ tests/
+migration:  ## Auto-generate an Alembic migration.  Usage: make migration msg="..."
+	$(MAKE) -C backend migration msg="$(msg)"
 
-# -- Database -----------------------------------------------------------------
-migration:  ## Auto-generate a new Alembic migration.  Usage: make migration msg="add users external_id"
-	POSTGRES_HOST=localhost uv run alembic revision --autogenerate -m "$(msg)"
-
-migrate:  ## Run Alembic migrations (head) against local Postgres
-	POSTGRES_HOST=localhost uv run alembic upgrade head
+migrate:  ## Run Alembic migrations (head)
+	$(MAKE) -C backend migrate
 
 # -- Docker Compose (development) ---------------------------------------------
 
@@ -53,19 +58,25 @@ restart:  ## Restart all dev services
 
 # -- Testing ------------------------------------------------------------------
 
-test-unit:  ## Run unit tests
-	uv run --group test pytest tests/unit/ -v
+test-unit-backend:  ## Run backend unit tests
+	$(MAKE) -C backend test-unit
 
-test-integration:  ## Start test stack, run integration tests, tear down
+test-integration-backend:  ## Run backend integration tests (starts test infra)
 	docker compose -f docker-compose.test.yml up -d --wait
-	POSTGRES_PORT=5433 POSTGRES_DB=pandaprobe_test_db REDIS_PORT=6380 \
+	cd backend && POSTGRES_PORT=5433 POSTGRES_DB=pandaprobe_test_db REDIS_PORT=6380 \
 		uv run --group test pytest tests/integration/ -v; \
 	status=$$?; \
-	docker compose -f docker-compose.test.yml down -v; \
+	cd .. && docker compose -f docker-compose.test.yml down -v; \
 	exit $$status
 
-test-all:  ## Run unit + integration tests
-	uv run --group test pytest tests/unit/ -v
+test-unit:  ## Run all unit tests
+	$(MAKE) test-unit-backend
+
+test-integration:  ## Run all integration tests
+	$(MAKE) test-integration-backend
+
+test-all:  ## Run all unit + integration tests
+	$(MAKE) test-unit
 	$(MAKE) test-integration
 
 test-db-up:  ## Start the test PostgreSQL and Redis services

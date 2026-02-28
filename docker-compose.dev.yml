@@ -2,17 +2,17 @@ services:
   # ---------- FastAPI application ----------
   app:
     build:
-      context: .
+      context: ./backend
       args:
         APP_ENV: ${APP_ENV:-development}
     ports:
       - "8000:8000"
     volumes:
-      - ./app:/app/app
-      - ./logs:/app/logs
+      - ./backend/app:/app/app
+      - ./backend/logs:/app/logs
       - ~/.config/gcloud:/home/appuser/.config/gcloud:ro
     env_file:
-      - .env.${APP_ENV:-development}
+      - ./backend/.env.${APP_ENV:-development}
     environment:
       - APP_ENV=${APP_ENV:-development}
       - GOOGLE_APPLICATION_CREDENTIALS=/home/appuser/.config/gcloud/application_default_credentials.json
@@ -34,7 +34,7 @@ services:
   # ---------- Celery background worker ----------
   worker:
     build:
-      context: .
+      context: ./backend
       args:
         APP_ENV: ${APP_ENV:-development}
     command:
@@ -46,10 +46,10 @@ services:
         "--concurrency=2",
       ]
     volumes:
-      - ./app:/app/app
-      - ./logs:/app/logs
+      - ./backend/app:/app/app
+      - ./backend/logs:/app/logs
     env_file:
-      - .env.${APP_ENV:-development}
+      - ./backend/.env.${APP_ENV:-development}
     environment:
       - APP_ENV=${APP_ENV:-development}
     restart: on-failure

@@ -29,3 +29,4 @@ uv.lock
 # Misc
 *.ipynb
 .pytest_cache/
+.ruff_cache/
