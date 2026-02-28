@@ -381,9 +381,7 @@ class TraceRepository:
             )
 
         result = await self._session.execute(
-            update(t)
-            .where(t.c.project_id == project_id, t.c.trace_id.in_(trace_ids))
-            .values(tags=expr)
+            update(t).where(t.c.project_id == project_id, t.c.trace_id.in_(trace_ids)).values(tags=expr)
         )
         return result.rowcount  # type: ignore[union-attr]
 
