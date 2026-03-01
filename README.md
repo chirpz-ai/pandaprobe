@@ -67,19 +67,6 @@ sequenceDiagram
     Worker->>DB: Persist evaluation result
 ```
 
-## Multi-Tenant Hierarchy
-
-```
-User ──(Membership)──► Organization ──► Project ──► Trace / Evaluation
-                                   └──► API Key (org-scoped)
-
-Trace ──(session_id)──► Session (implicit grouping, no dedicated table)
-```
-
-- **Users** authenticate via an external IdP (Supabase or Firebase).
-- **Organizations** contain **Projects**. Users join orgs via **Memberships** (OWNER / ADMIN / MEMBER).
-- **API Keys** are org-scoped with `sk_pp_` prefix. The SDK specifies the target project via `X-Project-Name` header. Projects are auto-created on first trace.
-
 ## Auth Strategy
 
 | Route group | Auth method | Header |
