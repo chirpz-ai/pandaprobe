@@ -5,207 +5,146 @@ Open-source, multi-tenant agent tracing and evaluation service. Trace agentic wo
 ## Quick Start
 
 ```bash
-# 1. Copy and configure environment
-cp .env.example .env.development
-# Edit .env.development — add your Supabase credentials and LLM provider keys
+# 1. Configure environment
+cp backend/.env.example backend/.env.development
+# Edit backend/.env.development — add your Supabase credentials and LLM provider keys
 
-# 2. Start services
+# 2. Start all services
 make up
 
-# 3. API available at http://localhost:8000
-#    Swagger docs at http://localhost:8000/docs
+# 3. Open http://localhost:8000/scalar for API references
 ```
-
-> [!NOTE]
-> **When you have db model changes:**
-> 
-> - Generate the migration file:
->   ```
->   make migration msg="your message"
->   ```
-> - (Optional) Manualy apply migration (entrypoint auto applies on `make up`):
->   ```
->   make migrate
->   ```
-
-
 
 ## Architecture
 
 ```mermaid
-flowchart TB
-    subgraph Client["Client (any language)"]
-        SDK["SDK / HTTP Client"]
-    end
+sequenceDiagram
+    participant Client as 📡 SDK / HTTP Client
+    participant API as ⚡ FastAPI
+    participant Auth as 🔐 Auth Service
+    participant IdP as 🌐 Supabase / Firebase
+    participant Identity as 👥 Identity Service
+    participant Trace as 🫆 Trace Service
+    participant Eval as 🧪 Eval Service
+    participant DB as 🗄️ PostgreSQL
+    participant Redis as 📮 Redis
+    participant Worker as ⚙️ Celery Worker
+    participant LLM as 🤖 LLM Engine (LiteLLM)
 
-    subgraph Auth["Authentication (external)"]
-        SUPABASE["Supabase Auth"]
-        FIREBASE["Firebase Auth"]
-    end
+    Note over Client,API: Management Plane (Bearer token)
+    Client->>API: Authorization: Bearer <idp_token>
+    API->>Auth: Verify token
+    Auth->>IdP: Validate with provider
+    IdP-->>Auth: User identity
+    Auth-->>API: Authenticated user
+    API->>Identity: /user, /organizations, /projects
+    Identity->>DB: Read / write
+    DB-->>Identity: Result
+    Identity-->>Client: Response
 
-    subgraph API["API Layer — FastAPI"]
-        R_USER["/user"]
-        R_ORG["/organizations"]
-        R_PROJ["/.../projects"]
-        R_TRACE["/traces"]
-        R_EVAL["/evaluations"]
-    end
+    Note over Client,API: Data Plane (API key)
+    Client->>API: X-API-Key + X-Project-Name
+    API->>Identity: Resolve org & project
+    Identity-->>API: Project context
 
-    subgraph Services["Application Services"]
-        AUTH_SVC["Auth Service"]
-        ID_SVC["Identity Service"]
-        TR_SVC["Trace Service"]
-        EV_SVC["Eval Service"]
-    end
+    API->>Trace: POST /traces
+    Trace->>Redis: Enqueue ingestion job
+    Redis-->>Client: 202 Accepted
+    Redis->>Worker: Pick up job
+    Worker->>DB: Persist trace + spans
 
-    subgraph Core["Core Domain"]
-        IDENTITY["Identity\n(User, Org, Membership,\nProject, API Key)"]
-        TRACES["Traces\n(Trace, Span)"]
-        EVALS["Evals\n(Metrics, Results)"]
-    end
+    API->>Trace: GET /traces, /sessions
+    Trace->>DB: Query with filters
+    DB-->>Trace: Rows
+    Trace-->>Client: Paginated response
 
-    subgraph Infra["Infrastructure"]
-        DB["PostgreSQL"]
-        REDIS["Redis"]
-        CELERY["Celery Worker"]
-        LLM["LLM Engine\n(LiteLLM)"]
-    end
-
-    SDK -->|"Authorization: Bearer"| R_USER
-    SDK -->|"Authorization: Bearer"| R_ORG
-    SDK -->|"Authorization: Bearer"| R_PROJ
-    SDK -->|"X-API-Key"| R_TRACE
-    SDK -->|"X-API-Key"| R_EVAL
-
-    R_USER --> AUTH_SVC
-    AUTH_SVC --> SUPABASE
-    AUTH_SVC --> FIREBASE
-    AUTH_SVC --> DB
-
-    R_ORG --> ID_SVC
-    R_PROJ --> ID_SVC
-    R_TRACE --> TR_SVC
-    R_EVAL --> EV_SVC
-
-    ID_SVC --> IDENTITY
-    TR_SVC --> TRACES
-    EV_SVC --> EVALS
-
-    TR_SVC -->|"enqueue"| REDIS
-    EV_SVC -->|"enqueue"| REDIS
-    REDIS --> CELERY
-
-    CELERY -->|"persist"| DB
-    CELERY -->|"judge calls"| LLM
-
-    ID_SVC --> DB
-    TR_SVC --> DB
-    EV_SVC --> DB
+    API->>Eval: POST /evaluations
+    Eval->>Redis: Enqueue eval job
+    Redis-->>Client: 202 Accepted
+    Redis->>Worker: Pick up job
+    Worker->>LLM: LLM-as-a-judge call
+    LLM-->>Worker: Verdict + score
+    Worker->>DB: Persist evaluation result
 ```
 
 ## Multi-Tenant Hierarchy
 
 ```
-User ──(Membership)──> Organization ──> Project ──> Trace / Evaluation
-                                   └──> API Key (org-scoped)
+User ──(Membership)──► Organization ──► Project ──► Trace / Evaluation
+                                   └──► API Key (org-scoped)
 
-Trace ──(session_id)──> Session (implicit grouping, no dedicated table)
+Trace ──(session_id)──► Session (implicit grouping, no dedicated table)
 ```
 
 - **Users** authenticate via an external IdP (Supabase or Firebase).
 - **Organizations** contain **Projects**. Users join orgs via **Memberships** (OWNER / ADMIN / MEMBER).
-- **API Keys** are org-scoped. The SDK specifies the target project at runtime via `PANDAPROBE_PROJECT` (→ `X-Project-Name` header). Projects are auto-created on first trace if they don't exist. Project names must be unique within an organization.
-
-### Role Permissions
-
-| Action | OWNER | ADMIN | MEMBER |
-|--------|:-----:|:-----:|:------:|
-| Update / delete organization | Yes | Update | — |
-| Create / update project | Yes | Yes | — |
-| Delete project | Yes | — | — |
-| View projects | Yes | Yes | Yes |
-| Add member (any role) | Yes | — | — |
-| Add member (MEMBER) | Yes | Yes | — |
-| Change member role | Non-OWNERs | — | — |
-| Remove ADMIN | Yes | — | — |
-| Remove MEMBER | Yes | Yes | — |
-| Remove / change OWNER | — | — | — |
-
-> Self-role changes are not allowed. OWNERs are peers and cannot modify each other.
+- **API Keys** are org-scoped with `sk_pp_` prefix. The SDK specifies the target project via `X-Project-Name` header. Projects are auto-created on first trace.
 
 ## Auth Strategy
 
-| Mode | `AUTH_PROVIDER` | Identity Provider | Required Env Vars |
-|------|----------------|-------------------|--------------------|
-| **Supabase** | `supabase` | Supabase Auth (cloud) | `SUPABASE_URL`, `SUPABASE_KEY` |
-| **Firebase** | `firebase` | Firebase Admin SDK | `GOOGLE_CLOUD_PROJECT` |
+| Route group | Auth method | Header |
+|---|---|---|
+| Management (`/user`, `/organizations`, `/projects`) | IdP token | `Authorization: Bearer <token>` |
+| Data plane (`/traces`, `/evaluations`, `/sessions`) | API key | `X-API-Key` + `X-Project-Name` |
 
-**Token flow:**
-1. User authenticates with the external IdP (Supabase or Firebase) and receives an IdP access token.
-2. Management APIs use `Authorization: Bearer <idp_token>`. Users and default organizations are provisioned automatically on first request (JIT).
-3. Data APIs (traces, evals) use `X-API-Key` + `X-Project-Name: <project_name>`. Projects are auto-created on first use.
+## Services
 
-## Project Structure
+| Service | Description | Port |
+|---|---|---|
+| **app** | FastAPI application server | 8000 |
+| **worker** | Celery background worker | — |
+| **postgres** | PostgreSQL 16 | 5432 |
+| **redis** | Redis 7 (broker + cache) | 6379 |
 
-```
-app/
-├── api/v1/routes/       # FastAPI routers (auth, orgs, projects, traces, evals, health)
-├── core/
-│   ├── identity/        # User, Org, Membership, Project, API Key entities
-│   ├── traces/          # Trace & Span entities + repository
-│   └── evals/           # Evaluation entities + metric registry
-│       └── metrics/     # BaseMetric, task_completion, ...
-├── registry/            # Settings, constants, exceptions, security
-├── infrastructure/
-│   ├── auth/            # Pluggable auth adapters (Supabase, Firebase, JWT issuer)
-│   ├── db/              # SQLAlchemy models + repositories
-│   ├── queue/           # Celery app + tasks
-│   └── llm/             # Universal LLM engine (LiteLLM)
-├── services/            # Orchestration (auth, identity, trace, eval)
-└── main.py
-```
-
-## Services (Docker Compose)
-
-| Service      | Description                    | Port  |
-|--------------|--------------------------------|-------|
-| **app**      | FastAPI application server     | 8000  |
-| **worker**   | Celery background worker       | —     |
-| **postgres** | PostgreSQL 16                  | 5432  |
-| **redis**    | Redis 7 (broker + cache)       | 6379  |
-
-## Local Development
+## Development
 
 ```bash
-make install     # install deps via uv
-make dev         # run app with hot-reload
-make worker      # run Celery worker (separate terminal)
-make migrate     # apply Alembic migrations
-make test        # run test suite
-make lint        # ruff linter
-make help        # show all commands
+make install          # Install backend deps via uv
+make up               # Start all services (Docker)
+make down             # Stop all services
+make dev              # Run API locally with hot-reload
+make worker           # Run Celery worker locally
+
+make lint             # Ruff linter
+make format           # Auto-format code
+make migration msg="" # Generate Alembic migration
+make migrate          # Apply migrations
+
+make test-unit        # Run unit tests
+make test-integration # Run integration tests (spins up test DB)
+make test-all         # Run everything
+make help             # Show all available commands
 ```
+
+> [!NOTE]
+> **Database migrations** are auto-applied on `make up` via the Docker entrypoint.
+> 
+> To generate a new migration after model changes:
+> ```bash
+> make migration msg="describe change"
+> ```
+> To manually apply migrations:
+> ```bash
+> make migrate
+> ```
 
 ## Environment Variables
 
-See [`.env.example`](.env.example) for the full list. Key variables:
+See [`backend/.env.example`](backend/.env.example) for the full list. Key variables:
 
 | Variable | Description |
-|----------|-------------|
+|---|---|
 | `AUTH_PROVIDER` | `supabase` or `firebase` |
-| `SUPABASE_URL` | Supabase project URL (Dashboard → Settings → API → Project URL) |
-| `SUPABASE_KEY` | Supabase anon/public key (Dashboard → Settings → API → `anon` `public` key) |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_KEY` | Supabase anon/public key |
 | `GOOGLE_CLOUD_PROJECT` | GCP project for Firebase + Vertex AI |
 | `EVAL_LLM_MODEL` | Default eval model (LiteLLM format) |
 | `OPENAI_API_KEY` | OpenAI credentials |
 
-
-# Authors
+## Authors
 
 Built by Chirpz AI team. Contact sina@chirpz.ai for all enquiries.
 
-<br />
+## License
 
-# License
-
-PandaProbe is licensed under Apache 2.0 - see the [LICENSE.md](https://github.com/chirpz-ai/pandaprobe/blob/main/LICENSE) file for details.
+PandaProbe is licensed under Apache 2.0 — see [LICENSE](LICENSE) for details.
