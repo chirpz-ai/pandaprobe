@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from scalar_fastapi import get_scalar_api_reference
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -97,6 +98,15 @@ async def validation_exception_handler(_request: Request, exc: RequestValidation
 app.include_router(v1_router)
 
 
+@app.get("/scalar", include_in_schema=False)
+async def scalar_html():
+    """Serve Scalar API reference documentation."""
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url,
+        title=f"{settings.PROJECT_NAME} API Reference",
+    )
+
+
 @app.get("/")
 async def root() -> dict[str, Any]:
     """Root endpoint with basic API information."""
@@ -105,4 +115,5 @@ async def root() -> dict[str, Any]:
         "version": settings.VERSION,
         "status": "healthy",
         "docs": "/docs",
+        "scalar": "/scalar",
     }
