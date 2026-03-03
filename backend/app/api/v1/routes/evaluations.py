@@ -1,14 +1,14 @@
-"""Routes for triggering and querying evaluations.
+"""Routes for evaluation runs, trace scores, and analytics.
 
-Evaluations run **asynchronously**: the POST endpoint creates the job
-and returns ``202 Accepted``.  A background Celery worker executes
-the metrics and persists the results.  Use the GET endpoints to poll
-for completion or retrieve scores.
+Eval runs execute **asynchronously**: POST creates the job and returns
+``202 Accepted``.  A Celery worker runs the metrics and writes trace
+scores.  Use GET endpoints to poll progress or retrieve results.
 
 Authentication: Bearer JWT (with ``X-Project-ID`` header) **or**
 ``X-API-Key`` with ``X-Project-Name``.
 """
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -19,9 +19,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.context import ApiContext
 from app.api.dependencies import require_project
 from app.api.rate_limit import limiter
-from app.core.evals.metrics import list_metrics
+from app.api.v1.schemas import PaginatedResponse
+from app.core.evals.metrics import get_metric_info, list_metrics
 from app.infrastructure.db.engine import get_db_session
-from app.registry.constants import EvaluationStatus
+from app.registry.constants import (
+    AnalyticsGranularity,
+    EvaluationStatus,
+    ScoreDataType,
+    ScoreSource,
+    ScoreStatus,
+)
 from app.services.eval_service import EvalService
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
@@ -32,66 +39,83 @@ router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 # ---------------------------------------------------------------------------
 
 
-class CreateEvaluationRequest(BaseModel):
-    """Payload for triggering an evaluation."""
+class EvalRunFilters(BaseModel):
+    """Filters for selecting traces in an eval run."""
 
-    trace_id: UUID
-    metrics: list[str] = Field(min_length=1, description="List of metric names to run")
+    date_from: str | None = None
+    date_to: str | None = None
+    status: str | None = None
+    session_id: str | None = None
+    user_id: str | None = None
+    tags: list[str] | None = None
+    name: str | None = None
 
 
-class EvaluationResultResponse(BaseModel):
-    """Single metric result inside an evaluation."""
+class CreateEvalRunRequest(BaseModel):
+    """Payload for creating an eval run."""
+
+    name: str | None = None
+    metrics: list[str] = Field(min_length=1, description="Metric names to run")
+    target_type: str = Field(default="TRACE")
+    filters: EvalRunFilters = Field(default_factory=EvalRunFilters)
+    sampling_rate: float = Field(default=1.0, ge=0.0, le=1.0)
+    model: str | None = None
+
+
+class EvalRunResponse(BaseModel):
+    """Full eval run representation."""
 
     id: UUID
-    metric_name: str
-    score: float
-    threshold: float
-    success: bool
-    reason: str | None
-    metadata: dict[str, Any]
-    evaluated_at: str
-
-
-class EvaluationResponse(BaseModel):
-    """Full evaluation with results."""
-
-    id: UUID
-    trace_id: UUID
     project_id: UUID
+    name: str | None
+    target_type: str
     metric_names: list[str]
+    filters: dict[str, Any]
+    sampling_rate: float
+    model: str | None
     status: EvaluationStatus
-    results: list[EvaluationResultResponse]
+    total_traces: int
+    evaluated_count: int
+    failed_count: int
+    error_message: str | None
     created_at: str
     completed_at: str | None
 
 
-class EvaluationAccepted(BaseModel):
-    """Returned when an evaluation job is successfully enqueued."""
+class TraceScoreResponse(BaseModel):
+    """Single trace score."""
 
     id: UUID
     trace_id: UUID
-    status: EvaluationStatus
-    metrics: list[str]
+    project_id: UUID
+    name: str
+    data_type: ScoreDataType
+    value: str | None
+    source: ScoreSource
+    status: ScoreStatus
+    eval_run_id: UUID | None
+    author_user_id: str | None
+    reason: str | None
+    environment: str | None
+    config_id: str | None
+    metadata: dict[str, Any]
+    created_at: str
+    updated_at: str
 
 
-class MetricListResponse(BaseModel):
-    """Available metrics that can be requested."""
+class MetricInfo(BaseModel):
+    """Summary info about an available metric."""
 
-    metrics: list[str]
-
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
+    name: str
+    description: str
+    category: str
+    default_threshold: float
 
 
-@router.get("/metrics", response_model=MetricListResponse)
-async def get_available_metrics() -> MetricListResponse:
-    """List all registered evaluation metrics.
+class MetricDetail(MetricInfo):
+    """Extended info about a metric."""
 
-    Auth: `public`
-    """
-    return MetricListResponse(metrics=list_metrics())
+    pass
 
 
 class ProviderInfo(BaseModel):
@@ -104,76 +128,231 @@ class ProviderInfo(BaseModel):
     message: str
 
 
+class ScoreSummaryItem(BaseModel):
+    """Aggregated score summary for one metric."""
+
+    metric_name: str
+    avg_score: float
+    count: int
+
+
+class ScoreTrendItem(BaseModel):
+    """Time-bucketed average score for a metric."""
+
+    bucket: str | None
+    metric_name: str
+    avg_score: float
+    count: int
+
+
+class ScoreDistributionItem(BaseModel):
+    """Histogram bucket for score distribution."""
+
+    bucket: int
+    bucket_min: float
+    bucket_max: float
+    count: int
+
+
+# ---------------------------------------------------------------------------
+# Metric discovery
+# ---------------------------------------------------------------------------
+
+
+@router.get("/metrics", response_model=list[MetricInfo])
+async def get_available_metrics() -> list[MetricInfo]:
+    """List all registered evaluation metrics with metadata."""
+    names = list_metrics()
+    return [MetricInfo(**get_metric_info(n)) for n in names]
+
+
+@router.get("/metrics/{metric_name}", response_model=MetricDetail)
+async def get_metric_detail(metric_name: str) -> MetricDetail:
+    """Get detailed info about a specific metric."""
+    info = get_metric_info(metric_name)
+    return MetricDetail(**info)
+
+
 @router.get("/providers", response_model=list[ProviderInfo])
 async def get_available_providers() -> list[ProviderInfo]:
-    """List LLM providers and their availability based on configured credentials.
-
-    Auth: `public`
-    """
+    """List LLM providers and their availability."""
     from app.infrastructure.llm.engine import LLMEngine
 
     engine = LLMEngine()
     return [ProviderInfo(**p) for p in engine.available_providers()]
 
 
-@router.post("", status_code=202, response_model=EvaluationAccepted)
+# ---------------------------------------------------------------------------
+# Eval runs
+# ---------------------------------------------------------------------------
+
+
+@router.post("/runs", status_code=202, response_model=EvalRunResponse)
 @limiter.limit("50/minute")
-async def create_evaluation(
+async def create_eval_run(
     request: Request,
-    body: CreateEvaluationRequest,
+    body: CreateEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> EvaluationAccepted:
-    """Trigger an asynchronous evaluation of a trace.
+) -> EvalRunResponse:
+    """Create and execute an eval run.
 
-    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
-
-    Rate limit: `50/min`
+    Rate limit: ``50/min``
     """
     svc = EvalService(session)
-    evaluation = await svc.create_evaluation(
-        trace_id=body.trace_id,
+    filters_dict = body.filters.model_dump(exclude_none=True)
+    run = await svc.create_eval_run(
         project_id=ctx.project.id,
         metric_names=body.metrics,
+        filters=filters_dict,
+        sampling_rate=body.sampling_rate,
+        model=body.model,
+        name=body.name,
+        target_type=body.target_type,
     )
-    return EvaluationAccepted(
-        id=evaluation.id,
-        trace_id=evaluation.trace_id,
-        status=evaluation.status,
-        metrics=evaluation.metric_names,
-    )
+    return _run_to_response(run)
 
 
-@router.get("/{evaluation_id}", response_model=EvaluationResponse)
-async def get_evaluation(
-    evaluation_id: UUID,
+@router.get("/runs", response_model=PaginatedResponse[EvalRunResponse])
+async def list_eval_runs(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> EvaluationResponse:
-    """Retrieve an evaluation with all its metric results.
-
-    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
-    """
+    status: EvaluationStatus | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> PaginatedResponse[EvalRunResponse]:
+    """List eval runs for the current project."""
     svc = EvalService(session)
-    evaluation = await svc.get_evaluation(evaluation_id, ctx.project.id)
-    return _to_response(evaluation)
+    runs, total = await svc.list_eval_runs(ctx.project.id, status=status, limit=limit, offset=offset)
+    return PaginatedResponse(
+        items=[_run_to_response(r) for r in runs],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
-@router.get("", response_model=list[EvaluationResponse])
-async def list_evaluations(
+@router.get("/runs/{run_id}", response_model=EvalRunResponse)
+async def get_eval_run(
+    run_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> EvalRunResponse:
+    """Get eval run detail with progress."""
+    svc = EvalService(session)
+    run = await svc.get_eval_run(run_id, ctx.project.id)
+    return _run_to_response(run)
+
+
+# ---------------------------------------------------------------------------
+# Trace scores
+# ---------------------------------------------------------------------------
+
+
+@router.get("/trace-scores", response_model=PaginatedResponse[TraceScoreResponse])
+async def list_trace_scores(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
     trace_id: UUID | None = Query(default=None),
+    metric_name: str | None = Query(default=None, alias="name"),
+    source: ScoreSource | None = Query(default=None),
+    data_type: ScoreDataType | None = Query(default=None),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-) -> list[EvaluationResponse]:
-    """List evaluations for the current project.
-
-    Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
-    """
+) -> PaginatedResponse[TraceScoreResponse]:
+    """List trace scores with filters."""
     svc = EvalService(session)
-    evaluations = await svc.list_evaluations(ctx.project.id, trace_id=trace_id, limit=limit, offset=offset)
-    return [_to_response(e) for e in evaluations]
+    scores, total = await svc.list_scores(
+        ctx.project.id,
+        name=metric_name,
+        trace_id=trace_id,
+        source=source,
+        data_type=data_type,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+        offset=offset,
+    )
+    return PaginatedResponse(
+        items=[_score_to_response(s) for s in scores],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/trace-scores/by-trace/{trace_id}", response_model=list[TraceScoreResponse])
+async def get_scores_by_trace(
+    trace_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[TraceScoreResponse]:
+    """Get all scores for a specific trace."""
+    svc = EvalService(session)
+    scores = await svc.get_scores_for_trace(trace_id, ctx.project.id)
+    return [_score_to_response(s) for s in scores]
+
+
+# ---------------------------------------------------------------------------
+# Analytics
+# ---------------------------------------------------------------------------
+
+
+@router.get("/analytics/summary", response_model=list[ScoreSummaryItem])
+async def get_analytics_summary(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+) -> list[ScoreSummaryItem]:
+    """Aggregated trace score summary per metric."""
+    svc = EvalService(session)
+    data = await svc.get_score_summary(ctx.project.id, date_from=date_from, date_to=date_to)
+    return [ScoreSummaryItem(**d) for d in data]
+
+
+@router.get("/analytics/trend", response_model=list[ScoreTrendItem])
+async def get_analytics_trend(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    metric_name: str = Query(...),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    granularity: AnalyticsGranularity = Query(default=AnalyticsGranularity.DAY),
+) -> list[ScoreTrendItem]:
+    """Time series of average trace scores by metric."""
+    svc = EvalService(session)
+    data = await svc.get_score_trend(
+        ctx.project.id,
+        metric_name=metric_name,
+        date_from=date_from,
+        date_to=date_to,
+        granularity=granularity,
+    )
+    return [ScoreTrendItem(**d) for d in data]
+
+
+@router.get("/analytics/distribution", response_model=list[ScoreDistributionItem])
+async def get_analytics_distribution(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    metric_name: str = Query(...),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    buckets: int = Query(default=10, ge=1, le=100),
+) -> list[ScoreDistributionItem]:
+    """Histogram of trace score values for a metric."""
+    svc = EvalService(session)
+    data = await svc.get_score_distribution(
+        ctx.project.id,
+        metric_name,
+        date_from=date_from,
+        date_to=date_to,
+        buckets=buckets,
+    )
+    return [ScoreDistributionItem(**d) for d in data]
 
 
 # ---------------------------------------------------------------------------
@@ -181,27 +360,42 @@ async def list_evaluations(
 # ---------------------------------------------------------------------------
 
 
-def _to_response(evaluation):
-    """Map a domain Evaluation to an EvaluationResponse."""
-    return EvaluationResponse(
-        id=evaluation.id,
-        trace_id=evaluation.trace_id,
-        project_id=evaluation.project_id,
-        metric_names=evaluation.metric_names,
-        status=evaluation.status,
-        results=[
-            EvaluationResultResponse(
-                id=r.id,
-                metric_name=r.metric_name,
-                score=r.score,
-                threshold=r.threshold,
-                success=r.success,
-                reason=r.reason,
-                metadata=r.metadata,
-                evaluated_at=r.evaluated_at.isoformat(),
-            )
-            for r in evaluation.results
-        ],
-        created_at=evaluation.created_at.isoformat(),
-        completed_at=evaluation.completed_at.isoformat() if evaluation.completed_at else None,
+def _run_to_response(run) -> EvalRunResponse:
+    return EvalRunResponse(
+        id=run.id,
+        project_id=run.project_id,
+        name=run.name,
+        target_type=run.target_type,
+        metric_names=run.metric_names,
+        filters=run.filters,
+        sampling_rate=run.sampling_rate,
+        model=run.model,
+        status=run.status,
+        total_traces=run.total_traces,
+        evaluated_count=run.evaluated_count,
+        failed_count=run.failed_count,
+        error_message=run.error_message,
+        created_at=run.created_at.isoformat(),
+        completed_at=run.completed_at.isoformat() if run.completed_at else None,
+    )
+
+
+def _score_to_response(score) -> TraceScoreResponse:
+    return TraceScoreResponse(
+        id=score.id,
+        trace_id=score.trace_id,
+        project_id=score.project_id,
+        name=score.name,
+        data_type=score.data_type,
+        value=score.value,
+        source=score.source,
+        status=score.status,
+        eval_run_id=score.eval_run_id,
+        author_user_id=score.author_user_id,
+        reason=score.reason,
+        environment=score.environment,
+        config_id=score.config_id,
+        metadata=score.metadata,
+        created_at=score.created_at.isoformat(),
+        updated_at=score.updated_at.isoformat(),
     )
