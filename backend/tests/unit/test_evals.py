@@ -1,83 +1,182 @@
-"""Unit tests for the evaluation domain (no database or LLM calls)."""
+"""Unit tests for the evaluation domain layer (no DB or LLM calls)."""
 
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.core.evals.entities import Evaluation, EvaluationResult
-from app.core.evals.metrics import get_metric, list_metrics
+from app.core.evals.entities import EvalRun, TraceScore
+from app.core.evals.metrics import get_metric, get_metric_info, list_metrics
 from app.core.evals.metrics.base import MetricResult
-from app.core.evals.metrics.task_completion.schema import (
-    TaskAndOutcome,
-    TaskCompletionVerdict,
-)
-from app.core.evals.metrics.task_completion.template import TaskCompletionTemplate
-from app.registry.constants import EvaluationStatus
+from app.registry.constants import EvaluationStatus, ScoreDataType, ScoreSource, ScoreStatus
 
 
-def test_list_metrics_includes_task_completion() -> None:
-    metrics = list_metrics()
-    assert "task_completion" in metrics
+ALL_METRIC_NAMES = [
+    "argument_correctness",
+    "plan_adherence",
+    "plan_quality",
+    "step_efficiency",
+    "task_completion",
+    "tool_correctness",
+]
 
 
-def test_get_metric_returns_class() -> None:
+def test_list_metrics_returns_all_six():
+    names = list_metrics()
+    assert names == ALL_METRIC_NAMES
+
+
+def test_get_metric_returns_class():
     cls = get_metric("task_completion")
     assert cls.name == "task_completion"
 
 
-def test_evaluation_entity_creation() -> None:
-    evaluation = Evaluation(
+def test_get_metric_info_returns_dict():
+    info = get_metric_info("task_completion")
+    assert info["name"] == "task_completion"
+    assert "description" in info
+    assert info["category"] == "trace"
+    assert info["default_threshold"] == 0.5
+
+
+def test_task_completion_attributes():
+    cls = get_metric("task_completion")
+    instance = cls()
+    assert instance.name == "task_completion"
+    assert instance.category == "trace"
+    assert instance.threshold == 0.5
+    assert instance.description != ""
+
+
+def test_tool_correctness_attributes():
+    cls = get_metric("tool_correctness")
+    instance = cls()
+    assert instance.name == "tool_correctness"
+    assert instance.category == "trace"
+    assert instance.threshold == 0.5
+    assert instance.description != ""
+
+
+def test_argument_correctness_attributes():
+    cls = get_metric("argument_correctness")
+    instance = cls()
+    assert instance.name == "argument_correctness"
+    assert instance.category == "trace"
+
+
+def test_step_efficiency_attributes():
+    cls = get_metric("step_efficiency")
+    instance = cls()
+    assert instance.name == "step_efficiency"
+    assert instance.category == "trace"
+
+
+def test_plan_adherence_attributes():
+    cls = get_metric("plan_adherence")
+    instance = cls()
+    assert instance.name == "plan_adherence"
+    assert instance.category == "trace"
+
+
+def test_plan_quality_attributes():
+    cls = get_metric("plan_quality")
+    instance = cls()
+    assert instance.name == "plan_quality"
+    assert instance.category == "trace"
+
+
+def test_trace_score_creation():
+    now = datetime.now(timezone.utc)
+    score = TraceScore(
         id=uuid4(),
         trace_id=uuid4(),
         project_id=uuid4(),
-        metric_names=["task_completion"],
-        status=EvaluationStatus.PENDING,
-        created_at=datetime.now(timezone.utc),
+        name="task_completion",
+        data_type=ScoreDataType.NUMERIC,
+        value="0.85",
+        source=ScoreSource.AUTOMATED,
+        created_at=now,
+        updated_at=now,
     )
-    assert evaluation.status == EvaluationStatus.PENDING
-    assert evaluation.results == []
+    assert score.name == "task_completion"
+    assert score.value == "0.85"
+    assert score.source == ScoreSource.AUTOMATED
 
 
-def test_evaluation_result_entity() -> None:
-    result = EvaluationResult(
+def test_trace_score_boolean():
+    now = datetime.now(timezone.utc)
+    score = TraceScore(
         id=uuid4(),
-        evaluation_id=uuid4(),
-        metric_name="task_completion",
-        score=0.85,
-        threshold=0.5,
-        success=True,
-        reason="Task was mostly completed.",
-        evaluated_at=datetime.now(timezone.utc),
+        trace_id=uuid4(),
+        project_id=uuid4(),
+        name="is_correct",
+        data_type=ScoreDataType.BOOLEAN,
+        value="true",
+        source=ScoreSource.ANNOTATION,
+        created_at=now,
+        updated_at=now,
     )
-    assert result.score == 0.85
-    assert result.success is True
+    assert score.data_type == ScoreDataType.BOOLEAN
 
 
-def test_metric_result_model() -> None:
-    result = MetricResult(score=0.7, reason="Good", metadata={"key": "val"})
-    assert result.score == 0.7
-
-
-def test_task_and_outcome_schema() -> None:
-    data = TaskAndOutcome(task="book a flight", outcome="found 2 flights")
-    assert data.task == "book a flight"
-
-
-def test_task_completion_verdict_schema() -> None:
-    verdict = TaskCompletionVerdict(verdict=0.9, reason="Nearly perfect")
-    assert verdict.verdict == 0.9
-
-
-def test_extract_template_produces_string() -> None:
-    trace = {"trace_id": "abc", "name": "test", "spans": []}
-    prompt = TaskCompletionTemplate.extract_task_and_outcome(trace)
-    assert "task" in prompt
-    assert "outcome" in prompt
-
-
-def test_verdict_template_produces_string() -> None:
-    prompt = TaskCompletionTemplate.generate_verdict(
-        task="Plan a trip",
-        actual_outcome="Found flights and hotels",
+def test_trace_score_categorical():
+    now = datetime.now(timezone.utc)
+    score = TraceScore(
+        id=uuid4(),
+        trace_id=uuid4(),
+        project_id=uuid4(),
+        name="quality",
+        data_type=ScoreDataType.CATEGORICAL,
+        value="PASS",
+        source=ScoreSource.PROGRAMMATIC,
+        created_at=now,
+        updated_at=now,
     )
-    assert "Plan a trip" in prompt
-    assert "verdict" in prompt
+    assert score.data_type == ScoreDataType.CATEGORICAL
+    assert score.value == "PASS"
+
+
+def test_eval_run_creation():
+    now = datetime.now(timezone.utc)
+    run = EvalRun(
+        id=uuid4(),
+        project_id=uuid4(),
+        metric_names=["task_completion", "tool_correctness"],
+        status=EvaluationStatus.PENDING,
+        total_traces=10,
+        created_at=now,
+    )
+    assert run.status == EvaluationStatus.PENDING
+    assert len(run.metric_names) == 2
+    assert run.total_traces == 10
+    assert run.sampling_rate == 1.0
+
+
+def test_metric_result_model():
+    result = MetricResult(score=0.75, reason="Good result", metadata={"key": "value"})
+    assert result.score == 0.75
+    assert result.reason == "Good result"
+    assert result.metadata == {"key": "value"}
+
+
+def test_score_source_values():
+    assert ScoreSource.AUTOMATED == "AUTOMATED"
+    assert ScoreSource.ANNOTATION == "ANNOTATION"
+    assert ScoreSource.PROGRAMMATIC == "PROGRAMMATIC"
+
+
+def test_score_status_values():
+    assert ScoreStatus.SUCCESS == "SUCCESS"
+    assert ScoreStatus.FAILED == "FAILED"
+    assert ScoreStatus.PENDING == "PENDING"
+
+
+def test_score_data_type_values():
+    assert ScoreDataType.NUMERIC == "NUMERIC"
+    assert ScoreDataType.BOOLEAN == "BOOLEAN"
+    assert ScoreDataType.CATEGORICAL == "CATEGORICAL"
+
+
+def test_evaluation_status_unchanged():
+    assert EvaluationStatus.PENDING == "PENDING"
+    assert EvaluationStatus.RUNNING == "RUNNING"
+    assert EvaluationStatus.COMPLETED == "COMPLETED"
+    assert EvaluationStatus.FAILED == "FAILED"
