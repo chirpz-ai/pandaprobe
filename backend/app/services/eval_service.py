@@ -1,86 +1,212 @@
-"""Orchestration logic for the Evaluation domain.
+"""Service layer for evaluation runs and trace scores."""
 
-Coordinates creating evaluation jobs, dispatching them to the Celery
-worker, and reading results back from the database.
-"""
+from __future__ import annotations
 
+import random
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.evals.entities import Evaluation
+from app.core.evals.entities import EvalRun, TraceScore
 from app.core.evals.metrics import list_metrics
+from app.infrastructure.db.models import TraceModel
 from app.infrastructure.db.repositories.eval_repo import EvalRepository
+from app.infrastructure.db.repositories.trace_repo import TraceRepository
 from app.logging import logger
-from app.registry.constants import EvaluationStatus
+from app.registry.constants import AnalyticsGranularity, EvaluationStatus, ScoreDataType, ScoreSource, TraceStatus
 from app.registry.exceptions import NotFoundError, ValidationError
 
 
 class EvalService:
-    """Application service for evaluations."""
+    """Orchestrates eval run creation, score retrieval, and analytics."""
 
     def __init__(self, session: AsyncSession) -> None:
-        """Initialise with an async database session."""
+        self._session = session
         self._repo = EvalRepository(session)
 
-    async def create_evaluation(
+    # -- Eval run creation -----------------------------------------------------
+
+    async def create_eval_run(
         self,
-        trace_id: UUID,
         project_id: UUID,
         metric_names: list[str],
-    ) -> Evaluation:
-        """Validate the requested metrics, persist the job, and enqueue it.
+        *,
+        filters: dict[str, Any] | None = None,
+        sampling_rate: float = 1.0,
+        model: str | None = None,
+        name: str | None = None,
+        target_type: str = "TRACE",
+    ) -> EvalRun:
+        """Validate metrics, resolve traces, and enqueue an eval run."""
+        available = list_metrics()
+        invalid = [m for m in metric_names if m not in available]
+        if invalid:
+            raise ValidationError(f"Unknown metrics: {', '.join(invalid)}")
 
-        Returns:
-            The created Evaluation entity (status=PENDING).
+        if not metric_names:
+            raise ValidationError("At least one metric is required.")
 
-        Raises:
-            ValidationError: If any metric name is unrecognised.
-        """
-        available = set(list_metrics())
-        unknown = set(metric_names) - available
-        if unknown:
-            raise ValidationError(
-                f"Unknown metric(s): {', '.join(sorted(unknown))}. Available: {', '.join(sorted(available))}"
-            )
+        filters = filters or {}
 
-        evaluation = Evaluation(
+        trace_ids = await self._resolve_trace_ids(project_id, filters)
+        if not trace_ids:
+            raise ValidationError("No traces match the provided filters.")
+
+        if sampling_rate < 1.0:
+            sample_count = max(1, int(len(trace_ids) * sampling_rate))
+            trace_ids = random.sample(trace_ids, sample_count)
+
+        now = datetime.now(timezone.utc)
+        run = EvalRun(
             id=uuid4(),
-            trace_id=trace_id,
             project_id=project_id,
+            name=name,
+            target_type=target_type,
             metric_names=metric_names,
+            filters=filters,
+            sampling_rate=sampling_rate,
+            model=model,
             status=EvaluationStatus.PENDING,
-            created_at=datetime.now(timezone.utc),
+            total_traces=len(trace_ids),
+            evaluated_count=0,
+            created_at=now,
         )
 
-        await self._repo.create_evaluation(evaluation)
+        await self._repo.create_eval_run(run)
+        await self._session.commit()
 
-        from app.infrastructure.queue.tasks import run_evaluation
+        from app.infrastructure.queue.tasks import execute_eval_run
 
-        run_evaluation.delay(str(evaluation.id), str(project_id))
-        logger.info(
-            "evaluation_enqueued",
-            evaluation_id=str(evaluation.id),
-            trace_id=str(trace_id),
-            metrics=metric_names,
-        )
+        execute_eval_run.delay(str(run.id), str(project_id), [str(tid) for tid in trace_ids])
 
-        return evaluation
+        logger.info("eval_run_created", run_id=str(run.id), total_traces=len(trace_ids))
+        return run
 
-    async def get_evaluation(self, evaluation_id: UUID, project_id: UUID) -> Evaluation:
-        """Fetch an evaluation or raise ``NotFoundError``."""
-        evaluation = await self._repo.get_evaluation(evaluation_id, project_id)
-        if evaluation is None:
-            raise NotFoundError(f"Evaluation {evaluation_id} not found.")
-        return evaluation
+    # -- Eval run queries ------------------------------------------------------
 
-    async def list_evaluations(
+    async def get_eval_run(self, run_id: UUID, project_id: UUID) -> EvalRun:
+        """Fetch an eval run or raise NotFoundError."""
+        run = await self._repo.get_eval_run(run_id, project_id)
+        if run is None:
+            raise NotFoundError(f"Eval run {run_id} not found.")
+        return run
+
+    async def list_eval_runs(
         self,
         project_id: UUID,
-        trace_id: UUID | None = None,
+        *,
+        status: EvaluationStatus | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[Evaluation]:
-        """Return paginated evaluations for a project."""
-        return await self._repo.list_evaluations(project_id, trace_id=trace_id, limit=limit, offset=offset)
+    ) -> tuple[list[EvalRun], int]:
+        """Paginated listing of eval runs."""
+        return await self._repo.list_eval_runs(project_id, status=status, limit=limit, offset=offset)
+
+    # -- Trace score queries ---------------------------------------------------
+
+    async def get_scores_for_trace(self, trace_id: UUID, project_id: UUID) -> list[TraceScore]:
+        """Fetch all scores for a single trace."""
+        return await self._repo.get_scores_for_trace(trace_id, project_id)
+
+    async def list_scores(
+        self,
+        project_id: UUID,
+        *,
+        name: str | None = None,
+        trace_id: UUID | None = None,
+        source: ScoreSource | None = None,
+        data_type: ScoreDataType | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[TraceScore], int]:
+        """Paginated listing of trace scores with filters."""
+        return await self._repo.list_scores(
+            project_id,
+            name=name,
+            trace_id=trace_id,
+            source=source,
+            data_type=data_type,
+            date_from=date_from,
+            date_to=date_to,
+            limit=limit,
+            offset=offset,
+        )
+
+    # -- Analytics -------------------------------------------------------------
+
+    async def get_score_summary(
+        self,
+        project_id: UUID,
+        *,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[dict[str, Any]]:
+        """Aggregated score summary grouped by metric."""
+        return await self._repo.get_score_summary(project_id, date_from=date_from, date_to=date_to)
+
+    async def get_score_distribution(
+        self,
+        project_id: UUID,
+        metric_name: str,
+        *,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        buckets: int = 10,
+    ) -> list[dict[str, Any]]:
+        """Histogram of score values for a metric."""
+        return await self._repo.get_score_distribution(
+            project_id, metric_name, date_from=date_from, date_to=date_to, buckets=buckets
+        )
+
+    async def get_score_trend(
+        self,
+        project_id: UUID,
+        *,
+        metric_name: str,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        granularity: AnalyticsGranularity = AnalyticsGranularity.DAY,
+    ) -> list[dict[str, Any]]:
+        """Time series of average scores for a metric."""
+        return await self._repo.get_score_trend(
+            project_id, metric_name=metric_name, date_from=date_from, date_to=date_to, granularity=granularity
+        )
+
+    # -- Private helpers -------------------------------------------------------
+
+    async def _resolve_trace_ids(self, project_id: UUID, filters: dict[str, Any]) -> list[UUID]:
+        """Resolve matching trace IDs using the same filter logic as the traces API."""
+        t = TraceModel.__table__
+        stmt = select(t.c.trace_id).where(t.c.project_id == project_id)
+
+        status_str = filters.get("status")
+        status = TraceStatus(status_str) if status_str else None
+
+        stmt = TraceRepository._apply_trace_filters(
+            stmt,
+            t,
+            session_id=filters.get("session_id"),
+            status=status,
+            user_id=filters.get("user_id"),
+            tags=filters.get("tags"),
+            name=filters.get("name"),
+            started_after=_parse_dt(filters.get("date_from")),
+            started_before=_parse_dt(filters.get("date_to")),
+        )
+
+        result = await self._session.execute(stmt)
+        return [row[0] for row in result.all()]
+
+
+def _parse_dt(value: Any) -> datetime | None:
+    """Parse an ISO-format datetime string, or return None."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(str(value))
