@@ -31,10 +31,14 @@ class BaseMetric(ABC):
 
     Attributes:
         name: Machine-readable identifier (e.g. ``"task_completion"``).
+        description: Human-readable explanation of what this metric measures.
+        category: Scope of the metric (``"trace"`` or ``"session"``).
         threshold: Default pass/fail threshold (0-1 scale).
     """
 
     name: str
+    description: str = ""
+    category: str = "trace"
     threshold: float = 0.5
 
     @abstractmethod
