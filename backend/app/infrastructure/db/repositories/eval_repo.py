@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, text, update
+from sqlalchemy import Float as SAFloat, cast, delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.evals.entities import EvalRun, TraceScore
@@ -246,7 +246,7 @@ class EvalRepository:
     ) -> list[dict[str, Any]]:
         """Aggregated score summary grouped by metric."""
         t = TraceScoreModel.__table__
-        numeric_value = func.cast(t.c.value, func.FLOAT())
+        numeric_value = cast(t.c.value, SAFloat)
 
         base = select(
             t.c.name.label("metric_name"),
@@ -285,7 +285,7 @@ class EvalRepository:
     ) -> list[dict[str, Any]]:
         """Histogram of score values for a metric."""
         t = TraceScoreModel.__table__
-        numeric_value = func.cast(t.c.value, func.FLOAT())
+        numeric_value = cast(t.c.value, SAFloat)
         bucket_col = func.width_bucket(numeric_value, 0.0, 1.0, buckets)
 
         base = select(
@@ -328,7 +328,7 @@ class EvalRepository:
     ) -> list[dict[str, Any]]:
         """Time series of average scores for a metric."""
         t = TraceScoreModel.__table__
-        numeric_value = func.cast(t.c.value, func.FLOAT())
+        numeric_value = cast(t.c.value, SAFloat)
         bucket = func.date_trunc(text(f"'{granularity.value}'"), t.c.created_at).label("bucket")
 
         base = select(
