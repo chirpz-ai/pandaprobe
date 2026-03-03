@@ -46,6 +46,35 @@ class EvaluationStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class ScoreSource(StrEnum):
+    """Who produced the score judgment (not how it arrived).
+
+    AUTOMATED -- the eval system's LLM judge produced this score
+    ANNOTATION -- a human assigned this score manually
+    PROGRAMMATIC -- external code submitted this score via API/SDK
+    """
+
+    AUTOMATED = "AUTOMATED"
+    ANNOTATION = "ANNOTATION"
+    PROGRAMMATIC = "PROGRAMMATIC"
+
+
+class ScoreStatus(StrEnum):
+    """Outcome of a trace score evaluation attempt."""
+
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    PENDING = "PENDING"
+
+
+class ScoreDataType(StrEnum):
+    """Data type for a trace score value."""
+
+    NUMERIC = "NUMERIC"
+    BOOLEAN = "BOOLEAN"
+    CATEGORICAL = "CATEGORICAL"
+
+
 class MembershipRole(StrEnum):
     """Role a user holds within an organization."""
 
