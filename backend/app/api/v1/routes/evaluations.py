@@ -28,6 +28,7 @@ from app.registry.constants import (
     ScoreDataType,
     ScoreSource,
     ScoreStatus,
+    TraceStatus,
 )
 from app.services.eval_service import EvalService
 
@@ -91,9 +92,9 @@ class EvalRunFilters(BaseModel):
         default=None,
         description="ISO 8601 datetime string (e.g. '2025-02-01T00:00:00Z'). Include traces started before this time (exclusive).",
     )
-    status: str | None = Field(
+    status: TraceStatus | None = Field(
         default=None,
-        description="Trace status. One of: PENDING, RUNNING, COMPLETED, ERROR.",
+        description="Trace status: PENDING, RUNNING, COMPLETED, or ERROR.",
     )
     session_id: str | None = Field(
         default=None,
