@@ -292,13 +292,10 @@ class EvalRepository:
 
     async def get_failed_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[TraceScore]:
         """Fetch FAILED scores belonging to a specific eval run."""
-        stmt = (
-            select(TraceScoreModel)
-            .where(
-                TraceScoreModel.eval_run_id == run_id,
-                TraceScoreModel.project_id == project_id,
-                TraceScoreModel.status == ScoreStatus.FAILED.value,
-            )
+        stmt = select(TraceScoreModel).where(
+            TraceScoreModel.eval_run_id == run_id,
+            TraceScoreModel.project_id == project_id,
+            TraceScoreModel.status == ScoreStatus.FAILED.value,
         )
         result = await self._session.execute(stmt)
         return [self._to_score(row) for row in result.scalars().all()]

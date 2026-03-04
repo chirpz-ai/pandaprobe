@@ -81,8 +81,21 @@ class PlanAdherenceTemplate:
     @classmethod
     def get_prompt_preview(cls) -> dict[str, str]:
         """Return prompt previews with sample placeholder data."""
-        sample_trace = {"trace_id": "TRACE_ID", "name": "sample-trace", "spans": [{"name": "agent", "kind": "AGENT", "input": {"task": "USER_TASK"}, "output": {"result": "AGENT_OUTPUT"}}]}
+        sample_trace = {
+            "trace_id": "TRACE_ID",
+            "name": "sample-trace",
+            "spans": [
+                {
+                    "name": "agent",
+                    "kind": "AGENT",
+                    "input": {"task": "USER_TASK"},
+                    "output": {"result": "AGENT_OUTPUT"},
+                }
+            ],
+        }
         return {
             "extract_plan": cls.extract_plan_from_trace(sample_trace),
-            "score": cls.evaluate_adherence(user_task="<extracted_task>", agent_plan="<extracted_plan>", execution_trace=sample_trace),
+            "score": cls.evaluate_adherence(
+                user_task="<extracted_task>", agent_plan="<extracted_plan>", execution_trace=sample_trace
+            ),
         }

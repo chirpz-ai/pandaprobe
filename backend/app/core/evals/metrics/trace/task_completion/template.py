@@ -69,7 +69,18 @@ class TaskCompletionTemplate:
     @classmethod
     def get_prompt_preview(cls) -> dict[str, str]:
         """Return prompt previews with sample placeholder data."""
-        sample_trace = {"trace_id": "TRACE_ID", "name": "sample-trace", "spans": [{"name": "agent", "kind": "AGENT", "input": {"task": "USER_TASK"}, "output": {"result": "AGENT_OUTPUT"}}]}
+        sample_trace = {
+            "trace_id": "TRACE_ID",
+            "name": "sample-trace",
+            "spans": [
+                {
+                    "name": "agent",
+                    "kind": "AGENT",
+                    "input": {"task": "USER_TASK"},
+                    "output": {"result": "AGENT_OUTPUT"},
+                }
+            ],
+        }
         return {
             "extract": cls.extract_task_and_outcome(sample_trace),
             "score": cls.generate_verdict(task="<extracted_task>", actual_outcome="<extracted_outcome>"),

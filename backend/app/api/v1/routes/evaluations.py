@@ -240,9 +240,15 @@ class CreateTraceScoreRequest(BaseModel):
 
     trace_id: UUID = Field(description="Trace UUID to attach the score to.")
     name: str = Field(description="Metric/score name (e.g. 'task_completion', 'quality', 'thumbs_up').")
-    value: str = Field(description="Score value as string. For NUMERIC: '0.85', for BOOLEAN: 'true', for CATEGORICAL: 'PASS'.")
-    data_type: ScoreDataType = Field(default=ScoreDataType.NUMERIC, description="Value type: NUMERIC, BOOLEAN, CATEGORICAL.")
-    source: ScoreSource = Field(default=ScoreSource.ANNOTATION, description="Score origin: ANNOTATION (human) or PROGRAMMATIC (SDK).")
+    value: str = Field(
+        description="Score value as string. For NUMERIC: '0.85', for BOOLEAN: 'true', for CATEGORICAL: 'PASS'."
+    )
+    data_type: ScoreDataType = Field(
+        default=ScoreDataType.NUMERIC, description="Value type: NUMERIC, BOOLEAN, CATEGORICAL."
+    )
+    source: ScoreSource = Field(
+        default=ScoreSource.ANNOTATION, description="Score origin: ANNOTATION (human) or PROGRAMMATIC (SDK)."
+    )
     reason: str | None = Field(default=None, description="Optional explanation or annotation note.")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Optional metadata object.")
 
@@ -256,7 +262,9 @@ class UpdateTraceScoreRequest(BaseModel):
     ``updated_at`` is also set automatically.
     """
 
-    value: str | None = Field(default=None, description="New score value (e.g. '0.9' for NUMERIC, 'true' for BOOLEAN).")
+    value: str | None = Field(
+        default=None, description="New score value (e.g. '0.9' for NUMERIC, 'true' for BOOLEAN)."
+    )
     reason: str | None = Field(default=None, description="Updated reason or annotation note.")
     metadata: dict[str, Any] | None = Field(default=None, description="Updated metadata object (replaces existing).")
 
@@ -568,13 +576,21 @@ async def list_trace_scores(
     session: AsyncSession = Depends(get_db_session),
     trace_id: UUID | None = Query(default=None, description="Filter by trace UUID"),
     metric_name: str | None = Query(default=None, alias="name", description="Filter by metric name (exact match)"),
-    source: ScoreSource | None = Query(default=None, description="Filter by score source: AUTOMATED, ANNOTATION, PROGRAMMATIC"),
+    source: ScoreSource | None = Query(
+        default=None, description="Filter by score source: AUTOMATED, ANNOTATION, PROGRAMMATIC"
+    ),
     status: ScoreStatus | None = Query(default=None, description="Filter by score status: SUCCESS, FAILED, PENDING"),
-    data_type: ScoreDataType | None = Query(default=None, description="Filter by data type: NUMERIC, BOOLEAN, CATEGORICAL"),
+    data_type: ScoreDataType | None = Query(
+        default=None, description="Filter by data type: NUMERIC, BOOLEAN, CATEGORICAL"
+    ),
     eval_run_id: UUID | None = Query(default=None, description="Filter by eval run UUID"),
     environment: str | None = Query(default=None, description="Filter by trace environment (exact match)"),
-    date_from: datetime | None = Query(default=None, description="ISO 8601 datetime. Include scores created on or after."),
-    date_to: datetime | None = Query(default=None, description="ISO 8601 datetime. Include scores created before (exclusive)."),
+    date_from: datetime | None = Query(
+        default=None, description="ISO 8601 datetime. Include scores created on or after."
+    ),
+    date_to: datetime | None = Query(
+        default=None, description="ISO 8601 datetime. Include scores created before (exclusive)."
+    ),
     limit: int = Query(default=50, ge=1, le=200, description="Page size"),
     offset: int = Query(default=0, ge=0, description="Number of items to skip"),
 ) -> PaginatedResponse[TraceScoreResponse]:
@@ -674,8 +690,12 @@ async def delete_trace_score(
 async def get_trace_score_analytics_summary(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-    date_from: datetime | None = Query(default=None, description="ISO 8601 datetime. Include scores created on or after."),
-    date_to: datetime | None = Query(default=None, description="ISO 8601 datetime. Include scores created before (exclusive)."),
+    date_from: datetime | None = Query(
+        default=None, description="ISO 8601 datetime. Include scores created on or after."
+    ),
+    date_to: datetime | None = Query(
+        default=None, description="ISO 8601 datetime. Include scores created before (exclusive)."
+    ),
 ) -> list[ScoreSummaryItem]:
     """Aggregated trace score summary per metric.
 
@@ -693,7 +713,9 @@ async def get_trace_score_analytics_trend(
     metric_name: str = Query(..., description="Metric name to get trend for"),
     date_from: datetime | None = Query(default=None, description="ISO 8601 datetime."),
     date_to: datetime | None = Query(default=None, description="ISO 8601 datetime."),
-    granularity: AnalyticsGranularity = Query(default=AnalyticsGranularity.DAY, description="Time bucket: hour, day, week"),
+    granularity: AnalyticsGranularity = Query(
+        default=AnalyticsGranularity.DAY, description="Time bucket: hour, day, week"
+    ),
 ) -> list[ScoreTrendItem]:
     """Time series of average trace scores by metric.
 
