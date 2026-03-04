@@ -7,7 +7,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from app.core.evals.entities import EvalRun, TraceScore
-from app.registry.constants import AnalyticsGranularity, EvaluationStatus, ScoreDataType, ScoreSource
+from app.registry.constants import AnalyticsGranularity, EvaluationStatus, ScoreDataType, ScoreSource, ScoreStatus
 
 
 class AbstractEvalRepository(Protocol):
@@ -38,7 +38,10 @@ class AbstractEvalRepository(Protocol):
         name: str | None = None,
         trace_id: UUID | None = None,
         source: ScoreSource | None = None,
+        status: ScoreStatus | None = None,
         data_type: ScoreDataType | None = None,
+        eval_run_id: UUID | None = None,
+        environment: str | None = None,
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         limit: int = 50,
