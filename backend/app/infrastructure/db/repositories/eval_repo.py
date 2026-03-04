@@ -290,6 +290,47 @@ class EvalRepository:
         )
         await self._session.execute(stmt)
 
+    async def get_failed_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[TraceScore]:
+        """Fetch FAILED scores belonging to a specific eval run."""
+        stmt = (
+            select(TraceScoreModel)
+            .where(
+                TraceScoreModel.eval_run_id == run_id,
+                TraceScoreModel.project_id == project_id,
+                TraceScoreModel.status == ScoreStatus.FAILED.value,
+            )
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_score(row) for row in result.scalars().all()]
+
+    async def get_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[TraceScore]:
+        """Fetch all scores belonging to a specific eval run."""
+        stmt = (
+            select(TraceScoreModel)
+            .where(TraceScoreModel.eval_run_id == run_id, TraceScoreModel.project_id == project_id)
+            .order_by(TraceScoreModel.created_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_score(row) for row in result.scalars().all()]
+
+    async def delete_eval_run(self, run_id: UUID, project_id: UUID) -> None:
+        """Delete an eval run record."""
+        stmt = delete(EvalRunModel).where(EvalRunModel.id == run_id, EvalRunModel.project_id == project_id)
+        await self._session.execute(stmt)
+
+    async def delete_scores_for_run(self, run_id: UUID, project_id: UUID) -> int:
+        """Delete all scores belonging to a specific eval run."""
+        stmt = delete(TraceScoreModel).where(
+            TraceScoreModel.eval_run_id == run_id, TraceScoreModel.project_id == project_id
+        )
+        result = await self._session.execute(stmt)
+        return result.rowcount
+
+    async def delete_score(self, score_id: UUID, project_id: UUID) -> None:
+        """Delete a single trace score."""
+        stmt = delete(TraceScoreModel).where(TraceScoreModel.id == score_id, TraceScoreModel.project_id == project_id)
+        await self._session.execute(stmt)
+
     # -- Analytics -------------------------------------------------------------
 
     async def get_score_summary(
@@ -302,16 +343,19 @@ class EvalRepository:
         """Aggregated score summary grouped by metric."""
         t = TraceScoreModel.__table__
         numeric_value = cast(t.c.value, SAFloat)
+        is_success = t.c.status == ScoreStatus.SUCCESS.value
+        is_numeric_success = (t.c.data_type == ScoreDataType.NUMERIC.value) & is_success
 
         base = select(
             t.c.name.label("metric_name"),
-            func.avg(numeric_value).label("avg_score"),
-            func.count().label("count"),
-        ).where(
-            t.c.project_id == project_id,
-            t.c.data_type == ScoreDataType.NUMERIC.value,
-            t.c.status == ScoreStatus.SUCCESS.value,
-        )
+            func.count().filter(is_success).label("success_count"),
+            func.count().filter(t.c.status == ScoreStatus.FAILED.value).label("failed_count"),
+            func.avg(numeric_value).filter(is_numeric_success).label("avg_score"),
+            func.min(numeric_value).filter(is_numeric_success).label("min_score"),
+            func.max(numeric_value).filter(is_numeric_success).label("max_score"),
+            func.percentile_cont(0.5).within_group(numeric_value).filter(is_numeric_success).label("median_score"),
+            func.max(t.c.created_at).label("latest_score_at"),
+        ).where(t.c.project_id == project_id)
 
         if date_from is not None:
             base = base.where(t.c.created_at >= date_from)
@@ -323,8 +367,13 @@ class EvalRepository:
         return [
             {
                 "metric_name": row.metric_name,
-                "avg_score": float(row.avg_score) if row.avg_score is not None else 0.0,
-                "count": row.count,
+                "avg_score": float(row.avg_score) if row.avg_score is not None else None,
+                "min_score": float(row.min_score) if row.min_score is not None else None,
+                "max_score": float(row.max_score) if row.max_score is not None else None,
+                "median_score": float(row.median_score) if row.median_score is not None else None,
+                "success_count": row.success_count,
+                "failed_count": row.failed_count,
+                "latest_score_at": row.latest_score_at.isoformat() if row.latest_score_at else None,
             }
             for row in result.all()
         ]
