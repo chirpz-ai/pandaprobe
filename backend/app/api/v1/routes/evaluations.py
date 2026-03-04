@@ -35,87 +35,30 @@ router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
 
 # ---------------------------------------------------------------------------
-# Schemas
+# Schemas -- Metrics
 # ---------------------------------------------------------------------------
 
 
-class EvalRunFilters(BaseModel):
-    """Filters for selecting traces in an eval run."""
+class PromptPreview(BaseModel):
+    """Actual LLM prompt text for one evaluation stage, rendered with sample data."""
 
-    date_from: str | None = None
-    date_to: str | None = None
-    status: str | None = None
-    session_id: str | None = None
-    user_id: str | None = None
-    tags: list[str] | None = None
-    name: str | None = None
+    stage: str
+    prompt: str
 
 
-class CreateEvalRunRequest(BaseModel):
-    """Payload for creating an eval run."""
-
-    name: str | None = None
-    metrics: list[str] = Field(min_length=1, description="Metric names to run")
-    target_type: str = Field(default="TRACE")
-    filters: EvalRunFilters = Field(default_factory=EvalRunFilters)
-    sampling_rate: float = Field(default=1.0, ge=0.0, le=1.0)
-    model: str | None = None
-
-
-class EvalRunResponse(BaseModel):
-    """Full eval run representation."""
-
-    id: UUID
-    project_id: UUID
-    name: str | None
-    target_type: str
-    metric_names: list[str]
-    filters: dict[str, Any]
-    sampling_rate: float
-    model: str | None
-    status: EvaluationStatus
-    total_traces: int
-    evaluated_count: int
-    failed_count: int
-    error_message: str | None
-    created_at: str
-    completed_at: str | None
-
-
-class TraceScoreResponse(BaseModel):
-    """Single trace score."""
-
-    id: UUID
-    trace_id: UUID
-    project_id: UUID
-    name: str
-    data_type: ScoreDataType
-    value: str | None
-    source: ScoreSource
-    status: ScoreStatus
-    eval_run_id: UUID | None
-    author_user_id: str | None
-    reason: str | None
-    environment: str | None
-    config_id: str | None
-    metadata: dict[str, Any]
-    created_at: str
-    updated_at: str
-
-
-class MetricInfo(BaseModel):
-    """Summary info about an available metric."""
+class MetricSummary(BaseModel):
+    """Lightweight metric info for the list endpoint."""
 
     name: str
     description: str
     category: str
+
+
+class MetricInfo(MetricSummary):
+    """Full metric info including threshold and prompt previews."""
+
     default_threshold: float
-
-
-class MetricDetail(MetricInfo):
-    """Extended info about a metric."""
-
-    pass
+    prompt_preview: list[PromptPreview]
 
 
 class ProviderInfo(BaseModel):
@@ -126,6 +69,181 @@ class ProviderInfo(BaseModel):
     description: str
     available: bool
     message: str
+
+
+# ---------------------------------------------------------------------------
+# Schemas -- Eval runs
+# ---------------------------------------------------------------------------
+
+
+class EvalRunFilters(BaseModel):
+    """Trace filters for a filtered eval run.
+
+    These mirror the GET /traces query parameters so the frontend can
+    reuse the same filter UI components.
+    """
+
+    date_from: str | None = Field(
+        default=None,
+        description="ISO 8601 datetime string (e.g. '2025-01-15T00:00:00Z'). Include traces started on or after this time.",
+    )
+    date_to: str | None = Field(
+        default=None,
+        description="ISO 8601 datetime string (e.g. '2025-02-01T00:00:00Z'). Include traces started before this time (exclusive).",
+    )
+    status: str | None = Field(
+        default=None,
+        description="Trace status. One of: PENDING, RUNNING, COMPLETED, ERROR.",
+    )
+    session_id: str | None = Field(
+        default=None,
+        description="Exact session ID string. Only traces belonging to this session.",
+    )
+    user_id: str | None = Field(
+        default=None,
+        description="Exact user ID string. Only traces from this user.",
+    )
+    tags: list[str] | None = Field(
+        default=None,
+        description="List of tag strings (e.g. ['production', 'v2']). Traces matching ANY of these tags are included.",
+    )
+    name: str | None = Field(
+        default=None,
+        description="Substring match on trace name (case-insensitive). E.g. 'booking' matches 'Flight Booking Agent'.",
+    )
+
+
+class CreateEvalRunRequest(BaseModel):
+    """Create a filtered eval run.
+
+    The system resolves matching traces from the filters, optionally
+    samples a fraction of them, then dispatches a background task to
+    run the requested metrics asynchronously via an LLM judge.
+
+    **Typical dashboard flow:**
+    1. User selects metrics -> call ``GET /runs/template?metric=task_completion``
+    2. Dashboard renders the template as a form with editable filters
+    3. User customizes filters/sampling -> frontend builds this request body
+    4. Frontend calls ``POST /runs`` with the final body
+    """
+
+    name: str | None = Field(
+        default=None,
+        description="Optional human-readable label for this run (e.g. 'Weekly prod eval').",
+    )
+    metrics: list[str] = Field(
+        min_length=1,
+        description="List of metric names to run. Use GET /evaluations/metrics to see available names. Example: ['task_completion', 'tool_correctness'].",
+    )
+    filters: EvalRunFilters = Field(
+        default_factory=EvalRunFilters,
+        description="Trace filters to select which traces to evaluate. Omit or leave empty to evaluate all traces in the project.",
+    )
+    sampling_rate: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of matching traces to evaluate (0.0 to 1.0). 1.0 = all matching traces, 0.1 = random 10%.",
+    )
+    model: str | None = Field(
+        default=None,
+        description="LLM model string override for the judge (e.g. 'openai/gpt-4o'). Null uses the system default.",
+    )
+
+
+class CreateBatchEvalRunRequest(BaseModel):
+    """Create an eval run for an explicit list of trace IDs.
+
+    Use this when the user has manually selected specific traces in the
+    dashboard rather than using filter-based selection.
+    """
+
+    trace_ids: list[UUID] = Field(
+        min_length=1,
+        description="List of trace UUIDs to evaluate. Duplicates are removed automatically.",
+    )
+    metrics: list[str] = Field(
+        min_length=1,
+        description="List of metric names to run on each trace. Example: ['task_completion', 'step_efficiency'].",
+    )
+    name: str | None = Field(
+        default=None,
+        description="Optional human-readable label for this run.",
+    )
+    model: str | None = Field(
+        default=None,
+        description="LLM model string override for the judge. Null uses the system default.",
+    )
+
+
+class EvalRunSummary(BaseModel):
+    """Lightweight representation for list endpoints."""
+
+    id: UUID
+    name: str | None
+    status: EvaluationStatus
+    metric_names: list[str]
+    total_traces: int
+    evaluated_count: int
+    failed_count: int
+    created_at: str
+    completed_at: str | None
+
+
+class EvalRunDetail(EvalRunSummary):
+    """Full representation for single-run endpoints."""
+
+    project_id: UUID
+    target_type: str
+    filters: dict[str, Any]
+    sampling_rate: float
+    model: str | None
+    error_message: str | None
+
+
+class EvalRunTemplate(BaseModel):
+    """Pre-filled template the dashboard renders as an editable form."""
+
+    metric: MetricInfo
+    filters: EvalRunFilters
+    sampling_rate: float
+    model: str | None
+
+
+# ---------------------------------------------------------------------------
+# Schemas -- Trace scores
+# ---------------------------------------------------------------------------
+
+
+class TraceScoreSummary(BaseModel):
+    """Lightweight representation for list endpoints."""
+
+    id: UUID
+    trace_id: UUID
+    name: str
+    value: str | None
+    status: ScoreStatus
+    source: ScoreSource
+    created_at: str
+
+
+class TraceScoreDetail(TraceScoreSummary):
+    """Full representation for single-trace score endpoints."""
+
+    project_id: UUID
+    data_type: ScoreDataType
+    eval_run_id: UUID | None
+    author_user_id: str | None
+    reason: str | None
+    environment: str | None
+    config_id: str | None
+    metadata: dict[str, Any]
+    updated_at: str
+
+
+# ---------------------------------------------------------------------------
+# Schemas -- Analytics
+# ---------------------------------------------------------------------------
 
 
 class ScoreSummaryItem(BaseModel):
@@ -159,23 +277,29 @@ class ScoreDistributionItem(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.get("/metrics", response_model=list[MetricInfo])
-async def get_available_metrics() -> list[MetricInfo]:
-    """List all registered evaluation metrics with metadata."""
+@router.get("/metrics", response_model=list[MetricSummary])
+async def get_available_metrics(
+    ctx: ApiContext = Depends(require_project),
+) -> list[MetricSummary]:
+    """List all registered evaluation metrics.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
     names = list_metrics()
-    return [MetricInfo(**get_metric_info(n)) for n in names]
-
-
-@router.get("/metrics/{metric_name}", response_model=MetricDetail)
-async def get_metric_detail(metric_name: str) -> MetricDetail:
-    """Get detailed info about a specific metric."""
-    info = get_metric_info(metric_name)
-    return MetricDetail(**info)
+    return [
+        MetricSummary(name=i["name"], description=i["description"], category=i["category"])
+        for i in (get_metric_info(n) for n in names)
+    ]
 
 
 @router.get("/providers", response_model=list[ProviderInfo])
-async def get_available_providers() -> list[ProviderInfo]:
-    """List LLM providers and their availability."""
+async def get_available_providers(
+    ctx: ApiContext = Depends(require_project),
+) -> list[ProviderInfo]:
+    """List LLM providers and their availability.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
     from app.infrastructure.llm.engine import LLMEngine
 
     engine = LLMEngine()
@@ -187,15 +311,61 @@ async def get_available_providers() -> list[ProviderInfo]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/runs", status_code=202, response_model=EvalRunResponse)
+@router.get("/runs/template", response_model=EvalRunTemplate)
+async def get_eval_run_template(
+    metric: str = Query(description="Metric name to build the template for"),
+    ctx: ApiContext = Depends(require_project),
+) -> EvalRunTemplate:
+    """Return a pre-filled eval run template for a single metric.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    from app.infrastructure.llm.engine import LLMEngine
+
+    info = get_metric_info(metric)
+    engine = LLMEngine()
+    return EvalRunTemplate(
+        metric=_metric_to_info(info),
+        filters=EvalRunFilters(),
+        sampling_rate=1.0,
+        model=engine.default_model,
+    )
+
+
+@router.post("/runs", status_code=202, response_model=EvalRunDetail)
 @limiter.limit("50/minute")
 async def create_eval_run(
     request: Request,
     body: CreateEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> EvalRunResponse:
-    """Create and execute an eval run.
+) -> EvalRunDetail:
+    """Create a filtered eval run.
+
+    Resolves traces matching the provided filters, optionally samples
+    a fraction of them, then dispatches a background Celery task to
+    run the requested metrics asynchronously via an LLM judge.
+
+    **Request body fields:**
+
+    - **name** *(string, optional)*: Human-readable label, e.g. ``"Weekly prod eval"``.
+    - **metrics** *(string[], required)*: Metric names to run. Get available names
+      from ``GET /evaluations/metrics``. Example: ``["task_completion", "tool_correctness"]``.
+    - **filters** *(object, optional)*: Trace selection filters. All fields optional:
+        - **date_from**: ISO 8601 datetime, e.g. ``"2025-01-15T00:00:00Z"``.
+          Includes traces started on or after this time.
+        - **date_to**: ISO 8601 datetime. Includes traces started before this time (exclusive).
+        - **status**: One of ``PENDING``, ``RUNNING``, ``COMPLETED``, ``ERROR``.
+        - **session_id**: Exact session ID string.
+        - **user_id**: Exact user ID string.
+        - **tags**: Array of strings, e.g. ``["production", "v2"]``. Matches traces with ANY tag.
+        - **name**: Substring match on trace name (case-insensitive).
+    - **sampling_rate** *(float, optional, default 1.0)*: Fraction of matching traces
+      to evaluate. ``1.0`` = all, ``0.1`` = random 10%.
+    - **model** *(string, optional)*: LLM model override, e.g. ``"openai/gpt-4o"``.
+      Uses system default if null.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
 
     Rate limit: ``50/min``
     """
@@ -208,40 +378,74 @@ async def create_eval_run(
         sampling_rate=body.sampling_rate,
         model=body.model,
         name=body.name,
-        target_type=body.target_type,
     )
-    return _run_to_response(run)
+    return _run_to_detail(run)
 
 
-@router.get("/runs", response_model=PaginatedResponse[EvalRunResponse])
+@router.post("/runs/batch", status_code=202, response_model=EvalRunDetail)
+@limiter.limit("50/minute")
+async def create_batch_eval_run(
+    request: Request,
+    body: CreateBatchEvalRunRequest,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> EvalRunDetail:
+    """Create an eval run for an explicit list of trace IDs.
+
+    Evaluates exactly the provided traces with all requested metrics.
+    All metrics for all traces are processed in a single sequential
+    Celery task -- no race conditions on concurrent writes.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+
+    Rate limit: ``50/min``
+    """
+    svc = EvalService(session)
+    run = await svc.create_batch_eval_run(
+        project_id=ctx.project.id,
+        trace_ids=body.trace_ids,
+        metric_names=body.metrics,
+        model=body.model,
+        name=body.name,
+    )
+    return _run_to_detail(run)
+
+
+@router.get("/runs", response_model=PaginatedResponse[EvalRunSummary])
 async def list_eval_runs(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
     status: EvaluationStatus | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-) -> PaginatedResponse[EvalRunResponse]:
-    """List eval runs for the current project."""
+) -> PaginatedResponse[EvalRunSummary]:
+    """List eval runs (summary view).
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
     svc = EvalService(session)
     runs, total = await svc.list_eval_runs(ctx.project.id, status=status, limit=limit, offset=offset)
     return PaginatedResponse(
-        items=[_run_to_response(r) for r in runs],
+        items=[_run_to_summary(r) for r in runs],
         total=total,
         limit=limit,
         offset=offset,
     )
 
 
-@router.get("/runs/{run_id}", response_model=EvalRunResponse)
+@router.get("/runs/{run_id}", response_model=EvalRunDetail)
 async def get_eval_run(
     run_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> EvalRunResponse:
-    """Get eval run detail with progress."""
+) -> EvalRunDetail:
+    """Get full eval run detail.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
     svc = EvalService(session)
     run = await svc.get_eval_run(run_id, ctx.project.id)
-    return _run_to_response(run)
+    return _run_to_detail(run)
 
 
 # ---------------------------------------------------------------------------
@@ -249,80 +453,99 @@ async def get_eval_run(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/trace-scores", response_model=PaginatedResponse[TraceScoreResponse])
+@router.get("/trace-scores", response_model=PaginatedResponse[TraceScoreSummary])
 async def list_trace_scores(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-    trace_id: UUID | None = Query(default=None),
-    metric_name: str | None = Query(default=None, alias="name"),
-    source: ScoreSource | None = Query(default=None),
-    data_type: ScoreDataType | None = Query(default=None),
-    date_from: datetime | None = Query(default=None),
-    date_to: datetime | None = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-) -> PaginatedResponse[TraceScoreResponse]:
-    """List trace scores with filters."""
+    trace_id: UUID | None = Query(default=None, description="Filter by trace UUID"),
+    metric_name: str | None = Query(default=None, alias="name", description="Filter by metric name (exact match)"),
+    source: ScoreSource | None = Query(default=None, description="Filter by score source: AUTOMATED, ANNOTATION, PROGRAMMATIC"),
+    status: ScoreStatus | None = Query(default=None, description="Filter by score status: SUCCESS, FAILED, PENDING"),
+    data_type: ScoreDataType | None = Query(default=None, description="Filter by data type: NUMERIC, BOOLEAN, CATEGORICAL"),
+    eval_run_id: UUID | None = Query(default=None, description="Filter by eval run UUID"),
+    environment: str | None = Query(default=None, description="Filter by trace environment (exact match)"),
+    date_from: datetime | None = Query(default=None, description="ISO 8601 datetime. Include scores created on or after."),
+    date_to: datetime | None = Query(default=None, description="ISO 8601 datetime. Include scores created before (exclusive)."),
+    limit: int = Query(default=50, ge=1, le=200, description="Page size"),
+    offset: int = Query(default=0, ge=0, description="Number of items to skip"),
+) -> PaginatedResponse[TraceScoreSummary]:
+    """List trace scores (summary view) with comprehensive filters.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
     svc = EvalService(session)
     scores, total = await svc.list_scores(
         ctx.project.id,
         name=metric_name,
         trace_id=trace_id,
         source=source,
+        status=status,
         data_type=data_type,
+        eval_run_id=eval_run_id,
+        environment=environment,
         date_from=date_from,
         date_to=date_to,
         limit=limit,
         offset=offset,
     )
     return PaginatedResponse(
-        items=[_score_to_response(s) for s in scores],
+        items=[_score_to_summary(s) for s in scores],
         total=total,
         limit=limit,
         offset=offset,
     )
 
 
-@router.get("/trace-scores/by-trace/{trace_id}", response_model=list[TraceScoreResponse])
-async def get_scores_by_trace(
+@router.get("/trace-scores/{trace_id}", response_model=list[TraceScoreDetail])
+async def get_scores_for_trace(
     trace_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> list[TraceScoreResponse]:
-    """Get all scores for a specific trace."""
+) -> list[TraceScoreDetail]:
+    """Get all scores for a specific trace (full detail).
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
     svc = EvalService(session)
     scores = await svc.get_scores_for_trace(trace_id, ctx.project.id)
-    return [_score_to_response(s) for s in scores]
+    return [_score_to_detail(s) for s in scores]
 
 
 # ---------------------------------------------------------------------------
-# Analytics
+# Analytics (namespaced under /analytics/trace-scores/ for future
+# session-scores parity: /analytics/session-scores/...)
 # ---------------------------------------------------------------------------
 
 
-@router.get("/analytics/summary", response_model=list[ScoreSummaryItem])
-async def get_analytics_summary(
+@router.get("/analytics/trace-scores/summary", response_model=list[ScoreSummaryItem])
+async def get_trace_score_analytics_summary(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-    date_from: datetime | None = Query(default=None),
-    date_to: datetime | None = Query(default=None),
+    date_from: datetime | None = Query(default=None, description="ISO 8601 datetime. Include scores created on or after."),
+    date_to: datetime | None = Query(default=None, description="ISO 8601 datetime. Include scores created before (exclusive)."),
 ) -> list[ScoreSummaryItem]:
-    """Aggregated trace score summary per metric."""
+    """Aggregated trace score summary per metric.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
     svc = EvalService(session)
     data = await svc.get_score_summary(ctx.project.id, date_from=date_from, date_to=date_to)
     return [ScoreSummaryItem(**d) for d in data]
 
 
-@router.get("/analytics/trend", response_model=list[ScoreTrendItem])
-async def get_analytics_trend(
+@router.get("/analytics/trace-scores/trend", response_model=list[ScoreTrendItem])
+async def get_trace_score_analytics_trend(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-    metric_name: str = Query(...),
-    date_from: datetime | None = Query(default=None),
-    date_to: datetime | None = Query(default=None),
-    granularity: AnalyticsGranularity = Query(default=AnalyticsGranularity.DAY),
+    metric_name: str = Query(..., description="Metric name to get trend for"),
+    date_from: datetime | None = Query(default=None, description="ISO 8601 datetime."),
+    date_to: datetime | None = Query(default=None, description="ISO 8601 datetime."),
+    granularity: AnalyticsGranularity = Query(default=AnalyticsGranularity.DAY, description="Time bucket: hour, day, week"),
 ) -> list[ScoreTrendItem]:
-    """Time series of average trace scores by metric."""
+    """Time series of average trace scores by metric.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
     svc = EvalService(session)
     data = await svc.get_score_trend(
         ctx.project.id,
@@ -334,16 +557,19 @@ async def get_analytics_trend(
     return [ScoreTrendItem(**d) for d in data]
 
 
-@router.get("/analytics/distribution", response_model=list[ScoreDistributionItem])
-async def get_analytics_distribution(
+@router.get("/analytics/trace-scores/distribution", response_model=list[ScoreDistributionItem])
+async def get_trace_score_analytics_distribution(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-    metric_name: str = Query(...),
-    date_from: datetime | None = Query(default=None),
-    date_to: datetime | None = Query(default=None),
-    buckets: int = Query(default=10, ge=1, le=100),
+    metric_name: str = Query(..., description="Metric name to get distribution for"),
+    date_from: datetime | None = Query(default=None, description="ISO 8601 datetime."),
+    date_to: datetime | None = Query(default=None, description="ISO 8601 datetime."),
+    buckets: int = Query(default=10, ge=1, le=100, description="Number of histogram buckets (1-100)"),
 ) -> list[ScoreDistributionItem]:
-    """Histogram of trace score values for a metric."""
+    """Histogram of trace score values for a metric.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
     svc = EvalService(session)
     data = await svc.get_score_distribution(
         ctx.project.id,
@@ -360,42 +586,82 @@ async def get_analytics_distribution(
 # ---------------------------------------------------------------------------
 
 
-def _run_to_response(run) -> EvalRunResponse:
-    return EvalRunResponse(
+def _build_prompt_preview(preview_dict: dict[str, str]) -> list[PromptPreview]:
+    return [PromptPreview(stage=stage, prompt=text) for stage, text in preview_dict.items()]
+
+
+def _metric_to_info(info: dict[str, Any]) -> MetricInfo:
+    return MetricInfo(
+        name=info["name"],
+        description=info["description"],
+        category=info["category"],
+        default_threshold=info["default_threshold"],
+        prompt_preview=_build_prompt_preview(info["prompt_preview"]),
+    )
+
+
+def _run_to_summary(run) -> EvalRunSummary:
+    return EvalRunSummary(
         id=run.id,
-        project_id=run.project_id,
         name=run.name,
-        target_type=run.target_type,
-        metric_names=run.metric_names,
-        filters=run.filters,
-        sampling_rate=run.sampling_rate,
-        model=run.model,
         status=run.status,
+        metric_names=run.metric_names,
         total_traces=run.total_traces,
         evaluated_count=run.evaluated_count,
         failed_count=run.failed_count,
-        error_message=run.error_message,
         created_at=run.created_at.isoformat(),
         completed_at=run.completed_at.isoformat() if run.completed_at else None,
     )
 
 
-def _score_to_response(score) -> TraceScoreResponse:
-    return TraceScoreResponse(
+def _run_to_detail(run) -> EvalRunDetail:
+    return EvalRunDetail(
+        id=run.id,
+        name=run.name,
+        status=run.status,
+        metric_names=run.metric_names,
+        total_traces=run.total_traces,
+        evaluated_count=run.evaluated_count,
+        failed_count=run.failed_count,
+        created_at=run.created_at.isoformat(),
+        completed_at=run.completed_at.isoformat() if run.completed_at else None,
+        project_id=run.project_id,
+        target_type=run.target_type,
+        filters=run.filters,
+        sampling_rate=run.sampling_rate,
+        model=run.model,
+        error_message=run.error_message,
+    )
+
+
+def _score_to_summary(score) -> TraceScoreSummary:
+    return TraceScoreSummary(
         id=score.id,
         trace_id=score.trace_id,
-        project_id=score.project_id,
         name=score.name,
-        data_type=score.data_type,
         value=score.value,
-        source=score.source,
         status=score.status,
+        source=score.source,
+        created_at=score.created_at.isoformat(),
+    )
+
+
+def _score_to_detail(score) -> TraceScoreDetail:
+    return TraceScoreDetail(
+        id=score.id,
+        trace_id=score.trace_id,
+        name=score.name,
+        value=score.value,
+        status=score.status,
+        source=score.source,
+        created_at=score.created_at.isoformat(),
+        project_id=score.project_id,
+        data_type=score.data_type,
         eval_run_id=score.eval_run_id,
         author_user_id=score.author_user_id,
         reason=score.reason,
         environment=score.environment,
         config_id=score.config_id,
         metadata=score.metadata,
-        created_at=score.created_at.isoformat(),
         updated_at=score.updated_at.isoformat(),
     )
