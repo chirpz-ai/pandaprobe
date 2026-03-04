@@ -48,10 +48,12 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./backend/logs:/app/logs
+      - ~/.config/gcloud:/home/appuser/.config/gcloud:ro
     env_file:
       - ./backend/.env.${APP_ENV:-development}
     environment:
       - APP_ENV=${APP_ENV:-development}
+      - GOOGLE_APPLICATION_CREDENTIALS=/home/appuser/.config/gcloud/application_default_credentials.json
     restart: on-failure
     depends_on:
       postgres:
