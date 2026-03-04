@@ -75,3 +75,12 @@ class ToolCorrectnessTemplate:
 
             JSON:
         """)
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return prompt previews with sample placeholder data."""
+        sample_trace = {"trace_id": "TRACE_ID", "name": "sample-trace", "spans": [{"name": "tool-call", "kind": "TOOL", "input": {"param": "value"}, "output": {"result": "output"}}]}
+        return {
+            "extract": cls.extract_tool_usage(sample_trace),
+            "score": cls.score_tool_selection(user_input="<extracted_user_input>", tools_called=[{"name": "<tool>", "parameters": {}}], available_tools=[{"name": "<tool>", "description": "<desc>"}]),
+        }

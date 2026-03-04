@@ -35,6 +35,16 @@ class ToolCorrectnessMetric(BaseMetric):
     description = "Evaluates whether the agent selected appropriate tools for the task."
     category = "trace"
     threshold = 0.5
+    prompt_description = (
+        "Two-stage LLM judge: (1) extract user input, tool calls made, and available tools "
+        "from trace spans, (2) score tool selection quality considering correct selection, "
+        "over-selection, under-selection, and mis-selection on a 0-1 scale."
+    )
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return actual prompt texts with sample data for preview."""
+        return ToolCorrectnessTemplate.get_prompt_preview()
 
     async def evaluate(
         self,
