@@ -184,6 +184,194 @@ After ingesting and exploring, check these behaviors:
 
 ---
 
+## Test Evaluations
+
+After ingesting the 7 seed traces, you can test the evaluation system. Make sure you have at least one LLM provider configured (e.g. `OPENAI_API_KEY` or `GEMINI_API_KEY` in your `.env`).
+
+### Prerequisite: Check Available Metrics
+
+```bash
+API_KEY="sk_pp_YOUR_KEY_HERE"
+PROJECT="my-dev-project"
+
+curl -s http://localhost:8000/evaluations/metrics \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+You should see 6 metrics: `argument_correctness`, `plan_adherence`, `plan_quality`, `step_efficiency`, `task_completion`, `tool_correctness`.
+
+### Get a Run Template (Preview)
+
+Before creating a run, fetch the template for a metric to see its prompt preview and defaults:
+
+```bash
+curl -s "http://localhost:8000/evaluations/runs/template?metric=task_completion" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+### Test 1: Filtered Eval Run (POST /evaluations/runs)
+
+Run `task_completion` on all COMPLETED traces:
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/runs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Test: task_completion on completed traces",
+    "metrics": ["task_completion"],
+    "filters": {
+      "status": "COMPLETED"
+    }
+  }' | python3 -m json.tool
+```
+
+This should return `202` with `total_traces: 6` (all COMPLETED traces, excluding the ERROR trace `04`).
+
+Run multiple metrics with a date filter and sampling:
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/runs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Test: multi-metric with sampling",
+    "metrics": ["task_completion", "step_efficiency"],
+    "filters": {
+      "date_from": "2026-02-23T00:00:00Z",
+      "date_to": "2026-02-24T00:00:00Z"
+    },
+    "sampling_rate": 0.5
+  }' | python3 -m json.tool
+```
+
+This evaluates ~50% of matching traces with both metrics.
+
+Run tool-related metrics only on traces with tool spans (the code review and support agents):
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/runs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Test: tool metrics on support session",
+    "metrics": ["tool_correctness", "argument_correctness"],
+    "filters": {
+      "session_id": "session-cs-20260223-jmartinez"
+    }
+  }' | python3 -m json.tool
+```
+
+### Test 2: Batch Eval Run (POST /evaluations/runs/batch)
+
+Evaluate specific traces by ID — pick the RAG pipeline and code review agent:
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/runs/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Test: batch eval on RAG + code review",
+    "trace_ids": [
+      "a1b2c3d4-0002-4000-8000-000000000001",
+      "a1b2c3d4-0003-4000-8000-000000000001"
+    ],
+    "metrics": ["task_completion", "step_efficiency", "plan_quality"]
+  }' | python3 -m json.tool
+```
+
+This evaluates exactly 2 traces with 3 metrics each (6 trace scores total).
+
+Evaluate the error trace to verify it still gets scored (the trace has ERROR status but the LLM judge evaluates what the agent did):
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/runs/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Test: eval error trace",
+    "trace_ids": [
+      "a1b2c3d4-0004-4000-8000-000000000001"
+    ],
+    "metrics": ["task_completion"]
+  }' | python3 -m json.tool
+```
+
+### Monitor and Verify Results
+
+Check run progress (replace `RUN_ID` with the `id` from the POST response):
+
+```bash
+curl -s http://localhost:8000/evaluations/runs/RUN_ID \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+Look at `status` (PENDING -> RUNNING -> COMPLETED), `evaluated_count`, and `failed_count`.
+
+List all runs:
+
+```bash
+curl -s http://localhost:8000/evaluations/runs \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+View trace scores for a specific trace (e.g. the RAG pipeline):
+
+```bash
+curl -s http://localhost:8000/evaluations/trace-scores/a1b2c3d4-0002-4000-8000-000000000001 \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+List all scores with filters:
+
+```bash
+# All scores for task_completion metric
+curl -s "http://localhost:8000/evaluations/trace-scores?name=task_completion" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# Only failed scores
+curl -s "http://localhost:8000/evaluations/trace-scores?status=FAILED" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+Check analytics (after runs complete):
+
+```bash
+# Score summary per metric
+curl -s http://localhost:8000/evaluations/analytics/trace-scores/summary \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# Score distribution for task_completion
+curl -s "http://localhost:8000/evaluations/analytics/trace-scores/distribution?metric_name=task_completion" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+### Things to Verify
+
+1. **Run lifecycle** — Status transitions from PENDING to RUNNING to COMPLETED
+2. **Score creation** — Each trace+metric pair produces a `trace_score` row with `source: AUTOMATED`
+3. **Failed metrics** — If a metric fails (e.g. LLM timeout), the score has `status: FAILED`, `value: null`, and a reason explaining the failure
+4. **Multiple metrics** — Batch run with 3 metrics on 2 traces should produce 6 score rows
+5. **Filter accuracy** — Filtered run with `status: COMPLETED` should skip the error trace (`04`)
+6. **Sampling** — Run with `sampling_rate: 0.5` on 6 traces should evaluate ~3 traces
+7. **Worker logs** — Check `make logs` for `metric_completed` and `eval_run_completed` log entries
+
+---
+
 ## Cleanup
 
 To remove all seed data without dropping the database, use batch delete:
