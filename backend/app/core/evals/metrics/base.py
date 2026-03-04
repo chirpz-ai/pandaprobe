@@ -41,6 +41,14 @@ class BaseMetric(ABC):
     category: str = "trace"
     threshold: float = 0.5
 
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return actual prompt texts with sample data for preview.
+
+        Subclasses should override this to delegate to their template class.
+        """
+        return {}
+
     @abstractmethod
     async def evaluate(
         self,

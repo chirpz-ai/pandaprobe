@@ -52,6 +52,7 @@ def get_metric_info(name: str) -> dict[str, Any]:
         "description": instance.description,
         "category": instance.category,
         "default_threshold": instance.threshold,
+        "prompt_preview": cls.get_prompt_preview(),
     }
 
 
