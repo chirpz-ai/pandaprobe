@@ -354,7 +354,10 @@ async def get_eval_run_template(
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
     from app.infrastructure.llm.engine import LLMEngine
+    from app.registry.exceptions import ValidationError
 
+    if metric not in list_metrics():
+        raise ValidationError(f"Unknown metric: {metric}")
     info = get_metric_info(metric)
     engine = LLMEngine()
     return EvalRunTemplate(
