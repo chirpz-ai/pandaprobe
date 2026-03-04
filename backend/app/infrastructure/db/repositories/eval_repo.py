@@ -107,7 +107,10 @@ class EvalRepository:
         name: str | None = None,
         trace_id: UUID | None = None,
         source: ScoreSource | None = None,
+        status: ScoreStatus | None = None,
         data_type: ScoreDataType | None = None,
+        eval_run_id: UUID | None = None,
+        environment: str | None = None,
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         limit: int = 50,
@@ -123,8 +126,14 @@ class EvalRepository:
             base = base.where(t.c.trace_id == trace_id)
         if source is not None:
             base = base.where(t.c.source == source.value)
+        if status is not None:
+            base = base.where(t.c.status == status.value)
         if data_type is not None:
             base = base.where(t.c.data_type == data_type.value)
+        if eval_run_id is not None:
+            base = base.where(t.c.eval_run_id == eval_run_id)
+        if environment is not None:
+            base = base.where(t.c.environment == environment)
         if date_from is not None:
             base = base.where(t.c.created_at >= date_from)
         if date_to is not None:
