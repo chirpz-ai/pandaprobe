@@ -41,6 +41,16 @@ class PlanQualityMetric(BaseMetric):
     description = "Evaluates the intrinsic quality, completeness, and optimality of the agent's plan."
     category = "trace"
     threshold = 0.5
+    prompt_description = (
+        "Three-stage LLM judge: (1) extract the user's task from the trace, (2) extract "
+        "the agent's plan from reasoning fields, (3) score the plan's intrinsic quality "
+        "based on completeness, logical coherence, optimality, and alignment with the task."
+    )
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return actual prompt texts with sample data for preview."""
+        return PlanQualityTemplate.get_prompt_preview()
 
     async def evaluate(
         self,

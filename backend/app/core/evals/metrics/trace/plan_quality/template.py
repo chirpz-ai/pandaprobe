@@ -43,3 +43,10 @@ class PlanQualityTemplate:
 
             JSON:
         """)
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return prompt previews with sample placeholder data."""
+        return {
+            "score": cls.evaluate_plan_quality(user_task="<extracted_task>", agent_plan="<extracted_plan>"),
+        }
