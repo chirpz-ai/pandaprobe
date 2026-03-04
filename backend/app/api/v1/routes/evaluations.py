@@ -176,8 +176,8 @@ class CreateBatchEvalRunRequest(BaseModel):
     )
 
 
-class EvalRunSummary(BaseModel):
-    """Lightweight representation for list endpoints."""
+class EvalRunResponse(BaseModel):
+    """Full eval run representation used by both list and detail endpoints."""
 
     id: UUID
     name: str | None
@@ -188,11 +188,6 @@ class EvalRunSummary(BaseModel):
     failed_count: int
     created_at: str
     completed_at: str | None
-
-
-class EvalRunDetail(EvalRunSummary):
-    """Full representation for single-run endpoints."""
-
     project_id: UUID
     target_type: str
     filters: dict[str, Any]
@@ -215,8 +210,8 @@ class EvalRunTemplate(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class TraceScoreSummary(BaseModel):
-    """Lightweight representation for list endpoints."""
+class TraceScoreResponse(BaseModel):
+    """Full trace score representation used by both list and detail endpoints."""
 
     id: UUID
     trace_id: UUID
@@ -225,11 +220,6 @@ class TraceScoreSummary(BaseModel):
     status: ScoreStatus
     source: ScoreSource
     created_at: str
-
-
-class TraceScoreDetail(TraceScoreSummary):
-    """Full representation for single-trace score endpoints."""
-
     project_id: UUID
     data_type: ScoreDataType
     eval_run_id: UUID | None
@@ -346,14 +336,14 @@ async def get_eval_run_template(
     )
 
 
-@router.post("/runs", status_code=202, response_model=EvalRunDetail)
+@router.post("/runs", status_code=202, response_model=EvalRunResponse)
 @limiter.limit("50/minute")
 async def create_eval_run(
     request: Request,
     body: CreateEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> EvalRunDetail:
+) -> EvalRunResponse:
     """Create a filtered eval run.
 
     Resolves traces matching the provided filters, optionally samples
@@ -396,14 +386,14 @@ async def create_eval_run(
     return _run_to_detail(run)
 
 
-@router.post("/runs/batch", status_code=202, response_model=EvalRunDetail)
+@router.post("/runs/batch", status_code=202, response_model=EvalRunResponse)
 @limiter.limit("50/minute")
 async def create_batch_eval_run(
     request: Request,
     body: CreateBatchEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> EvalRunDetail:
+) -> EvalRunResponse:
     """Create an eval run for an explicit list of trace IDs.
 
     Evaluates exactly the provided traces with all requested metrics.
@@ -425,14 +415,14 @@ async def create_batch_eval_run(
     return _run_to_detail(run)
 
 
-@router.get("/runs", response_model=PaginatedResponse[EvalRunSummary])
+@router.get("/runs", response_model=PaginatedResponse[EvalRunResponse])
 async def list_eval_runs(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
     status: EvaluationStatus | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-) -> PaginatedResponse[EvalRunSummary]:
+) -> PaginatedResponse[EvalRunResponse]:
     """List eval runs (summary view).
 
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
@@ -440,19 +430,19 @@ async def list_eval_runs(
     svc = EvalService(session)
     runs, total = await svc.list_eval_runs(ctx.project.id, status=status, limit=limit, offset=offset)
     return PaginatedResponse(
-        items=[_run_to_summary(r) for r in runs],
+        items=[_run_to_detail(r) for r in runs],
         total=total,
         limit=limit,
         offset=offset,
     )
 
 
-@router.get("/runs/{run_id}", response_model=EvalRunDetail)
+@router.get("/runs/{run_id}", response_model=EvalRunResponse)
 async def get_eval_run(
     run_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> EvalRunDetail:
+) -> EvalRunResponse:
     """Get full eval run detail.
 
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
@@ -467,7 +457,7 @@ async def get_eval_run(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/trace-scores", response_model=PaginatedResponse[TraceScoreSummary])
+@router.get("/trace-scores", response_model=PaginatedResponse[TraceScoreResponse])
 async def list_trace_scores(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
@@ -482,7 +472,7 @@ async def list_trace_scores(
     date_to: datetime | None = Query(default=None, description="ISO 8601 datetime. Include scores created before (exclusive)."),
     limit: int = Query(default=50, ge=1, le=200, description="Page size"),
     offset: int = Query(default=0, ge=0, description="Number of items to skip"),
-) -> PaginatedResponse[TraceScoreSummary]:
+) -> PaginatedResponse[TraceScoreResponse]:
     """List trace scores (summary view) with comprehensive filters.
 
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
@@ -503,19 +493,19 @@ async def list_trace_scores(
         offset=offset,
     )
     return PaginatedResponse(
-        items=[_score_to_summary(s) for s in scores],
+        items=[_score_to_detail(s) for s in scores],
         total=total,
         limit=limit,
         offset=offset,
     )
 
 
-@router.get("/trace-scores/{trace_id}", response_model=list[TraceScoreDetail])
+@router.get("/trace-scores/{trace_id}", response_model=list[TraceScoreResponse])
 async def get_scores_for_trace(
     trace_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> list[TraceScoreDetail]:
+) -> list[TraceScoreResponse]:
     """Get the latest score per metric for a specific trace.
 
     Returns one score per metric name, deduplicated by most recent
@@ -529,13 +519,13 @@ async def get_scores_for_trace(
     return [_score_to_detail(s) for s in scores]
 
 
-@router.patch("/trace-scores/{score_id}", response_model=TraceScoreDetail)
+@router.patch("/trace-scores/{score_id}", response_model=TraceScoreResponse)
 async def update_trace_score(
     score_id: UUID,
     body: UpdateTraceScoreRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
-) -> TraceScoreDetail:
+) -> TraceScoreResponse:
     """Manually edit a trace score.
 
     Only ``value``, ``reason``, and ``metadata`` can be changed by the
@@ -644,22 +634,8 @@ def _metric_to_info(info: dict[str, Any]) -> MetricInfo:
     )
 
 
-def _run_to_summary(run) -> EvalRunSummary:
-    return EvalRunSummary(
-        id=run.id,
-        name=run.name,
-        status=run.status,
-        metric_names=run.metric_names,
-        total_traces=run.total_traces,
-        evaluated_count=run.evaluated_count,
-        failed_count=run.failed_count,
-        created_at=run.created_at.isoformat(),
-        completed_at=run.completed_at.isoformat() if run.completed_at else None,
-    )
-
-
-def _run_to_detail(run) -> EvalRunDetail:
-    return EvalRunDetail(
+def _run_to_detail(run) -> EvalRunResponse:
+    return EvalRunResponse(
         id=run.id,
         name=run.name,
         status=run.status,
@@ -678,20 +654,8 @@ def _run_to_detail(run) -> EvalRunDetail:
     )
 
 
-def _score_to_summary(score) -> TraceScoreSummary:
-    return TraceScoreSummary(
-        id=score.id,
-        trace_id=score.trace_id,
-        name=score.name,
-        value=score.value,
-        status=score.status,
-        source=score.source,
-        created_at=score.created_at.isoformat(),
-    )
-
-
-def _score_to_detail(score) -> TraceScoreDetail:
-    return TraceScoreDetail(
+def _score_to_detail(score) -> TraceScoreResponse:
+    return TraceScoreResponse(
         id=score.id,
         trace_id=score.trace_id,
         name=score.name,
