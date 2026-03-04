@@ -231,6 +231,22 @@ class TraceScoreResponse(BaseModel):
     updated_at: str
 
 
+class CreateTraceScoreRequest(BaseModel):
+    """Manually create a trace score (annotation or programmatic).
+
+    Used by the dashboard for human annotations or by the SDK for
+    programmatic score submission.
+    """
+
+    trace_id: UUID = Field(description="Trace UUID to attach the score to.")
+    name: str = Field(description="Metric/score name (e.g. 'task_completion', 'quality', 'thumbs_up').")
+    value: str = Field(description="Score value as string. For NUMERIC: '0.85', for BOOLEAN: 'true', for CATEGORICAL: 'PASS'.")
+    data_type: ScoreDataType = Field(default=ScoreDataType.NUMERIC, description="Value type: NUMERIC, BOOLEAN, CATEGORICAL.")
+    source: ScoreSource = Field(default=ScoreSource.ANNOTATION, description="Score origin: ANNOTATION (human) or PROGRAMMATIC (SDK).")
+    reason: str | None = Field(default=None, description="Optional explanation or annotation note.")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Optional metadata object.")
+
+
 class UpdateTraceScoreRequest(BaseModel):
     """Editable fields for a trace score.
 
@@ -254,8 +270,13 @@ class ScoreSummaryItem(BaseModel):
     """Aggregated score summary for one metric."""
 
     metric_name: str
-    avg_score: float
-    count: int
+    avg_score: float | None
+    min_score: float | None
+    max_score: float | None
+    median_score: float | None
+    success_count: int
+    failed_count: int
+    latest_score_at: str | None
 
 
 class ScoreTrendItem(BaseModel):
@@ -452,9 +473,93 @@ async def get_eval_run(
     return _run_to_detail(run)
 
 
+@router.delete("/runs/{run_id}", status_code=204)
+async def delete_eval_run(
+    run_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    delete_scores: bool = Query(default=False, description="Also delete all trace scores created by this run."),
+) -> None:
+    """Delete an eval run.
+
+    By default, only the run record is deleted (scores are preserved
+    with ``eval_run_id`` set to NULL via CASCADE). Pass
+    ``?delete_scores=true`` to also delete all scores from this run.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    await svc.delete_eval_run(run_id, ctx.project.id, delete_scores=delete_scores)
+
+
+@router.post("/runs/{run_id}/retry", status_code=202, response_model=EvalRunResponse)
+@limiter.limit("50/minute")
+async def retry_failed_eval_run(
+    request: Request,
+    run_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> EvalRunResponse:
+    """Retry failed metrics from a completed eval run.
+
+    Creates a new eval run targeting only the trace+metric pairs that
+    failed in the original run. Returns 422 if the original run has
+    no failures to retry.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+
+    Rate limit: ``50/min``
+    """
+    svc = EvalService(session)
+    run = await svc.retry_failed_run(run_id, ctx.project.id)
+    return _run_to_detail(run)
+
+
+@router.get("/runs/{run_id}/scores", response_model=list[TraceScoreResponse])
+async def get_scores_for_run(
+    run_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[TraceScoreResponse]:
+    """List all trace scores produced by a specific eval run.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    scores = await svc.get_scores_for_run(run_id, ctx.project.id)
+    return [_score_to_detail(s) for s in scores]
+
+
 # ---------------------------------------------------------------------------
 # Trace scores
 # ---------------------------------------------------------------------------
+
+
+@router.post("/trace-scores", status_code=201, response_model=TraceScoreResponse)
+async def create_trace_score(
+    body: CreateTraceScoreRequest,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> TraceScoreResponse:
+    """Manually create a trace score.
+
+    Use ``source=ANNOTATION`` for human-created scores from the dashboard,
+    or ``source=PROGRAMMATIC`` for SDK/API-submitted scores.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    score = await svc.create_score(
+        project_id=ctx.project.id,
+        trace_id=body.trace_id,
+        name=body.name,
+        value=body.value,
+        data_type=body.data_type,
+        source=body.source,
+        reason=body.reason,
+        metadata=body.metadata,
+    )
+    return _score_to_detail(score)
 
 
 @router.get("/trace-scores", response_model=PaginatedResponse[TraceScoreResponse])
@@ -543,6 +648,20 @@ async def update_trace_score(
         metadata=body.metadata,
     )
     return _score_to_detail(score)
+
+
+@router.delete("/trace-scores/{score_id}", status_code=204)
+async def delete_trace_score(
+    score_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Delete a single trace score.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    await svc.delete_score(score_id, ctx.project.id)
 
 
 # ---------------------------------------------------------------------------
