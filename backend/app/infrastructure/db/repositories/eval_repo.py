@@ -263,12 +263,21 @@ class EvalRepository:
         status: EvaluationStatus,
         error_message: str | None = None,
     ) -> None:
-        """Update the status of an eval run."""
+        """Update the status of an eval run.
+
+        Clears ``error_message`` on RUNNING/COMPLETED so a successful
+        retry doesn't retain a stale error from a previous attempt.
+        """
         values: dict[str, Any] = {"status": status}
-        if error_message is not None:
+        if status == EvaluationStatus.FAILED:
             values["error_message"] = error_message
-        if status in (EvaluationStatus.COMPLETED, EvaluationStatus.FAILED):
             values["completed_at"] = datetime.now(timezone.utc)
+        elif status == EvaluationStatus.COMPLETED:
+            values["error_message"] = None
+            values["completed_at"] = datetime.now(timezone.utc)
+        elif status == EvaluationStatus.RUNNING:
+            values["error_message"] = None
+            values["completed_at"] = None
         stmt = update(EvalRunModel).where(EvalRunModel.id == run_id).values(**values)
         await self._session.execute(stmt)
 
