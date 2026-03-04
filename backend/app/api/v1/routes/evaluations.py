@@ -502,12 +502,16 @@ async def get_scores_for_trace(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
 ) -> list[TraceScoreDetail]:
-    """Get all scores for a specific trace (full detail).
+    """Get the latest score per metric for a specific trace.
+
+    Returns one score per metric name, deduplicated. For each metric,
+    the most recent SUCCESS score is preferred. If no SUCCESS exists,
+    the most recent FAILED/PENDING score is returned instead.
 
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
     svc = EvalService(session)
-    scores = await svc.get_scores_for_trace(trace_id, ctx.project.id)
+    scores = await svc.get_latest_scores_for_trace(trace_id, ctx.project.id)
     return [_score_to_detail(s) for s in scores]
 
 
