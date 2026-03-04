@@ -36,6 +36,16 @@ class ArgumentCorrectnessMetric(BaseMetric):
     description = "Evaluates whether tool call arguments were correctly specified for the task."
     category = "trace"
     threshold = 0.5
+    prompt_description = (
+        "Three-stage LLM judge: (1) extract user input and tool calls with parameters from "
+        "the trace, (2) generate a per-tool-call yes/no verdict on whether arguments correctly "
+        "address the task, (3) compute score as correct/total and produce an overall explanation."
+    )
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return actual prompt texts with sample data for preview."""
+        return ArgumentCorrectnessTemplate.get_prompt_preview()
 
     async def evaluate(
         self,
