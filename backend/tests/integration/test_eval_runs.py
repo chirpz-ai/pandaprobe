@@ -74,7 +74,7 @@ async def test_create_batch_eval_run_empty_traces(client: AsyncClient):
     assert resp.status_code == 422
 
 
-async def test_list_eval_runs_returns_summary(client: AsyncClient, seed_trace):
+async def test_list_eval_runs(client: AsyncClient, seed_trace):
     await seed_trace()
     await client.post(
         "/evaluations/runs",
@@ -89,8 +89,9 @@ async def test_list_eval_runs_returns_summary(client: AsyncClient, seed_trace):
     assert "id" in item
     assert "status" in item
     assert "metric_names" in item
-    assert "project_id" not in item
-    assert "filters" not in item
+    assert "project_id" in item
+    assert "filters" in item
+    assert "sampling_rate" in item
 
 
 async def test_get_eval_run_detail(client: AsyncClient, seed_trace):
