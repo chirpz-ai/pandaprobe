@@ -66,3 +66,12 @@ class StepEfficiencyTemplate:
 
             JSON:
         """)
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return prompt previews with sample placeholder data."""
+        sample_trace = {"trace_id": "TRACE_ID", "name": "sample-trace", "spans": [{"name": "agent", "kind": "AGENT", "input": {"task": "USER_TASK"}, "output": {"result": "AGENT_OUTPUT"}}]}
+        return {
+            "extract_task": cls.extract_task_from_trace(sample_trace),
+            "score": cls.get_execution_efficiency(task="<extracted_task>", trace=sample_trace),
+        }

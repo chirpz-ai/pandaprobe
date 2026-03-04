@@ -34,6 +34,16 @@ class StepEfficiencyMetric(BaseMetric):
     description = "Evaluates how efficiently the agent executed the task with minimal unnecessary steps."
     category = "trace"
     threshold = 0.5
+    prompt_description = (
+        "Two-stage LLM judge: (1) extract the user's original goal from the trace, "
+        "(2) score how efficiently the agent achieved it based on minimality of actions, "
+        "penalizing redundant steps, unnecessary tool calls, and speculative work."
+    )
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return actual prompt texts with sample data for preview."""
+        return StepEfficiencyTemplate.get_prompt_preview()
 
     async def evaluate(
         self,
