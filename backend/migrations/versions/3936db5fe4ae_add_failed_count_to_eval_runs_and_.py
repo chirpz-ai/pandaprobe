@@ -1,4 +1,4 @@
-"""add failed_count to eval_runs and rename score_source values
+"""add failed_count to eval_runs
 
 Revision ID: 3936db5fe4ae
 Revises: 572b122d002a

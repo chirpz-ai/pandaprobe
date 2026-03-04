@@ -54,7 +54,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('data_type', sa.Enum('NUMERIC', 'BOOLEAN', 'CATEGORICAL', name='score_data_type', native_enum=False, length=20), nullable=False),
     sa.Column('value', sa.String(length=255), nullable=False),
-    sa.Column('source', sa.Enum('EVAL', 'ANNOTATION', 'API', name='score_source', native_enum=False, length=20), nullable=False),
+    sa.Column('source', sa.Enum('AUTOMATED', 'ANNOTATION', 'PROGRAMMATIC', name='score_source', native_enum=False, length=20), nullable=False),
     sa.Column('eval_run_id', sa.UUID(), nullable=True),
     sa.Column('author_user_id', sa.String(length=255), nullable=True),
     sa.Column('reason', sa.Text(), nullable=True),
