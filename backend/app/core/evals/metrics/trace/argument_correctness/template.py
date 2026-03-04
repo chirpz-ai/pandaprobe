@@ -94,3 +94,13 @@ class ArgumentCorrectnessTemplate:
 
             JSON:
         """)
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return prompt previews with sample placeholder data."""
+        sample_trace = {"trace_id": "TRACE_ID", "name": "sample-trace", "spans": [{"name": "tool-call", "kind": "TOOL", "input": {"param": "value"}}]}
+        return {
+            "extract": cls.extract_tool_calls(sample_trace),
+            "verdicts": cls.generate_verdicts(user_input="<extracted_user_input>", tool_calls=[{"name": "<tool>", "parameters": {"key": "value"}, "reasoning": "<reasoning>"}]),
+            "reason": cls.generate_reason(incorrect_reasons=["<reason_for_incorrect_call>"], user_input="<extracted_user_input>", score=0.75),
+        }
