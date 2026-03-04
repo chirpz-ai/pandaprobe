@@ -290,6 +290,15 @@ class EvalRepository:
         )
         await self._session.execute(stmt)
 
+    async def reset_run_counters(self, run_id: UUID) -> None:
+        """Reset progress counters to zero (used before a retry)."""
+        stmt = (
+            update(EvalRunModel)
+            .where(EvalRunModel.id == run_id)
+            .values(evaluated_count=0, failed_count=0)
+        )
+        await self._session.execute(stmt)
+
     async def increment_failed(self, run_id: UUID, count: int = 1) -> None:
         """Increment the failed metric count on a run."""
         stmt = (

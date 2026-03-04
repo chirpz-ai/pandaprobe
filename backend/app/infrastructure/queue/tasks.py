@@ -154,6 +154,8 @@ async def _run_eval_run(
         eval_repo = EvalRepository(session)
         trace_repo = TraceRepository(session)
 
+        await eval_repo.delete_scores_for_run(run_uuid, proj_uuid)
+        await eval_repo.reset_run_counters(run_uuid)
         await eval_repo.update_run_status(run_uuid, EvaluationStatus.RUNNING)
         await session.commit()
 
