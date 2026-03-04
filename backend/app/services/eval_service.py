@@ -160,7 +160,9 @@ class EvalService:
         return await self._repo.list_eval_runs(project_id, status=status, limit=limit, offset=offset)
 
     async def retry_failed_run(self, run_id: UUID, project_id: UUID) -> EvalRun:
-        """Create a new run retrying only the failed trace+metric pairs from an existing run."""
+        """Create a new run retrying only the exact failed trace+metric pairs."""
+        from collections import defaultdict
+
         original = await self._repo.get_eval_run(run_id, project_id)
         if original is None:
             raise NotFoundError(f"Eval run {run_id} not found.")
@@ -169,16 +171,45 @@ class EvalService:
         if not failed_scores:
             raise ValidationError("No failed scores to retry in this run.")
 
-        trace_ids = list({s.trace_id for s in failed_scores})
-        metric_names = list({s.name for s in failed_scores})
+        trace_metric_map: dict[UUID, list[str]] = defaultdict(list)
+        for s in failed_scores:
+            if s.name not in trace_metric_map[s.trace_id]:
+                trace_metric_map[s.trace_id].append(s.name)
 
-        return await self.create_batch_eval_run(
+        trace_ids = list(trace_metric_map.keys())
+        all_metric_names = sorted({name for names in trace_metric_map.values() for name in names})
+
+        now = datetime.now(timezone.utc)
+        run = EvalRun(
+            id=uuid4(),
             project_id=project_id,
-            trace_ids=trace_ids,
-            metric_names=metric_names,
-            model=original.model,
             name=f"Retry: {original.name or original.id}",
+            target_type="TRACE",
+            metric_names=all_metric_names,
+            filters={"retry_of": str(run_id), "trace_ids": [str(tid) for tid in trace_ids]},
+            sampling_rate=1.0,
+            model=original.model,
+            status=EvaluationStatus.PENDING,
+            total_traces=len(trace_ids),
+            evaluated_count=0,
+            created_at=now,
         )
+
+        await self._repo.create_eval_run(run)
+        await self._session.commit()
+
+        from app.infrastructure.queue.tasks import execute_eval_run
+
+        serialized_map = {str(tid): metrics for tid, metrics in trace_metric_map.items()}
+        execute_eval_run.delay(
+            str(run.id),
+            str(project_id),
+            [str(tid) for tid in trace_ids],
+            trace_metric_map=serialized_map,
+        )
+
+        logger.info("retry_eval_run_created", run_id=str(run.id), original_run_id=str(run_id), total_traces=len(trace_ids))
+        return run
 
     async def get_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[TraceScore]:
         """Fetch all scores produced by a specific eval run."""

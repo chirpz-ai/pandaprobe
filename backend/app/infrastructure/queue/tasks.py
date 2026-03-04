@@ -98,6 +98,7 @@ def execute_eval_run(
     run_id: str,
     project_id: str,
     trace_ids: list[str],
+    trace_metric_map: dict[str, list[str]] | None = None,
 ) -> dict[str, str]:
     """Run requested metrics against a batch of traces.
 
@@ -110,19 +111,28 @@ def execute_eval_run(
         run_id: UUID of the eval run.
         project_id: UUID of the owning project.
         trace_ids: List of trace UUID strings to evaluate.
+        trace_metric_map: Optional per-trace metric override. When set,
+            each trace only runs the metrics listed for it instead of
+            all metrics from the run. Used by retry to avoid Cartesian
+            product re-evaluation.
 
     Returns:
         A dict summarising the eval run outcome.
     """
     try:
-        return asyncio.run(_run_eval_run(run_id, project_id, trace_ids))
+        return asyncio.run(_run_eval_run(run_id, project_id, trace_ids, trace_metric_map))
     except Exception as exc:
         logger.error("execute_eval_run_failed", error=str(exc), run_id=run_id)
         asyncio.run(_fail_eval_run(run_id, str(exc)))
         raise self.retry(exc=exc)
 
 
-async def _run_eval_run(run_id: str, project_id: str, trace_ids: list[str]) -> dict[str, str]:
+async def _run_eval_run(
+    run_id: str,
+    project_id: str,
+    trace_ids: list[str],
+    trace_metric_map: dict[str, list[str]] | None = None,
+) -> dict[str, str]:
     """Core async logic for executing an eval run."""
     from datetime import datetime, timezone
     from uuid import UUID, uuid4
@@ -160,7 +170,8 @@ async def _run_eval_run(run_id: str, project_id: str, trace_ids: list[str]) -> d
                 await session.commit()
                 continue
 
-            for metric_name in run.metric_names:
+            metrics_for_trace = trace_metric_map.get(tid_str, run.metric_names) if trace_metric_map else run.metric_names
+            for metric_name in metrics_for_trace:
                 metric_cls = get_metric(metric_name)
                 metric = metric_cls()
 
