@@ -116,6 +116,47 @@ async def test_get_eval_run_not_found(client: AsyncClient):
     assert resp.status_code == 404
 
 
+async def test_delete_eval_run(client: AsyncClient, seed_trace):
+    await seed_trace()
+    create_resp = await client.post(
+        "/evaluations/runs",
+        json={"metrics": ["task_completion"], "filters": {}},
+    )
+    run_id = create_resp.json()["id"]
+    resp = await client.delete(f"/evaluations/runs/{run_id}")
+    assert resp.status_code == 204
+    get_resp = await client.get(f"/evaluations/runs/{run_id}")
+    assert get_resp.status_code == 404
+
+
+async def test_delete_eval_run_not_found(client: AsyncClient):
+    resp = await client.delete(f"/evaluations/runs/{uuid4()}")
+    assert resp.status_code == 404
+
+
+async def test_get_run_scores_empty(client: AsyncClient, seed_trace):
+    await seed_trace()
+    create_resp = await client.post(
+        "/evaluations/runs",
+        json={"metrics": ["task_completion"], "filters": {}},
+    )
+    run_id = create_resp.json()["id"]
+    resp = await client.get(f"/evaluations/runs/{run_id}/scores")
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+
+
+async def test_retry_no_failures_returns_422(client: AsyncClient, seed_trace):
+    await seed_trace()
+    create_resp = await client.post(
+        "/evaluations/runs",
+        json={"metrics": ["task_completion"], "filters": {}},
+    )
+    run_id = create_resp.json()["id"]
+    resp = await client.post(f"/evaluations/runs/{run_id}/retry")
+    assert resp.status_code == 422
+
+
 async def test_get_run_template(client: AsyncClient):
     resp = await client.get("/evaluations/runs/template", params={"metric": "task_completion"})
     assert resp.status_code == 200
