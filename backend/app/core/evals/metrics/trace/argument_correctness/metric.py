@@ -96,9 +96,9 @@ class ArgumentCorrectnessMetric(BaseMetric):
         )
 
         verdicts = verdicts_result.verdicts or []
+        total_verdicts = len(verdicts)
         correct_count = sum(1 for v in verdicts if v.verdict == "yes")
-        total_count = len(tool_calls)
-        score = correct_count / total_count if total_count > 0 else 1.0
+        score = min(correct_count / total_verdicts, 1.0) if total_verdicts > 0 else 1.0
 
         # Stage 3: Generate overall reason
         incorrect_reasons = [v.reason or "No reason provided" for v in verdicts if v.verdict == "no"]
