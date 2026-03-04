@@ -241,6 +241,20 @@ class TraceScoreDetail(TraceScoreSummary):
     updated_at: str
 
 
+class UpdateTraceScoreRequest(BaseModel):
+    """Editable fields for a trace score.
+
+    All fields are optional -- only provided fields are updated.
+    ``status`` is set to SUCCESS automatically on save, and
+    ``source`` is changed to ANNOTATION to indicate human edit.
+    ``updated_at`` is also set automatically.
+    """
+
+    value: str | None = Field(default=None, description="New score value (e.g. '0.9' for NUMERIC, 'true' for BOOLEAN).")
+    reason: str | None = Field(default=None, description="Updated reason or annotation note.")
+    metadata: dict[str, Any] | None = Field(default=None, description="Updated metadata object (replaces existing).")
+
+
 # ---------------------------------------------------------------------------
 # Schemas -- Analytics
 # ---------------------------------------------------------------------------
@@ -504,15 +518,41 @@ async def get_scores_for_trace(
 ) -> list[TraceScoreDetail]:
     """Get the latest score per metric for a specific trace.
 
-    Returns one score per metric name, deduplicated. For each metric,
-    the most recent SUCCESS score is preferred. If no SUCCESS exists,
-    the most recent FAILED/PENDING score is returned instead.
+    Returns one score per metric name, deduplicated by most recent
+    ``created_at`` regardless of status. The dashboard uses this to
+    display a score overview panel for the trace.
 
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
     svc = EvalService(session)
     scores = await svc.get_latest_scores_for_trace(trace_id, ctx.project.id)
     return [_score_to_detail(s) for s in scores]
+
+
+@router.patch("/trace-scores/{score_id}", response_model=TraceScoreDetail)
+async def update_trace_score(
+    score_id: UUID,
+    body: UpdateTraceScoreRequest,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> TraceScoreDetail:
+    """Manually edit a trace score.
+
+    Only ``value``, ``reason``, and ``metadata`` can be changed by the
+    caller. ``status`` is automatically set to SUCCESS, ``source`` is
+    changed to ANNOTATION, and ``updated_at`` is set to now.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    score = await svc.update_score(
+        score_id=score_id,
+        project_id=ctx.project.id,
+        value=body.value,
+        reason=body.reason,
+        metadata=body.metadata,
+    )
+    return _score_to_detail(score)
 
 
 # ---------------------------------------------------------------------------

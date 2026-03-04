@@ -172,6 +172,35 @@ class EvalRepository:
         result = await self._session.execute(stmt)
         return result.rowcount
 
+    async def get_score_by_id(self, score_id: UUID, project_id: UUID) -> TraceScore | None:
+        """Fetch a single score by its ID."""
+        stmt = select(TraceScoreModel).where(TraceScoreModel.id == score_id, TraceScoreModel.project_id == project_id)
+        result = await self._session.execute(stmt)
+        row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        return self._to_score(row)
+
+    async def update_score(
+        self,
+        score_id: UUID,
+        project_id: UUID,
+        **fields: Any,
+    ) -> None:
+        """Update editable fields on a score. Sets updated_at automatically."""
+        values = {k: v for k, v in fields.items() if v is not None}
+        if not values:
+            return
+        if "metadata" in values:
+            values["metadata_"] = values.pop("metadata")
+        values["updated_at"] = datetime.now(timezone.utc)
+        stmt = (
+            update(TraceScoreModel)
+            .where(TraceScoreModel.id == score_id, TraceScoreModel.project_id == project_id)
+            .values(**values)
+        )
+        await self._session.execute(stmt)
+
     # -- Eval run operations ---------------------------------------------------
 
     async def create_eval_run(self, run: EvalRun) -> EvalRun:

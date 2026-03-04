@@ -169,6 +169,34 @@ class EvalService:
         """Fetch the latest score per metric for a trace (deduplicated)."""
         return await self._repo.get_latest_scores_for_trace(trace_id, project_id)
 
+    async def update_score(
+        self,
+        score_id: UUID,
+        project_id: UUID,
+        *,
+        value: str | None = None,
+        reason: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> TraceScore:
+        """Manually edit a score. Automatically marks as ANNOTATION + SUCCESS."""
+        existing = await self._repo.get_score_by_id(score_id, project_id)
+        if existing is None:
+            raise NotFoundError(f"Trace score {score_id} not found.")
+
+        await self._repo.update_score(
+            score_id,
+            project_id,
+            value=value,
+            reason=reason,
+            metadata=metadata,
+            status=ScoreStatus.SUCCESS,
+            source=ScoreSource.ANNOTATION,
+        )
+        await self._session.commit()
+
+        updated = await self._repo.get_score_by_id(score_id, project_id)
+        return updated
+
     async def list_scores(
         self,
         project_id: UUID,
