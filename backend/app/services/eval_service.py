@@ -159,6 +159,75 @@ class EvalService:
         """Paginated listing of eval runs."""
         return await self._repo.list_eval_runs(project_id, status=status, limit=limit, offset=offset)
 
+    async def retry_failed_run(self, run_id: UUID, project_id: UUID) -> EvalRun:
+        """Create a new run retrying only the failed trace+metric pairs from an existing run."""
+        original = await self._repo.get_eval_run(run_id, project_id)
+        if original is None:
+            raise NotFoundError(f"Eval run {run_id} not found.")
+
+        failed_scores = await self._repo.get_failed_scores_for_run(run_id, project_id)
+        if not failed_scores:
+            raise ValidationError("No failed scores to retry in this run.")
+
+        trace_ids = list({s.trace_id for s in failed_scores})
+        metric_names = list({s.name for s in failed_scores})
+
+        return await self.create_batch_eval_run(
+            project_id=project_id,
+            trace_ids=trace_ids,
+            metric_names=metric_names,
+            model=original.model,
+            name=f"Retry: {original.name or original.id}",
+        )
+
+    async def get_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[TraceScore]:
+        """Fetch all scores produced by a specific eval run."""
+        return await self._repo.get_scores_for_run(run_id, project_id)
+
+    async def delete_eval_run(self, run_id: UUID, project_id: UUID, *, delete_scores: bool = False) -> None:
+        """Delete an eval run, optionally cascading to its scores."""
+        run = await self._repo.get_eval_run(run_id, project_id)
+        if run is None:
+            raise NotFoundError(f"Eval run {run_id} not found.")
+        if delete_scores:
+            await self._repo.delete_scores_for_run(run_id, project_id)
+        await self._repo.delete_eval_run(run_id, project_id)
+        await self._session.commit()
+
+    # -- Trace score creation --------------------------------------------------
+
+    async def create_score(
+        self,
+        project_id: UUID,
+        trace_id: UUID,
+        name: str,
+        value: str,
+        *,
+        data_type: ScoreDataType = ScoreDataType.NUMERIC,
+        source: ScoreSource = ScoreSource.ANNOTATION,
+        reason: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> TraceScore:
+        """Manually create a trace score (annotation or programmatic)."""
+        now = datetime.now(timezone.utc)
+        score = TraceScore(
+            id=uuid4(),
+            trace_id=trace_id,
+            project_id=project_id,
+            name=name,
+            data_type=data_type,
+            value=value,
+            source=source,
+            status=ScoreStatus.SUCCESS,
+            reason=reason,
+            metadata=metadata or {},
+            created_at=now,
+            updated_at=now,
+        )
+        await self._repo.create_score(score)
+        await self._session.commit()
+        return score
+
     # -- Trace score queries ---------------------------------------------------
 
     async def get_scores_for_trace(self, trace_id: UUID, project_id: UUID) -> list[TraceScore]:
@@ -196,6 +265,14 @@ class EvalService:
 
         updated = await self._repo.get_score_by_id(score_id, project_id)
         return updated
+
+    async def delete_score(self, score_id: UUID, project_id: UUID) -> None:
+        """Delete a single trace score."""
+        existing = await self._repo.get_score_by_id(score_id, project_id)
+        if existing is None:
+            raise NotFoundError(f"Trace score {score_id} not found.")
+        await self._repo.delete_score(score_id, project_id)
+        await self._session.commit()
 
     async def list_scores(
         self,
