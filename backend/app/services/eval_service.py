@@ -16,7 +16,14 @@ from app.infrastructure.db.models import TraceModel
 from app.infrastructure.db.repositories.eval_repo import EvalRepository
 from app.infrastructure.db.repositories.trace_repo import TraceRepository
 from app.logging import logger
-from app.registry.constants import AnalyticsGranularity, EvaluationStatus, ScoreDataType, ScoreSource, TraceStatus
+from app.registry.constants import (
+    AnalyticsGranularity,
+    EvaluationStatus,
+    ScoreDataType,
+    ScoreSource,
+    ScoreStatus,
+    TraceStatus,
+)
 from app.registry.exceptions import NotFoundError, ValidationError
 
 
@@ -85,6 +92,53 @@ class EvalService:
         logger.info("eval_run_created", run_id=str(run.id), total_traces=len(trace_ids))
         return run
 
+    async def create_batch_eval_run(
+        self,
+        project_id: UUID,
+        trace_ids: list[UUID],
+        metric_names: list[str],
+        *,
+        model: str | None = None,
+        name: str | None = None,
+    ) -> EvalRun:
+        """Create an eval run for an explicit list of trace IDs."""
+        available = list_metrics()
+        invalid = [m for m in metric_names if m not in available]
+        if invalid:
+            raise ValidationError(f"Unknown metrics: {', '.join(invalid)}")
+        if not metric_names:
+            raise ValidationError("At least one metric is required.")
+        if not trace_ids:
+            raise ValidationError("At least one trace ID is required.")
+
+        unique_ids = list(dict.fromkeys(trace_ids))
+
+        now = datetime.now(timezone.utc)
+        run = EvalRun(
+            id=uuid4(),
+            project_id=project_id,
+            name=name,
+            target_type="TRACE",
+            metric_names=metric_names,
+            filters={"trace_ids": [str(tid) for tid in unique_ids]},
+            sampling_rate=1.0,
+            model=model,
+            status=EvaluationStatus.PENDING,
+            total_traces=len(unique_ids),
+            evaluated_count=0,
+            created_at=now,
+        )
+
+        await self._repo.create_eval_run(run)
+        await self._session.commit()
+
+        from app.infrastructure.queue.tasks import execute_eval_run
+
+        execute_eval_run.delay(str(run.id), str(project_id), [str(tid) for tid in unique_ids])
+
+        logger.info("batch_eval_run_created", run_id=str(run.id), total_traces=len(unique_ids))
+        return run
+
     # -- Eval run queries ------------------------------------------------------
 
     async def get_eval_run(self, run_id: UUID, project_id: UUID) -> EvalRun:
@@ -118,7 +172,10 @@ class EvalService:
         name: str | None = None,
         trace_id: UUID | None = None,
         source: ScoreSource | None = None,
+        status: ScoreStatus | None = None,
         data_type: ScoreDataType | None = None,
+        eval_run_id: UUID | None = None,
+        environment: str | None = None,
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         limit: int = 50,
@@ -130,7 +187,10 @@ class EvalService:
             name=name,
             trace_id=trace_id,
             source=source,
+            status=status,
             data_type=data_type,
+            eval_run_id=eval_run_id,
+            environment=environment,
             date_from=date_from,
             date_to=date_to,
             limit=limit,
