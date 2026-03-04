@@ -165,6 +165,10 @@ class EvalService:
         """Fetch all scores for a single trace."""
         return await self._repo.get_scores_for_trace(trace_id, project_id)
 
+    async def get_latest_scores_for_trace(self, trace_id: UUID, project_id: UUID) -> list[TraceScore]:
+        """Fetch the latest score per metric for a trace (deduplicated)."""
+        return await self._repo.get_latest_scores_for_trace(trace_id, project_id)
+
     async def list_scores(
         self,
         project_id: UUID,
