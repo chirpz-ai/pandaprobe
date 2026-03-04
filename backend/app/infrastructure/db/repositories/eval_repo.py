@@ -84,6 +84,23 @@ class EvalRepository:
         result = await self._session.execute(stmt)
         return [self._to_score(row) for row in result.scalars().all()]
 
+    async def get_latest_scores_for_trace(self, trace_id: UUID, project_id: UUID) -> list[TraceScore]:
+        """Fetch the latest score per metric name for a trace.
+
+        Returns one row per metric name: the most recently created score,
+        regardless of status. If the latest is FAILED, the user sees it
+        and can re-run.
+        """
+        t = TraceScoreModel.__table__
+        stmt = (
+            select(t)
+            .distinct(t.c.name)
+            .where(t.c.trace_id == trace_id, t.c.project_id == project_id)
+            .order_by(t.c.name, t.c.created_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_score_from_row(r) for r in result.mappings().all()]
+
     async def get_scores_for_traces(self, trace_ids: list[UUID], project_id: UUID) -> dict[UUID, list[TraceScore]]:
         """Batch-fetch scores for multiple traces."""
         if not trace_ids:
