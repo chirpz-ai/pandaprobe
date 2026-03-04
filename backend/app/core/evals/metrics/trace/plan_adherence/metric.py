@@ -40,6 +40,16 @@ class PlanAdherenceMetric(BaseMetric):
     description = "Evaluates how closely the agent followed its declared plan during execution."
     category = "trace"
     threshold = 0.5
+    prompt_description = (
+        "Three-stage LLM judge: (1) extract the user's task from the trace, (2) extract "
+        "the agent's explicit or implied plan from reasoning fields, (3) score how strictly "
+        "the execution followed the declared plan, checking step order and completeness."
+    )
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return actual prompt texts with sample data for preview."""
+        return PlanAdherenceTemplate.get_prompt_preview()
 
     async def evaluate(
         self,
