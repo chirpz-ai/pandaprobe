@@ -32,6 +32,15 @@ class TaskCompletionMetric(BaseMetric):
     description = "Evaluates whether the agent accomplished the user's stated objective."
     category = "trace"
     threshold = 0.5
+    prompt_description = (
+        "Two-stage LLM judge: (1) extract the user's task and the agent's factual outcome "
+        "from the trace, (2) score how well the outcome fulfills the task on a 0-1 scale."
+    )
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return actual prompt texts with sample data for preview."""
+        return TaskCompletionTemplate.get_prompt_preview()
 
     async def evaluate(
         self,
