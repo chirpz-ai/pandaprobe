@@ -64,6 +64,8 @@ class EvalService:
 
         if sampling_rate < 1.0:
             sample_count = int(len(trace_ids) * sampling_rate)
+            if sampling_rate > 0:
+                sample_count = max(1, sample_count)
             trace_ids = random.sample(trace_ids, sample_count) if sample_count > 0 else []
 
         now = datetime.now(timezone.utc)
