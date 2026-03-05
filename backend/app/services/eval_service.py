@@ -63,8 +63,8 @@ class EvalService:
             raise ValidationError("No traces match the provided filters.")
 
         if sampling_rate < 1.0:
-            sample_count = max(1, int(len(trace_ids) * sampling_rate))
-            trace_ids = random.sample(trace_ids, sample_count)
+            sample_count = int(len(trace_ids) * sampling_rate)
+            trace_ids = random.sample(trace_ids, sample_count) if sample_count > 0 else []
 
         now = datetime.now(timezone.utc)
         run = EvalRun(
