@@ -39,11 +39,25 @@ def list_metrics() -> list[str]:
     return sorted(_REGISTRY.keys())
 
 
-def get_metric_info(name: str) -> dict[str, Any]:
-    """Return metadata about a registered metric.
+def get_metric_summary(name: str) -> dict[str, Any]:
+    """Return lightweight summary (name, description, category) without expensive prompt_preview.
 
-    Raises:
-        KeyError: If the metric name is not registered.
+    Use this for list endpoints. For full info including threshold and
+    prompt preview, use get_metric_info().
+    """
+    cls = get_metric(name)
+    return {
+        "name": cls.name,
+        "description": cls.description,
+        "category": cls.category,
+    }
+
+
+def get_metric_info(name: str) -> dict[str, Any]:
+    """Return full metadata about a registered metric.
+
+    Includes prompt_preview (expensive: instantiates metric and builds
+    sample prompts). Use get_metric_summary() for list endpoints.
     """
     cls = get_metric(name)
     instance = cls()

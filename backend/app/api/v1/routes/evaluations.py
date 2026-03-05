@@ -20,7 +20,7 @@ from app.api.context import ApiContext
 from app.api.dependencies import require_project
 from app.api.rate_limit import limiter
 from app.api.v1.schemas import PaginatedResponse
-from app.core.evals.metrics import get_metric_info, list_metrics
+from app.core.evals.metrics import get_metric_info, get_metric_summary, list_metrics
 from app.infrastructure.db.engine import get_db_session
 from app.registry.constants import (
     AnalyticsGranularity,
@@ -322,7 +322,7 @@ async def get_available_metrics(
     names = list_metrics()
     return [
         MetricSummary(name=i["name"], description=i["description"], category=i["category"])
-        for i in (get_metric_info(n) for n in names)
+        for i in (get_metric_summary(n) for n in names)
     ]
 
 
