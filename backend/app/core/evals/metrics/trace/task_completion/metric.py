@@ -13,11 +13,11 @@ from typing import TYPE_CHECKING
 
 from app.core.evals.metrics import register_metric
 from app.core.evals.metrics.base import BaseMetric, MetricResult
-from app.core.evals.metrics.task_completion.schema import (
+from app.core.evals.metrics.trace.task_completion.schema import (
     TaskAndOutcome,
     TaskCompletionVerdict,
 )
-from app.core.evals.metrics.task_completion.template import TaskCompletionTemplate
+from app.core.evals.metrics.trace.task_completion.template import TaskCompletionTemplate
 
 if TYPE_CHECKING:
     from app.core.traces.entities import Trace
@@ -29,7 +29,18 @@ class TaskCompletionMetric(BaseMetric):
     """Measures how completely an agent fulfilled the user's request."""
 
     name = "task_completion"
+    description = "Evaluates whether the agent accomplished the user's stated objective."
+    category = "trace"
     threshold = 0.5
+    prompt_description = (
+        "Two-stage LLM judge: (1) extract the user's task and the agent's factual outcome "
+        "from the trace, (2) score how well the outcome fulfills the task on a 0-1 scale."
+    )
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return actual prompt texts with sample data for preview."""
+        return TaskCompletionTemplate.get_prompt_preview()
 
     async def evaluate(
         self,
@@ -39,17 +50,9 @@ class TaskCompletionMetric(BaseMetric):
         threshold: float | None = None,
         model: str | None = None,
     ) -> MetricResult:
-        """Run the two-stage evaluation and return a scored result.
-
-        Args:
-            trace: The full trace with spans.
-            llm: Universal LLM engine for judge calls.
-            threshold: Optional override for the pass/fail threshold.
-            model: Optional override for the evaluation model.
-        """
+        """Score a trace using this metric."""
         effective_threshold = threshold if threshold is not None else self.threshold
 
-        # Stage 1: Extract the task and outcome from the trace.
         trace_dict = trace.model_dump(mode="json")
         extract_prompt = TaskCompletionTemplate.extract_task_and_outcome(trace_dict)
         extraction = await llm.generate_structured(
@@ -58,7 +61,6 @@ class TaskCompletionMetric(BaseMetric):
             model=model,
         )
 
-        # Stage 2: Judge how well the outcome matches the task.
         verdict_prompt = TaskCompletionTemplate.generate_verdict(
             task=extraction.task,
             actual_outcome=extraction.outcome,

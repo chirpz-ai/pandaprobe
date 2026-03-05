@@ -31,11 +31,23 @@ class BaseMetric(ABC):
 
     Attributes:
         name: Machine-readable identifier (e.g. ``"task_completion"``).
+        description: Human-readable explanation of what this metric measures.
+        category: Scope of the metric (``"trace"`` or ``"session"``).
         threshold: Default pass/fail threshold (0-1 scale).
     """
 
     name: str
+    description: str = ""
+    category: str = "trace"
     threshold: float = 0.5
+
+    @classmethod
+    def get_prompt_preview(cls) -> dict[str, str]:
+        """Return actual prompt texts with sample data for preview.
+
+        Subclasses should override this to delegate to their template class.
+        """
+        return {}
 
     @abstractmethod
     async def evaluate(

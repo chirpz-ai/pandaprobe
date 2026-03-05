@@ -6,8 +6,8 @@ async SQLAlchemy session.
 
 Two task families:
 - **process_trace** -- persist an ingested trace to PostgreSQL.
-- **run_evaluation** -- execute metrics against a stored trace using
-  an LLM judge and persist the results.
+- **execute_eval_run** -- run metrics against a batch of traces and
+  persist trace scores.
 
 **Why NullPool?**  Each ``asyncio.run()`` call creates a new event loop.
 A pooled engine holds connections bound to the previous loop, causing
@@ -88,48 +88,64 @@ async def _persist_trace(payload: dict[str, Any]) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# Evaluation execution
+# Eval run execution
 # ---------------------------------------------------------------------------
 
 
-@celery.task(name="run_evaluation", bind=True, max_retries=2, default_retry_delay=10)
-def run_evaluation(self: Any, evaluation_id: str, project_id: str) -> dict[str, str]:
-    """Load a stored trace and run the requested metrics against it.
+@celery.task(name="execute_eval_run", bind=True, max_retries=2, default_retry_delay=10)
+def execute_eval_run(
+    self: Any,
+    run_id: str,
+    project_id: str,
+    trace_ids: list[str],
+    trace_metric_map: dict[str, list[str]] | None = None,
+) -> dict[str, str]:
+    """Run requested metrics against a batch of traces.
 
-    The evaluation row must already exist in the database (created by
+    The eval run row must already exist in the database (created by
     the API handler).  This task transitions it through
     PENDING -> RUNNING -> COMPLETED/FAILED.
 
     Args:
         self: Celery task instance.
-        evaluation_id: UUID of the evaluation job.
+        run_id: UUID of the eval run.
         project_id: UUID of the owning project.
+        trace_ids: List of trace UUID strings to evaluate.
+        trace_metric_map: Optional per-trace metric override. When set,
+            each trace only runs the metrics listed for it instead of
+            all metrics from the run. Used by retry to avoid Cartesian
+            product re-evaluation.
 
     Returns:
-        A dict summarising the evaluation outcome.
+        A dict summarising the eval run outcome.
     """
     try:
-        return asyncio.run(_execute_evaluation(evaluation_id, project_id))
+        return asyncio.run(_run_eval_run(run_id, project_id, trace_ids, trace_metric_map))
     except Exception as exc:
-        logger.error("run_evaluation_failed", error=str(exc), evaluation_id=evaluation_id)
-        asyncio.run(_fail_evaluation(evaluation_id))
+        logger.error("execute_eval_run_failed", error=str(exc), run_id=run_id)
+        asyncio.run(_fail_eval_run(run_id, str(exc)))
         raise self.retry(exc=exc)
 
 
-async def _execute_evaluation(evaluation_id: str, project_id: str) -> dict[str, str]:
-    """Core async logic for running an evaluation job."""
+async def _run_eval_run(
+    run_id: str,
+    project_id: str,
+    trace_ids: list[str],
+    trace_metric_map: dict[str, list[str]] | None = None,
+) -> dict[str, str]:
+    """Core async logic for executing an eval run."""
     from datetime import datetime, timezone
     from uuid import UUID, uuid4
 
-    from app.core.evals.entities import EvaluationResult
+    from app.core.evals.entities import TraceScore
     from app.core.evals.metrics import get_metric
     from app.core.evals.metrics.base import MetricResult
     from app.infrastructure.db.repositories.eval_repo import EvalRepository
     from app.infrastructure.db.repositories.trace_repo import TraceRepository
     from app.infrastructure.llm.engine import LLMEngine
-    from app.registry.constants import EvaluationStatus
+    from app.registry.constants import EvaluationStatus, ScoreDataType, ScoreSource, ScoreStatus
 
-    eval_uuid = UUID(evaluation_id)
+    run_uuid = UUID(run_id)
     proj_uuid = UUID(project_id)
 
     llm = LLMEngine()
@@ -138,76 +154,97 @@ async def _execute_evaluation(evaluation_id: str, project_id: str) -> dict[str, 
         eval_repo = EvalRepository(session)
         trace_repo = TraceRepository(session)
 
-        # Mark as RUNNING.
-        await eval_repo.update_status(eval_uuid, EvaluationStatus.RUNNING)
+        await eval_repo.delete_scores_for_run(run_uuid, proj_uuid)
+        await eval_repo.reset_run_counters(run_uuid)
+        await eval_repo.update_run_status(run_uuid, EvaluationStatus.RUNNING)
         await session.commit()
 
-        # Load the evaluation and its target trace.
-        evaluation = await eval_repo.get_evaluation(eval_uuid, proj_uuid)
-        if evaluation is None:
-            raise ValueError(f"Evaluation {evaluation_id} not found")
+        run = await eval_repo.get_eval_run(run_uuid, proj_uuid)
+        if run is None:
+            raise ValueError(f"Eval run {run_id} not found")
 
-        trace = await trace_repo.get_trace(evaluation.trace_id, proj_uuid)
-        if trace is None:
-            raise ValueError(f"Trace {evaluation.trace_id} not found for evaluation")
+        for tid_str in trace_ids:
+            tid = UUID(tid_str)
+            trace = await trace_repo.get_trace(tid, proj_uuid)
+            if trace is None:
+                logger.warning("eval_run_trace_not_found", run_id=run_id, trace_id=tid_str)
+                await eval_repo.increment_progress(run_uuid)
+                await session.commit()
+                continue
 
-        # Run each requested metric.
-        for metric_name in evaluation.metric_names:
-            metric_cls = get_metric(metric_name)
-            metric = metric_cls()
+            metrics_for_trace = trace_metric_map.get(tid_str, run.metric_names) if trace_metric_map else run.metric_names
+            for metric_name in metrics_for_trace:
+                metric_cls = get_metric(metric_name)
+                metric = metric_cls()
 
-            try:
-                result: MetricResult = await metric.evaluate(trace, llm)
+                now = datetime.now(timezone.utc)
+                try:
+                    result: MetricResult = await metric.evaluate(trace, llm, model=run.model)
 
-                eval_result = EvaluationResult(
-                    id=uuid4(),
-                    evaluation_id=eval_uuid,
-                    metric_name=metric_name,
-                    score=result.score,
-                    threshold=metric.threshold,
-                    success=result.score >= metric.threshold,
-                    reason=result.reason,
-                    metadata=result.metadata,
-                    evaluated_at=datetime.now(timezone.utc),
-                )
-                await eval_repo.add_result(eval_result)
-                logger.info(
-                    "metric_completed",
-                    evaluation_id=evaluation_id,
-                    metric=metric_name,
-                    score=result.score,
-                )
-            except Exception as exc:
-                logger.error(
-                    "metric_failed",
-                    evaluation_id=evaluation_id,
-                    metric=metric_name,
-                    error=str(exc),
-                )
-                # Record a failed result with score 0.
-                eval_result = EvaluationResult(
-                    id=uuid4(),
-                    evaluation_id=eval_uuid,
-                    metric_name=metric_name,
-                    score=0.0,
-                    threshold=metric.threshold,
-                    success=False,
-                    reason=f"Metric execution failed: {exc}",
-                    metadata={},
-                    evaluated_at=datetime.now(timezone.utc),
-                )
-                await eval_repo.add_result(eval_result)
+                    score = TraceScore(
+                        id=uuid4(),
+                        trace_id=tid,
+                        project_id=proj_uuid,
+                        name=metric_name,
+                        data_type=ScoreDataType.NUMERIC,
+                        value=str(round(result.score, 4)),
+                        source=ScoreSource.AUTOMATED,
+                        status=ScoreStatus.SUCCESS,
+                        eval_run_id=run_uuid,
+                        reason=result.reason,
+                        environment=trace.environment,
+                        metadata=result.metadata,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    await eval_repo.create_score(score)
 
-        # Mark as COMPLETED.
-        await eval_repo.update_status(eval_uuid, EvaluationStatus.COMPLETED)
+                    logger.info(
+                        "metric_completed",
+                        run_id=run_id,
+                        trace_id=tid_str,
+                        metric=metric_name,
+                        score=result.score,
+                    )
+                except Exception as exc:
+                    logger.error(
+                        "metric_failed",
+                        run_id=run_id,
+                        trace_id=tid_str,
+                        metric=metric_name,
+                        error=str(exc),
+                    )
+                    failed_score = TraceScore(
+                        id=uuid4(),
+                        trace_id=tid,
+                        project_id=proj_uuid,
+                        name=metric_name,
+                        data_type=ScoreDataType.NUMERIC,
+                        value=None,
+                        source=ScoreSource.AUTOMATED,
+                        status=ScoreStatus.FAILED,
+                        eval_run_id=run_uuid,
+                        reason=f"Metric execution failed: {exc}",
+                        environment=trace.environment,
+                        metadata={},
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    await eval_repo.create_score(failed_score)
+                    await eval_repo.increment_failed(run_uuid)
+
+            await eval_repo.increment_progress(run_uuid)
+            await session.commit()
+
+        await eval_repo.update_run_status(run_uuid, EvaluationStatus.COMPLETED)
         await session.commit()
 
-    logger.info("evaluation_completed", evaluation_id=evaluation_id)
-    return {"evaluation_id": evaluation_id, "status": "completed"}
+    logger.info("eval_run_completed", run_id=run_id)
+    return {"run_id": run_id, "status": "completed"}
 
 
-async def _fail_evaluation(evaluation_id: str) -> None:
-    """Mark an evaluation as FAILED on unrecoverable errors."""
+async def _fail_eval_run(run_id: str, error_message: str) -> None:
+    """Mark an eval run as FAILED on unrecoverable errors."""
     from uuid import UUID
 
     from app.infrastructure.db.repositories.eval_repo import EvalRepository
@@ -216,7 +253,7 @@ async def _fail_evaluation(evaluation_id: str) -> None:
     try:
         async with _worker_session() as session:
             repo = EvalRepository(session)
-            await repo.update_status(UUID(evaluation_id), EvaluationStatus.FAILED)
+            await repo.update_run_status(UUID(run_id), EvaluationStatus.FAILED, error_message=error_message)
             await session.commit()
     except Exception:
-        logger.error("fail_evaluation_update_failed", evaluation_id=evaluation_id)
+        logger.error("fail_eval_run_update_failed", run_id=run_id)
