@@ -13,7 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.context import ApiContext
@@ -252,6 +252,21 @@ class CreateTraceScoreRequest(BaseModel):
     )
     reason: str | None = Field(default=None, description="Optional explanation or annotation note.")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Optional metadata object.")
+
+    @model_validator(mode="after")
+    def _validate_value_for_data_type(self) -> "CreateTraceScoreRequest":
+        """Reject invalid values at API layer so we return 422 instead of 500."""
+        if self.data_type == ScoreDataType.NUMERIC:
+            try:
+                score = float(self.value)
+            except ValueError:
+                raise ValueError("NUMERIC score must be a valid number")
+            if not (0.0 <= score <= 1.0):
+                raise ValueError("NUMERIC score must be in [0.0, 1.0]")
+        elif self.data_type == ScoreDataType.BOOLEAN:
+            if self.value.lower() not in ("true", "false"):
+                raise ValueError("BOOLEAN score must be 'true' or 'false'")
+        return self
 
 
 class UpdateTraceScoreRequest(BaseModel):

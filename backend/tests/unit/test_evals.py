@@ -3,6 +3,9 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import pytest
+
+from app.api.v1.routes.evaluations import CreateTraceScoreRequest
 from app.core.evals.entities import EvalRun, TraceScore
 from app.core.evals.metrics import get_metric, get_metric_info, list_metrics
 from app.core.evals.metrics.base import MetricResult
@@ -132,6 +135,36 @@ def test_trace_score_categorical():
     )
     assert score.data_type == ScoreDataType.CATEGORICAL
     assert score.value == "PASS"
+
+
+def test_create_trace_score_request_rejects_numeric_out_of_range():
+    """Invalid NUMERIC values are rejected at API layer (422, not 500)."""
+    with pytest.raises(ValueError, match="NUMERIC score must be in"):
+        CreateTraceScoreRequest(
+            trace_id=uuid4(),
+            name="task_completion",
+            value="1.5",
+            data_type=ScoreDataType.NUMERIC,
+        )
+
+
+def test_create_trace_score_request_rejects_invalid_boolean():
+    """Invalid BOOLEAN values are rejected at API layer."""
+    with pytest.raises(ValueError, match="BOOLEAN score must be"):
+        CreateTraceScoreRequest(
+            trace_id=uuid4(),
+            name="is_correct",
+            value="yes",
+            data_type=ScoreDataType.BOOLEAN,
+        )
+
+
+def test_create_trace_score_request_accepts_valid_values():
+    """Valid NUMERIC, BOOLEAN, and CATEGORICAL values pass."""
+    tid = uuid4()
+    CreateTraceScoreRequest(trace_id=tid, name="m", value="0.85", data_type=ScoreDataType.NUMERIC)
+    CreateTraceScoreRequest(trace_id=tid, name="m", value="true", data_type=ScoreDataType.BOOLEAN)
+    CreateTraceScoreRequest(trace_id=tid, name="m", value="PASS", data_type=ScoreDataType.CATEGORICAL)
 
 
 def test_eval_run_creation():
