@@ -16,6 +16,21 @@ from pydantic import BaseModel, Field, field_validator
 from app.registry.constants import EvaluationStatus, ScoreDataType, ScoreSource, ScoreStatus
 
 
+def validate_score_value(value: str, data_type: ScoreDataType) -> None:
+    """Validate a score value for the given data_type. Raises ValueError if invalid."""
+    if data_type == ScoreDataType.NUMERIC:
+        try:
+            score = float(value)
+        except ValueError:
+            raise ValueError("NUMERIC score must be a valid number")
+        if not (0.0 <= score <= 1.0):
+            raise ValueError("NUMERIC score must be in [0.0, 1.0]")
+    elif data_type == ScoreDataType.BOOLEAN:
+        if value.lower() not in ("true", "false"):
+            raise ValueError("BOOLEAN score must be 'true' or 'false'")
+    # CATEGORICAL: no validation
+
+
 class TraceScore(BaseModel):
     """A single score for a single trace."""
 
@@ -42,13 +57,7 @@ class TraceScore(BaseModel):
         if v is None:
             return v
         data_type = info.data.get("data_type", ScoreDataType.NUMERIC)
-        if data_type == ScoreDataType.NUMERIC:
-            score = float(v)
-            if not (0.0 <= score <= 1.0):
-                raise ValueError("NUMERIC score must be in [0.0, 1.0]")
-        elif data_type == ScoreDataType.BOOLEAN:
-            if v.lower() not in ("true", "false"):
-                raise ValueError("BOOLEAN score must be 'true' or 'false'")
+        validate_score_value(v, data_type)
         return v
 
 
