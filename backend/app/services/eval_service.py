@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.evals.entities import EvalRun, TraceScore
+from app.core.evals.entities import EvalRun, TraceScore, validate_score_value
 from app.core.evals.metrics import list_metrics
 from app.infrastructure.db.models import TraceModel
 from app.infrastructure.db.repositories.eval_repo import EvalRepository
@@ -282,6 +282,12 @@ class EvalService:
         existing = await self._repo.get_score_by_id(score_id, project_id)
         if existing is None:
             raise NotFoundError(f"Trace score {score_id} not found.")
+
+        if value is not None:
+            try:
+                validate_score_value(value, existing.data_type)
+            except ValueError as e:
+                raise ValidationError(str(e))
 
         await self._repo.update_score(
             score_id,

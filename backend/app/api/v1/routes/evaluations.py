@@ -20,6 +20,7 @@ from app.api.context import ApiContext
 from app.api.dependencies import require_project
 from app.api.rate_limit import limiter
 from app.api.v1.schemas import PaginatedResponse
+from app.core.evals.entities import validate_score_value
 from app.core.evals.metrics import get_metric_info, get_metric_summary, list_metrics
 from app.infrastructure.db.engine import get_db_session
 from app.registry.constants import (
@@ -256,16 +257,7 @@ class CreateTraceScoreRequest(BaseModel):
     @model_validator(mode="after")
     def _validate_value_for_data_type(self) -> "CreateTraceScoreRequest":
         """Reject invalid values at API layer so we return 422 instead of 500."""
-        if self.data_type == ScoreDataType.NUMERIC:
-            try:
-                score = float(self.value)
-            except ValueError:
-                raise ValueError("NUMERIC score must be a valid number")
-            if not (0.0 <= score <= 1.0):
-                raise ValueError("NUMERIC score must be in [0.0, 1.0]")
-        elif self.data_type == ScoreDataType.BOOLEAN:
-            if self.value.lower() not in ("true", "false"):
-                raise ValueError("BOOLEAN score must be 'true' or 'false'")
+        validate_score_value(self.value, self.data_type)
         return self
 
 
