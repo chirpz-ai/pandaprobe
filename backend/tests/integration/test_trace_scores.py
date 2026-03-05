@@ -92,6 +92,43 @@ async def test_patch_trace_score_not_found(client: AsyncClient):
     assert resp.status_code == 404
 
 
+async def test_patch_trace_score_rejects_invalid_value(client: AsyncClient, seed_trace):
+    """PATCH with value invalid for score's data_type returns 422."""
+    trace = await seed_trace()
+    create_resp = await client.post(
+        "/evaluations/trace-scores",
+        json={
+            "trace_id": str(trace.trace_id),
+            "name": "quality",
+            "value": "0.5",
+            "data_type": "NUMERIC",
+        },
+    )
+    score_id = create_resp.json()["id"]
+
+    # Invalid: non-numeric for NUMERIC score
+    resp = await client.patch(
+        f"/evaluations/trace-scores/{score_id}",
+        json={"value": "hello"},
+    )
+    assert resp.status_code == 422
+
+    # Invalid: out of range for NUMERIC score
+    resp = await client.patch(
+        f"/evaluations/trace-scores/{score_id}",
+        json={"value": "1.5"},
+    )
+    assert resp.status_code == 422
+
+    # Valid update
+    resp = await client.patch(
+        f"/evaluations/trace-scores/{score_id}",
+        json={"value": "0.9"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["value"] == "0.9"
+
+
 async def test_delete_trace_score(client: AsyncClient, seed_trace):
     trace = await seed_trace()
     create_resp = await client.post(

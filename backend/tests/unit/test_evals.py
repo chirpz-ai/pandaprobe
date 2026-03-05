@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 
 from app.api.v1.routes.evaluations import CreateTraceScoreRequest
-from app.core.evals.entities import EvalRun, TraceScore
+from app.core.evals.entities import EvalRun, TraceScore, validate_score_value
 from app.core.evals.metrics import get_metric, get_metric_info, list_metrics
 from app.core.evals.metrics.base import MetricResult
 from app.registry.constants import EvaluationStatus, ScoreDataType, ScoreSource, ScoreStatus
@@ -165,6 +165,35 @@ def test_create_trace_score_request_accepts_valid_values():
     CreateTraceScoreRequest(trace_id=tid, name="m", value="0.85", data_type=ScoreDataType.NUMERIC)
     CreateTraceScoreRequest(trace_id=tid, name="m", value="true", data_type=ScoreDataType.BOOLEAN)
     CreateTraceScoreRequest(trace_id=tid, name="m", value="PASS", data_type=ScoreDataType.CATEGORICAL)
+
+
+def test_validate_score_value_numeric():
+    """validate_score_value enforces NUMERIC rules."""
+    validate_score_value("0.5", ScoreDataType.NUMERIC)
+    validate_score_value("0", ScoreDataType.NUMERIC)
+    validate_score_value("1.0", ScoreDataType.NUMERIC)
+    with pytest.raises(ValueError, match="valid number"):
+        validate_score_value("hello", ScoreDataType.NUMERIC)
+    with pytest.raises(ValueError, match="in \\[0.0, 1.0\\]"):
+        validate_score_value("1.5", ScoreDataType.NUMERIC)
+    with pytest.raises(ValueError, match="in \\[0.0, 1.0\\]"):
+        validate_score_value("-0.1", ScoreDataType.NUMERIC)
+
+
+def test_validate_score_value_boolean():
+    """validate_score_value enforces BOOLEAN rules."""
+    validate_score_value("true", ScoreDataType.BOOLEAN)
+    validate_score_value("false", ScoreDataType.BOOLEAN)
+    validate_score_value("TRUE", ScoreDataType.BOOLEAN)
+    with pytest.raises(ValueError, match="'true' or 'false'"):
+        validate_score_value("yes", ScoreDataType.BOOLEAN)
+
+
+def test_validate_score_value_categorical():
+    """validate_score_value accepts any string for CATEGORICAL."""
+    validate_score_value("GOOD", ScoreDataType.CATEGORICAL)
+    validate_score_value("PASS", ScoreDataType.CATEGORICAL)
+    validate_score_value("anything", ScoreDataType.CATEGORICAL)
 
 
 def test_eval_run_creation():
