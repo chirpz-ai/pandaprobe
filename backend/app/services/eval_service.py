@@ -295,6 +295,8 @@ class EvalService:
         await self._session.commit()
 
         updated = await self._repo.get_score_by_id(score_id, project_id)
+        if updated is None:
+            raise NotFoundError(f"Trace score {score_id} not found after update.")
         return updated
 
     async def delete_score(self, score_id: UUID, project_id: UUID) -> None:
