@@ -25,6 +25,14 @@ from app.registry.constants import (
     TraceStatus,
 )
 from app.registry.exceptions import NotFoundError, ValidationError
+from app.registry.settings import settings
+
+
+def _resolve_model(model: str | None) -> str:
+    """Return the explicit model or resolve the configured default."""
+    from app.infrastructure.llm.providers import resolve_model_string
+
+    return resolve_model_string(model or settings.EVAL_LLM_MODEL)
 
 
 class EvalService:
@@ -68,6 +76,8 @@ class EvalService:
                 sample_count = max(1, sample_count)
             trace_ids = random.sample(trace_ids, sample_count) if sample_count > 0 else []
 
+        resolved_model = _resolve_model(model)
+
         now = datetime.now(timezone.utc)
         run = EvalRun(
             id=uuid4(),
@@ -77,7 +87,7 @@ class EvalService:
             metric_names=metric_names,
             filters=filters,
             sampling_rate=sampling_rate,
-            model=model,
+            model=resolved_model,
             status=EvaluationStatus.PENDING,
             total_traces=len(trace_ids),
             evaluated_count=0,
@@ -114,6 +124,7 @@ class EvalService:
             raise ValidationError("At least one trace ID is required.")
 
         unique_ids = list(dict.fromkeys(trace_ids))
+        resolved_model = _resolve_model(model)
 
         now = datetime.now(timezone.utc)
         run = EvalRun(
@@ -124,7 +135,7 @@ class EvalService:
             metric_names=metric_names,
             filters={"trace_ids": [str(tid) for tid in unique_ids]},
             sampling_rate=1.0,
-            model=model,
+            model=resolved_model,
             status=EvaluationStatus.PENDING,
             total_traces=len(unique_ids),
             evaluated_count=0,
