@@ -108,14 +108,14 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
     GOOGLE_CLOUD_PROJECT: str = ""
-    VERTEX_AI_LOCATION: str = "us-central1"
+    VERTEX_AI_LOCATION: str = "global"
 
     # -- Evaluation LLM defaults ---------------------------------------------
     # Model string follows LiteLLM format: "<provider>/<model>"
     # e.g. "openai/gpt-4o-mini", "anthropic/claude-3-5-sonnet-20241022",
-    # "gemini/gemini-2.5-flash"
-    EVAL_LLM_MODEL: str = "vertex_ai/gemini-2.5-flash"
-    EVAL_LLM_TEMPERATURE: float = 0.0
+    # "vertex_ai/gemini-3.1-flash-lite-preview"
+    EVAL_LLM_MODEL: str = "vertex_ai/gemini-3.1-flash-lite-preview"
+    EVAL_LLM_TEMPERATURE: float = 1.0
 
     # -- Authentication -------------------------------------------------------
     # "supabase" = Supabase Auth (cloud-hosted, uses SUPABASE_URL + anon key)
