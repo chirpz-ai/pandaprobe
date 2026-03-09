@@ -1,6 +1,28 @@
-# PandaProbe
+<p align="center">
+  <img src="docs/assets/PandProbe-2.png" alt="PandaProbe" width="700">
+</p>
 
-Open-source, multi-tenant agent tracing and evaluation service. Trace agentic workflows from any framework, evaluate them with LLM-as-a-judge metrics, and query results via a REST API.
+<p align="center">
+  PandaProbe is an open source agent engineering platform.<br>
+  It helps teams collaboratively develop, monitor, evaluate, and debug AI agents. You can use PandaProbe cloud (under dev) or self host the service.
+</p>
+
+<p align="center">
+  <a href="https://pandaprobe.com/" target="_blank"><img src="https://img.shields.io/badge/PandaProbe_Cloud-0066FF" alt="PandaProbe Cloud"></a>
+  <a href="https://pandaprobe.com/" target="_blank"><img src="https://img.shields.io/badge/Docs-0066FF" alt="Docs"></a>
+  <a href="https://x.com/PandaProbe" target="_blank"><img src="https://img.shields.io/twitter/follow/PandaProbe?style=social" alt="Follow on X"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/build.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+  <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/lint.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/lint.yml/badge.svg" alt="Lint"></a>
+  <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/test-unit.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/test-unit.yml/badge.svg" alt="Unit Tests"></a>
+  <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/test-integration.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/test-integration.yml/badge.svg" alt="Integration Tests"></a>
+  <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/codeql.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+</p>
+
+---
 
 ## Quick Start
 
@@ -67,7 +89,7 @@ sequenceDiagram
     Worker->>DB: Persist evaluation result
 ```
 
-## Auth Strategy
+## Auth
 
 | Route group | Auth method | Header |
 |---|---|---|
@@ -115,22 +137,13 @@ make help             # Show all available commands
 > make migrate
 > ```
 
-## Environment Variables
+## Contributing
 
-See [`backend/.env.example`](backend/.env.example) for the full list. Key variables:
-
-| Variable | Description |
-|---|---|
-| `AUTH_PROVIDER` | `supabase` or `firebase` |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_KEY` | Supabase anon/public key |
-| `GOOGLE_CLOUD_PROJECT` | GCP project for Firebase + Vertex AI |
-| `EVAL_LLM_MODEL` | Default eval model (LiteLLM format) |
-| `OPENAI_API_KEY` | OpenAI credentials |
+We welcome contributions! Please read the [Contributing Guide](CONTRIBUTING.md) for details on how to set up your environment, run tests, and submit pull requests.
 
 ## Authors
 
-Built by Chirpz AI team. Contact sina@chirpz.ai for all enquiries.
+Built by the [Chirpz AI](https://chirpz.ai) team. Contact sina@chirpz.ai for enquiries.
 
 ## License
 

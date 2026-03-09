@@ -1,0 +1,82 @@
+name: "Bug Report"
+description: Report a bug to help us improve PandaProbe
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+  - type: checkboxes
+    attributes:
+      label: Preflight checklist
+      description: Please confirm you have done the following before submitting
+      options:
+        - label: I added a descriptive title to this issue
+          required: true
+        - label: I searched existing issues and didn't find a duplicate
+          required: true
+        - label: I am sure this is a bug and not a question or usage help request
+          required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        Provide a minimal, step-by-step sequence to reproduce the bug.
+        Include code, curl commands, or API calls if applicable.
+      placeholder: |
+        1. Start services with `make up`
+        2. Send a POST request to /api/v1/traces with payload ...
+        3. Observe the error
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include any error messages or unexpected output.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Error Message / Stack Trace
+      description: |
+        If applicable, paste the full error message and stack trace.
+        This will be automatically formatted as code.
+      render: shell
+
+  - type: input
+    attributes:
+      label: PandaProbe Version
+      description: "Version tag or commit SHA (e.g., v0.1.0 or abc1234)"
+      placeholder: "v0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Python Version
+      description: "Output of `python --version`"
+      placeholder: "3.12.4"
+
+  - type: input
+    attributes:
+      label: Operating System
+      description: "e.g., Ubuntu 22.04, macOS 15, Windows 11"
+      placeholder: "Ubuntu 22.04"
+
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: |
+        Any other context about the problem — configuration, logs, screenshots, related issues.

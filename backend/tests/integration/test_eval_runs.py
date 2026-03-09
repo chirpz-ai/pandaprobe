@@ -1,8 +1,13 @@
 """Integration tests for eval run endpoints."""
 
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.infrastructure.db.models import EvalRunModel, TraceScoreModel
+from app.registry.constants import EvaluationStatus, ScoreDataType, ScoreSource, ScoreStatus
 
 
 async def test_create_eval_run_returns_202(client: AsyncClient, seed_trace):
@@ -146,13 +151,44 @@ async def test_get_run_scores_empty(client: AsyncClient, seed_trace):
     assert isinstance(resp.json(), list)
 
 
-async def test_retry_no_failures_returns_422(client: AsyncClient, seed_trace):
-    await seed_trace()
-    create_resp = await client.post(
-        "/evaluations/runs",
-        json={"metrics": ["task_completion"], "filters": {}},
+async def test_retry_no_failures_returns_422(client: AsyncClient, seed_trace, db_session: AsyncSession):
+    trace = await seed_trace()
+
+    now = datetime.now(timezone.utc)
+    run_id = uuid4()
+    project_id = trace.project_id
+
+    db_session.add(
+        EvalRunModel(
+            id=run_id,
+            project_id=project_id,
+            name="completed-run",
+            target_type="TRACE",
+            metric_names=["task_completion"],
+            filters={},
+            sampling_rate=1.0,
+            status=EvaluationStatus.COMPLETED,
+            total_traces=1,
+            evaluated_count=1,
+            created_at=now,
+        )
     )
-    run_id = create_resp.json()["id"]
+    db_session.add(
+        TraceScoreModel(
+            id=uuid4(),
+            trace_id=trace.trace_id,
+            project_id=project_id,
+            name="task_completion",
+            data_type=ScoreDataType.NUMERIC,
+            value="0.95",
+            source=ScoreSource.AUTOMATED,
+            status=ScoreStatus.SUCCESS,
+            eval_run_id=run_id,
+            created_at=now,
+        )
+    )
+    await db_session.commit()
+
     resp = await client.post(f"/evaluations/runs/{run_id}/retry")
     assert resp.status_code == 422
 
