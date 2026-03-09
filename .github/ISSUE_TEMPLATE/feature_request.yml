@@ -1,0 +1,55 @@
+name: "Feature Request"
+description: Suggest a new feature or enhancement for PandaProbe
+labels: ["enhancement"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest an improvement!
+
+  - type: checkboxes
+    attributes:
+      label: Preflight checklist
+      description: Please confirm you have done the following before submitting
+      options:
+        - label: I added a descriptive title to this issue
+          required: true
+        - label: I searched existing issues and didn't find a duplicate
+          required: true
+        - label: I am sure this is a feature request and not a bug report
+          required: true
+
+  - type: textarea
+    attributes:
+      label: Problem Statement
+      description: |
+        What problem does this feature solve? Describe the pain point or gap you are experiencing.
+      placeholder: |
+        I'm always frustrated when ...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Proposed Solution
+      description: |
+        Describe how you'd like this feature to work. Include API shapes, configuration, or code examples if helpful.
+      placeholder: |
+        It would be great if PandaProbe could ...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Alternatives Considered
+      description: |
+        Have you considered any workarounds or alternative approaches? Why don't they work for your use case?
+      placeholder: |
+        I tried ... but it doesn't work because ...
+
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: |
+        Any other context — mockups, links to similar features in other tools, related issues.
