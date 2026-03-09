@@ -172,7 +172,9 @@ async def _run_eval_run(
                 await session.commit()
                 continue
 
-            metrics_for_trace = trace_metric_map.get(tid_str, run.metric_names) if trace_metric_map else run.metric_names
+            metrics_for_trace = (
+                trace_metric_map.get(tid_str, run.metric_names) if trace_metric_map else run.metric_names
+            )
             for metric_name in metrics_for_trace:
                 metric_cls = get_metric(metric_name)
                 metric = metric_cls()

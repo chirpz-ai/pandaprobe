@@ -19,7 +19,7 @@ Link any related issues below (use `Closes #123` to auto-close on merge).
 
 ## Contributor Checklist
 
-- [ ] I have read the [Contributing Guidelines](../.github/CONTRIBUTING.md)
+- [ ] I have read the [Contributing Guidelines](../CONTRIBUTING.md)
 - [ ] `make lint` passes with no errors
 - [ ] `make test-unit` passes
 - [ ] I have added or updated tests that cover my changes

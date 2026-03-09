@@ -221,7 +221,9 @@ class EvalService:
             trace_metric_map=serialized_map,
         )
 
-        logger.info("retry_eval_run_created", run_id=str(run.id), original_run_id=str(run_id), total_traces=len(trace_ids))
+        logger.info(
+            "retry_eval_run_created", run_id=str(run.id), original_run_id=str(run_id), total_traces=len(trace_ids)
+        )
         return run
 
     async def get_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[TraceScore]:

@@ -94,8 +94,8 @@ make migrate   # Apply the migration locally to verify it works
 
 ## Reporting Issues
 
-Found a bug or have a feature idea? Please open an issue using the appropriate [issue template](https://github.com/ChirpZ/pandaprobe/issues/new/choose).
+Found a bug or have a feature idea? Please open an issue using the appropriate [issue template](https://github.com/chirpz-ai/pandaprobe/issues/new/choose).
 
 ## Questions?
 
-If you have questions that aren't covered here, open a [discussion](https://github.com/ChirpZ/pandaprobe/discussions) or reach out to the maintainers.
+If you have questions that aren't covered here, open a [discussion](https://github.com/chirpz-ai/pandaprobe/discussions) or reach out to the maintainers.
