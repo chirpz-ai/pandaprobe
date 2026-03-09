@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to PandaProbe! This guide will help you get started.
 
-PandaProbe is licensed under [Apache 2.0](../LICENSE). By contributing, you agree that your contributions will be licensed under the same terms.
+PandaProbe is licensed under [Apache 2.0](LICENSE). By contributing, you agree that your contributions will be licensed under the same terms.
 
 ## Getting Started
 

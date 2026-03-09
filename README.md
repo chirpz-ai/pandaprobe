@@ -67,7 +67,7 @@ sequenceDiagram
     Worker->>DB: Persist evaluation result
 ```
 
-## Auth Strategy
+## Auth
 
 | Route group | Auth method | Header |
 |---|---|---|
@@ -115,18 +115,10 @@ make help             # Show all available commands
 > make migrate
 > ```
 
-## Environment Variables
 
-See [`backend/.env.example`](backend/.env.example) for the full list. Key variables:
+## Contributing
 
-| Variable | Description |
-|---|---|
-| `AUTH_PROVIDER` | `supabase` or `firebase` |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_KEY` | Supabase anon/public key |
-| `GOOGLE_CLOUD_PROJECT` | GCP project for Firebase + Vertex AI |
-| `EVAL_LLM_MODEL` | Default eval model (LiteLLM format) |
-| `OPENAI_API_KEY` | OpenAI credentials |
+We welcome contributions! Please read the [Contributing Guide](CONTRIBUTING.md) for details on how to set up your environment, run tests, and submit pull requests.
 
 ## Authors
 
