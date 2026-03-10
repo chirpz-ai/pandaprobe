@@ -1,12 +1,13 @@
 <div align="center">
   <a href="https://pandaprobe.com" target="_blank" rel="noopener noreferrer">
-    <img alt="PandaProbe Logo" src="docs/assets/PandProbe-1.png" width="80%">
+    <img alt="PandaProbe Logo" src="docs/assets/PandProbe-1.png" width="100%">
   </a>
 </div>
 
 <p align="center">
   PandaProbe is an open source agent engineering platform.<br>
-  It helps teams collaboratively develop, monitor, evaluate, and debug AI agents. You can use PandaProbe cloud (under dev) or self host the service.
+  It helps teams collaboratively develop, monitor, evaluate, and debug AI agents.<br>
+  You can use PandaProbe cloud (under dev) or self host the service.
 </p>
 
 <p align="center">
