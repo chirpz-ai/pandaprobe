@@ -1,6 +1,8 @@
-<p align="center">
-  <img src="docs/assets/PandProbe-2.png" alt="PandaProbe" width="700">
-</p>
+<div align="center">
+  <a href="https://pandaprobe.com" target="_blank" rel="noopener noreferrer">
+    <img alt="PandaProbe Logo" src="docs/assets/PandProbe-1.png" width="80%">
+  </a>
+</div>
 
 <p align="center">
   PandaProbe is an open source agent engineering platform.<br>
