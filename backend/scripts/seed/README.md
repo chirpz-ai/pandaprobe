@@ -404,3 +404,44 @@ make down
 docker volume rm pandaprobe_postgres-data
 make up
 ```
+
+---
+
+## Interpreting Session-Level Metrics
+
+Session evaluation produces two complementary scores that together give a complete picture of agent performance across a session (all traces sharing a `session_id`).
+
+### `agent_reliability` (0–1, higher = safer)
+
+Measures **worst-case failure risk**. Uses max-compose aggregation to surface the single most dangerous signal per trace, then applies top-k tail risk to focus on the worst traces. A single catastrophic trace will drag this score down even if every other trace is perfect.
+
+**Read it as:** "Can I trust this agent not to fail?"
+
+### `agent_consistency` (0–1, higher = more stable)
+
+Measures **overall behavioral stability**. Uses weighted RMS aggregation where situational penalties (tool misuse, incoherence, looping) amplify confidence uncertainty. Penalizes sessions with many moderate issues even when no individual trace is catastrophic.
+
+**Read it as:** "Does this agent perform smoothly and predictably?"
+
+### Reading the Two Together
+
+| Reliability | Consistency | Interpretation |
+|---|---|---|
+| HIGH | HIGH | Healthy agent — no failures, stable behavior. |
+| HIGH | LOW | No catastrophic failures, but sustained moderate degradation across traces (e.g. slightly wrong tool usage everywhere). Investigate systemic issues. |
+| LOW | HIGH | One or few traces failed badly while the rest were fine. The agent is generally stable but has edge-case vulnerabilities. Inspect flagged traces. |
+| LOW | LOW | Widespread problems — the agent is both failing and behaving erratically. Likely looping, misusing tools, or incoherent across multiple traces. |
+| MODERATE | HIGH | A persistent but non-critical issue (e.g. tool correctness at ~0.5) affects every trace uniformly. The agent is consistent but has a systematic weakness. |
+
+### Underlying Signals
+
+Both metrics aggregate the same four trace-level signals (inverted to risk):
+
+| Signal | What it captures |
+|---|---|
+| `confidence` | Agent decisiveness — did the LLM appear confident in its actions? |
+| `loop_detection` | Repetition — is the agent stuck repeating similar outputs? |
+| `tool_correctness` | Tool usage — are the right tools called with correct arguments? |
+| `coherence` | Input-output alignment — does the agent's response relate to its input? |
+
+Default weights: confidence=1.0, loop_detection=1.0, tool_correctness=0.8, coherence=1.0. These can be overridden per eval run via the `signal_weights` field in the request body.
