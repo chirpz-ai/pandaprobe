@@ -21,7 +21,13 @@ from app.api.dependencies import require_project
 from app.api.rate_limit import limiter
 from app.api.v1.schemas import PaginatedResponse
 from app.core.evals.entities import validate_score_value
-from app.core.evals.metrics import get_metric_info, get_metric_summary, list_metrics
+from app.core.evals.metrics import (
+    get_metric_info,
+    get_metric_summary,
+    get_session_metric_summary,
+    list_metrics,
+    list_session_metrics,
+)
 from app.infrastructure.db.engine import get_db_session
 from app.registry.constants import (
     AnalyticsGranularity,
@@ -311,6 +317,62 @@ class ScoreDistributionItem(BaseModel):
     bucket_min: float
     bucket_max: float
     count: int
+
+
+# ---------------------------------------------------------------------------
+# Schemas -- Session eval runs
+# ---------------------------------------------------------------------------
+
+
+class SessionEvalRunFilters(BaseModel):
+    """Filters for session-level evaluation runs."""
+
+    date_from: str | None = Field(default=None, description="ISO 8601 datetime.")
+    date_to: str | None = Field(default=None, description="ISO 8601 datetime.")
+    user_id: str | None = Field(default=None, description="Exact user ID string.")
+    has_error: bool | None = Field(default=None, description="Only sessions with/without errors.")
+    tags: list[str] | None = Field(default=None, description="Traces matching ANY of these tags.")
+    min_trace_count: int | None = Field(default=None, ge=1, description="Minimum traces in a session.")
+
+
+class CreateSessionEvalRunRequest(BaseModel):
+    """Create a filter-based session eval run."""
+
+    metrics: list[str] = Field(min_length=1, description="Session metric names (e.g. ['agent_reliability']).")
+    name: str | None = Field(default=None, description="Human-readable label.")
+    filters: SessionEvalRunFilters = Field(default_factory=SessionEvalRunFilters)
+    sampling_rate: float = Field(default=1.0, ge=0.0, le=1.0, description="Fraction of sessions to evaluate.")
+    model: str | None = Field(default=None, description="LLM model override for judge calls.")
+    signal_weights: dict[str, float] | None = Field(default=None, description="Override default signal weights.")
+
+
+class CreateBatchSessionEvalRunRequest(BaseModel):
+    """Create a session eval run for explicit session IDs."""
+
+    session_ids: list[str] = Field(min_length=1, description="List of session ID strings.")
+    metrics: list[str] = Field(min_length=1, description="Session metric names.")
+    name: str | None = Field(default=None, description="Human-readable label.")
+    model: str | None = Field(default=None, description="LLM model override for judge calls.")
+    signal_weights: dict[str, float] | None = Field(default=None, description="Override default signal weights.")
+
+
+class SessionScoreResponse(BaseModel):
+    """Full session score representation."""
+
+    id: UUID
+    session_id: str
+    project_id: UUID
+    name: str
+    data_type: str
+    value: str | None
+    source: str
+    status: str
+    eval_run_id: UUID | None
+    author_user_id: str | None
+    reason: str | None
+    metadata: dict[str, Any]
+    created_at: str
+    updated_at: str
 
 
 # ---------------------------------------------------------------------------
@@ -825,3 +887,291 @@ def _score_to_detail(score) -> TraceScoreResponse:
         metadata=score.metadata,
         updated_at=score.updated_at.isoformat(),
     )
+
+
+def _session_score_to_detail(score) -> SessionScoreResponse:
+    return SessionScoreResponse(
+        id=score.id,
+        session_id=score.session_id,
+        project_id=score.project_id,
+        name=score.name,
+        data_type=score.data_type,
+        value=score.value,
+        source=score.source,
+        status=score.status,
+        eval_run_id=score.eval_run_id,
+        author_user_id=score.author_user_id,
+        reason=score.reason,
+        metadata=score.metadata,
+        created_at=score.created_at.isoformat(),
+        updated_at=score.updated_at.isoformat(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Session metric discovery
+# ---------------------------------------------------------------------------
+
+
+@router.get("/session-metrics", response_model=list[MetricSummary])
+async def get_available_session_metrics(
+    ctx: ApiContext = Depends(require_project),
+) -> list[MetricSummary]:
+    """List all registered session evaluation metrics.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    names = list_session_metrics()
+    return [
+        MetricSummary(name=i["name"], description=i["description"], category=i["category"])
+        for i in (get_session_metric_summary(n) for n in names)
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Session eval runs
+# ---------------------------------------------------------------------------
+
+
+@router.post("/session-runs", status_code=202, response_model=EvalRunResponse)
+@limiter.limit("50/minute")
+async def create_session_eval_run(
+    request: Request,
+    body: CreateSessionEvalRunRequest,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> EvalRunResponse:
+    """Create a filter-based session eval run.
+
+    Resolves sessions matching the provided filters, then dispatches a
+    background Celery task that computes trace-level signals and
+    aggregates them into session-level metrics.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+
+    Rate limit: ``50/min``
+    """
+    svc = EvalService(session)
+    filters_dict = body.filters.model_dump(exclude_none=True)
+    run = await svc.create_session_eval_run(
+        project_id=ctx.project.id,
+        metric_names=body.metrics,
+        filters=filters_dict,
+        sampling_rate=body.sampling_rate,
+        model=body.model,
+        name=body.name,
+        signal_weights=body.signal_weights,
+    )
+    return _run_to_detail(run)
+
+
+@router.post("/session-runs/batch", status_code=202, response_model=EvalRunResponse)
+@limiter.limit("50/minute")
+async def create_batch_session_eval_run(
+    request: Request,
+    body: CreateBatchSessionEvalRunRequest,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> EvalRunResponse:
+    """Create a session eval run for explicit session IDs.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+
+    Rate limit: ``50/min``
+    """
+    svc = EvalService(session)
+    run = await svc.create_batch_session_eval_run(
+        project_id=ctx.project.id,
+        session_ids=body.session_ids,
+        metric_names=body.metrics,
+        model=body.model,
+        name=body.name,
+        signal_weights=body.signal_weights,
+    )
+    return _run_to_detail(run)
+
+
+@router.get("/session-runs", response_model=PaginatedResponse[EvalRunResponse])
+async def list_session_eval_runs(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    status: EvaluationStatus | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> PaginatedResponse[EvalRunResponse]:
+    """List session eval runs.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    runs, total = await svc.list_eval_runs(ctx.project.id, status=status, limit=limit, offset=offset)
+    session_runs = [r for r in runs if r.target_type == "SESSION"]
+    return PaginatedResponse(
+        items=[_run_to_detail(r) for r in session_runs],
+        total=len(session_runs),
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/session-runs/{run_id}", response_model=EvalRunResponse)
+async def get_session_eval_run(
+    run_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> EvalRunResponse:
+    """Get full session eval run detail.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    run = await svc.get_eval_run(run_id, ctx.project.id)
+    return _run_to_detail(run)
+
+
+@router.delete("/session-runs/{run_id}", status_code=204)
+async def delete_session_eval_run(
+    run_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    delete_scores: bool = Query(default=False, description="Also delete all session scores from this run."),
+) -> None:
+    """Delete a session eval run.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    await svc.delete_eval_run(run_id, ctx.project.id, delete_scores=delete_scores)
+
+
+@router.get("/session-runs/{run_id}/scores", response_model=list[SessionScoreResponse])
+async def get_session_scores_for_run(
+    run_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[SessionScoreResponse]:
+    """List all session scores produced by a specific eval run.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    scores = await svc.get_session_scores_for_run(run_id, ctx.project.id)
+    return [_session_score_to_detail(s) for s in scores]
+
+
+# ---------------------------------------------------------------------------
+# Session scores
+# ---------------------------------------------------------------------------
+
+
+@router.get("/session-scores", response_model=PaginatedResponse[SessionScoreResponse])
+async def list_session_scores(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    session_id: str | None = Query(default=None, description="Filter by session ID"),
+    metric_name: str | None = Query(default=None, alias="name", description="Filter by metric name"),
+    source: ScoreSource | None = Query(default=None),
+    status: ScoreStatus | None = Query(default=None),
+    eval_run_id: UUID | None = Query(default=None),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> PaginatedResponse[SessionScoreResponse]:
+    """List session scores with filters.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    scores, total = await svc.list_session_scores(
+        ctx.project.id,
+        name=metric_name,
+        session_id=session_id,
+        source=source,
+        status=status,
+        eval_run_id=eval_run_id,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+        offset=offset,
+    )
+    return PaginatedResponse(
+        items=[_session_score_to_detail(s) for s in scores],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/session-scores/{session_id}", response_model=list[SessionScoreResponse])
+async def get_scores_for_session(
+    session_id: str,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[SessionScoreResponse]:
+    """Get all scores for a specific session.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    scores = await svc.get_session_scores(session_id, ctx.project.id)
+    return [_session_score_to_detail(s) for s in scores]
+
+
+@router.delete("/session-scores/{score_id}", status_code=204)
+async def delete_session_score(
+    score_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Delete a single session score.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    await svc.delete_session_score(score_id, ctx.project.id)
+
+
+# ---------------------------------------------------------------------------
+# Session score analytics
+# ---------------------------------------------------------------------------
+
+
+@router.get("/analytics/session-scores/summary", response_model=list[ScoreSummaryItem])
+async def get_session_score_analytics_summary(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+) -> list[ScoreSummaryItem]:
+    """Aggregated session score summary per metric.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    data = await svc.get_session_score_summary(ctx.project.id, date_from=date_from, date_to=date_to)
+    return [ScoreSummaryItem(**d) for d in data]
+
+
+@router.get("/analytics/session-scores/trend", response_model=list[ScoreTrendItem])
+async def get_session_score_analytics_trend(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    metric_name: str = Query(..., description="Metric name to get trend for"),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    granularity: AnalyticsGranularity = Query(default=AnalyticsGranularity.DAY),
+) -> list[ScoreTrendItem]:
+    """Time series of average session scores by metric.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    data = await svc.get_session_score_trend(
+        ctx.project.id,
+        metric_name=metric_name,
+        date_from=date_from,
+        date_to=date_to,
+        granularity=granularity,
+    )
+    return [ScoreTrendItem(**d) for d in data]
