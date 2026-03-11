@@ -566,6 +566,16 @@ class EvalRepository:
         scores = [self._to_session_score_from_row(r) for r in result.mappings().all()]
         return scores, total
 
+    async def get_failed_session_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[SessionScore]:
+        """Fetch FAILED session scores belonging to a specific eval run."""
+        stmt = select(SessionScoreModel).where(
+            SessionScoreModel.eval_run_id == run_id,
+            SessionScoreModel.project_id == project_id,
+            SessionScoreModel.status == ScoreStatus.FAILED.value,
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_session_score(row) for row in result.scalars().all()]
+
     async def delete_session_scores_for_run(self, run_id: UUID, project_id: UUID) -> int:
         """Delete all session scores belonging to a specific eval run."""
         stmt = delete(SessionScoreModel).where(
