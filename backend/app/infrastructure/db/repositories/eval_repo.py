@@ -1,4 +1,4 @@
-"""PostgreSQL repository for eval runs and trace scores."""
+"""PostgreSQL repository for eval runs, trace scores, and session scores."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from uuid import UUID
 from sqlalchemy import Float as SAFloat, cast, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.evals.entities import EvalRun, TraceScore
-from app.infrastructure.db.models import EvalRunModel, TraceScoreModel
+from app.core.evals.entities import EvalRun, SessionScore, TraceScore
+from app.infrastructure.db.models import EvalRunModel, SessionScoreModel, TraceScoreModel
 from app.registry.constants import AnalyticsGranularity, EvaluationStatus, ScoreDataType, ScoreSource, ScoreStatus
 
 
@@ -475,7 +475,263 @@ class EvalRepository:
             for row in result.all()
         ]
 
+    # -- Session score operations ----------------------------------------------
+
+    async def create_session_score(self, score: SessionScore) -> SessionScore:
+        """Persist a single session score."""
+        row = SessionScoreModel(
+            id=score.id,
+            session_id=score.session_id,
+            project_id=score.project_id,
+            name=score.name,
+            data_type=score.data_type,
+            value=score.value,
+            source=score.source,
+            status=score.status,
+            eval_run_id=score.eval_run_id,
+            author_user_id=score.author_user_id,
+            reason=score.reason,
+            environment=score.environment,
+            config_id=score.config_id,
+            metadata_=score.metadata,
+            created_at=score.created_at,
+            updated_at=score.updated_at,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        return score
+
+    async def get_session_scores_for_session(
+        self, session_id: str, project_id: UUID
+    ) -> list[SessionScore]:
+        """Fetch all scores for a specific session."""
+        stmt = (
+            select(SessionScoreModel)
+            .where(SessionScoreModel.session_id == session_id, SessionScoreModel.project_id == project_id)
+            .order_by(SessionScoreModel.created_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_session_score(row) for row in result.scalars().all()]
+
+    async def get_session_scores_for_run(
+        self, run_id: UUID, project_id: UUID
+    ) -> list[SessionScore]:
+        """Fetch all session scores belonging to a specific eval run."""
+        stmt = (
+            select(SessionScoreModel)
+            .where(SessionScoreModel.eval_run_id == run_id, SessionScoreModel.project_id == project_id)
+            .order_by(SessionScoreModel.created_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_session_score(row) for row in result.scalars().all()]
+
+    async def list_session_scores(
+        self,
+        project_id: UUID,
+        *,
+        name: str | None = None,
+        session_id: str | None = None,
+        source: ScoreSource | None = None,
+        status: ScoreStatus | None = None,
+        eval_run_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[SessionScore], int]:
+        """Paginated listing of session scores with filters."""
+        t = SessionScoreModel.__table__
+        base = select(t).where(t.c.project_id == project_id)
+
+        if name is not None:
+            base = base.where(t.c.name == name)
+        if session_id is not None:
+            base = base.where(t.c.session_id == session_id)
+        if source is not None:
+            base = base.where(t.c.source == source.value)
+        if status is not None:
+            base = base.where(t.c.status == status.value)
+        if eval_run_id is not None:
+            base = base.where(t.c.eval_run_id == eval_run_id)
+        if date_from is not None:
+            base = base.where(t.c.created_at >= date_from)
+        if date_to is not None:
+            base = base.where(t.c.created_at < date_to)
+
+        count_stmt = select(func.count()).select_from(base.subquery())
+        total = (await self._session.execute(count_stmt)).scalar_one()
+
+        data_stmt = base.order_by(t.c.created_at.desc()).offset(offset).limit(limit)
+        result = await self._session.execute(data_stmt)
+        scores = [self._to_session_score_from_row(r) for r in result.mappings().all()]
+        return scores, total
+
+    async def delete_session_scores_for_run(self, run_id: UUID, project_id: UUID) -> int:
+        """Delete all session scores belonging to a specific eval run."""
+        stmt = delete(SessionScoreModel).where(
+            SessionScoreModel.eval_run_id == run_id, SessionScoreModel.project_id == project_id
+        )
+        result = await self._session.execute(stmt)
+        return result.rowcount
+
+    async def delete_session_score(self, score_id: UUID, project_id: UUID) -> None:
+        """Delete a single session score."""
+        stmt = delete(SessionScoreModel).where(
+            SessionScoreModel.id == score_id, SessionScoreModel.project_id == project_id
+        )
+        await self._session.execute(stmt)
+
+    async def get_session_score_summary(
+        self,
+        project_id: UUID,
+        *,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[dict[str, Any]]:
+        """Aggregated session score summary grouped by metric."""
+        t = SessionScoreModel.__table__
+        numeric_value = cast(t.c.value, SAFloat)
+        is_success = t.c.status == ScoreStatus.SUCCESS.value
+        is_numeric_success = (t.c.data_type == ScoreDataType.NUMERIC.value) & is_success
+
+        base = select(
+            t.c.name.label("metric_name"),
+            func.count().filter(is_success).label("success_count"),
+            func.count().filter(t.c.status == ScoreStatus.FAILED.value).label("failed_count"),
+            func.avg(numeric_value).filter(is_numeric_success).label("avg_score"),
+            func.min(numeric_value).filter(is_numeric_success).label("min_score"),
+            func.max(numeric_value).filter(is_numeric_success).label("max_score"),
+            func.percentile_cont(0.5).within_group(numeric_value).filter(is_numeric_success).label("median_score"),
+            func.max(t.c.created_at).label("latest_score_at"),
+        ).where(t.c.project_id == project_id)
+
+        if date_from is not None:
+            base = base.where(t.c.created_at >= date_from)
+        if date_to is not None:
+            base = base.where(t.c.created_at < date_to)
+
+        base = base.group_by(t.c.name)
+        result = await self._session.execute(base)
+        return [
+            {
+                "metric_name": row.metric_name,
+                "avg_score": float(row.avg_score) if row.avg_score is not None else None,
+                "min_score": float(row.min_score) if row.min_score is not None else None,
+                "max_score": float(row.max_score) if row.max_score is not None else None,
+                "median_score": float(row.median_score) if row.median_score is not None else None,
+                "success_count": row.success_count,
+                "failed_count": row.failed_count,
+                "latest_score_at": row.latest_score_at.isoformat() if row.latest_score_at else None,
+            }
+            for row in result.all()
+        ]
+
+    async def get_session_score_trend(
+        self,
+        project_id: UUID,
+        *,
+        metric_name: str,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        granularity: AnalyticsGranularity = AnalyticsGranularity.DAY,
+    ) -> list[dict[str, Any]]:
+        """Time series of average session scores for a metric."""
+        t = SessionScoreModel.__table__
+        numeric_value = cast(t.c.value, SAFloat)
+        bucket = func.date_trunc(granularity.value, t.c.created_at).label("bucket")
+
+        base = select(
+            bucket,
+            t.c.name.label("metric_name"),
+            func.avg(numeric_value).label("avg_score"),
+            func.count().label("count"),
+        ).where(
+            t.c.project_id == project_id,
+            t.c.name == metric_name,
+            t.c.data_type == ScoreDataType.NUMERIC.value,
+            t.c.status == ScoreStatus.SUCCESS.value,
+        )
+
+        if date_from is not None:
+            base = base.where(t.c.created_at >= date_from)
+        if date_to is not None:
+            base = base.where(t.c.created_at < date_to)
+
+        base = base.group_by(bucket, t.c.name).order_by(bucket)
+        result = await self._session.execute(base)
+        return [
+            {
+                "bucket": row.bucket.isoformat() if row.bucket else None,
+                "metric_name": row.metric_name,
+                "avg_score": float(row.avg_score) if row.avg_score is not None else 0.0,
+                "count": row.count,
+            }
+            for row in result.all()
+        ]
+
+    async def find_existing_trace_score(
+        self, trace_id: UUID, metric_name: str
+    ) -> TraceScore | None:
+        """Find the most recent successful trace score for a trace + metric."""
+        stmt = (
+            select(TraceScoreModel)
+            .where(
+                TraceScoreModel.trace_id == trace_id,
+                TraceScoreModel.name == metric_name,
+                TraceScoreModel.status == ScoreStatus.SUCCESS.value,
+            )
+            .order_by(TraceScoreModel.created_at.desc())
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        return self._to_score(row)
+
     # -- Mappers ---------------------------------------------------------------
+
+    @staticmethod
+    def _to_session_score(row: SessionScoreModel) -> SessionScore:
+        return SessionScore(
+            id=row.id,
+            session_id=row.session_id,
+            project_id=row.project_id,
+            name=row.name,
+            data_type=ScoreDataType(row.data_type),
+            value=row.value,
+            source=ScoreSource(row.source),
+            status=ScoreStatus(row.status),
+            eval_run_id=row.eval_run_id,
+            author_user_id=row.author_user_id,
+            reason=row.reason,
+            environment=row.environment,
+            config_id=row.config_id,
+            metadata=row.metadata_,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
+
+    @staticmethod
+    def _to_session_score_from_row(r: Any) -> SessionScore:
+        return SessionScore(
+            id=r["id"],
+            session_id=r["session_id"],
+            project_id=r["project_id"],
+            name=r["name"],
+            data_type=ScoreDataType(r["data_type"]),
+            value=r["value"],
+            source=ScoreSource(r["source"]),
+            status=ScoreStatus(r["status"]),
+            eval_run_id=r["eval_run_id"],
+            author_user_id=r["author_user_id"],
+            reason=r["reason"],
+            environment=r["environment"],
+            config_id=r["config_id"],
+            metadata=r["metadata"],
+            created_at=r["created_at"],
+            updated_at=r["updated_at"],
+        )
 
     @staticmethod
     def _to_score(row: TraceScoreModel) -> TraceScore:
