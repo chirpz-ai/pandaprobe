@@ -155,10 +155,10 @@ async def test_delete_trace_score_not_found(client: AsyncClient):
 
 
 async def test_list_metrics(client: AsyncClient):
-    resp = await client.get("/evaluations/metrics")
+    resp = await client.get("/evaluations/trace-metrics")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 6
+    assert len(data) == 9
     names = [m["name"] for m in data]
     assert "task_completion" in names
     assert "tool_correctness" in names
