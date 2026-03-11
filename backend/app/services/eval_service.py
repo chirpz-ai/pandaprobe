@@ -516,6 +516,57 @@ class EvalService:
         logger.info("batch_session_eval_run_created", run_id=str(run.id), total_sessions=len(unique_ids))
         return run
 
+    async def retry_failed_session_run(self, run_id: UUID, project_id: UUID) -> EvalRun:
+        """Create a new session run retrying only the sessions with failed scores."""
+        original = await self._repo.get_eval_run(run_id, project_id)
+        if original is None:
+            raise NotFoundError(f"Eval run {run_id} not found.")
+
+        failed_scores = await self._repo.get_failed_session_scores_for_run(run_id, project_id)
+        if not failed_scores:
+            raise ValidationError("No failed scores to retry in this run.")
+
+        session_ids = sorted(set(s.session_id for s in failed_scores))
+        metric_names = sorted(set(s.name for s in failed_scores))
+
+        signal_weights = (original.filters or {}).get("signal_weights")
+        run_filters: dict[str, Any] = {"retry_of": str(run_id), "session_ids": session_ids}
+        if signal_weights:
+            run_filters["signal_weights"] = signal_weights
+
+        resolved_model = _resolve_model(original.model)
+
+        now = datetime.now(timezone.utc)
+        run = EvalRun(
+            id=uuid4(),
+            project_id=project_id,
+            name=f"Retry: {original.name or original.id}",
+            target_type="SESSION",
+            metric_names=metric_names,
+            filters=run_filters,
+            sampling_rate=1.0,
+            model=resolved_model,
+            status=EvaluationStatus.PENDING,
+            total_traces=len(session_ids),
+            evaluated_count=0,
+            created_at=now,
+        )
+
+        await self._repo.create_eval_run(run)
+        await self._session.commit()
+
+        from app.infrastructure.queue.tasks import execute_session_eval_run
+
+        execute_session_eval_run.delay(str(run.id), str(project_id), session_ids)
+
+        logger.info(
+            "retry_session_eval_run_created",
+            run_id=str(run.id),
+            original_run_id=str(run_id),
+            total_sessions=len(session_ids),
+        )
+        return run
+
     # -- Session score queries -------------------------------------------------
 
     async def get_session_scores(self, session_id: str, project_id: UUID) -> list[SessionScore]:
