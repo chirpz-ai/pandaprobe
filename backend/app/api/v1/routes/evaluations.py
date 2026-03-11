@@ -338,8 +338,8 @@ class SessionEvalRunFilters(BaseModel):
 class CreateSessionEvalRunRequest(BaseModel):
     """Create a filter-based session eval run."""
 
-    metrics: list[str] = Field(min_length=1, description="Session metric names (e.g. ['agent_reliability']).")
     name: str | None = Field(default=None, description="Human-readable label.")
+    metrics: list[str] = Field(min_length=1, description="Session metric names (e.g. ['agent_reliability']).")
     filters: SessionEvalRunFilters = Field(default_factory=SessionEvalRunFilters)
     sampling_rate: float = Field(default=1.0, ge=0.0, le=1.0, description="Fraction of sessions to evaluate.")
     model: str | None = Field(default=None, description="LLM model override for judge calls.")
