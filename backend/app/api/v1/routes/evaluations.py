@@ -129,10 +129,10 @@ class CreateEvalRunRequest(BaseModel):
     run the requested metrics asynchronously via an LLM judge.
 
     **Typical dashboard flow:**
-    1. User selects metrics -> call ``GET /runs/template?metric=task_completion``
+    1. User selects metrics -> call ``GET /trace-runs/template?metric=task_completion``
     2. Dashboard renders the template as a form with editable filters
     3. User customizes filters/sampling -> frontend builds this request body
-    4. Frontend calls ``POST /runs`` with the final body
+    4. Frontend calls ``POST /trace-runs`` with the final body
     """
 
     name: str | None = Field(
@@ -141,7 +141,7 @@ class CreateEvalRunRequest(BaseModel):
     )
     metrics: list[str] = Field(
         min_length=1,
-        description="List of metric names to run. Use GET /evaluations/metrics to see available names. Example: ['task_completion', 'tool_correctness'].",
+        description="List of metric names to run. Use GET /evaluations/trace-metrics to see available names. Example: ['task_completion', 'tool_correctness'].",
     )
     filters: EvalRunFilters = Field(
         default_factory=EvalRunFilters,
@@ -380,7 +380,7 @@ class SessionScoreResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.get("/metrics", response_model=list[MetricSummary])
+@router.get("/trace-metrics", response_model=list[MetricSummary])
 async def get_available_metrics(
     ctx: ApiContext = Depends(require_project),
 ) -> list[MetricSummary]:
@@ -410,11 +410,11 @@ async def get_available_providers(
 
 
 # ---------------------------------------------------------------------------
-# Eval runs
+# Trace eval runs
 # ---------------------------------------------------------------------------
 
 
-@router.get("/runs/template", response_model=EvalRunTemplate)
+@router.get("/trace-runs/template", response_model=EvalRunTemplate)
 async def get_eval_run_template(
     metric: str = Query(description="Metric name to build the template for"),
     ctx: ApiContext = Depends(require_project),
@@ -438,7 +438,7 @@ async def get_eval_run_template(
     )
 
 
-@router.post("/runs", status_code=202, response_model=EvalRunResponse)
+@router.post("/trace-runs", status_code=202, response_model=EvalRunResponse)
 @limiter.limit("50/minute")
 async def create_eval_run(
     request: Request,
@@ -456,7 +456,7 @@ async def create_eval_run(
 
     - **name** *(string, optional)*: Human-readable label, e.g. ``"Weekly prod eval"``.
     - **metrics** *(string[], required)*: Metric names to run. Get available names
-      from ``GET /evaluations/metrics``. Example: ``["task_completion", "tool_correctness"]``.
+      from ``GET /evaluations/trace-metrics``. Example: ``["task_completion", "tool_correctness"]``.
     - **filters** *(object, optional)*: Trace selection filters. All fields optional:
         - **date_from**: ISO 8601 datetime, e.g. ``"2025-01-15T00:00:00Z"``.
           Includes traces started on or after this time.
@@ -488,7 +488,7 @@ async def create_eval_run(
     return _run_to_detail(run)
 
 
-@router.post("/runs/batch", status_code=202, response_model=EvalRunResponse)
+@router.post("/trace-runs/batch", status_code=202, response_model=EvalRunResponse)
 @limiter.limit("50/minute")
 async def create_batch_eval_run(
     request: Request,
@@ -517,7 +517,7 @@ async def create_batch_eval_run(
     return _run_to_detail(run)
 
 
-@router.get("/runs", response_model=PaginatedResponse[EvalRunResponse])
+@router.get("/trace-runs", response_model=PaginatedResponse[EvalRunResponse])
 async def list_eval_runs(
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
@@ -539,7 +539,7 @@ async def list_eval_runs(
     )
 
 
-@router.get("/runs/{run_id}", response_model=EvalRunResponse)
+@router.get("/trace-runs/{run_id}", response_model=EvalRunResponse)
 async def get_eval_run(
     run_id: UUID,
     ctx: ApiContext = Depends(require_project),
@@ -554,7 +554,7 @@ async def get_eval_run(
     return _run_to_detail(run)
 
 
-@router.delete("/runs/{run_id}", status_code=204)
+@router.delete("/trace-runs/{run_id}", status_code=204)
 async def delete_eval_run(
     run_id: UUID,
     ctx: ApiContext = Depends(require_project),
@@ -573,7 +573,7 @@ async def delete_eval_run(
     await svc.delete_eval_run(run_id, ctx.project.id, delete_scores=delete_scores)
 
 
-@router.post("/runs/{run_id}/retry", status_code=202, response_model=EvalRunResponse)
+@router.post("/trace-runs/{run_id}/retry", status_code=202, response_model=EvalRunResponse)
 @limiter.limit("50/minute")
 async def retry_failed_eval_run(
     request: Request,
@@ -596,7 +596,7 @@ async def retry_failed_eval_run(
     return _run_to_detail(run)
 
 
-@router.get("/runs/{run_id}/scores", response_model=list[TraceScoreResponse])
+@router.get("/trace-runs/{run_id}/scores", response_model=list[TraceScoreResponse])
 async def get_scores_for_run(
     run_id: UUID,
     ctx: ApiContext = Depends(require_project),
@@ -1042,6 +1042,29 @@ async def delete_session_eval_run(
     """
     svc = EvalService(session)
     await svc.delete_eval_run(run_id, ctx.project.id, delete_scores=delete_scores)
+
+
+@router.post("/session-runs/{run_id}/retry", status_code=202, response_model=EvalRunResponse)
+@limiter.limit("50/minute")
+async def retry_failed_session_eval_run(
+    request: Request,
+    run_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> EvalRunResponse:
+    """Retry failed metrics from a completed session eval run.
+
+    Creates a new session eval run targeting only the session+metric
+    pairs that failed in the original run. Returns 422 if the original
+    run has no failures to retry.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+
+    Rate limit: ``50/min``
+    """
+    svc = EvalService(session)
+    run = await svc.retry_failed_session_run(run_id, ctx.project.id)
+    return _run_to_detail(run)
 
 
 @router.get("/session-runs/{run_id}/scores", response_model=list[SessionScoreResponse])
