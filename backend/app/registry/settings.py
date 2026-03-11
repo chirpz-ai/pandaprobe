@@ -116,6 +116,7 @@ class Settings(BaseSettings):
     # "vertex_ai/gemini-3.1-flash-lite-preview"
     EVAL_LLM_MODEL: str = "vertex_ai/gemini-3.1-flash-lite-preview"
     EVAL_LLM_TEMPERATURE: float = 1.0
+    EVAL_EMBEDDING_MODEL: str = "vertex_ai/text-embedding-004"
 
     # -- Authentication -------------------------------------------------------
     # "supabase" = Supabase Auth (cloud-hosted, uses SUPABASE_URL + anon key)
