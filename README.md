@@ -146,7 +146,7 @@ We welcome contributions! Please read the [Contributing Guide](CONTRIBUTING.md) 
 
 ## Authors
 
-Built by the [Chirpz AI](https://github.com/chirpz-ai) team. Contact sina@chirpz.ai for enquiries.
+Built by the [Chirpz AI](https://pandaprobe.com/about) team. Contact sina@chirpz.ai for enquiries.
 
 ## License
 
