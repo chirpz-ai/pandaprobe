@@ -380,6 +380,20 @@ class SessionScoreResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+@router.get("/providers", response_model=list[ProviderInfo])
+async def get_available_providers(
+    ctx: ApiContext = Depends(require_project),
+) -> list[ProviderInfo]:
+    """List LLM providers and their availability.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    from app.infrastructure.llm.engine import LLMEngine
+
+    engine = LLMEngine()
+    return [ProviderInfo(**p) for p in engine.available_providers()]
+
+
 @router.get("/trace-metrics", response_model=list[MetricSummary])
 async def get_available_metrics(
     ctx: ApiContext = Depends(require_project),
@@ -393,20 +407,6 @@ async def get_available_metrics(
         MetricSummary(name=i["name"], description=i["description"], category=i["category"])
         for i in (get_metric_summary(n) for n in names)
     ]
-
-
-@router.get("/providers", response_model=list[ProviderInfo])
-async def get_available_providers(
-    ctx: ApiContext = Depends(require_project),
-) -> list[ProviderInfo]:
-    """List LLM providers and their availability.
-
-    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
-    """
-    from app.infrastructure.llm.engine import LLMEngine
-
-    engine = LLMEngine()
-    return [ProviderInfo(**p) for p in engine.available_providers()]
 
 
 # ---------------------------------------------------------------------------
