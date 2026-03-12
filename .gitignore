@@ -26,6 +26,9 @@ uv.lock
 .idea/
 .vscode/
 
+# macOS
+.DS_Store
+
 # Misc
 *.ipynb
 .pytest_cache/
