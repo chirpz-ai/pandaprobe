@@ -407,6 +407,134 @@ make up
 
 ---
 
+## Session Evaluation Runs
+
+Session-level evaluation computes `agent_reliability` and `agent_consistency` across all traces in a session.
+
+The seed data contains **4 sessions** (trace 07 has no session):
+
+| Session ID | Traces | Time Range (2026-02-23) |
+|---|---|---|
+| `session-docextract-batch-20260223` | 04, 08 | 09:22 – 09:23 |
+| `session-cs-20260223-jmartinez` | 01, 05 | 10:00 – 10:01 |
+| `session-docsqa-20260223-akim` | 02 | 11:15 |
+| `session-codereview-pr47` | 03 | 14:30 |
+
+### Filter-based: Evaluate all sessions
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "metrics": ["agent_reliability", "agent_consistency"],
+    "filters": {}
+  }' | python3 -m json.tool
+```
+
+### Filter-based: Evaluate sessions active in a date window
+
+The `date_from`/`date_to` filter matches traces by `started_at`. A session is included if **any** of its traces fall within the window. The worker then evaluates **all** traces in each matched session (not just those inside the window).
+
+This example window (09:00 – 10:30) catches the first two sessions:
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "metrics": ["agent_reliability", "agent_consistency"],
+    "filters": {
+      "date_from": "2026-02-23T09:00:00Z",
+      "date_to": "2026-02-23T10:30:00Z"
+    }
+  }' | python3 -m json.tool
+```
+
+### Filter-based: Narrow window catching only one session
+
+This window (11:00 – 15:00) catches the RAG and code-review sessions:
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "metrics": ["agent_reliability"],
+    "filters": {
+      "date_from": "2026-02-23T11:00:00Z",
+      "date_to": "2026-02-23T15:00:00Z"
+    }
+  }' | python3 -m json.tool
+```
+
+### Batch: Evaluate specific sessions by ID
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "session_ids": [
+      "session-docextract-batch-20260223",
+      "session-cs-20260223-jmartinez"
+    ],
+    "metrics": ["agent_reliability", "agent_consistency"]
+  }' | python3 -m json.tool
+```
+
+### Batch: Single session with custom signal weights
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "session_ids": ["session-codereview-pr47"],
+    "metrics": ["agent_consistency"],
+    "signal_weights": {
+      "confidence": 1.0,
+      "loop_detection": 1.5,
+      "tool_correctness": 1.0,
+      "coherence": 0.5
+    }
+  }' | python3 -m json.tool
+```
+
+### Retry a failed session eval run
+
+Replace `RUN_ID` with the `id` from a completed run that has failed scores:
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs/RUN_ID/retry \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+### View scores for a session eval run
+
+```bash
+curl -s http://localhost:8000/evaluations/session-runs/RUN_ID/scores \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+### List all session scores
+
+```bash
+curl -s "http://localhost:8000/evaluations/session-scores?limit=20" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+---
+
 ## Interpreting Session-Level Metrics
 
 Session evaluation produces two complementary scores that together give a complete picture of agent performance across a session (all traces sharing a `session_id`).
