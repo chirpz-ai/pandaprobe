@@ -7,10 +7,11 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.evals.entities import EvalRun, SessionScore, TraceScore, validate_score_value
+from app.core.evals.cadence import compute_next_run, validate_cadence
+from app.core.evals.entities import EvalMonitor, EvalRun, SessionScore, TraceScore, validate_score_value
 from app.core.evals.metrics import list_metrics, list_session_metrics
 from app.infrastructure.db.models import TraceModel
 from app.infrastructure.db.repositories.eval_repo import EvalRepository
@@ -19,6 +20,7 @@ from app.logging import logger
 from app.registry.constants import (
     AnalyticsGranularity,
     EvaluationStatus,
+    MonitorStatus,
     ScoreDataType,
     ScoreSource,
     ScoreStatus,
@@ -166,11 +168,14 @@ class EvalService:
         project_id: UUID,
         *,
         status: EvaluationStatus | None = None,
+        target_type: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[EvalRun], int]:
         """Paginated listing of eval runs."""
-        return await self._repo.list_eval_runs(project_id, status=status, limit=limit, offset=offset)
+        return await self._repo.list_eval_runs(
+            project_id, status=status, target_type=target_type, limit=limit, offset=offset
+        )
 
     async def retry_failed_run(self, run_id: UUID, project_id: UUID) -> EvalRun:
         """Create a new run retrying only the exact failed trace+metric pairs."""
@@ -629,6 +634,294 @@ class EvalService:
         return await self._repo.get_session_score_trend(
             project_id, metric_name=metric_name, date_from=date_from, date_to=date_to, granularity=granularity
         )
+
+    # -- Monitors --------------------------------------------------------------
+
+    async def create_monitor(
+        self,
+        project_id: UUID,
+        name: str,
+        target_type: str,
+        metric_names: list[str],
+        cadence: str,
+        *,
+        filters: dict[str, Any] | None = None,
+        sampling_rate: float = 1.0,
+        model: str | None = None,
+        only_if_changed: bool = True,
+        signal_weights: dict[str, float] | None = None,
+    ) -> EvalMonitor:
+        """Create and persist a new evaluation monitor."""
+        if target_type not in ("TRACE", "SESSION"):
+            raise ValidationError("target_type must be 'TRACE' or 'SESSION'.")
+
+        if target_type == "TRACE":
+            available = list_metrics()
+            if signal_weights:
+                raise ValidationError("signal_weights is only valid for SESSION monitors.")
+        else:
+            available = list_session_metrics()
+
+        invalid = [m for m in metric_names if m not in available]
+        if invalid:
+            raise ValidationError(f"Unknown metrics: {', '.join(invalid)}")
+        if not metric_names:
+            raise ValidationError("At least one metric is required.")
+
+        try:
+            cadence = validate_cadence(cadence)
+        except ValueError as e:
+            raise ValidationError(str(e))
+
+        now = datetime.now(timezone.utc)
+        next_run = compute_next_run(cadence, now)
+
+        monitor_filters: dict[str, Any] = dict(filters) if filters else {}
+        if signal_weights:
+            monitor_filters["signal_weights"] = signal_weights
+
+        monitor = EvalMonitor(
+            id=uuid4(),
+            project_id=project_id,
+            name=name,
+            target_type=target_type,
+            metric_names=metric_names,
+            filters=monitor_filters,
+            sampling_rate=sampling_rate,
+            model=model,
+            cadence=cadence,
+            only_if_changed=only_if_changed,
+            status=MonitorStatus.ACTIVE,
+            next_run_at=next_run,
+            created_at=now,
+            updated_at=now,
+        )
+
+        await self._repo.create_monitor(monitor)
+        await self._session.commit()
+        logger.info("eval_monitor_created", monitor_id=str(monitor.id), cadence=cadence, target=target_type)
+        return monitor
+
+    async def get_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor:
+        monitor = await self._repo.get_monitor(monitor_id, project_id)
+        if monitor is None:
+            raise NotFoundError(f"Eval monitor {monitor_id} not found.")
+        return monitor
+
+    async def list_monitors(
+        self,
+        project_id: UUID,
+        *,
+        status: MonitorStatus | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[EvalMonitor], int]:
+        return await self._repo.list_monitors(project_id, status=status, limit=limit, offset=offset)
+
+    async def update_monitor(
+        self,
+        monitor_id: UUID,
+        project_id: UUID,
+        **fields: Any,
+    ) -> EvalMonitor:
+        """Partial update of a monitor. Re-validates changed fields."""
+        monitor = await self._repo.get_monitor(monitor_id, project_id)
+        if monitor is None:
+            raise NotFoundError(f"Eval monitor {monitor_id} not found.")
+
+        if "metrics" in fields and fields["metrics"] is not None:
+            target_type = fields.get("target_type") or monitor.target_type
+            available = list_metrics() if target_type == "TRACE" else list_session_metrics()
+            invalid = [m for m in fields["metrics"] if m not in available]
+            if invalid:
+                raise ValidationError(f"Unknown metrics: {', '.join(invalid)}")
+            fields["metric_names"] = fields.pop("metrics")
+        else:
+            fields.pop("metrics", None)
+
+        new_cadence = fields.get("cadence")
+        if new_cadence is not None:
+            try:
+                fields["cadence"] = validate_cadence(new_cadence)
+            except ValueError as e:
+                raise ValidationError(str(e))
+            now = datetime.now(timezone.utc)
+            fields["next_run_at"] = compute_next_run(fields["cadence"], now)
+
+        await self._repo.update_monitor(monitor_id, project_id, **fields)
+        await self._session.commit()
+        return await self.get_monitor(monitor_id, project_id)
+
+    async def delete_monitor(self, monitor_id: UUID, project_id: UUID) -> None:
+        monitor = await self._repo.get_monitor(monitor_id, project_id)
+        if monitor is None:
+            raise NotFoundError(f"Eval monitor {monitor_id} not found.")
+        await self._repo.delete_monitor(monitor_id, project_id)
+        await self._session.commit()
+
+    async def pause_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor:
+        monitor = await self._repo.get_monitor(monitor_id, project_id)
+        if monitor is None:
+            raise NotFoundError(f"Eval monitor {monitor_id} not found.")
+        if monitor.status == MonitorStatus.PAUSED:
+            return monitor
+        await self._repo.update_monitor(
+            monitor_id, project_id, status=MonitorStatus.PAUSED, next_run_at=None
+        )
+        await self._session.commit()
+        return await self.get_monitor(monitor_id, project_id)
+
+    async def resume_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor:
+        monitor = await self._repo.get_monitor(monitor_id, project_id)
+        if monitor is None:
+            raise NotFoundError(f"Eval monitor {monitor_id} not found.")
+        if monitor.status == MonitorStatus.ACTIVE:
+            return monitor
+        now = datetime.now(timezone.utc)
+        next_run = compute_next_run(monitor.cadence, now)
+        await self._repo.update_monitor(
+            monitor_id, project_id, status=MonitorStatus.ACTIVE, next_run_at=next_run
+        )
+        await self._session.commit()
+        return await self.get_monitor(monitor_id, project_id)
+
+    async def trigger_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalRun:
+        """Force-spawn an eval run immediately regardless of cadence."""
+        monitor = await self._repo.get_monitor(monitor_id, project_id)
+        if monitor is None:
+            raise NotFoundError(f"Eval monitor {monitor_id} not found.")
+
+        run = await self._spawn_run_for_monitor(monitor)
+
+        now = datetime.now(timezone.utc)
+        next_run = compute_next_run(monitor.cadence, now)
+        await self._repo.advance_monitor(
+            monitor_id, last_run_at=now, last_run_id=run.id, next_run_at=next_run
+        )
+        await self._session.commit()
+        logger.info("monitor_triggered", monitor_id=str(monitor_id), run_id=str(run.id))
+        return run
+
+    async def list_monitor_runs(
+        self,
+        monitor_id: UUID,
+        project_id: UUID,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[EvalRun], int]:
+        monitor = await self._repo.get_monitor(monitor_id, project_id)
+        if monitor is None:
+            raise NotFoundError(f"Eval monitor {monitor_id} not found.")
+        return await self._repo.list_runs_for_monitor(monitor_id, project_id, limit=limit, offset=offset)
+
+    async def should_skip_monitor(self, monitor: EvalMonitor) -> bool:
+        """Check if a monitor can be skipped because no new data arrived."""
+        if not monitor.only_if_changed:
+            return False
+        if monitor.last_run_at is None:
+            return False
+
+        t = TraceModel.__table__
+        if monitor.target_type == "SESSION":
+            stmt = select(func.max(t.c.started_at)).where(
+                t.c.project_id == monitor.project_id,
+                t.c.session_id.isnot(None),
+            )
+        else:
+            stmt = select(func.count()).where(
+                t.c.project_id == monitor.project_id,
+                t.c.started_at > monitor.last_run_at,
+            )
+
+        filters = monitor.filters or {}
+        if filters.get("date_from"):
+            stmt = stmt.where(t.c.started_at >= _parse_dt(filters["date_from"]))
+        if filters.get("date_to"):
+            stmt = stmt.where(t.c.started_at < _parse_dt(filters["date_to"]))
+        if filters.get("user_id"):
+            stmt = stmt.where(t.c.user_id == filters["user_id"])
+        if filters.get("tags"):
+            stmt = stmt.where(t.c.tags.overlap(filters["tags"]))
+
+        result = await self._session.execute(stmt)
+        val = result.scalar_one()
+
+        if monitor.target_type == "SESSION":
+            if val is None:
+                return True
+            return val <= monitor.last_run_at
+        else:
+            return val == 0
+
+    async def _spawn_run_for_monitor(self, monitor: EvalMonitor) -> EvalRun:
+        """Create and dispatch an eval run from a monitor's configuration."""
+        now = datetime.now(timezone.utc)
+        run_name = f"[Monitor] {monitor.name}"
+
+        if monitor.target_type == "TRACE":
+            trace_ids = await self._resolve_trace_ids(monitor.project_id, monitor.filters)
+            if not trace_ids:
+                raise ValidationError("No traces match the monitor's filters.")
+
+            if monitor.sampling_rate < 1.0:
+                sample_count = max(1, int(len(trace_ids) * monitor.sampling_rate))
+                trace_ids = random.sample(trace_ids, sample_count)
+
+            resolved_model = _resolve_model(monitor.model)
+            run = EvalRun(
+                id=uuid4(),
+                project_id=monitor.project_id,
+                name=run_name,
+                target_type="TRACE",
+                metric_names=monitor.metric_names,
+                filters=monitor.filters,
+                sampling_rate=monitor.sampling_rate,
+                model=resolved_model,
+                monitor_id=monitor.id,
+                status=EvaluationStatus.PENDING,
+                total_traces=len(trace_ids),
+                evaluated_count=0,
+                created_at=now,
+            )
+            await self._repo.create_eval_run(run)
+            await self._session.flush()
+
+            from app.infrastructure.queue.tasks import execute_eval_run
+            execute_eval_run.delay(str(run.id), str(monitor.project_id), [str(t) for t in trace_ids])
+
+        else:
+            session_ids = await self._resolve_session_ids(monitor.project_id, monitor.filters)
+            if not session_ids:
+                raise ValidationError("No sessions match the monitor's filters.")
+
+            if monitor.sampling_rate < 1.0:
+                sample_count = max(1, int(len(session_ids) * monitor.sampling_rate))
+                session_ids = random.sample(session_ids, sample_count)
+
+            resolved_model = _resolve_model(monitor.model)
+            run = EvalRun(
+                id=uuid4(),
+                project_id=monitor.project_id,
+                name=run_name,
+                target_type="SESSION",
+                metric_names=monitor.metric_names,
+                filters=monitor.filters,
+                sampling_rate=monitor.sampling_rate,
+                model=resolved_model,
+                monitor_id=monitor.id,
+                status=EvaluationStatus.PENDING,
+                total_traces=len(session_ids),
+                evaluated_count=0,
+                created_at=now,
+            )
+            await self._repo.create_eval_run(run)
+            await self._session.flush()
+
+            from app.infrastructure.queue.tasks import execute_session_eval_run
+            execute_session_eval_run.delay(str(run.id), str(monitor.project_id), session_ids)
+
+        return run
 
     # -- Private helpers -------------------------------------------------------
 
