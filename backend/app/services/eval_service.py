@@ -635,6 +635,44 @@ class EvalService:
             project_id, metric_name=metric_name, date_from=date_from, date_to=date_to, granularity=granularity
         )
 
+    async def get_session_score_distribution(
+        self,
+        project_id: UUID,
+        metric_name: str,
+        *,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        buckets: int = 10,
+    ) -> list[dict[str, Any]]:
+        return await self._repo.get_session_score_distribution(
+            project_id, metric_name, date_from=date_from, date_to=date_to, buckets=buckets
+        )
+
+    async def get_session_score_history(
+        self,
+        project_id: UUID,
+        session_id: str,
+        *,
+        metric_name: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        return await self._repo.get_session_score_history(
+            project_id, session_id, metric_name=metric_name, limit=limit
+        )
+
+    async def get_session_score_comparison(
+        self,
+        project_id: UUID,
+        metric_name: str,
+        *,
+        sort_order: str = "asc",
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[dict[str, Any]], int]:
+        return await self._repo.get_session_score_comparison(
+            project_id, metric_name, sort_order=sort_order, limit=limit, offset=offset
+        )
+
     # -- Monitors --------------------------------------------------------------
 
     async def create_monitor(
