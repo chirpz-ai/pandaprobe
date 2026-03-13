@@ -277,6 +277,21 @@ redis = [
 ]
 
 [[package]]
+name = "celery-redbeat"
+version = "2.3.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "celery" },
+    { name = "python-dateutil" },
+    { name = "redis" },
+    { name = "tenacity" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7d/d5/cebf6a03a4716ae33315ce1dad68f2465ea30491a560293ecd2a4ad3148a/celery_redbeat-2.3.3.tar.gz", hash = "sha256:f52664b490b2923a787d9f348f291243601430bf8ec383b6e79870a1731ee92a", size = 34429, upload_time = "2025-07-02T13:08:55.251Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/c1/ea03e5c737b4b0f4054001d8db64bec693b1506cbb68f93ebecd710b2785/celery_redbeat-2.3.3-py2.py3-none-any.whl", hash = "sha256:0d6da101c46c0147b88f3ae2bfaed42548545934263a31d325a8b0e6585c3fb1", size = 14674, upload_time = "2025-07-02T13:08:54.062Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1667,6 +1682,7 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "celery", extra = ["redis"] },
+    { name = "celery-redbeat" },
     { name = "croniter" },
     { name = "email-validator" },
     { name = "fastapi" },
@@ -1704,6 +1720,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.14.0" },
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "celery", extras = ["redis"], specifier = ">=5.4.0" },
+    { name = "celery-redbeat", specifier = ">=2.2.0" },
     { name = "croniter", specifier = ">=6.0.0" },
     { name = "email-validator", specifier = ">=2.2.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
