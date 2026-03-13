@@ -23,6 +23,8 @@ celery.conf.update(
     enable_utc=True,
     task_track_started=True,
     task_always_eager=settings.CELERY_TASK_ALWAYS_EAGER,
+    beat_scheduler="redbeat.RedBeatScheduler",
+    redbeat_redis_url=settings.REDIS_URL,
 )
 
 celery.conf.beat_schedule = {
