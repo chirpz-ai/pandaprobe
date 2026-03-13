@@ -968,8 +968,11 @@ class EvalService:
             stmt = stmt.where(t.c.started_at < _parse_dt(filters["date_to"]))
         if filters.get("user_id"):
             stmt = stmt.where(t.c.user_id == filters["user_id"])
-        if filters.get("has_error") is True:
-            stmt = stmt.where(t.c.status == TraceStatus.ERROR.value)
+        if "has_error" in filters and filters["has_error"] is not None:
+            if filters["has_error"]:
+                stmt = stmt.where(t.c.status == TraceStatus.ERROR.value)
+            else:
+                stmt = stmt.where(t.c.status != TraceStatus.ERROR.value)
         if filters.get("tags"):
             stmt = stmt.where(t.c.tags.overlap(filters["tags"]))
 
