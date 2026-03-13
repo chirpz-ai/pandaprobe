@@ -262,6 +262,114 @@ async def _fail_eval_run(run_id: str, error_message: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Eval monitor tick
+# ---------------------------------------------------------------------------
+
+
+@celery.task(name="check_eval_monitors", bind=True, max_retries=0)
+def check_eval_monitors(self: Any) -> dict[str, Any]:
+    """Periodic tick: query due monitors and spawn eval runs.
+
+    Guarded by a Redis lock to prevent concurrent execution when
+    multiple beat or worker instances overlap.
+    """
+    try:
+        return asyncio.run(_check_eval_monitors())
+    except Exception as exc:
+        logger.error("check_eval_monitors_failed", error=str(exc))
+        return {"error": str(exc)}
+
+
+async def _check_eval_monitors() -> dict[str, Any]:
+    from datetime import datetime, timezone
+
+    from app.core.evals.cadence import compute_next_run
+    from app.infrastructure.db.repositories.eval_repo import EvalRepository
+    from app.services.eval_service import EvalService
+
+    import redis
+
+    redis_client = redis.from_url(settings.REDIS_URL)
+    lock = redis_client.lock("check_eval_monitors", timeout=280)
+    if not lock.acquire(blocking=False):
+        logger.info("check_eval_monitors_skipped", reason="lock held by another worker")
+        return {"status": "skipped", "reason": "lock"}
+
+    try:
+        now = datetime.now(timezone.utc)
+        spawned = 0
+        skipped = 0
+        checked = 0
+
+        async with _worker_session() as session:
+            eval_repo = EvalRepository(session)
+            svc = EvalService(session)
+
+            due_monitors = await eval_repo.get_due_monitors(now)
+            checked = len(due_monitors)
+
+            for monitor in due_monitors:
+                try:
+                    if await svc.should_skip_monitor(monitor):
+                        next_run = compute_next_run(monitor.cadence, now)
+                        await eval_repo.advance_monitor(
+                            monitor.id,
+                            last_run_at=now,
+                            last_run_id=None,
+                            next_run_at=next_run,
+                        )
+                        await session.commit()
+                        skipped += 1
+                        logger.info(
+                            "monitor_skipped_no_changes",
+                            monitor_id=str(monitor.id),
+                            next_run_at=next_run.isoformat(),
+                        )
+                        continue
+
+                    run = await svc._spawn_run_for_monitor(monitor)
+
+                    next_run = compute_next_run(monitor.cadence, now)
+                    await eval_repo.advance_monitor(
+                        monitor.id,
+                        last_run_at=now,
+                        last_run_id=run.id,
+                        next_run_at=next_run,
+                    )
+                    await session.commit()
+                    spawned += 1
+                    logger.info(
+                        "monitor_run_spawned",
+                        monitor_id=str(monitor.id),
+                        run_id=str(run.id),
+                        next_run_at=next_run.isoformat(),
+                    )
+
+                except Exception as exc:
+                    await session.rollback()
+                    logger.error(
+                        "monitor_tick_error",
+                        monitor_id=str(monitor.id),
+                        error=str(exc),
+                    )
+
+        summary = {
+            "status": "completed",
+            "checked": checked,
+            "spawned": spawned,
+            "skipped": skipped,
+        }
+        logger.info("check_eval_monitors_done", **summary)
+        return summary
+
+    finally:
+        try:
+            lock.release()
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------------------
 # Session eval run execution
 # ---------------------------------------------------------------------------
 
