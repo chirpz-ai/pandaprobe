@@ -960,7 +960,7 @@ class EvalService:
     async def _resolve_session_ids(self, project_id: UUID, filters: dict[str, Any]) -> list[str]:
         """Resolve matching session IDs using filter criteria."""
         t = TraceModel.__table__
-        stmt = select(t.c.session_id).where(t.c.project_id == project_id, t.c.session_id.isnot(None)).distinct()
+        stmt = select(t.c.session_id).where(t.c.project_id == project_id, t.c.session_id.isnot(None))
 
         if filters.get("date_from"):
             stmt = stmt.where(t.c.started_at >= _parse_dt(filters["date_from"]))
@@ -972,6 +972,12 @@ class EvalService:
             stmt = stmt.where(t.c.status == TraceStatus.ERROR.value)
         if filters.get("tags"):
             stmt = stmt.where(t.c.tags.overlap(filters["tags"]))
+
+        stmt = stmt.group_by(t.c.session_id)
+
+        min_count = filters.get("min_trace_count")
+        if min_count:
+            stmt = stmt.having(func.count() >= min_count)
 
         result = await self._session.execute(stmt)
         return [row[0] for row in result.all()]
