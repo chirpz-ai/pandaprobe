@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 import os
+from collections import OrderedDict
 from typing import TypeVar
 
 import litellm
@@ -63,7 +64,7 @@ class LLMEngine:
         sync our pydantic-settings values into the process environment.
         """
         self._sync_credentials()
-        self._embedding_cache: dict[str, list[float]] = {}
+        self._embedding_cache: OrderedDict[str, list[float]] = OrderedDict()
 
     def _sync_credentials(self) -> None:
         """Push credential settings into ``os.environ`` for LiteLLM."""
@@ -190,9 +191,9 @@ class LLMEngine:
         """Batch-embed texts via ``litellm.aembedding()``.
 
         Results are cached by content hash so repeated calls with the
-        same text are free.  The cache lives on the instance -- scoped
-        to the lifetime of this ``LLMEngine`` object (typically one
-        Celery task execution).
+        same text are free.  The cache is bounded to
+        ``settings.EVAL_EMBEDDING_CACHE_SIZE`` entries (default 2048)
+        with LRU eviction.
         """
         resolved_model = resolve_model_string(model or settings.EVAL_EMBEDDING_MODEL)
 
@@ -211,7 +212,15 @@ class LLMEngine:
             for idx, item in zip(uncached_indices, response.data, strict=True):
                 self._embedding_cache[hashes[idx]] = item["embedding"]
 
-        return [self._embedding_cache[h] for h in hashes]
+            max_size = settings.EVAL_EMBEDDING_CACHE_SIZE
+            while len(self._embedding_cache) > max_size:
+                self._embedding_cache.popitem(last=False)
+
+        results: list[list[float]] = []
+        for h in hashes:
+            self._embedding_cache.move_to_end(h)
+            results.append(self._embedding_cache[h])
+        return results
 
     @staticmethod
     def cosine_distance(vec_a: list[float], vec_b: list[float]) -> float:
