@@ -1086,6 +1086,28 @@ class EvalRepository:
         )
         await self._session.execute(stmt)
 
+    async def reschedule_monitor(
+        self,
+        monitor_id: UUID,
+        *,
+        next_run_at: datetime,
+    ) -> None:
+        """Bump only ``next_run_at`` so the monitor is not re-dispatched on the next tick.
+
+        Unlike ``advance_monitor`` this deliberately leaves ``last_run_at``
+        and ``last_run_id`` untouched — those are set by the sub-task only
+        when a run is actually spawned.
+        """
+        stmt = (
+            update(EvalMonitorModel)
+            .where(EvalMonitorModel.id == monitor_id)
+            .values(
+                next_run_at=next_run_at,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
+        await self._session.execute(stmt)
+
     async def list_runs_for_monitor(
         self,
         monitor_id: UUID,

@@ -305,10 +305,8 @@ async def _check_eval_monitors() -> dict[str, Any]:
             dispatched = 0
             for monitor in due_monitors:
                 next_run = compute_next_run(monitor.cadence, now)
-                await eval_repo.advance_monitor(
+                await eval_repo.reschedule_monitor(
                     monitor.id,
-                    last_run_at=now,
-                    last_run_id=None,
                     next_run_at=next_run,
                 )
                 await session.commit()
