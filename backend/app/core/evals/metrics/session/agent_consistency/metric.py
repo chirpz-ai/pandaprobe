@@ -34,7 +34,7 @@ class AgentConsistencyMetric(BaseSessionMetric):
     category = "session"
     threshold = 0.5
 
-    async def evaluate(
+    async def evaluate(  # noqa: D102
         self,
         session_id: str,
         traces: list[Trace],

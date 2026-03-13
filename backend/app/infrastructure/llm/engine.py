@@ -208,7 +208,7 @@ class LLMEngine:
         if uncached_indices:
             uncached_texts = [texts[i] for i in uncached_indices]
             response = await litellm.aembedding(model=resolved_model, input=uncached_texts)
-            for idx, item in zip(uncached_indices, response.data):
+            for idx, item in zip(uncached_indices, response.data, strict=True):
                 self._embedding_cache[hashes[idx]] = item["embedding"]
 
         return [self._embedding_cache[h] for h in hashes]
@@ -216,7 +216,7 @@ class LLMEngine:
     @staticmethod
     def cosine_distance(vec_a: list[float], vec_b: list[float]) -> float:
         """Return cosine distance (0 = identical, 1 = orthogonal) between two vectors."""
-        dot = sum(a * b for a, b in zip(vec_a, vec_b))
+        dot = sum(a * b for a, b in zip(vec_a, vec_b, strict=True))
         norm_a = math.sqrt(sum(a * a for a in vec_a))
         norm_b = math.sqrt(sum(b * b for b in vec_b))
         if norm_a == 0 or norm_b == 0:

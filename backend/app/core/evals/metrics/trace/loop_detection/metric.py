@@ -61,7 +61,7 @@ class LoopDetectionMetric(BaseMetric):
     category = "trace"
     threshold = 0.5
 
-    async def evaluate(
+    async def evaluate(  # noqa: D102
         self,
         trace: Trace,
         llm: LLMEngine,

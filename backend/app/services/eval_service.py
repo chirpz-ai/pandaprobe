@@ -574,13 +574,13 @@ class EvalService:
 
     # -- Session score queries -------------------------------------------------
 
-    async def get_session_scores(self, session_id: str, project_id: UUID) -> list[SessionScore]:
+    async def get_session_scores(self, session_id: str, project_id: UUID) -> list[SessionScore]:  # noqa: D102
         return await self._repo.get_session_scores_for_session(session_id, project_id)
 
-    async def get_session_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[SessionScore]:
+    async def get_session_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[SessionScore]:  # noqa: D102
         return await self._repo.get_session_scores_for_run(run_id, project_id)
 
-    async def list_session_scores(
+    async def list_session_scores(  # noqa: D102
         self,
         project_id: UUID,
         *,
@@ -607,13 +607,13 @@ class EvalService:
             offset=offset,
         )
 
-    async def delete_session_score(self, score_id: UUID, project_id: UUID) -> None:
+    async def delete_session_score(self, score_id: UUID, project_id: UUID) -> None:  # noqa: D102
         await self._repo.delete_session_score(score_id, project_id)
         await self._session.commit()
 
     # -- Session score analytics -----------------------------------------------
 
-    async def get_session_score_summary(
+    async def get_session_score_summary(  # noqa: D102
         self,
         project_id: UUID,
         *,
@@ -622,7 +622,7 @@ class EvalService:
     ) -> list[dict[str, Any]]:
         return await self._repo.get_session_score_summary(project_id, date_from=date_from, date_to=date_to)
 
-    async def get_session_score_trend(
+    async def get_session_score_trend(  # noqa: D102
         self,
         project_id: UUID,
         *,
@@ -635,7 +635,7 @@ class EvalService:
             project_id, metric_name=metric_name, date_from=date_from, date_to=date_to, granularity=granularity
         )
 
-    async def get_session_score_distribution(
+    async def get_session_score_distribution(  # noqa: D102
         self,
         project_id: UUID,
         metric_name: str,
@@ -648,7 +648,7 @@ class EvalService:
             project_id, metric_name, date_from=date_from, date_to=date_to, buckets=buckets
         )
 
-    async def get_session_score_history(
+    async def get_session_score_history(  # noqa: D102
         self,
         project_id: UUID,
         session_id: str,
@@ -660,7 +660,7 @@ class EvalService:
             project_id, session_id, metric_name=metric_name, limit=limit
         )
 
-    async def get_session_score_comparison(
+    async def get_session_score_comparison(  # noqa: D102
         self,
         project_id: UUID,
         metric_name: str,
@@ -740,13 +740,13 @@ class EvalService:
         logger.info("eval_monitor_created", monitor_id=str(monitor.id), cadence=cadence, target=target_type)
         return monitor
 
-    async def get_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor:
+    async def get_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor:  # noqa: D102
         monitor = await self._repo.get_monitor(monitor_id, project_id)
         if monitor is None:
             raise NotFoundError(f"Eval monitor {monitor_id} not found.")
         return monitor
 
-    async def list_monitors(
+    async def list_monitors(  # noqa: D102
         self,
         project_id: UUID,
         *,
@@ -790,14 +790,14 @@ class EvalService:
         await self._session.commit()
         return await self.get_monitor(monitor_id, project_id)
 
-    async def delete_monitor(self, monitor_id: UUID, project_id: UUID) -> None:
+    async def delete_monitor(self, monitor_id: UUID, project_id: UUID) -> None:  # noqa: D102
         monitor = await self._repo.get_monitor(monitor_id, project_id)
         if monitor is None:
             raise NotFoundError(f"Eval monitor {monitor_id} not found.")
         await self._repo.delete_monitor(monitor_id, project_id)
         await self._session.commit()
 
-    async def pause_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor:
+    async def pause_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor:  # noqa: D102
         monitor = await self._repo.get_monitor(monitor_id, project_id)
         if monitor is None:
             raise NotFoundError(f"Eval monitor {monitor_id} not found.")
@@ -809,7 +809,7 @@ class EvalService:
         await self._session.commit()
         return await self.get_monitor(monitor_id, project_id)
 
-    async def resume_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor:
+    async def resume_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor:  # noqa: D102
         monitor = await self._repo.get_monitor(monitor_id, project_id)
         if monitor is None:
             raise NotFoundError(f"Eval monitor {monitor_id} not found.")
@@ -840,7 +840,7 @@ class EvalService:
         logger.info("monitor_triggered", monitor_id=str(monitor_id), run_id=str(run.id))
         return run
 
-    async def list_monitor_runs(
+    async def list_monitor_runs(  # noqa: D102
         self,
         monitor_id: UUID,
         project_id: UUID,

@@ -39,7 +39,7 @@ class ConfidenceTemplate:
         """)
 
     @classmethod
-    def get_prompt_preview(cls) -> dict[str, str]:
+    def get_prompt_preview(cls) -> dict[str, str]:  # noqa: D102
         sample_trace = {
             "trace_id": "TRACE_ID",
             "name": "sample-trace",

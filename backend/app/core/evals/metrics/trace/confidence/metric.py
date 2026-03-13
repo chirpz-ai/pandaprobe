@@ -29,10 +29,10 @@ class ConfidenceMetric(BaseMetric):
     threshold = 0.5
 
     @classmethod
-    def get_prompt_preview(cls) -> dict[str, str]:
+    def get_prompt_preview(cls) -> dict[str, str]:  # noqa: D102
         return ConfidenceTemplate.get_prompt_preview()
 
-    async def evaluate(
+    async def evaluate(  # noqa: D102
         self,
         trace: Trace,
         llm: LLMEngine,
