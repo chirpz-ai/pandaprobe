@@ -25,4 +25,11 @@ celery.conf.update(
     task_always_eager=settings.CELERY_TASK_ALWAYS_EAGER,
 )
 
+celery.conf.beat_schedule = {
+    "check-eval-monitors": {
+        "task": "check_eval_monitors",
+        "schedule": 300.0,
+    },
+}
+
 celery.autodiscover_tasks(["app.infrastructure.queue"])
