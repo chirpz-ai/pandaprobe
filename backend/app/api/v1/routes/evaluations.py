@@ -1538,7 +1538,7 @@ async def update_monitor(
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
     svc = EvalService(session)
-    fields = body.model_dump(exclude_none=True)
+    fields = {k: getattr(body, k) for k in body.model_fields_set}
     monitor = await svc.update_monitor(monitor_id, ctx.project.id, **fields)
     return _monitor_to_response(monitor)
 
