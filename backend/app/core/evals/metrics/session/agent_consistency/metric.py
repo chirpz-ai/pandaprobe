@@ -63,27 +63,38 @@ class AgentConsistencyMetric(BaseSessionMetric):
         for trace in traces:
             tid = str(trace.trace_id)
             signals = precomputed_signals.get(tid)
-            if signals is None:
+            if signals is None or not signals:
                 continue
 
-            conf_risk = 1.0 - signals.get("confidence", 1.0)
-            loop_risk = 1.0 - signals.get("loop_detection", 1.0)
-            tool_risk = 1.0 - signals.get("tool_correctness", 1.0)
-            coh_risk = 1.0 - signals.get("coherence", 1.0)
+            detail: dict[str, float] = {}
 
-            penalty = w_loop * loop_risk + w_tool * tool_risk + w_coh * coh_risk
+            if "confidence" not in signals:
+                continue
+            conf_risk = 1.0 - signals["confidence"]
+            detail["confidence_risk"] = round(conf_risk, 4)
+
+            penalty_terms: list[float] = []
+            if "loop_detection" in signals:
+                loop_risk = 1.0 - signals["loop_detection"]
+                penalty_terms.append(w_loop * loop_risk)
+                detail["loop_risk"] = round(loop_risk, 4)
+            if "tool_correctness" in signals:
+                tool_risk = 1.0 - signals["tool_correctness"]
+                penalty_terms.append(w_tool * tool_risk)
+                detail["tool_risk"] = round(tool_risk, 4)
+            if "coherence" in signals:
+                coh_risk = 1.0 - signals["coherence"]
+                penalty_terms.append(w_coh * coh_risk)
+                detail["coherence_risk"] = round(coh_risk, 4)
+
+            penalty = sum(penalty_terms)
             amplification = 1.0 + penalty
             wu = amplification * (w_conf * conf_risk)
 
             weighted_uncertainties.append(wu)
-            per_trace_details[tid] = {
-                "confidence_risk": round(conf_risk, 4),
-                "loop_risk": round(loop_risk, 4),
-                "tool_risk": round(tool_risk, 4),
-                "coherence_risk": round(coh_risk, 4),
-                "situational_penalty": round(penalty, 4),
-                "weighted_uncertainty": round(wu, 4),
-            }
+            detail["situational_penalty"] = round(penalty, 4)
+            detail["weighted_uncertainty"] = round(wu, 4)
+            per_trace_details[tid] = detail
 
         if not weighted_uncertainties:
             return MetricResult(score=1.0, reason="No evaluable traces.", metadata={})

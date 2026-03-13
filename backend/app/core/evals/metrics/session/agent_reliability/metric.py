@@ -65,28 +65,36 @@ class AgentReliabilityMetric(BaseSessionMetric):
         for trace in traces:
             tid = str(trace.trace_id)
             signals = precomputed_signals.get(tid)
-            if signals is None:
+            if signals is None or not signals:
                 continue
 
-            conf_risk = 1.0 - signals.get("confidence", 1.0)
-            loop_risk = 1.0 - signals.get("loop_detection", 1.0)
-            tool_risk = 1.0 - signals.get("tool_correctness", 1.0)
-            coh_risk = 1.0 - signals.get("coherence", 1.0)
+            risk_components: list[float] = []
+            detail: dict[str, float] = {}
 
-            risk = max(
-                w_conf * conf_risk,
-                w_loop * loop_risk,
-                w_tool * tool_risk,
-                w_coh * coh_risk,
-            )
+            if "confidence" in signals:
+                conf_risk = 1.0 - signals["confidence"]
+                risk_components.append(w_conf * conf_risk)
+                detail["confidence_risk"] = round(conf_risk, 4)
+            if "loop_detection" in signals:
+                loop_risk = 1.0 - signals["loop_detection"]
+                risk_components.append(w_loop * loop_risk)
+                detail["loop_risk"] = round(loop_risk, 4)
+            if "tool_correctness" in signals:
+                tool_risk = 1.0 - signals["tool_correctness"]
+                risk_components.append(w_tool * tool_risk)
+                detail["tool_risk"] = round(tool_risk, 4)
+            if "coherence" in signals:
+                coh_risk = 1.0 - signals["coherence"]
+                risk_components.append(w_coh * coh_risk)
+                detail["coherence_risk"] = round(coh_risk, 4)
+
+            if not risk_components:
+                continue
+
+            risk = max(risk_components)
             per_trace_risks.append(risk)
-            per_trace_details[tid] = {
-                "confidence_risk": round(conf_risk, 4),
-                "loop_risk": round(loop_risk, 4),
-                "tool_risk": round(tool_risk, 4),
-                "coherence_risk": round(coh_risk, 4),
-                "step_risk": round(risk, 4),
-            }
+            detail["step_risk"] = round(risk, 4)
+            per_trace_details[tid] = detail
 
             if risk > 0.5:
                 flagged.append(tid)

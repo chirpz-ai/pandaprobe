@@ -612,7 +612,7 @@ async def _run_session_eval(
                                 signal=signal_name,
                                 error=str(exc),
                             )
-                            score_value = 1.0
+                            score_value = None
 
                             now = datetime.now(timezone.utc)
                             failed_score = TraceScore(
@@ -633,7 +633,8 @@ async def _run_session_eval(
                             )
                             await eval_repo.create_score(failed_score)
 
-                    trace_signals[signal_name] = score_value
+                    if score_value is not None:
+                        trace_signals[signal_name] = score_value
 
                 precomputed_signals[str(tid)] = trace_signals
 
