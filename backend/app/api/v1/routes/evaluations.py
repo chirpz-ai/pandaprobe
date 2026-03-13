@@ -32,6 +32,7 @@ from app.infrastructure.db.engine import get_db_session
 from app.registry.constants import (
     AnalyticsGranularity,
     EvaluationStatus,
+    MonitorStatus,
     ScoreDataType,
     ScoreSource,
     ScoreStatus,
@@ -201,6 +202,7 @@ class EvalRunResponse(BaseModel):
     filters: dict[str, Any]
     sampling_rate: float
     model: str | None
+    monitor_id: UUID | None
     error_message: str | None
 
 
@@ -525,12 +527,14 @@ async def list_eval_runs(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> PaginatedResponse[EvalRunResponse]:
-    """List eval runs (summary view).
+    """List trace eval runs (summary view).
 
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
     svc = EvalService(session)
-    runs, total = await svc.list_eval_runs(ctx.project.id, status=status, limit=limit, offset=offset)
+    runs, total = await svc.list_eval_runs(
+        ctx.project.id, status=status, target_type="TRACE", limit=limit, offset=offset
+    )
     return PaginatedResponse(
         items=[_run_to_detail(r) for r in runs],
         total=total,
@@ -864,6 +868,7 @@ def _run_to_detail(run) -> EvalRunResponse:
         filters=run.filters,
         sampling_rate=run.sampling_rate,
         model=run.model,
+        monitor_id=run.monitor_id,
         error_message=run.error_message,
     )
 
@@ -1004,11 +1009,12 @@ async def list_session_eval_runs(
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
     svc = EvalService(session)
-    runs, total = await svc.list_eval_runs(ctx.project.id, status=status, limit=limit, offset=offset)
-    session_runs = [r for r in runs if r.target_type == "SESSION"]
+    runs, total = await svc.list_eval_runs(
+        ctx.project.id, status=status, target_type="SESSION", limit=limit, offset=offset
+    )
     return PaginatedResponse(
-        items=[_run_to_detail(r) for r in session_runs],
-        total=len(session_runs),
+        items=[_run_to_detail(r) for r in runs],
+        total=total,
         limit=limit,
         offset=offset,
     )
@@ -1198,3 +1204,332 @@ async def get_session_score_analytics_trend(
         granularity=granularity,
     )
     return [ScoreTrendItem(**d) for d in data]
+
+
+# ---------------------------------------------------------------------------
+# Schemas -- Monitors
+# ---------------------------------------------------------------------------
+
+
+class CreateMonitorRequest(BaseModel):
+    """Create an evaluation monitor that spawns runs on a cadence."""
+
+    name: str = Field(description="Human-readable name for the monitor, e.g. 'Daily prod trace eval'.")
+    target_type: str = Field(
+        description="Evaluation scope: ``'TRACE'`` for trace-level metrics or ``'SESSION'`` for session-level metrics."
+    )
+    metrics: list[str] = Field(
+        min_length=1,
+        description=(
+            "Metric names to run on each scheduled eval. "
+            "For TRACE monitors use ``GET /evaluations/trace-metrics``; "
+            "for SESSION monitors use ``GET /evaluations/session-metrics`` to list available names. "
+            "Example: ``['task_completion', 'step_efficiency']``."
+        ),
+    )
+    filters: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "JSON object defining which traces/sessions the monitor targets. "
+            "Pass ``{}`` to match everything in the project. "
+            "**TRACE monitors** accept: ``date_from`` (ISO 8601), ``date_to`` (ISO 8601), "
+            "``status`` (PENDING|RUNNING|COMPLETED|ERROR), ``session_id``, ``user_id``, "
+            "``tags`` (string array, ANY match), ``name`` (substring, case-insensitive). "
+            "**SESSION monitors** accept: ``date_from``, ``date_to``, ``user_id``, "
+            "``has_error`` (bool), ``tags``, ``min_trace_count`` (int). "
+            "Example: ``{\"status\": \"COMPLETED\", \"tags\": [\"production\"]}``."
+        ),
+    )
+    sampling_rate: float = Field(
+        default=1.0, ge=0.0, le=1.0,
+        description="Fraction of matching traces/sessions to evaluate per run. 1.0 = all, 0.1 = random 10%.",
+    )
+    model: str | None = Field(
+        default=None,
+        description="LLM model override for judge calls (e.g. ``'openai/gpt-4o'``). Uses system default if null.",
+    )
+    cadence: str = Field(
+        description=(
+            "How often the monitor fires. Predefined intervals: ``'every_6h'``, ``'daily'``, ``'weekly'``. "
+            "Custom cron: ``'cron:<5-part expression>'`` where the five parts are "
+            "``minute hour day-of-month month day-of-week``. "
+            "Examples: ``'cron:0 3 * * *'`` (daily at 3 AM UTC), "
+            "``'cron:0 6 * * 1-5'`` (weekdays at 6 AM), "
+            "``'cron:0 */4 * * *'`` (every 4 hours)."
+        ),
+    )
+    only_if_changed: bool = Field(
+        default=True,
+        description=(
+            "When true, the scheduled run is skipped if no new traces/sessions "
+            "have arrived since the last run, saving LLM costs. "
+            "Set to false to always run on schedule regardless of new data."
+        ),
+    )
+    signal_weights: dict[str, float] | None = Field(
+        default=None,
+        description=(
+            "Override default signal weights for session-level aggregation. "
+            "**Only valid for SESSION monitors** (rejected for TRACE). "
+            "Keys: ``confidence``, ``loop_detection``, ``tool_correctness``, ``coherence``. "
+            "Defaults: confidence=1.0, loop_detection=1.0, tool_correctness=0.8, coherence=1.0. "
+            "Example: ``{\"confidence\": 1.0, \"loop_detection\": 1.5}``."
+        ),
+    )
+
+
+class UpdateMonitorRequest(BaseModel):
+    """Partial update of a monitor's configuration."""
+
+    name: str | None = None
+    metrics: list[str] | None = None
+    filters: dict[str, Any] | None = None
+    sampling_rate: float | None = Field(default=None, ge=0.0, le=1.0)
+    model: str | None = None
+    cadence: str | None = None
+    only_if_changed: bool | None = None
+    signal_weights: dict[str, float] | None = None
+
+
+class MonitorResponse(BaseModel):
+    """Full evaluation monitor representation."""
+
+    id: UUID
+    project_id: UUID
+    name: str
+    target_type: str
+    metric_names: list[str]
+    filters: dict[str, Any]
+    sampling_rate: float
+    model: str | None
+    cadence: str
+    only_if_changed: bool
+    status: str
+    last_run_at: str | None
+    last_run_id: UUID | None
+    next_run_at: str | None
+    created_at: str
+    updated_at: str
+
+
+# ---------------------------------------------------------------------------
+# Monitor endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/monitors", status_code=201, response_model=MonitorResponse)
+async def create_monitor(
+    body: CreateMonitorRequest,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> MonitorResponse:
+    """Create an evaluation monitor that spawns eval runs on a recurring schedule.
+
+    Monitors persist a reusable evaluation configuration (target type, metrics,
+    filters, cadence) and the system automatically creates eval runs at each
+    scheduled interval.  If ``only_if_changed`` is true (default), runs are
+    skipped when no new data has arrived since the previous run.
+
+    **Request body fields:**
+
+    - **name** *(string, required)*: Human-readable label, e.g. ``"Daily prod eval"``.
+    - **target_type** *(string, required)*: ``"TRACE"`` or ``"SESSION"``.
+    - **metrics** *(string[], required)*: Metric names to run. Use
+      ``GET /evaluations/trace-metrics`` (TRACE) or ``GET /evaluations/session-metrics``
+      (SESSION) for available names.
+    - **filters** *(object, optional, default {})*: Scope the data the monitor evaluates.
+      Pass ``{}`` to match everything. Accepted keys depend on ``target_type``:
+        - **TRACE**: ``date_from``, ``date_to`` (ISO 8601), ``status``
+          (PENDING/RUNNING/COMPLETED/ERROR), ``session_id``, ``user_id``,
+          ``tags`` (string[]), ``name`` (substring match).
+        - **SESSION**: ``date_from``, ``date_to``, ``user_id``, ``has_error`` (bool),
+          ``tags`` (string[]), ``min_trace_count`` (int).
+    - **cadence** *(string, required)*: Firing schedule. Predefined: ``"every_6h"``,
+      ``"daily"``, ``"weekly"``. Custom cron: ``"cron:<min hour dom month dow>"``,
+      e.g. ``"cron:0 3 * * *"`` (daily 3 AM UTC), ``"cron:0 6 * * 1-5"``
+      (weekdays 6 AM).
+    - **sampling_rate** *(float, optional, default 1.0)*: Fraction of matching
+      items to evaluate per run (0.0–1.0).
+    - **model** *(string, optional)*: LLM model override, e.g. ``"openai/gpt-4o"``.
+    - **only_if_changed** *(bool, optional, default true)*: Skip the run if no
+      new traces/sessions exist since the last run.
+    - **signal_weights** *(object, optional, SESSION only)*: Override signal
+      aggregation weights. Keys: ``confidence``, ``loop_detection``,
+      ``tool_correctness``, ``coherence``.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    monitor = await svc.create_monitor(
+        project_id=ctx.project.id,
+        name=body.name,
+        target_type=body.target_type,
+        metric_names=body.metrics,
+        cadence=body.cadence,
+        filters=body.filters,
+        sampling_rate=body.sampling_rate,
+        model=body.model,
+        only_if_changed=body.only_if_changed,
+        signal_weights=body.signal_weights,
+    )
+    return _monitor_to_response(monitor)
+
+
+@router.get("/monitors", response_model=PaginatedResponse[MonitorResponse])
+async def list_monitors(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    status: MonitorStatus | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> PaginatedResponse[MonitorResponse]:
+    """List evaluation monitors.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    monitors, total = await svc.list_monitors(ctx.project.id, status=status, limit=limit, offset=offset)
+    return PaginatedResponse(
+        items=[_monitor_to_response(m) for m in monitors],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/monitors/{monitor_id}", response_model=MonitorResponse)
+async def get_monitor(
+    monitor_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> MonitorResponse:
+    """Get evaluation monitor detail.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    monitor = await svc.get_monitor(monitor_id, ctx.project.id)
+    return _monitor_to_response(monitor)
+
+
+@router.patch("/monitors/{monitor_id}", response_model=MonitorResponse)
+async def update_monitor(
+    monitor_id: UUID,
+    body: UpdateMonitorRequest,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> MonitorResponse:
+    """Update an evaluation monitor.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    fields = body.model_dump(exclude_none=True)
+    monitor = await svc.update_monitor(monitor_id, ctx.project.id, **fields)
+    return _monitor_to_response(monitor)
+
+
+@router.delete("/monitors/{monitor_id}", status_code=204)
+async def delete_monitor(
+    monitor_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Delete an evaluation monitor. Spawned runs are preserved.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    await svc.delete_monitor(monitor_id, ctx.project.id)
+
+
+@router.post("/monitors/{monitor_id}/pause", response_model=MonitorResponse)
+async def pause_monitor(
+    monitor_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> MonitorResponse:
+    """Pause an evaluation monitor. Idempotent if already paused.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    monitor = await svc.pause_monitor(monitor_id, ctx.project.id)
+    return _monitor_to_response(monitor)
+
+
+@router.post("/monitors/{monitor_id}/resume", response_model=MonitorResponse)
+async def resume_monitor(
+    monitor_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> MonitorResponse:
+    """Resume a paused evaluation monitor. Idempotent if already active.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    monitor = await svc.resume_monitor(monitor_id, ctx.project.id)
+    return _monitor_to_response(monitor)
+
+
+@router.post("/monitors/{monitor_id}/trigger", status_code=202, response_model=EvalRunResponse)
+@limiter.limit("10/minute")
+async def trigger_monitor(
+    request: Request,
+    monitor_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+) -> EvalRunResponse:
+    """Force an immediate eval run from a monitor, ignoring cadence.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+
+    Rate limit: ``10/min``
+    """
+    svc = EvalService(session)
+    run = await svc.trigger_monitor(monitor_id, ctx.project.id)
+    return _run_to_detail(run)
+
+
+@router.get("/monitors/{monitor_id}/runs", response_model=PaginatedResponse[EvalRunResponse])
+async def list_monitor_runs(
+    monitor_id: UUID,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> PaginatedResponse[EvalRunResponse]:
+    """List eval runs spawned by a specific monitor.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    runs, total = await svc.list_monitor_runs(monitor_id, ctx.project.id, limit=limit, offset=offset)
+    return PaginatedResponse(
+        items=[_run_to_detail(r) for r in runs],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def _monitor_to_response(m) -> MonitorResponse:
+    return MonitorResponse(
+        id=m.id,
+        project_id=m.project_id,
+        name=m.name,
+        target_type=m.target_type,
+        metric_names=m.metric_names,
+        filters=m.filters,
+        sampling_rate=m.sampling_rate,
+        model=m.model,
+        cadence=m.cadence,
+        only_if_changed=m.only_if_changed,
+        status=m.status,
+        last_run_at=m.last_run_at.isoformat() if m.last_run_at else None,
+        last_run_id=m.last_run_id,
+        next_run_at=m.next_run_at.isoformat() if m.next_run_at else None,
+        created_at=m.created_at.isoformat(),
+        updated_at=m.updated_at.isoformat(),
+    )
