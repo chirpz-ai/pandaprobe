@@ -656,9 +656,7 @@ class EvalService:
         metric_name: str | None = None,
         limit: int = 50,
     ) -> list[dict[str, Any]]:
-        return await self._repo.get_session_score_history(
-            project_id, session_id, metric_name=metric_name, limit=limit
-        )
+        return await self._repo.get_session_score_history(project_id, session_id, metric_name=metric_name, limit=limit)
 
     async def get_session_score_comparison(  # noqa: D102
         self,
@@ -803,9 +801,7 @@ class EvalService:
             raise NotFoundError(f"Eval monitor {monitor_id} not found.")
         if monitor.status == MonitorStatus.PAUSED:
             return monitor
-        await self._repo.update_monitor(
-            monitor_id, project_id, status=MonitorStatus.PAUSED, next_run_at=None
-        )
+        await self._repo.update_monitor(monitor_id, project_id, status=MonitorStatus.PAUSED, next_run_at=None)
         await self._session.commit()
         return await self.get_monitor(monitor_id, project_id)
 
@@ -817,9 +813,7 @@ class EvalService:
             return monitor
         now = datetime.now(timezone.utc)
         next_run = compute_next_run(monitor.cadence, now)
-        await self._repo.update_monitor(
-            monitor_id, project_id, status=MonitorStatus.ACTIVE, next_run_at=next_run
-        )
+        await self._repo.update_monitor(monitor_id, project_id, status=MonitorStatus.ACTIVE, next_run_at=next_run)
         await self._session.commit()
         return await self.get_monitor(monitor_id, project_id)
 
@@ -833,9 +827,7 @@ class EvalService:
 
         now = datetime.now(timezone.utc)
         next_run = compute_next_run(monitor.cadence, now)
-        await self._repo.advance_monitor(
-            monitor_id, last_run_at=now, last_run_id=run.id, next_run_at=next_run
-        )
+        await self._repo.advance_monitor(monitor_id, last_run_at=now, last_run_id=run.id, next_run_at=next_run)
         await self._session.commit()
         logger.info("monitor_triggered", monitor_id=str(monitor_id), run_id=str(run.id))
         return run
@@ -926,6 +918,7 @@ class EvalService:
             await self._session.flush()
 
             from app.infrastructure.queue.tasks import execute_eval_run
+
             execute_eval_run.delay(str(run.id), str(monitor.project_id), [str(t) for t in trace_ids])
 
         else:
@@ -957,6 +950,7 @@ class EvalService:
             await self._session.flush()
 
             from app.infrastructure.queue.tasks import execute_session_eval_run
+
             execute_session_eval_run.delay(str(run.id), str(monitor.project_id), session_ids)
 
         return run
@@ -966,11 +960,7 @@ class EvalService:
     async def _resolve_session_ids(self, project_id: UUID, filters: dict[str, Any]) -> list[str]:
         """Resolve matching session IDs using filter criteria."""
         t = TraceModel.__table__
-        stmt = (
-            select(t.c.session_id)
-            .where(t.c.project_id == project_id, t.c.session_id.isnot(None))
-            .distinct()
-        )
+        stmt = select(t.c.session_id).where(t.c.project_id == project_id, t.c.session_id.isnot(None)).distinct()
 
         if filters.get("date_from"):
             stmt = stmt.where(t.c.started_at >= _parse_dt(filters["date_from"]))

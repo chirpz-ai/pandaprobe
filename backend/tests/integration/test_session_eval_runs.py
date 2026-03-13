@@ -153,9 +153,7 @@ async def test_get_session_run_scores_empty(client: AsyncClient, seed_trace):
 # ---------------------------------------------------------------------------
 
 
-async def test_retry_session_run_no_failures_returns_422(
-    client: AsyncClient, seed_trace, db_session: AsyncSession
-):
+async def test_retry_session_run_no_failures_returns_422(client: AsyncClient, seed_trace, db_session: AsyncSession):
     trace = await seed_trace(session_id="sess-retry")
     now = datetime.now(timezone.utc)
     run_id = uuid4()
@@ -196,9 +194,7 @@ async def test_retry_session_run_no_failures_returns_422(
     assert resp.status_code == 422
 
 
-async def test_retry_session_run_with_failures_returns_202(
-    client: AsyncClient, seed_trace, db_session: AsyncSession
-):
+async def test_retry_session_run_with_failures_returns_202(client: AsyncClient, seed_trace, db_session: AsyncSession):
     trace = await seed_trace(session_id="sess-retry-fail")
     now = datetime.now(timezone.utc)
     run_id = uuid4()
@@ -264,9 +260,7 @@ async def test_get_scores_for_session_empty(client: AsyncClient):
     assert resp.json() == []
 
 
-async def test_delete_session_score(
-    client: AsyncClient, seed_trace, db_session: AsyncSession
-):
+async def test_delete_session_score(client: AsyncClient, seed_trace, db_session: AsyncSession):
     trace = await seed_trace(session_id="sess-del-score")
     now = datetime.now(timezone.utc)
     score_id = uuid4()

@@ -88,7 +88,7 @@ class AgentConsistencyMetric(BaseSessionMetric):
         if not weighted_uncertainties:
             return MetricResult(score=1.0, reason="No evaluable traces.", metadata={})
 
-        rms = math.sqrt(sum(wu ** 2 for wu in weighted_uncertainties) / len(weighted_uncertainties))
+        rms = math.sqrt(sum(wu**2 for wu in weighted_uncertainties) / len(weighted_uncertainties))
         raw_instability = rms
         score = round(max(0.0, min(1.0, 1.0 - raw_instability)), 4)
 

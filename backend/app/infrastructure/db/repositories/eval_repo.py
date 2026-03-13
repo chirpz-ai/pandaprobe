@@ -12,7 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.evals.entities import EvalMonitor, EvalRun, SessionScore, TraceScore
 from app.infrastructure.db.models import EvalMonitorModel, EvalRunModel, SessionScoreModel, TraceScoreModel
-from app.registry.constants import AnalyticsGranularity, EvaluationStatus, MonitorStatus, ScoreDataType, ScoreSource, ScoreStatus
+from app.registry.constants import (
+    AnalyticsGranularity,
+    EvaluationStatus,
+    MonitorStatus,
+    ScoreDataType,
+    ScoreSource,
+    ScoreStatus,
+)
 
 
 class EvalRepository:
@@ -505,9 +512,7 @@ class EvalRepository:
         await self._session.flush()
         return score
 
-    async def get_session_scores_for_session(
-        self, session_id: str, project_id: UUID
-    ) -> list[SessionScore]:
+    async def get_session_scores_for_session(self, session_id: str, project_id: UUID) -> list[SessionScore]:
         """Fetch all scores for a specific session."""
         stmt = (
             select(SessionScoreModel)
@@ -517,9 +522,7 @@ class EvalRepository:
         result = await self._session.execute(stmt)
         return [self._to_session_score(row) for row in result.scalars().all()]
 
-    async def get_session_scores_for_run(
-        self, run_id: UUID, project_id: UUID
-    ) -> list[SessionScore]:
+    async def get_session_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[SessionScore]:
         """Fetch all session scores belonging to a specific eval run."""
         stmt = (
             select(SessionScoreModel)
@@ -806,12 +809,7 @@ class EvalRepository:
         total = (await self._session.execute(count_stmt)).scalar_one()
 
         order_col = latest.c.score.asc() if sort_order == "asc" else latest.c.score.desc()
-        data_stmt = (
-            select(latest)
-            .order_by(order_col.nulls_last(), latest.c.session_id)
-            .offset(offset)
-            .limit(limit)
-        )
+        data_stmt = select(latest).order_by(order_col.nulls_last(), latest.c.session_id).offset(offset).limit(limit)
         result = await self._session.execute(data_stmt)
         rows = [
             {
@@ -824,9 +822,7 @@ class EvalRepository:
         ]
         return rows, total
 
-    async def find_existing_trace_score(
-        self, trace_id: UUID, metric_name: str
-    ) -> TraceScore | None:
+    async def find_existing_trace_score(self, trace_id: UUID, metric_name: str) -> TraceScore | None:
         """Find the most recent successful trace score for a trace + metric."""
         stmt = (
             select(TraceScoreModel)

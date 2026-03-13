@@ -41,10 +41,7 @@ def validate_cadence(cadence: str) -> str:
             raise ValueError(f"Invalid cron expression: {expr!r}")
         return f"{_CRON_PREFIX}{expr}"
 
-    raise ValueError(
-        f"Invalid cadence {cadence!r}. "
-        f"Must be one of {list(_PREDEFINED_DELTAS)} or 'cron:<expression>'."
-    )
+    raise ValueError(f"Invalid cadence {cadence!r}. Must be one of {list(_PREDEFINED_DELTAS)} or 'cron:<expression>'.")
 
 
 def compute_next_run(cadence: str, from_time: datetime) -> datetime:

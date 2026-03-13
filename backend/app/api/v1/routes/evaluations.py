@@ -1279,9 +1279,7 @@ async def get_session_score_history(
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
     svc = EvalService(session)
-    data = await svc.get_session_score_history(
-        ctx.project.id, session_id, metric_name=metric_name, limit=limit
-    )
+    data = await svc.get_session_score_history(ctx.project.id, session_id, metric_name=metric_name, limit=limit)
     return [SessionScoreHistoryItem(**d) for d in data]
 
 
@@ -1351,11 +1349,13 @@ class CreateMonitorRequest(BaseModel):
             "``tags`` (string array, ANY match), ``name`` (substring, case-insensitive). "
             "**SESSION monitors** accept: ``date_from``, ``date_to``, ``user_id``, "
             "``has_error`` (bool), ``tags``, ``min_trace_count`` (int). "
-            "Example: ``{\"status\": \"COMPLETED\", \"tags\": [\"production\"]}``."
+            'Example: ``{"status": "COMPLETED", "tags": ["production"]}``.'
         ),
     )
     sampling_rate: float = Field(
-        default=1.0, ge=0.0, le=1.0,
+        default=1.0,
+        ge=0.0,
+        le=1.0,
         description="Fraction of matching traces/sessions to evaluate per run. 1.0 = all, 0.1 = random 10%.",
     )
     model: str | None = Field(
@@ -1387,7 +1387,7 @@ class CreateMonitorRequest(BaseModel):
             "**Only valid for SESSION monitors** (rejected for TRACE). "
             "Keys: ``confidence``, ``loop_detection``, ``tool_correctness``, ``coherence``. "
             "Defaults: confidence=1.0, loop_detection=1.0, tool_correctness=0.8, coherence=1.0. "
-            "Example: ``{\"confidence\": 1.0, \"loop_detection\": 1.5}``."
+            'Example: ``{"confidence": 1.0, "loop_detection": 1.5}``.'
         ),
     )
 

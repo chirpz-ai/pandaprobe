@@ -109,12 +109,14 @@ class LoopDetectionMetric(BaseMetric):
             jac_sim = _jaccard(current_tokens, _tokenize(prev_text))
             hybrid = cos_sim * jac_sim
             max_hybrid = max(max_hybrid, hybrid)
-            comparisons.append({
-                "trace_index": len(session_traces) - len(prev_texts) + i,
-                "cosine_similarity": round(cos_sim, 4),
-                "jaccard_similarity": round(jac_sim, 4),
-                "hybrid_score": round(hybrid, 4),
-            })
+            comparisons.append(
+                {
+                    "trace_index": len(session_traces) - len(prev_texts) + i,
+                    "cosine_similarity": round(cos_sim, 4),
+                    "jaccard_similarity": round(jac_sim, 4),
+                    "hybrid_score": round(hybrid, 4),
+                }
+            )
 
         score = round(max(0.0, min(1.0, 1.0 - max_hybrid)), 4)
 
