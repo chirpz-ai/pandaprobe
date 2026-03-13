@@ -1206,6 +1206,120 @@ async def get_session_score_analytics_trend(
     return [ScoreTrendItem(**d) for d in data]
 
 
+@router.get("/analytics/session-scores/distribution", response_model=list[ScoreDistributionItem])
+async def get_session_score_analytics_distribution(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    metric_name: str = Query(..., description="Session metric name to get distribution for"),
+    date_from: datetime | None = Query(default=None, description="ISO 8601 datetime."),
+    date_to: datetime | None = Query(default=None, description="ISO 8601 datetime."),
+    buckets: int = Query(default=10, ge=1, le=100, description="Number of histogram buckets (1-100)"),
+) -> list[ScoreDistributionItem]:
+    """Histogram of session score values for a metric.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    data = await svc.get_session_score_distribution(
+        ctx.project.id,
+        metric_name,
+        date_from=date_from,
+        date_to=date_to,
+        buckets=buckets,
+    )
+    return [ScoreDistributionItem(**d) for d in data]
+
+
+# ---------------------------------------------------------------------------
+# Schemas -- Session score history & comparison
+# ---------------------------------------------------------------------------
+
+
+class SessionScoreHistoryItem(BaseModel):
+    """A single data point in a session's score evolution over time."""
+
+    metric_name: str
+    score: float | None
+    eval_run_id: str | None
+    created_at: str | None
+    status: str
+
+
+class SessionComparisonItem(BaseModel):
+    """A session's latest score for a metric, used in leaderboard/ranking views."""
+
+    session_id: str
+    score: float | None
+    evaluated_at: str | None
+    eval_run_id: str | None
+
+
+# ---------------------------------------------------------------------------
+# Session score history & comparison endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/analytics/session-scores/history/{session_id}",
+    response_model=list[SessionScoreHistoryItem],
+)
+async def get_session_score_history(
+    session_id: str,
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    metric_name: str | None = Query(default=None, description="Filter to a single metric name."),
+    limit: int = Query(default=50, ge=1, le=200, description="Max data points to return."),
+) -> list[SessionScoreHistoryItem]:
+    """Score evolution for a specific session across re-evaluations over time.
+
+    Returns one row per (metric, eval_run) ordered chronologically, showing
+    how the session's scores changed as new traces arrived and the session
+    was re-evaluated. Useful for "session health over time" dashboard charts.
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    data = await svc.get_session_score_history(
+        ctx.project.id, session_id, metric_name=metric_name, limit=limit
+    )
+    return [SessionScoreHistoryItem(**d) for d in data]
+
+
+@router.get(
+    "/analytics/session-scores/comparison",
+    response_model=PaginatedResponse[SessionComparisonItem],
+)
+async def get_session_score_comparison(
+    ctx: ApiContext = Depends(require_project),
+    session: AsyncSession = Depends(get_db_session),
+    metric_name: str = Query(..., description="Metric name to rank sessions by."),
+    sort_order: str = Query(
+        default="asc",
+        description="Sort order: 'asc' (worst first, good for finding problems) or 'desc' (best first).",
+    ),
+    limit: int = Query(default=20, ge=1, le=100, description="Page size."),
+    offset: int = Query(default=0, ge=0, description="Number of items to skip."),
+) -> PaginatedResponse[SessionComparisonItem]:
+    """Leaderboard: latest score per session for a metric, sorted by value.
+
+    Shows each session's most recent score for the requested metric,
+    ranked by value. Use ``sort_order=asc`` to surface the worst-performing
+    sessions first (e.g. "Bottom 10 by agent_reliability").
+
+    Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
+    """
+    svc = EvalService(session)
+    items, total = await svc.get_session_score_comparison(
+        ctx.project.id, metric_name, sort_order=sort_order, limit=limit, offset=offset
+    )
+    return PaginatedResponse(
+        items=[SessionComparisonItem(**d) for d in items],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Schemas -- Monitors
 # ---------------------------------------------------------------------------
