@@ -683,6 +683,147 @@ class EvalRepository:
             for row in result.all()
         ]
 
+    async def get_session_score_distribution(
+        self,
+        project_id: UUID,
+        metric_name: str,
+        *,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        buckets: int = 10,
+    ) -> list[dict[str, Any]]:
+        """Histogram of session score values for a metric."""
+        t = SessionScoreModel.__table__
+        numeric_value = cast(t.c.value, SAFloat)
+        bucket_col = func.width_bucket(numeric_value, 0.0, 1.0, buckets)
+
+        base = select(
+            bucket_col.label("bucket"),
+            func.count().label("count"),
+        ).where(
+            t.c.project_id == project_id,
+            t.c.name == metric_name,
+            t.c.data_type == ScoreDataType.NUMERIC.value,
+            t.c.status == ScoreStatus.SUCCESS.value,
+        )
+
+        if date_from is not None:
+            base = base.where(t.c.created_at >= date_from)
+        if date_to is not None:
+            base = base.where(t.c.created_at < date_to)
+
+        base = base.group_by(bucket_col).order_by(bucket_col)
+        result = await self._session.execute(base)
+
+        step = 1.0 / buckets
+        return [
+            {
+                "bucket": row.bucket,
+                "bucket_min": round(max(0.0, (row.bucket - 1) * step), 4),
+                "bucket_max": round(min(1.0, row.bucket * step), 4),
+                "count": row.count,
+            }
+            for row in result.all()
+        ]
+
+    async def get_session_score_history(
+        self,
+        project_id: UUID,
+        session_id: str,
+        *,
+        metric_name: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Score evolution for a specific session across eval runs over time.
+
+        Returns one row per (metric, eval_run) ordered by score creation time,
+        showing how the session's scores changed as it was re-evaluated.
+        """
+        t = SessionScoreModel.__table__
+
+        base = select(
+            t.c.name.label("metric_name"),
+            cast(t.c.value, SAFloat).label("score"),
+            t.c.eval_run_id,
+            t.c.created_at,
+            t.c.status,
+        ).where(
+            t.c.project_id == project_id,
+            t.c.session_id == session_id,
+            t.c.data_type == ScoreDataType.NUMERIC.value,
+        )
+
+        if metric_name is not None:
+            base = base.where(t.c.name == metric_name)
+
+        base = base.order_by(t.c.created_at.asc()).limit(limit)
+        result = await self._session.execute(base)
+        return [
+            {
+                "metric_name": row.metric_name,
+                "score": float(row.score) if row.score is not None else None,
+                "eval_run_id": str(row.eval_run_id) if row.eval_run_id else None,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+                "status": row.status,
+            }
+            for row in result.all()
+        ]
+
+    async def get_session_score_comparison(
+        self,
+        project_id: UUID,
+        metric_name: str,
+        *,
+        sort_order: str = "asc",
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Leaderboard: latest score per session for a given metric, sorted by value.
+
+        Uses DISTINCT ON to pick the most recent score per session, then
+        sorts by score value for ranking.
+        """
+        t = SessionScoreModel.__table__
+
+        latest = (
+            select(
+                t.c.session_id,
+                cast(t.c.value, SAFloat).label("score"),
+                t.c.created_at,
+                t.c.eval_run_id,
+            )
+            .where(
+                t.c.project_id == project_id,
+                t.c.name == metric_name,
+                t.c.data_type == ScoreDataType.NUMERIC.value,
+                t.c.status == ScoreStatus.SUCCESS.value,
+            )
+            .distinct(t.c.session_id)
+            .order_by(t.c.session_id, t.c.created_at.desc())
+        ).subquery("latest")
+
+        count_stmt = select(func.count()).select_from(latest)
+        total = (await self._session.execute(count_stmt)).scalar_one()
+
+        order_col = latest.c.score.asc() if sort_order == "asc" else latest.c.score.desc()
+        data_stmt = (
+            select(latest)
+            .order_by(order_col.nulls_last(), latest.c.session_id)
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self._session.execute(data_stmt)
+        rows = [
+            {
+                "session_id": row.session_id,
+                "score": float(row.score) if row.score is not None else None,
+                "evaluated_at": row.created_at.isoformat() if row.created_at else None,
+                "eval_run_id": str(row.eval_run_id) if row.eval_run_id else None,
+            }
+            for row in result.all()
+        ]
+        return rows, total
+
     async def find_existing_trace_score(
         self, trace_id: UUID, metric_name: str
     ) -> TraceScore | None:
