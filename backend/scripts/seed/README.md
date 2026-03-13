@@ -573,3 +573,110 @@ Both metrics aggregate the same four trace-level signals (inverted to risk):
 | `coherence` | Input-output alignment — does the agent's response relate to its input? |
 
 Default weights: confidence=1.0, loop_detection=1.0, tool_correctness=0.8, coherence=1.0. These can be overridden per eval run via the `signal_weights` field in the request body.
+
+---
+
+## Evaluation Monitors (Scheduled Runs)
+
+Monitors define recurring evaluation jobs that run automatically on a cadence. Instead of manually creating eval runs, you configure a monitor once and the system spawns runs on schedule, skipping when no new data has arrived.
+
+### Key Fields
+
+- **`cadence`** — How often the monitor fires. Accepts:
+  - Predefined intervals: `"every_6h"`, `"daily"`, `"weekly"`
+  - Custom cron expressions: `"cron:<5-part expression>"`, e.g. `"cron:0 3 * * 1"` (every Monday at 3 AM UTC). The five parts are `minute hour day-of-month month day-of-week`.
+- **`filters`** — A JSON object with the same filter keys used by the corresponding eval run endpoints. For `TRACE` monitors: `date_from`, `date_to`, `status`, `session_id`, `user_id`, `tags`, `name`. For `SESSION` monitors: `date_from`, `date_to`, `user_id`, `has_error`, `tags`, `min_trace_count`. Pass `{}` to match everything.
+- **`only_if_changed`** — When `true` (default), the monitor skips a run if no new traces/sessions have arrived since the last run, saving LLM costs.
+- **`signal_weights`** — Only valid for `SESSION` monitors. Overrides the default weights used to aggregate trace-level signals into session metrics. Keys: `confidence`, `loop_detection`, `tool_correctness`, `coherence`.
+
+### Create a Trace Monitor (daily)
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/monitors \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Daily trace eval — completed only",
+    "target_type": "TRACE",
+    "metrics": ["task_completion", "step_efficiency"],
+    "cadence": "daily",
+    "filters": {
+      "status": "COMPLETED"
+    },
+    "sampling_rate": 1.0,
+    "only_if_changed": true
+  }' | python3 -m json.tool
+```
+
+### Create a Session Monitor (every 6 hours, with custom cron)
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/monitors \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Session reliability — weekdays 6 AM",
+    "target_type": "SESSION",
+    "metrics": ["agent_reliability", "agent_consistency"],
+    "cadence": "cron:0 6 * * 1-5",
+    "filters": {},
+    "sampling_rate": 1.0,
+    "only_if_changed": true,
+    "signal_weights": {
+      "confidence": 1.0,
+      "loop_detection": 1.5,
+      "tool_correctness": 1.0,
+      "coherence": 0.5
+    }
+  }' | python3 -m json.tool
+```
+
+### Create a Session Monitor (weekly, scoped to a user)
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/monitors \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Weekly session eval — Martinez",
+    "target_type": "SESSION",
+    "metrics": ["agent_reliability"],
+    "cadence": "weekly",
+    "filters": {
+      "user_id": "user-j-martinez-8821"
+    },
+    "only_if_changed": false
+  }' | python3 -m json.tool
+```
+
+### Manage Monitors
+
+```bash
+# List all monitors
+curl -s http://localhost:8000/evaluations/monitors \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# Pause a monitor (replace MONITOR_ID)
+curl -s -X POST http://localhost:8000/evaluations/monitors/MONITOR_ID/pause \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# Resume a paused monitor
+curl -s -X POST http://localhost:8000/evaluations/monitors/MONITOR_ID/resume \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# Force-trigger immediately (bypasses cadence)
+curl -s -X POST http://localhost:8000/evaluations/monitors/MONITOR_ID/trigger \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# List runs spawned by a monitor
+curl -s http://localhost:8000/evaluations/monitors/MONITOR_ID/runs \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
