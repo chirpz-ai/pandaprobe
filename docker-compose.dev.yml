@@ -63,6 +63,35 @@ services:
     networks:
       - pandaprobe
 
+  # ---------- Celery Beat scheduler ----------
+  beat:
+    build:
+      context: ./backend
+      args:
+        APP_ENV: ${APP_ENV:-development}
+    command:
+      [
+        "/app/.venv/bin/celery",
+        "-A", "app.infrastructure.queue.celery_app",
+        "beat",
+        "--loglevel=info",
+      ]
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/logs:/app/logs
+    env_file:
+      - ./backend/.env.${APP_ENV:-development}
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pandaprobe
+
   # ---------- PostgreSQL ----------
   postgres:
     image: postgres:16-alpine
