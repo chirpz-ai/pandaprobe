@@ -853,16 +853,12 @@ class EvalService:
             return False
 
         t = TraceModel.__table__
+        stmt = select(func.count()).where(
+            t.c.project_id == monitor.project_id,
+            t.c.started_at > monitor.last_run_at,
+        )
         if monitor.target_type == "SESSION":
-            stmt = select(func.max(t.c.started_at)).where(
-                t.c.project_id == monitor.project_id,
-                t.c.session_id.isnot(None),
-            )
-        else:
-            stmt = select(func.count()).where(
-                t.c.project_id == monitor.project_id,
-                t.c.started_at > monitor.last_run_at,
-            )
+            stmt = stmt.where(t.c.session_id.isnot(None))
 
         filters = monitor.filters or {}
         if filters.get("date_from"):
@@ -875,14 +871,7 @@ class EvalService:
             stmt = stmt.where(t.c.tags.overlap(filters["tags"]))
 
         result = await self._session.execute(stmt)
-        val = result.scalar_one()
-
-        if monitor.target_type == "SESSION":
-            if val is None:
-                return True
-            return val <= monitor.last_run_at
-        else:
-            return val == 0
+        return result.scalar_one() == 0
 
     async def _spawn_run_for_monitor(self, monitor: EvalMonitor) -> EvalRun:
         """Create and dispatch an eval run from a monitor's configuration."""
