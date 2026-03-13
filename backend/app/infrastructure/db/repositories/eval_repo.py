@@ -10,9 +10,9 @@ from uuid import UUID
 from sqlalchemy import Float as SAFloat, cast, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.evals.entities import EvalRun, SessionScore, TraceScore
-from app.infrastructure.db.models import EvalRunModel, SessionScoreModel, TraceScoreModel
-from app.registry.constants import AnalyticsGranularity, EvaluationStatus, ScoreDataType, ScoreSource, ScoreStatus
+from app.core.evals.entities import EvalMonitor, EvalRun, SessionScore, TraceScore
+from app.infrastructure.db.models import EvalMonitorModel, EvalRunModel, SessionScoreModel, TraceScoreModel
+from app.registry.constants import AnalyticsGranularity, EvaluationStatus, MonitorStatus, ScoreDataType, ScoreSource, ScoreStatus
 
 
 class EvalRepository:
@@ -214,6 +214,7 @@ class EvalRepository:
             filters=run.filters,
             sampling_rate=run.sampling_rate,
             model=run.model,
+            monitor_id=run.monitor_id,
             status=run.status,
             total_traces=run.total_traces,
             evaluated_count=run.evaluated_count,
@@ -240,6 +241,7 @@ class EvalRepository:
         project_id: UUID,
         *,
         status: EvaluationStatus | None = None,
+        target_type: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[EvalRun], int]:
@@ -248,6 +250,8 @@ class EvalRepository:
         base = select(t).where(t.c.project_id == project_id)
         if status is not None:
             base = base.where(t.c.status == status.value)
+        if target_type is not None:
+            base = base.where(t.c.target_type == target_type)
 
         count_stmt = select(func.count()).select_from(base.subquery())
         total = (await self._session.execute(count_stmt)).scalar_one()
@@ -796,6 +800,7 @@ class EvalRepository:
             filters=row.filters,
             sampling_rate=row.sampling_rate,
             model=row.model,
+            monitor_id=row.monitor_id,
             status=EvaluationStatus(row.status),
             total_traces=row.total_traces,
             evaluated_count=row.evaluated_count,
@@ -816,6 +821,7 @@ class EvalRepository:
             filters=r["filters"],
             sampling_rate=r["sampling_rate"],
             model=r["model"],
+            monitor_id=r["monitor_id"],
             status=EvaluationStatus(r["status"]),
             total_traces=r["total_traces"],
             evaluated_count=r["evaluated_count"],
@@ -823,4 +829,184 @@ class EvalRepository:
             error_message=r["error_message"],
             created_at=r["created_at"],
             completed_at=r["completed_at"],
+        )
+
+    # -- Monitor operations ----------------------------------------------------
+
+    async def create_monitor(self, monitor: EvalMonitor) -> EvalMonitor:
+        """Persist a new eval monitor."""
+        row = EvalMonitorModel(
+            id=monitor.id,
+            project_id=monitor.project_id,
+            name=monitor.name,
+            target_type=monitor.target_type,
+            metric_names=monitor.metric_names,
+            filters=monitor.filters,
+            sampling_rate=monitor.sampling_rate,
+            model=monitor.model,
+            cadence=monitor.cadence,
+            only_if_changed=monitor.only_if_changed,
+            status=monitor.status,
+            last_run_at=monitor.last_run_at,
+            last_run_id=monitor.last_run_id,
+            next_run_at=monitor.next_run_at,
+            created_at=monitor.created_at,
+            updated_at=monitor.updated_at,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        return monitor
+
+    async def get_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalMonitor | None:
+        """Fetch a monitor by ID scoped to a project."""
+        stmt = select(EvalMonitorModel).where(
+            EvalMonitorModel.id == monitor_id,
+            EvalMonitorModel.project_id == project_id,
+        )
+        result = await self._session.execute(stmt)
+        row = result.scalar_one_or_none()
+        if row is None:
+            return None
+        return self._to_monitor(row)
+
+    async def list_monitors(
+        self,
+        project_id: UUID,
+        *,
+        status: MonitorStatus | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[EvalMonitor], int]:
+        """Paginated listing of monitors."""
+        t = EvalMonitorModel.__table__
+        base = select(t).where(t.c.project_id == project_id)
+        if status is not None:
+            base = base.where(t.c.status == status.value)
+
+        count_stmt = select(func.count()).select_from(base.subquery())
+        total = (await self._session.execute(count_stmt)).scalar_one()
+
+        data_stmt = base.order_by(t.c.created_at.desc()).offset(offset).limit(limit)
+        result = await self._session.execute(data_stmt)
+        monitors = [self._to_monitor_from_row(r) for r in result.mappings().all()]
+        return monitors, total
+
+    async def update_monitor(self, monitor_id: UUID, project_id: UUID, **fields: Any) -> None:
+        """Partial update of monitor fields.
+
+        Fields with None values are applied if explicitly passed (e.g.
+        next_run_at=None to clear the scheduled time on pause).
+        """
+        if not fields:
+            return
+        values = dict(fields)
+        values["updated_at"] = datetime.now(timezone.utc)
+        stmt = (
+            update(EvalMonitorModel)
+            .where(EvalMonitorModel.id == monitor_id, EvalMonitorModel.project_id == project_id)
+            .values(**values)
+        )
+        await self._session.execute(stmt)
+
+    async def delete_monitor(self, monitor_id: UUID, project_id: UUID) -> None:
+        """Delete a monitor. Spawned runs are preserved (FK SET NULL)."""
+        stmt = delete(EvalMonitorModel).where(
+            EvalMonitorModel.id == monitor_id, EvalMonitorModel.project_id == project_id
+        )
+        await self._session.execute(stmt)
+
+    async def get_due_monitors(self, now: datetime) -> list[EvalMonitor]:
+        """Return all ACTIVE monitors whose next_run_at <= now."""
+        stmt = (
+            select(EvalMonitorModel)
+            .where(
+                EvalMonitorModel.status == MonitorStatus.ACTIVE.value,
+                EvalMonitorModel.next_run_at <= now,
+            )
+            .order_by(EvalMonitorModel.next_run_at.asc())
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_monitor(row) for row in result.scalars().all()]
+
+    async def advance_monitor(
+        self,
+        monitor_id: UUID,
+        *,
+        last_run_at: datetime,
+        last_run_id: UUID | None,
+        next_run_at: datetime,
+    ) -> None:
+        """Advance a monitor's scheduling state after spawning (or skipping) a run."""
+        stmt = (
+            update(EvalMonitorModel)
+            .where(EvalMonitorModel.id == monitor_id)
+            .values(
+                last_run_at=last_run_at,
+                last_run_id=last_run_id,
+                next_run_at=next_run_at,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
+        await self._session.execute(stmt)
+
+    async def list_runs_for_monitor(
+        self,
+        monitor_id: UUID,
+        project_id: UUID,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[EvalRun], int]:
+        """List eval runs spawned by a specific monitor."""
+        t = EvalRunModel.__table__
+        base = select(t).where(t.c.monitor_id == monitor_id, t.c.project_id == project_id)
+
+        count_stmt = select(func.count()).select_from(base.subquery())
+        total = (await self._session.execute(count_stmt)).scalar_one()
+
+        data_stmt = base.order_by(t.c.created_at.desc()).offset(offset).limit(limit)
+        result = await self._session.execute(data_stmt)
+        runs = [self._to_eval_run_from_row(r) for r in result.mappings().all()]
+        return runs, total
+
+    @staticmethod
+    def _to_monitor(row: EvalMonitorModel) -> EvalMonitor:
+        return EvalMonitor(
+            id=row.id,
+            project_id=row.project_id,
+            name=row.name,
+            target_type=row.target_type,
+            metric_names=row.metric_names,
+            filters=row.filters,
+            sampling_rate=row.sampling_rate,
+            model=row.model,
+            cadence=row.cadence,
+            only_if_changed=row.only_if_changed,
+            status=row.status,
+            last_run_at=row.last_run_at,
+            last_run_id=row.last_run_id,
+            next_run_at=row.next_run_at,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
+
+    @staticmethod
+    def _to_monitor_from_row(r: Any) -> EvalMonitor:
+        return EvalMonitor(
+            id=r["id"],
+            project_id=r["project_id"],
+            name=r["name"],
+            target_type=r["target_type"],
+            metric_names=r["metric_names"],
+            filters=r["filters"],
+            sampling_rate=r["sampling_rate"],
+            model=r["model"],
+            cadence=r["cadence"],
+            only_if_changed=r["only_if_changed"],
+            status=r["status"],
+            last_run_at=r["last_run_at"],
+            last_run_id=r["last_run_id"],
+            next_run_at=r["next_run_at"],
+            created_at=r["created_at"],
+            updated_at=r["updated_at"],
         )
