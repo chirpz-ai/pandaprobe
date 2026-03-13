@@ -106,6 +106,7 @@ class EvalRun(BaseModel):
     filters: dict[str, Any] = Field(default_factory=dict)
     sampling_rate: float = Field(default=1.0, ge=0.0, le=1.0)
     model: str | None = None
+    monitor_id: UUID | None = None
     status: EvaluationStatus = EvaluationStatus.PENDING
     total_traces: int = 0
     evaluated_count: int = 0
@@ -113,3 +114,24 @@ class EvalRun(BaseModel):
     error_message: str | None = None
     created_at: datetime
     completed_at: datetime | None = None
+
+
+class EvalMonitor(BaseModel):
+    """A persistent evaluation schedule that spawns eval runs on a cadence."""
+
+    id: UUID
+    project_id: UUID
+    name: str
+    target_type: str
+    metric_names: list[str]
+    filters: dict[str, Any] = Field(default_factory=dict)
+    sampling_rate: float = Field(default=1.0, ge=0.0, le=1.0)
+    model: str | None = None
+    cadence: str
+    only_if_changed: bool = True
+    status: str
+    last_run_at: datetime | None = None
+    last_run_id: UUID | None = None
+    next_run_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
