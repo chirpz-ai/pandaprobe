@@ -1,5 +1,5 @@
 .PHONY: install dev worker lint format migration migrate \
-       up down logs logs-app logs-worker ps restart \
+       up down logs logs-app logs-worker logs-beat ps restart \
        test-unit-backend test-unit \
        test-integration-backend test-integration \
        test-all test-db-up test-db-down help
@@ -49,6 +49,9 @@ logs-app:  ## Tail app logs only
 
 logs-worker:  ## Tail worker logs only
 	docker compose -f docker-compose.dev.yml logs -f worker
+
+logs-beat:  ## Tail beat scheduler logs only
+	docker compose -f docker-compose.dev.yml logs -f beat
 
 ps:  ## Show running containers
 	docker compose -f docker-compose.dev.yml ps
