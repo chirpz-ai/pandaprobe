@@ -268,10 +268,11 @@ async def _fail_eval_run(run_id: str, error_message: str) -> None:
 
 @celery.task(name="check_eval_monitors", bind=True, max_retries=0)
 def check_eval_monitors(self: Any) -> dict[str, Any]:
-    """Periodic tick: query due monitors and spawn eval runs.
+    """Periodic tick: query due monitors and fan out into per-monitor sub-tasks.
 
-    Guarded by a Redis lock to prevent concurrent execution when
-    multiple beat or worker instances overlap.
+    This is a lightweight dispatcher. It acquires a Redis lock, queries
+    for due monitors, then fires one ``process_single_monitor`` task per
+    monitor into the Celery queue for parallel execution across workers.
     """
     try:
         return asyncio.run(_check_eval_monitors())
@@ -285,80 +286,37 @@ async def _check_eval_monitors() -> dict[str, Any]:
 
     from app.core.evals.cadence import compute_next_run
     from app.infrastructure.db.repositories.eval_repo import EvalRepository
-    from app.services.eval_service import EvalService
 
     import redis
 
     redis_client = redis.from_url(settings.REDIS_URL)
-    lock = redis_client.lock("check_eval_monitors", timeout=280)
+    lock = redis_client.lock("check_eval_monitors", timeout=60)
     if not lock.acquire(blocking=False):
         logger.info("check_eval_monitors_skipped", reason="lock held by another worker")
         return {"status": "skipped", "reason": "lock"}
 
     try:
         now = datetime.now(timezone.utc)
-        spawned = 0
-        skipped = 0
-        checked = 0
 
         async with _worker_session() as session:
             eval_repo = EvalRepository(session)
-            svc = EvalService(session)
-
             due_monitors = await eval_repo.get_due_monitors(now)
-            checked = len(due_monitors)
 
+            dispatched = 0
             for monitor in due_monitors:
-                try:
-                    if await svc.should_skip_monitor(monitor):
-                        next_run = compute_next_run(monitor.cadence, now)
-                        await eval_repo.advance_monitor(
-                            monitor.id,
-                            last_run_at=now,
-                            last_run_id=None,
-                            next_run_at=next_run,
-                        )
-                        await session.commit()
-                        skipped += 1
-                        logger.info(
-                            "monitor_skipped_no_changes",
-                            monitor_id=str(monitor.id),
-                            next_run_at=next_run.isoformat(),
-                        )
-                        continue
+                next_run = compute_next_run(monitor.cadence, now)
+                await eval_repo.advance_monitor(
+                    monitor.id,
+                    last_run_at=now,
+                    last_run_id=None,
+                    next_run_at=next_run,
+                )
+                await session.commit()
 
-                    run = await svc._spawn_run_for_monitor(monitor)
+                process_single_monitor.delay(str(monitor.id), str(monitor.project_id))
+                dispatched += 1
 
-                    next_run = compute_next_run(monitor.cadence, now)
-                    await eval_repo.advance_monitor(
-                        monitor.id,
-                        last_run_at=now,
-                        last_run_id=run.id,
-                        next_run_at=next_run,
-                    )
-                    await session.commit()
-                    spawned += 1
-                    logger.info(
-                        "monitor_run_spawned",
-                        monitor_id=str(monitor.id),
-                        run_id=str(run.id),
-                        next_run_at=next_run.isoformat(),
-                    )
-
-                except Exception as exc:
-                    await session.rollback()
-                    logger.error(
-                        "monitor_tick_error",
-                        monitor_id=str(monitor.id),
-                        error=str(exc),
-                    )
-
-        summary = {
-            "status": "completed",
-            "checked": checked,
-            "spawned": spawned,
-            "skipped": skipped,
-        }
+        summary = {"status": "completed", "dispatched": dispatched}
         logger.info("check_eval_monitors_done", **summary)
         return summary
 
@@ -367,6 +325,65 @@ async def _check_eval_monitors() -> dict[str, Any]:
             lock.release()
         except Exception:
             pass
+
+
+@celery.task(name="process_single_monitor", bind=True, max_retries=2, default_retry_delay=30)
+def process_single_monitor(self: Any, monitor_id: str, project_id: str) -> dict[str, str]:
+    """Process a single due monitor: check for new data, spawn an eval run if needed.
+
+    Runs as an independent task so multiple monitors execute in parallel
+    across all available worker slots.
+    """
+    try:
+        return asyncio.run(_process_single_monitor(monitor_id, project_id))
+    except Exception as exc:
+        logger.error("process_single_monitor_failed", monitor_id=monitor_id, error=str(exc))
+        raise self.retry(exc=exc)
+
+
+async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str, str]:
+    from datetime import datetime, timezone
+    from uuid import UUID
+
+    from app.core.evals.cadence import compute_next_run
+    from app.infrastructure.db.repositories.eval_repo import EvalRepository
+    from app.services.eval_service import EvalService
+
+    mid = UUID(monitor_id)
+    pid = UUID(project_id)
+
+    async with _worker_session() as session:
+        eval_repo = EvalRepository(session)
+        svc = EvalService(session)
+
+        monitor = await eval_repo.get_monitor(mid, pid)
+        if monitor is None:
+            logger.warning("process_single_monitor_not_found", monitor_id=monitor_id)
+            return {"monitor_id": monitor_id, "status": "not_found"}
+
+        if await svc.should_skip_monitor(monitor):
+            logger.info("monitor_skipped_no_changes", monitor_id=monitor_id)
+            return {"monitor_id": monitor_id, "status": "skipped"}
+
+        run = await svc._spawn_run_for_monitor(monitor)
+
+        now = datetime.now(timezone.utc)
+        next_run = compute_next_run(monitor.cadence, now)
+        await eval_repo.advance_monitor(
+            mid,
+            last_run_at=now,
+            last_run_id=run.id,
+            next_run_at=next_run,
+        )
+        await session.commit()
+
+        logger.info(
+            "monitor_run_spawned",
+            monitor_id=monitor_id,
+            run_id=str(run.id),
+            next_run_at=next_run.isoformat(),
+        )
+        return {"monitor_id": monitor_id, "status": "spawned", "run_id": str(run.id)}
 
 
 # ---------------------------------------------------------------------------
