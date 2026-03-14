@@ -945,9 +945,7 @@ class EvalService:
             return run, session_ids
 
     @staticmethod
-    def _dispatch_monitor_run(
-        target_type: str, run_id: UUID, project_id: UUID, target_ids: list[str]
-    ) -> None:
+    def _dispatch_monitor_run(target_type: str, run_id: UUID, project_id: UUID, target_ids: list[str]) -> None:
         """Dispatch the Celery task for a monitor-spawned run.
 
         Must only be called **after** the transaction that created the
