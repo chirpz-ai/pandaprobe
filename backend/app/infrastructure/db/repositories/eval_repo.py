@@ -1071,18 +1071,25 @@ class EvalRepository:
         *,
         last_run_at: datetime,
         last_run_id: UUID | None,
-        next_run_at: datetime,
+        next_run_at: datetime | None = None,
     ) -> None:
-        """Advance a monitor's scheduling state after spawning (or skipping) a run."""
+        """Advance a monitor's scheduling state after spawning (or skipping) a run.
+
+        *next_run_at* is optional: when the dispatcher has already set it via
+        ``reschedule_monitor``, callers can omit it to avoid overwriting with a
+        later timestamp (which would cause schedule drift on short cadences).
+        """
+        values: dict[str, Any] = {
+            "last_run_at": last_run_at,
+            "last_run_id": last_run_id,
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if next_run_at is not None:
+            values["next_run_at"] = next_run_at
         stmt = (
             update(EvalMonitorModel)
             .where(EvalMonitorModel.id == monitor_id)
-            .values(
-                last_run_at=last_run_at,
-                last_run_id=last_run_id,
-                next_run_at=next_run_at,
-                updated_at=datetime.now(timezone.utc),
-            )
+            .values(**values)
         )
         await self._session.execute(stmt)
 

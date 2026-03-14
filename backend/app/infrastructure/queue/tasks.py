@@ -349,7 +349,6 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
     from datetime import datetime, timezone
     from uuid import UUID
 
-    from app.core.evals.cadence import compute_next_run
     from app.infrastructure.db.repositories.eval_repo import EvalRepository
     from app.services.eval_service import EvalService
 
@@ -372,12 +371,10 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
         run, target_ids = await svc._spawn_run_for_monitor(monitor)
 
         now = datetime.now(timezone.utc)
-        next_run = compute_next_run(monitor.cadence, now)
         await eval_repo.advance_monitor(
             mid,
             last_run_at=now,
             last_run_id=run.id,
-            next_run_at=next_run,
         )
         await session.commit()
 
@@ -387,7 +384,6 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
             "monitor_run_spawned",
             monitor_id=monitor_id,
             run_id=str(run.id),
-            next_run_at=next_run.isoformat(),
         )
         return {"monitor_id": monitor_id, "status": "spawned", "run_id": str(run.id)}
 
