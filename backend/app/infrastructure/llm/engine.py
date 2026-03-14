@@ -219,7 +219,7 @@ class LLMEngine:
         results: list[list[float]] = []
         for h in hashes:
             self._embedding_cache.move_to_end(h)
-            results.append(self._embedding_cache[h])
+            results.append(list(self._embedding_cache[h]))
         return results
 
     @staticmethod
