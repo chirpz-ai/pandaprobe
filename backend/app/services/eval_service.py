@@ -241,7 +241,10 @@ class EvalService:
         if run is None:
             raise NotFoundError(f"Eval run {run_id} not found.")
         if delete_scores:
-            await self._repo.delete_scores_for_run(run_id, project_id)
+            if run.target_type == "SESSION":
+                await self._repo.delete_session_scores_for_run(run_id, project_id)
+            else:
+                await self._repo.delete_scores_for_run(run_id, project_id)
         await self._repo.delete_eval_run(run_id, project_id)
         await self._session.commit()
 
