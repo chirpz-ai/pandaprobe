@@ -1086,11 +1086,7 @@ class EvalRepository:
         }
         if next_run_at is not None:
             values["next_run_at"] = next_run_at
-        stmt = (
-            update(EvalMonitorModel)
-            .where(EvalMonitorModel.id == monitor_id)
-            .values(**values)
-        )
+        stmt = update(EvalMonitorModel).where(EvalMonitorModel.id == monitor_id).values(**values)
         await self._session.execute(stmt)
 
     async def reschedule_monitor(
