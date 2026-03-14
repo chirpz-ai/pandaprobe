@@ -785,7 +785,7 @@ class EvalService:
             target_type = monitor.target_type
             if target_type == "TRACE" and signal_weights:
                 raise ValidationError("signal_weights is only valid for SESSION monitors.")
-            base_filters = dict(fields["filters"]) if "filters" in fields else dict(monitor.filters or {})
+            base_filters = dict(fields.get("filters") or {}) if "filters" in fields else dict(monitor.filters or {})
             if signal_weights:
                 base_filters["signal_weights"] = signal_weights
             else:
@@ -794,7 +794,7 @@ class EvalService:
         elif "filters" in fields:
             existing_sw = (monitor.filters or {}).get("signal_weights")
             if existing_sw is not None:
-                new_filters = dict(fields["filters"])
+                new_filters = dict(fields["filters"] or {})
                 new_filters["signal_weights"] = existing_sw
                 fields["filters"] = new_filters
 
