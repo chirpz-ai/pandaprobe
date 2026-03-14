@@ -204,7 +204,12 @@ class LLMEngine:
                 raise ProviderNotConfiguredError(msg)
 
         hashes = [hashlib.sha256(t.encode()).hexdigest() for t in texts]
-        uncached_indices = [i for i, h in enumerate(hashes) if h not in self._embedding_cache]
+        uncached_indices: list[int] = []
+        for i, h in enumerate(hashes):
+            if h in self._embedding_cache:
+                self._embedding_cache.move_to_end(h)
+            else:
+                uncached_indices.append(i)
 
         if uncached_indices:
             uncached_texts = [texts[i] for i in uncached_indices]
@@ -216,11 +221,7 @@ class LLMEngine:
             while len(self._embedding_cache) > max_size:
                 self._embedding_cache.popitem(last=False)
 
-        results: list[list[float]] = []
-        for h in hashes:
-            self._embedding_cache.move_to_end(h)
-            results.append(list(self._embedding_cache[h]))
-        return results
+        return [list(self._embedding_cache[h]) for h in hashes]
 
     @staticmethod
     def cosine_distance(vec_a: list[float], vec_b: list[float]) -> float:
