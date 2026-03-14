@@ -290,34 +290,37 @@ async def _check_eval_monitors() -> dict[str, Any]:
     import redis
 
     redis_client = redis.from_url(settings.REDIS_URL)
-    lock = redis_client.lock("check_eval_monitors", timeout=60)
-    if not lock.acquire(blocking=False):
-        logger.info("check_eval_monitors_skipped", reason="lock held by another worker")
-        return {"status": "skipped", "reason": "lock"}
-
-    monitors_to_dispatch: list[tuple[str, str]] = []
     try:
-        now = datetime.now(timezone.utc)
+        lock = redis_client.lock("check_eval_monitors", timeout=60)
+        if not lock.acquire(blocking=False):
+            logger.info("check_eval_monitors_skipped", reason="lock held by another worker")
+            return {"status": "skipped", "reason": "lock"}
 
-        async with _worker_session() as session:
-            eval_repo = EvalRepository(session)
-            due_monitors = await eval_repo.get_due_monitors(now)
-
-            for monitor in due_monitors:
-                next_run = compute_next_run(monitor.cadence, now)
-                await eval_repo.reschedule_monitor(
-                    monitor.id,
-                    next_run_at=next_run,
-                )
-                monitors_to_dispatch.append((str(monitor.id), str(monitor.project_id)))
-
-            await session.commit()
-
-    finally:
+        monitors_to_dispatch: list[tuple[str, str]] = []
         try:
-            lock.release()
-        except Exception:
-            pass
+            now = datetime.now(timezone.utc)
+
+            async with _worker_session() as session:
+                eval_repo = EvalRepository(session)
+                due_monitors = await eval_repo.get_due_monitors(now)
+
+                for monitor in due_monitors:
+                    next_run = compute_next_run(monitor.cadence, now)
+                    await eval_repo.reschedule_monitor(
+                        monitor.id,
+                        next_run_at=next_run,
+                    )
+                    monitors_to_dispatch.append((str(monitor.id), str(monitor.project_id)))
+
+                await session.commit()
+
+        finally:
+            try:
+                lock.release()
+            except Exception:
+                pass
+    finally:
+        redis_client.close()
 
     for monitor_id, project_id in monitors_to_dispatch:
         process_single_monitor.delay(monitor_id, project_id)
