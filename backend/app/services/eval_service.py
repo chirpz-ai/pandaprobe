@@ -30,6 +30,9 @@ from app.registry.exceptions import NotFoundError, ValidationError
 from app.registry.settings import settings
 
 
+_SENTINEL = object()
+
+
 def _resolve_model(model: str | None) -> str:
     """Return the explicit model or resolve the configured default."""
     from app.infrastructure.llm.providers import resolve_model_string
@@ -776,6 +779,18 @@ class EvalService:
             fields["metric_names"] = fields.pop("metrics")
         else:
             fields.pop("metrics", None)
+
+        signal_weights = fields.pop("signal_weights", _SENTINEL)
+        if signal_weights is not _SENTINEL:
+            target_type = monitor.target_type
+            if target_type == "TRACE" and signal_weights:
+                raise ValidationError("signal_weights is only valid for SESSION monitors.")
+            base_filters = dict(fields["filters"]) if "filters" in fields else dict(monitor.filters or {})
+            if signal_weights:
+                base_filters["signal_weights"] = signal_weights
+            else:
+                base_filters.pop("signal_weights", None)
+            fields["filters"] = base_filters
 
         new_cadence = fields.get("cadence")
         if new_cadence is not None:
