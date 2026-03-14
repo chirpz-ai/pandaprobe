@@ -295,6 +295,7 @@ async def _check_eval_monitors() -> dict[str, Any]:
         logger.info("check_eval_monitors_skipped", reason="lock held by another worker")
         return {"status": "skipped", "reason": "lock"}
 
+    monitors_to_dispatch: list[tuple[str, str]] = []
     try:
         now = datetime.now(timezone.utc)
 
@@ -302,27 +303,29 @@ async def _check_eval_monitors() -> dict[str, Any]:
             eval_repo = EvalRepository(session)
             due_monitors = await eval_repo.get_due_monitors(now)
 
-            dispatched = 0
             for monitor in due_monitors:
                 next_run = compute_next_run(monitor.cadence, now)
                 await eval_repo.reschedule_monitor(
                     monitor.id,
                     next_run_at=next_run,
                 )
-                await session.commit()
+                monitors_to_dispatch.append((str(monitor.id), str(monitor.project_id)))
 
-                process_single_monitor.delay(str(monitor.id), str(monitor.project_id))
-                dispatched += 1
-
-        summary = {"status": "completed", "dispatched": dispatched}
-        logger.info("check_eval_monitors_done", **summary)
-        return summary
+            await session.commit()
 
     finally:
         try:
             lock.release()
         except Exception:
             pass
+
+    for monitor_id, project_id in monitors_to_dispatch:
+        process_single_monitor.delay(monitor_id, project_id)
+
+    dispatched = len(monitors_to_dispatch)
+    summary = {"status": "completed", "dispatched": dispatched}
+    logger.info("check_eval_monitors_done", **summary)
+    return summary
 
 
 @celery.task(name="process_single_monitor", bind=True, max_retries=2, default_retry_delay=30)
