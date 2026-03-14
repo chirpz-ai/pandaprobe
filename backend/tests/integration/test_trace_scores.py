@@ -158,7 +158,7 @@ async def test_list_metrics(client: AsyncClient):
     resp = await client.get("/evaluations/trace-metrics")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 9
+    assert len(data) == 8
     names = [m["name"] for m in data]
     assert "task_completion" in names
     assert "tool_correctness" in names

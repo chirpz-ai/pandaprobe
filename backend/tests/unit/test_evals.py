@@ -16,7 +16,6 @@ ALL_METRIC_NAMES = [
     "argument_correctness",
     "coherence",
     "confidence",
-    "loop_detection",
     "plan_adherence",
     "plan_quality",
     "step_efficiency",
