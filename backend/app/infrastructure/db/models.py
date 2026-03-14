@@ -25,6 +25,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from app.registry.constants import (
     EvaluationStatus,
     MembershipRole,
+    MonitorStatus,
     ScoreDataType,
     ScoreSource,
     ScoreStatus,
@@ -230,8 +231,57 @@ class SpanModel(Base):
 
 
 # ---------------------------------------------------------------------------
-# Eval Runs & Trace Scores
+# Eval Monitors, Eval Runs & Trace Scores
 # ---------------------------------------------------------------------------
+
+
+class EvalMonitorModel(Base):
+    """A persistent evaluation schedule that spawns eval runs on a cadence."""
+
+    __tablename__ = "eval_monitors"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    metric_names: Mapped[list[str]] = mapped_column(ARRAY(String(255)), nullable=False)
+    filters: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    sampling_rate: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    model: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cadence: Mapped[str] = mapped_column(String(50), nullable=False)
+    only_if_changed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    status: Mapped[str] = mapped_column(
+        SAEnum(MonitorStatus, name="monitor_status", create_constraint=False, native_enum=False, length=20),
+        default=MonitorStatus.ACTIVE,
+        nullable=False,
+    )
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("eval_runs.id", ondelete="SET NULL", use_alter=True, name="fk_eval_monitors_last_run_id"),
+        nullable=True,
+    )
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    project: Mapped["ProjectModel"] = relationship()
+    eval_runs: Mapped[list["EvalRunModel"]] = relationship(
+        back_populates="monitor",
+        foreign_keys="EvalRunModel.monitor_id",
+        passive_deletes=True,
+    )
+
+    __table_args__ = (
+        Index("ix_eval_monitors_project", "project_id", "status"),
+        Index("ix_eval_monitors_next_run", "status", "next_run_at"),
+    )
 
 
 class EvalRunModel(Base):
@@ -260,11 +310,17 @@ class EvalRunModel(Base):
     evaluated_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     failed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    monitor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("eval_monitors.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     project: Mapped["ProjectModel"] = relationship(back_populates="eval_runs")
     trace_scores: Mapped[list["TraceScoreModel"]] = relationship(back_populates="eval_run", passive_deletes=True)
+    monitor: Mapped["EvalMonitorModel | None"] = relationship(back_populates="eval_runs", foreign_keys=[monitor_id])
 
     __table_args__ = (Index("ix_eval_runs_project", "project_id", "created_at"),)
 
@@ -325,4 +381,57 @@ class TraceScoreModel(Base):
         Index("ix_trace_scores_project_name", "project_id", "name"),
         Index("ix_trace_scores_eval_run", "eval_run_id"),
         Index("ix_trace_scores_project_created", "project_id", "created_at"),
+    )
+
+
+class SessionScoreModel(Base):
+    """A single score for a session (agent-level), from any source."""
+
+    __tablename__ = "session_scores"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    data_type: Mapped[str] = mapped_column(
+        SAEnum(ScoreDataType, name="score_data_type", create_constraint=False, native_enum=False, length=20),
+        default=ScoreDataType.NUMERIC,
+        nullable=False,
+    )
+    value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source: Mapped[str] = mapped_column(
+        SAEnum(ScoreSource, name="score_source", create_constraint=False, native_enum=False, length=20),
+        nullable=False,
+    )
+    status: Mapped[str] = mapped_column(
+        SAEnum(ScoreStatus, name="score_status", create_constraint=False, native_enum=False, length=20),
+        default=ScoreStatus.SUCCESS,
+        nullable=False,
+    )
+    eval_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("eval_runs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    author_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    environment: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    config_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    metadata_: Mapped[dict] = mapped_column("metadata", JSONB, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    project: Mapped["ProjectModel"] = relationship()
+    eval_run: Mapped["EvalRunModel | None"] = relationship()
+
+    __table_args__ = (
+        Index("ix_session_scores_project_session", "project_id", "session_id"),
+        Index("ix_session_scores_project_name", "project_id", "name", "created_at"),
+        Index("ix_session_scores_eval_run", "eval_run_id"),
     )

@@ -128,6 +128,22 @@ class AnalyticsGranularity(StrEnum):
     WEEK = "week"
 
 
+class MonitorStatus(StrEnum):
+    """Lifecycle status of an evaluation monitor."""
+
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+
+
+class MonitorCadence(StrEnum):
+    """Predefined cadence intervals for evaluation monitors."""
+
+    EVERY_6H = "every_6h"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    CUSTOM = "custom"
+
+
 # Prefix prepended to every generated API key.
 API_KEY_PREFIX = "sk_pp_"
 

@@ -404,3 +404,279 @@ make down
 docker volume rm pandaprobe_postgres-data
 make up
 ```
+
+---
+
+## Session Evaluation Runs
+
+Session-level evaluation computes `agent_reliability` and `agent_consistency` across all traces in a session.
+
+The seed data contains **4 sessions** (trace 07 has no session):
+
+| Session ID | Traces | Time Range (2026-02-23) |
+|---|---|---|
+| `session-docextract-batch-20260223` | 04, 08 | 09:22 – 09:23 |
+| `session-cs-20260223-jmartinez` | 01, 05 | 10:00 – 10:01 |
+| `session-docsqa-20260223-akim` | 02 | 11:15 |
+| `session-codereview-pr47` | 03 | 14:30 |
+
+### Filter-based: Evaluate all sessions
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "metrics": ["agent_reliability", "agent_consistency"],
+    "filters": {}
+  }' | python3 -m json.tool
+```
+
+### Filter-based: Evaluate sessions active in a date window
+
+The `date_from`/`date_to` filter matches traces by `started_at`. A session is included if **any** of its traces fall within the window. The worker then evaluates **all** traces in each matched session (not just those inside the window).
+
+This example window (09:00 – 10:30) catches the first two sessions:
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "metrics": ["agent_reliability", "agent_consistency"],
+    "filters": {
+      "date_from": "2026-02-23T09:00:00Z",
+      "date_to": "2026-02-23T10:30:00Z"
+    }
+  }' | python3 -m json.tool
+```
+
+### Filter-based: Narrow window catching only one session
+
+This window (11:00 – 15:00) catches the RAG and code-review sessions:
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "metrics": ["agent_reliability"],
+    "filters": {
+      "date_from": "2026-02-23T11:00:00Z",
+      "date_to": "2026-02-23T15:00:00Z"
+    }
+  }' | python3 -m json.tool
+```
+
+### Batch: Evaluate specific sessions by ID
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "session_ids": [
+      "session-docextract-batch-20260223",
+      "session-cs-20260223-jmartinez"
+    ],
+    "metrics": ["agent_reliability", "agent_consistency"]
+  }' | python3 -m json.tool
+```
+
+### Batch: Single session with custom signal weights
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs/batch \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "session_ids": ["session-codereview-pr47"],
+    "metrics": ["agent_consistency"],
+    "signal_weights": {
+      "confidence": 1.0,
+      "loop_detection": 1.5,
+      "tool_correctness": 1.0,
+      "coherence": 0.5
+    }
+  }' | python3 -m json.tool
+```
+
+### Retry a failed session eval run
+
+Replace `RUN_ID` with the `id` from a completed run that has failed scores:
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/session-runs/RUN_ID/retry \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+### View scores for a session eval run
+
+```bash
+curl -s http://localhost:8000/evaluations/session-runs/RUN_ID/scores \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+### List all session scores
+
+```bash
+curl -s "http://localhost:8000/evaluations/session-scores?limit=20" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```
+
+---
+
+## Interpreting Session-Level Metrics
+
+Session evaluation produces two complementary scores that together give a complete picture of agent performance across a session (all traces sharing a `session_id`).
+
+### `agent_reliability` (0–1, higher = safer)
+
+Measures **worst-case failure risk**. Uses max-compose aggregation to surface the single most dangerous signal per trace, then applies top-k tail risk to focus on the worst traces. A single catastrophic trace will drag this score down even if every other trace is perfect.
+
+**Read it as:** "Can I trust this agent not to fail?"
+
+### `agent_consistency` (0–1, higher = more stable)
+
+Measures **overall behavioral stability**. Uses weighted RMS aggregation where situational penalties (tool misuse, incoherence, looping) amplify confidence uncertainty. Penalizes sessions with many moderate issues even when no individual trace is catastrophic.
+
+**Read it as:** "Does this agent perform smoothly and predictably?"
+
+### Reading the Two Together
+
+| Reliability | Consistency | Interpretation |
+|---|---|---|
+| HIGH | HIGH | Healthy agent — no failures, stable behavior. |
+| HIGH | LOW | No catastrophic failures, but sustained moderate degradation across traces (e.g. slightly wrong tool usage everywhere). Investigate systemic issues. |
+| LOW | HIGH | One or few traces failed badly while the rest were fine. The agent is generally stable but has edge-case vulnerabilities. Inspect flagged traces. |
+| LOW | LOW | Widespread problems — the agent is both failing and behaving erratically. Likely looping, misusing tools, or incoherent across multiple traces. |
+| MODERATE | HIGH | A persistent but non-critical issue (e.g. tool correctness at ~0.5) affects every trace uniformly. The agent is consistent but has a systematic weakness. |
+
+### Underlying Signals
+
+Both metrics aggregate the same four trace-level signals (inverted to risk):
+
+| Signal | What it captures |
+|---|---|
+| `confidence` | Agent decisiveness — did the LLM appear confident in its actions? |
+| `loop_detection` | Repetition — is the agent stuck repeating similar outputs? |
+| `tool_correctness` | Tool usage — are the right tools called with correct arguments? |
+| `coherence` | Input-output alignment — does the agent's response relate to its input? |
+
+Default weights: confidence=1.0, loop_detection=1.0, tool_correctness=0.8, coherence=1.0. These can be overridden per eval run via the `signal_weights` field in the request body.
+
+---
+
+## Evaluation Monitors (Scheduled Runs)
+
+Monitors define recurring evaluation jobs that run automatically on a cadence. Instead of manually creating eval runs, you configure a monitor once and the system spawns runs on schedule, skipping when no new data has arrived.
+
+### Key Fields
+
+- **`cadence`** — How often the monitor fires. Accepts:
+  - Predefined intervals: `"every_6h"`, `"daily"`, `"weekly"`
+  - Custom cron expressions: `"cron:<5-part expression>"`, e.g. `"cron:0 3 * * 1"` (every Monday at 3 AM UTC). The five parts are `minute hour day-of-month month day-of-week`.
+- **`filters`** — A JSON object with the same filter keys used by the corresponding eval run endpoints. For `TRACE` monitors: `date_from`, `date_to`, `status`, `session_id`, `user_id`, `tags`, `name`. For `SESSION` monitors: `date_from`, `date_to`, `user_id`, `has_error`, `tags`, `min_trace_count`. Pass `{}` to match everything.
+- **`only_if_changed`** — When `true` (default), the monitor skips a run if no new traces/sessions have arrived since the last run, saving LLM costs.
+- **`signal_weights`** — Only valid for `SESSION` monitors. Overrides the default weights used to aggregate trace-level signals into session metrics. Keys: `confidence`, `loop_detection`, `tool_correctness`, `coherence`.
+
+### Create a Trace Monitor (daily)
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/monitors \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Daily trace eval — completed only",
+    "target_type": "TRACE",
+    "metrics": ["task_completion", "step_efficiency"],
+    "cadence": "daily",
+    "filters": {
+      "status": "COMPLETED"
+    },
+    "sampling_rate": 1.0,
+    "only_if_changed": true
+  }' | python3 -m json.tool
+```
+
+### Create a Session Monitor (every 6 hours, with custom cron)
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/monitors \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Session reliability — weekdays 6 AM",
+    "target_type": "SESSION",
+    "metrics": ["agent_reliability", "agent_consistency"],
+    "cadence": "cron:0 6 * * 1-5",
+    "filters": {},
+    "sampling_rate": 1.0,
+    "only_if_changed": true,
+    "signal_weights": {
+      "confidence": 1.0,
+      "loop_detection": 1.5,
+      "tool_correctness": 1.0,
+      "coherence": 0.5
+    }
+  }' | python3 -m json.tool
+```
+
+### Create a Session Monitor (weekly, scoped to a user)
+
+```bash
+curl -s -X POST http://localhost:8000/evaluations/monitors \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" \
+  -d '{
+    "name": "Weekly session eval — Martinez",
+    "target_type": "SESSION",
+    "metrics": ["agent_reliability"],
+    "cadence": "weekly",
+    "filters": {
+      "user_id": "user-j-martinez-8821"
+    },
+    "only_if_changed": false
+  }' | python3 -m json.tool
+```
+
+### Manage Monitors
+
+```bash
+# List all monitors
+curl -s http://localhost:8000/evaluations/monitors \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# Pause a monitor (replace MONITOR_ID)
+curl -s -X POST http://localhost:8000/evaluations/monitors/MONITOR_ID/pause \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# Resume a paused monitor
+curl -s -X POST http://localhost:8000/evaluations/monitors/MONITOR_ID/resume \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# Force-trigger immediately (bypasses cadence)
+curl -s -X POST http://localhost:8000/evaluations/monitors/MONITOR_ID/trigger \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+
+# List runs spawned by a monitor
+curl -s http://localhost:8000/evaluations/monitors/MONITOR_ID/runs \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-Project-Name: $PROJECT" | python3 -m json.tool
+```

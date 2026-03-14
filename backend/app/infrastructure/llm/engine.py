@@ -9,8 +9,11 @@ and parses the structured response.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import os
+from collections import OrderedDict
 from typing import TypeVar
 
 import litellm
@@ -61,6 +64,7 @@ class LLMEngine:
         sync our pydantic-settings values into the process environment.
         """
         self._sync_credentials()
+        self._embedding_cache: OrderedDict[str, list[float]] = OrderedDict()
 
     def _sync_credentials(self) -> None:
         """Push credential settings into ``os.environ`` for LiteLLM."""
@@ -177,6 +181,58 @@ class LLMEngine:
             )
             raw = response.choices[0].message.content or ""
             return self._parse_response(raw, response_schema)
+
+    async def embed_texts(
+        self,
+        texts: list[str],
+        *,
+        model: str | None = None,
+    ) -> list[list[float]]:
+        """Batch-embed texts via ``litellm.aembedding()``.
+
+        Results are cached by content hash so repeated calls with the
+        same text are free.  The cache is bounded to
+        ``settings.EVAL_EMBEDDING_CACHE_SIZE`` entries (default 2048)
+        with LRU eviction.
+        """
+        resolved_model = resolve_model_string(model or settings.EVAL_EMBEDDING_MODEL)
+
+        provider_key = provider_key_from_model(resolved_model)
+        if provider_key:
+            ok, msg = check_provider_credentials(provider_key)
+            if not ok:
+                raise ProviderNotConfiguredError(msg)
+
+        hashes = [hashlib.sha256(t.encode()).hexdigest() for t in texts]
+        uncached_indices: list[int] = []
+        for i, h in enumerate(hashes):
+            if h in self._embedding_cache:
+                self._embedding_cache.move_to_end(h)
+            else:
+                uncached_indices.append(i)
+
+        if uncached_indices:
+            uncached_texts = [texts[i] for i in uncached_indices]
+            response = await litellm.aembedding(model=resolved_model, input=uncached_texts)
+            for idx, item in zip(uncached_indices, response.data, strict=True):
+                self._embedding_cache[hashes[idx]] = item["embedding"]
+
+            max_size = settings.EVAL_EMBEDDING_CACHE_SIZE
+            while len(self._embedding_cache) > max_size:
+                self._embedding_cache.popitem(last=False)
+
+        return [list(self._embedding_cache[h]) for h in hashes]
+
+    @staticmethod
+    def cosine_distance(vec_a: list[float], vec_b: list[float]) -> float:
+        """Return cosine distance (0 = identical, 1 = orthogonal) between two vectors."""
+        dot = sum(a * b for a, b in zip(vec_a, vec_b, strict=True))
+        norm_a = math.sqrt(sum(a * a for a in vec_a))
+        norm_b = math.sqrt(sum(b * b for b in vec_b))
+        if norm_a == 0 or norm_b == 0:
+            return 1.0
+        similarity = dot / (norm_a * norm_b)
+        return max(0.0, min(1.0, 1.0 - similarity))
 
     @staticmethod
     def _parse_response(raw: str, schema: type[T]) -> T:

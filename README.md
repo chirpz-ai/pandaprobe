@@ -1,10 +1,13 @@
-<p align="center">
-  <img src="docs/assets/PandProbe-2.png" alt="PandaProbe" width="700">
-</p>
+<div align="center">
+  <a href="https://pandaprobe.com" target="_blank" rel="noopener noreferrer">
+    <img alt="PandaProbe Logo" src="docs/assets/PandProbe-1.png" width="100%">
+  </a>
+</div>
 
 <p align="center">
   PandaProbe is an open source agent engineering platform.<br>
-  It helps teams collaboratively develop, monitor, evaluate, and debug AI agents. You can use PandaProbe cloud (under dev) or self host the service.
+  It helps teams collaboratively develop, monitor, evaluate, and debug AI agents.<br>
+  You can use PandaProbe cloud (under dev) or self host the service.
 </p>
 
 <p align="center">
@@ -143,7 +146,7 @@ We welcome contributions! Please read the [Contributing Guide](CONTRIBUTING.md) 
 
 ## Authors
 
-Built by the [Chirpz AI](https://chirpz.ai) team. Contact sina@chirpz.ai for enquiries.
+Built by the [Chirpz AI](https://pandaprobe.com/about) team. Contact sina@chirpz.ai for enquiries.
 
 ## License
 

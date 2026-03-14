@@ -52,6 +52,7 @@ class StepEfficiencyMetric(BaseMetric):
         *,
         threshold: float | None = None,
         model: str | None = None,
+        session_traces: list[Trace] | None = None,
     ) -> MetricResult:
         """Score a trace using this metric."""
         effective_threshold = threshold if threshold is not None else self.threshold

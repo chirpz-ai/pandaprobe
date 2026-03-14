@@ -14,6 +14,8 @@ from app.registry.constants import EvaluationStatus, ScoreDataType, ScoreSource,
 
 ALL_METRIC_NAMES = [
     "argument_correctness",
+    "coherence",
+    "confidence",
     "plan_adherence",
     "plan_quality",
     "step_efficiency",
@@ -22,7 +24,7 @@ ALL_METRIC_NAMES = [
 ]
 
 
-def test_list_metrics_returns_all_six():
+def test_list_metrics_returns_all():
     names = list_metrics()
     assert names == ALL_METRIC_NAMES
 

@@ -59,6 +59,7 @@ SERVICE_ROLE="unknown"
 for arg in "$@"; do
     case "$arg" in
         *uvicorn*) SERVICE_ROLE="app" ;;
+        *beat*)    SERVICE_ROLE="beat" ;;
         *celery*)  SERVICE_ROLE="worker" ;;
     esac
 done
@@ -77,6 +78,9 @@ case "$SERVICE_ROLE" in
         ;;
     worker)
         echo -e "${BOLD}Starting:${NC} ${YELLOW}Worker (Celery)${NC}"
+        ;;
+    beat)
+        echo -e "${BOLD}Starting:${NC} ${YELLOW}Beat (Celery)${NC}"
         ;;
     *)
         echo -e "${BOLD}Starting:${NC} $*"

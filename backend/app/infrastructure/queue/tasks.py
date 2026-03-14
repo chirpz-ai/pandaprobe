@@ -259,3 +259,457 @@ async def _fail_eval_run(run_id: str, error_message: str) -> None:
             await session.commit()
     except Exception:
         logger.error("fail_eval_run_update_failed", run_id=run_id)
+
+
+# ---------------------------------------------------------------------------
+# Eval monitor tick
+# ---------------------------------------------------------------------------
+
+
+@celery.task(name="check_eval_monitors", bind=True, max_retries=0)
+def check_eval_monitors(self: Any) -> dict[str, Any]:
+    """Periodic tick: query due monitors and fan out into per-monitor sub-tasks.
+
+    This is a lightweight dispatcher. It acquires a Redis lock, queries
+    for due monitors, then fires one ``process_single_monitor`` task per
+    monitor into the Celery queue for parallel execution across workers.
+    """
+    try:
+        return asyncio.run(_check_eval_monitors())
+    except Exception as exc:
+        logger.error("check_eval_monitors_failed", error=str(exc))
+        return {"error": str(exc)}
+
+
+async def _check_eval_monitors() -> dict[str, Any]:
+    from datetime import datetime, timezone
+
+    from app.core.evals.cadence import compute_next_run
+    from app.infrastructure.db.repositories.eval_repo import EvalRepository
+
+    import redis
+
+    redis_client = redis.from_url(settings.REDIS_URL)
+    try:
+        lock = redis_client.lock("check_eval_monitors", timeout=60)
+        if not lock.acquire(blocking=False):
+            logger.info("check_eval_monitors_skipped", reason="lock held by another worker")
+            return {"status": "skipped", "reason": "lock"}
+
+        monitors_to_dispatch: list[tuple[str, str]] = []
+        try:
+            now = datetime.now(timezone.utc)
+
+            async with _worker_session() as session:
+                eval_repo = EvalRepository(session)
+                due_monitors = await eval_repo.get_due_monitors(now)
+
+                for monitor in due_monitors:
+                    next_run = compute_next_run(monitor.cadence, now)
+                    await eval_repo.reschedule_monitor(
+                        monitor.id,
+                        next_run_at=next_run,
+                    )
+                    monitors_to_dispatch.append((str(monitor.id), str(monitor.project_id)))
+
+                await session.commit()
+
+        finally:
+            try:
+                lock.release()
+            except Exception:
+                pass
+    finally:
+        redis_client.close()
+
+    for monitor_id, project_id in monitors_to_dispatch:
+        process_single_monitor.delay(monitor_id, project_id)
+
+    dispatched = len(monitors_to_dispatch)
+    summary = {"status": "completed", "dispatched": dispatched}
+    logger.info("check_eval_monitors_done", **summary)
+    return summary
+
+
+@celery.task(name="process_single_monitor", bind=True, max_retries=2, default_retry_delay=30)
+def process_single_monitor(self: Any, monitor_id: str, project_id: str) -> dict[str, str]:
+    """Process a single due monitor: check for new data, spawn an eval run if needed.
+
+    Runs as an independent task so multiple monitors execute in parallel
+    across all available worker slots.
+    """
+    try:
+        return asyncio.run(_process_single_monitor(monitor_id, project_id))
+    except Exception as exc:
+        logger.error("process_single_monitor_failed", monitor_id=monitor_id, error=str(exc))
+        raise self.retry(exc=exc)
+
+
+async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str, str]:
+    from datetime import datetime, timezone
+    from uuid import UUID
+
+    from app.infrastructure.db.repositories.eval_repo import EvalRepository
+    from app.services.eval_service import EvalService
+
+    mid = UUID(monitor_id)
+    pid = UUID(project_id)
+
+    async with _worker_session() as session:
+        eval_repo = EvalRepository(session)
+        svc = EvalService(session)
+
+        monitor = await eval_repo.get_monitor(mid, pid)
+        if monitor is None:
+            logger.warning("process_single_monitor_not_found", monitor_id=monitor_id)
+            return {"monitor_id": monitor_id, "status": "not_found"}
+
+        if await svc.should_skip_monitor(monitor):
+            logger.info("monitor_skipped_no_changes", monitor_id=monitor_id)
+            return {"monitor_id": monitor_id, "status": "skipped"}
+
+        run, target_ids = await svc._spawn_run_for_monitor(monitor)
+
+        now = datetime.now(timezone.utc)
+        await eval_repo.advance_monitor(
+            mid,
+            last_run_at=now,
+            last_run_id=run.id,
+        )
+        await session.commit()
+
+        svc._dispatch_monitor_run(monitor.target_type, run.id, monitor.project_id, target_ids)
+
+        logger.info(
+            "monitor_run_spawned",
+            monitor_id=monitor_id,
+            run_id=str(run.id),
+        )
+        return {"monitor_id": monitor_id, "status": "spawned", "run_id": str(run.id)}
+
+
+# ---------------------------------------------------------------------------
+# Session eval run execution
+# ---------------------------------------------------------------------------
+
+SIGNAL_METRICS = ["confidence", "coherence", "loop_detection", "tool_correctness"]
+
+
+@celery.task(name="execute_session_eval_run", bind=True, max_retries=2, default_retry_delay=10)
+def execute_session_eval_run(
+    self: Any,
+    run_id: str,
+    project_id: str,
+    session_ids: list[str],
+) -> dict[str, str]:
+    """Run session-level metrics across one or more sessions.
+
+    Fully self-contained: resolves traces per session, computes all
+    trace-level signals (persisting each as a TraceScore), then passes
+    the precomputed signals to session metrics for pure aggregation.
+    """
+    try:
+        return asyncio.run(_run_session_eval(run_id, project_id, session_ids))
+    except Exception as exc:
+        logger.error("execute_session_eval_run_failed", error=str(exc), run_id=run_id)
+        asyncio.run(_fail_eval_run(run_id, str(exc)))
+        raise self.retry(exc=exc)
+
+
+async def _run_session_eval(
+    run_id: str,
+    project_id: str,
+    session_ids: list[str],
+) -> dict[str, str]:
+    """Core async logic for executing a session eval run."""
+    from datetime import datetime, timezone
+    from uuid import UUID, uuid4
+
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    from app.core.evals.entities import SessionScore, TraceScore
+    from app.core.evals.metrics import get_metric, get_session_metric
+    from app.core.evals.metrics.base import MetricResult
+    from app.core.evals.metrics.utils import to_text
+    from app.core.traces.entities import Span, Trace
+    from app.infrastructure.db.models import SpanModel, TraceModel
+    from app.infrastructure.db.repositories.eval_repo import EvalRepository
+    from app.infrastructure.llm.engine import LLMEngine
+    from app.registry.constants import (
+        EvaluationStatus,
+        ScoreDataType,
+        ScoreSource,
+        ScoreStatus,
+        SpanKind,
+        SpanStatusCode,
+        TraceStatus,
+    )
+
+    run_uuid = UUID(run_id)
+    proj_uuid = UUID(project_id)
+
+    llm = LLMEngine()
+
+    async with _worker_session() as session:
+        eval_repo = EvalRepository(session)
+
+        # Phase 0 -- Setup
+        await eval_repo.delete_session_scores_for_run(run_uuid, proj_uuid)
+        await eval_repo.delete_scores_for_run(run_uuid, proj_uuid)
+        await eval_repo.reset_run_counters(run_uuid)
+        await eval_repo.update_run_status(run_uuid, EvaluationStatus.RUNNING)
+        await session.commit()
+
+        run = await eval_repo.get_eval_run(run_uuid, proj_uuid)
+        if run is None:
+            raise ValueError(f"Eval run {run_id} not found")
+
+        signal_weights = run.filters.get("signal_weights")
+
+        # Phase 1 -- Per-session processing
+        for sid in session_ids:
+            # Step A -- Resolve traces
+            stmt = (
+                select(TraceModel)
+                .options(selectinload(TraceModel.spans))
+                .where(TraceModel.project_id == proj_uuid, TraceModel.session_id == sid)
+                .order_by(TraceModel.started_at.asc())
+            )
+            result = await session.execute(stmt)
+            trace_rows = result.scalars().all()
+
+            if not trace_rows:
+                logger.warning("session_eval_no_traces", run_id=run_id, session_id=sid)
+                await eval_repo.increment_progress(run_uuid)
+                await session.commit()
+                continue
+
+            traces: list[Trace] = []
+            for row in trace_rows:
+                spans = [
+                    Span(
+                        span_id=s.span_id,
+                        trace_id=s.trace_id,
+                        parent_span_id=s.parent_span_id,
+                        name=s.name,
+                        kind=SpanKind(s.kind),
+                        status=SpanStatusCode(s.status),
+                        input=s.input,
+                        output=s.output,
+                        model=s.model,
+                        token_usage=s.token_usage,
+                        metadata=s.metadata_,
+                        started_at=s.started_at,
+                        ended_at=s.ended_at,
+                        error=s.error,
+                        completion_start_time=s.completion_start_time,
+                        model_parameters=s.model_parameters,
+                        cost=s.cost,
+                    )
+                    for s in row.spans
+                ]
+                traces.append(
+                    Trace(
+                        trace_id=row.trace_id,
+                        project_id=row.project_id,
+                        name=row.name,
+                        status=TraceStatus(row.status),
+                        input=row.input,
+                        output=row.output,
+                        metadata=row.metadata_,
+                        started_at=row.started_at,
+                        ended_at=row.ended_at,
+                        session_id=row.session_id,
+                        user_id=row.user_id,
+                        tags=row.tags or [],
+                        environment=row.environment,
+                        release=row.release,
+                        spans=spans,
+                    )
+                )
+
+            # Step B -- Warm embedding cache
+            all_texts = []
+            for t in traces:
+                inp = to_text(t.input)
+                out = to_text(t.output)
+                if inp:
+                    all_texts.append(inp)
+                if out:
+                    all_texts.append(out)
+            if all_texts:
+                try:
+                    await llm.embed_texts(all_texts)
+                except Exception as exc:
+                    logger.warning("session_eval_embed_warmup_failed", error=str(exc))
+
+            # Step C -- Compute and persist trace-level signals
+            precomputed_signals: dict[str, dict[str, float]] = {}
+
+            for i, trace_entity in enumerate(traces):
+                tid = trace_entity.trace_id
+                trace_signals: dict[str, float] = {}
+
+                for signal_name in SIGNAL_METRICS:
+                    existing = await eval_repo.find_existing_trace_score(tid, signal_name)
+
+                    if existing and existing.value is not None:
+                        score_value = float(existing.value)
+                        logger.debug(
+                            "signal_reused",
+                            run_id=run_id,
+                            trace_id=str(tid),
+                            signal=signal_name,
+                            score=score_value,
+                        )
+                    else:
+                        try:
+                            metric_cls = get_metric(signal_name)
+                            metric_instance = metric_cls()
+                            result: MetricResult = await metric_instance.evaluate(
+                                trace_entity,
+                                llm,
+                                model=run.model,
+                                session_traces=traces[:i],
+                            )
+                            score_value = result.score
+
+                            now = datetime.now(timezone.utc)
+                            trace_score = TraceScore(
+                                id=uuid4(),
+                                trace_id=tid,
+                                project_id=proj_uuid,
+                                name=signal_name,
+                                data_type=ScoreDataType.NUMERIC,
+                                value=str(round(score_value, 4)),
+                                source=ScoreSource.AUTOMATED,
+                                status=ScoreStatus.SUCCESS,
+                                eval_run_id=run_uuid,
+                                reason=result.reason,
+                                environment=trace_entity.environment,
+                                metadata=result.metadata or {},
+                                created_at=now,
+                                updated_at=now,
+                            )
+                            await eval_repo.create_score(trace_score)
+
+                            logger.info(
+                                "signal_computed",
+                                run_id=run_id,
+                                trace_id=str(tid),
+                                signal=signal_name,
+                                score=score_value,
+                            )
+                        except Exception as exc:
+                            logger.error(
+                                "signal_failed",
+                                run_id=run_id,
+                                trace_id=str(tid),
+                                signal=signal_name,
+                                error=str(exc),
+                            )
+                            score_value = None
+
+                            now = datetime.now(timezone.utc)
+                            failed_score = TraceScore(
+                                id=uuid4(),
+                                trace_id=tid,
+                                project_id=proj_uuid,
+                                name=signal_name,
+                                data_type=ScoreDataType.NUMERIC,
+                                value=None,
+                                source=ScoreSource.AUTOMATED,
+                                status=ScoreStatus.FAILED,
+                                eval_run_id=run_uuid,
+                                reason=f"Signal computation failed: {exc}",
+                                environment=trace_entity.environment,
+                                metadata={},
+                                created_at=now,
+                                updated_at=now,
+                            )
+                            await eval_repo.create_score(failed_score)
+
+                    if score_value is not None:
+                        trace_signals[signal_name] = score_value
+
+                precomputed_signals[str(tid)] = trace_signals
+
+            await session.commit()
+
+            # Step D -- Run session metrics (pure aggregation)
+            for metric_name in run.metric_names:
+                now = datetime.now(timezone.utc)
+                try:
+                    session_metric_cls = get_session_metric(metric_name)
+                    session_metric = session_metric_cls()
+
+                    result = await session_metric.evaluate(
+                        session_id=sid,
+                        traces=traces,
+                        llm=llm,
+                        model=run.model,
+                        signal_weights=signal_weights,
+                        precomputed_signals=precomputed_signals,
+                    )
+
+                    score_entity = SessionScore(
+                        id=uuid4(),
+                        session_id=sid,
+                        project_id=proj_uuid,
+                        name=metric_name,
+                        data_type=ScoreDataType.NUMERIC,
+                        value=str(round(result.score, 4)),
+                        source=ScoreSource.AUTOMATED,
+                        status=ScoreStatus.SUCCESS,
+                        eval_run_id=run_uuid,
+                        reason=result.reason,
+                        metadata=result.metadata or {},
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    await eval_repo.create_session_score(score_entity)
+
+                    logger.info(
+                        "session_metric_completed",
+                        run_id=run_id,
+                        session_id=sid,
+                        metric=metric_name,
+                        score=result.score,
+                    )
+                except Exception as exc:
+                    logger.error(
+                        "session_metric_failed",
+                        run_id=run_id,
+                        session_id=sid,
+                        metric=metric_name,
+                        error=str(exc),
+                    )
+                    failed_entity = SessionScore(
+                        id=uuid4(),
+                        session_id=sid,
+                        project_id=proj_uuid,
+                        name=metric_name,
+                        data_type=ScoreDataType.NUMERIC,
+                        value=None,
+                        source=ScoreSource.AUTOMATED,
+                        status=ScoreStatus.FAILED,
+                        eval_run_id=run_uuid,
+                        reason=f"Session metric failed: {exc}",
+                        metadata={},
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    await eval_repo.create_session_score(failed_entity)
+                    await eval_repo.increment_failed(run_uuid)
+
+            # Step E -- Progress
+            await eval_repo.increment_progress(run_uuid)
+            await session.commit()
+
+        # Phase 2 -- Finalize
+        await eval_repo.update_run_status(run_uuid, EvaluationStatus.COMPLETED)
+        await session.commit()
+
+    logger.info("session_eval_run_completed", run_id=run_id)
+    return {"run_id": run_id, "status": "completed"}

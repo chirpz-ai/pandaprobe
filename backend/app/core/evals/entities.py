@@ -61,6 +61,36 @@ class TraceScore(BaseModel):
         return v
 
 
+class SessionScore(BaseModel):
+    """A single evaluation score for a session (agent-level)."""
+
+    id: UUID
+    session_id: str
+    project_id: UUID
+    name: str
+    data_type: ScoreDataType = ScoreDataType.NUMERIC
+    value: str | None
+    source: ScoreSource
+    status: ScoreStatus = ScoreStatus.SUCCESS
+    eval_run_id: UUID | None = None
+    author_user_id: str | None = None
+    reason: str | None = None
+    environment: str | None = None
+    config_id: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+
+    @field_validator("value")
+    @classmethod
+    def _validate_value(cls, v: str | None, info: Any) -> str | None:
+        if v is None:
+            return v
+        data_type = info.data.get("data_type", ScoreDataType.NUMERIC)
+        validate_score_value(v, data_type)
+        return v
+
+
 class EvalRun(BaseModel):
     """A batch evaluation job targeting a filtered set of traces.
 
@@ -76,6 +106,7 @@ class EvalRun(BaseModel):
     filters: dict[str, Any] = Field(default_factory=dict)
     sampling_rate: float = Field(default=1.0, ge=0.0, le=1.0)
     model: str | None = None
+    monitor_id: UUID | None = None
     status: EvaluationStatus = EvaluationStatus.PENDING
     total_traces: int = 0
     evaluated_count: int = 0
@@ -83,3 +114,24 @@ class EvalRun(BaseModel):
     error_message: str | None = None
     created_at: datetime
     completed_at: datetime | None = None
+
+
+class EvalMonitor(BaseModel):
+    """A persistent evaluation schedule that spawns eval runs on a cadence."""
+
+    id: UUID
+    project_id: UUID
+    name: str
+    target_type: str
+    metric_names: list[str]
+    filters: dict[str, Any] = Field(default_factory=dict)
+    sampling_rate: float = Field(default=1.0, ge=0.0, le=1.0)
+    model: str | None = None
+    cadence: str
+    only_if_changed: bool = True
+    status: str
+    last_run_at: datetime | None = None
+    last_run_id: UUID | None = None
+    next_run_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
