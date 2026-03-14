@@ -791,6 +791,12 @@ class EvalService:
             else:
                 base_filters.pop("signal_weights", None)
             fields["filters"] = base_filters
+        elif "filters" in fields:
+            existing_sw = (monitor.filters or {}).get("signal_weights")
+            if existing_sw is not None:
+                new_filters = dict(fields["filters"])
+                new_filters["signal_weights"] = existing_sw
+                fields["filters"] = new_filters
 
         new_cadence = fields.get("cadence")
         if new_cadence is not None:
