@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from app.core.traces.entities import Trace
     from app.infrastructure.llm.engine import LLMEngine
 
+
 DEFAULT_SIGNAL_WEIGHTS: dict[str, float] = {
     "confidence": 1.0,
     "loop_detection": 1.0,

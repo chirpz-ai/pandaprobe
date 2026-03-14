@@ -7,24 +7,15 @@ is needed -- only embedding API calls.
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
 from app.core.evals.metrics import register_metric
 from app.core.evals.metrics.base import BaseMetric, MetricResult
+from app.core.evals.metrics.utils import to_text
 
 if TYPE_CHECKING:
     from app.core.traces.entities import Trace
     from app.infrastructure.llm.engine import LLMEngine
-
-
-def _to_text(value: object) -> str:
-    """Serialize a trace input/output value to a plain string."""
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        return value
-    return json.dumps(value, default=str)
 
 
 @register_metric("coherence")
@@ -47,8 +38,8 @@ class CoherenceMetric(BaseMetric):
     ) -> MetricResult:
         effective_threshold = threshold if threshold is not None else self.threshold
 
-        input_text = _to_text(trace.input)
-        output_text = _to_text(trace.output)
+        input_text = to_text(trace.input)
+        output_text = to_text(trace.output)
 
         if not input_text or not output_text:
             return MetricResult(

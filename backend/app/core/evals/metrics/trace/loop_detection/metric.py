@@ -8,12 +8,12 @@ High semantic but low lexical overlap indicates valid enumeration.
 
 from __future__ import annotations
 
-import json
 import re
 from typing import TYPE_CHECKING
 
 from app.core.evals.metrics import register_metric
 from app.core.evals.metrics.base import BaseMetric, MetricResult
+from app.core.evals.metrics.utils import to_text
 
 if TYPE_CHECKING:
     from app.core.traces.entities import Trace
@@ -28,14 +28,6 @@ _STOP_WORDS = frozenset(
 )
 
 DEFAULT_WINDOW = 3
-
-
-def _to_text(value: object) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        return value
-    return json.dumps(value, default=str)
 
 
 def _tokenize(text: str) -> set[str]:
@@ -79,7 +71,7 @@ class LoopDetectionMetric(BaseMetric):
             )
 
         window = session_traces[-DEFAULT_WINDOW:]
-        current_text = _to_text(trace.output)
+        current_text = to_text(trace.output)
         if not current_text:
             return MetricResult(
                 score=1.0,
@@ -87,7 +79,7 @@ class LoopDetectionMetric(BaseMetric):
                 metadata={"note": "empty_output"},
             )
 
-        prev_texts = [_to_text(t.output) for t in window]
+        prev_texts = [to_text(t.output) for t in window]
         prev_texts = [t for t in prev_texts if t]
         if not prev_texts:
             return MetricResult(

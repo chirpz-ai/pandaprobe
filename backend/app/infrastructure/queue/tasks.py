@@ -422,7 +422,6 @@ async def _run_session_eval(
     session_ids: list[str],
 ) -> dict[str, str]:
     """Core async logic for executing a session eval run."""
-    import json as _json
     from datetime import datetime, timezone
     from uuid import UUID, uuid4
 
@@ -432,6 +431,7 @@ async def _run_session_eval(
     from app.core.evals.entities import SessionScore, TraceScore
     from app.core.evals.metrics import get_metric, get_session_metric
     from app.core.evals.metrics.base import MetricResult
+    from app.core.evals.metrics.utils import to_text
     from app.core.traces.entities import Span, Trace
     from app.infrastructure.db.models import SpanModel, TraceModel
     from app.infrastructure.db.repositories.eval_repo import EvalRepository
@@ -530,17 +530,10 @@ async def _run_session_eval(
                 )
 
             # Step B -- Warm embedding cache
-            def _to_text(val: object) -> str:
-                if val is None:
-                    return ""
-                if isinstance(val, str):
-                    return val
-                return _json.dumps(val, default=str)
-
             all_texts = []
             for t in traces:
-                inp = _to_text(t.input)
-                out = _to_text(t.output)
+                inp = to_text(t.input)
+                out = to_text(t.output)
                 if inp:
                     all_texts.append(inp)
                 if out:
