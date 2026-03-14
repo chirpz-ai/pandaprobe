@@ -60,6 +60,7 @@ class LoopDetectionMetric(BaseMetric):
     description = "Detects if the agent is stuck repeating itself across traces."
     category = "trace"
     threshold = 0.5
+    requires_session_context = True
 
     async def evaluate(  # noqa: D102
         self,

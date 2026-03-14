@@ -41,12 +41,16 @@ class BaseMetric(ABC):
         description: Human-readable explanation of what this metric measures.
         category: Scope of the metric (``"trace"`` or ``"session"``).
         threshold: Default pass/fail threshold (0-1 scale).
+        requires_session_context: If True, the metric needs ``session_traces``
+            to produce meaningful results and is excluded from standalone
+            trace-level eval runs (only usable as a session-eval signal).
     """
 
     name: str
     description: str = ""
     category: str = "trace"
     threshold: float = 0.5
+    requires_session_context: bool = False
 
     @classmethod
     def get_prompt_preview(cls) -> dict[str, str]:

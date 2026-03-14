@@ -57,9 +57,15 @@ def get_session_metric(name: str) -> type["BaseSessionMetric"]:
 
 
 def list_metrics() -> list[str]:
-    """Return the names of all registered trace metrics."""
+    """Return the names of all registered trace metrics available for standalone runs.
+
+    Metrics that require session context (e.g. loop_detection) are excluded
+    because they cannot produce meaningful results without prior traces.
+    They remain accessible via ``get_metric()`` for the session-eval signal
+    pipeline.
+    """
     _import_builtin_metrics()
-    return sorted(_REGISTRY.keys())
+    return sorted(k for k, cls in _REGISTRY.items() if not cls.requires_session_context)
 
 
 def list_session_metrics() -> list[str]:
