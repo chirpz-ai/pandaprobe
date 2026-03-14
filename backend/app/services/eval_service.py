@@ -825,12 +825,14 @@ class EvalService:
         if monitor is None:
             raise NotFoundError(f"Eval monitor {monitor_id} not found.")
 
-        run = await self._spawn_run_for_monitor(monitor)
+        run, target_ids = await self._spawn_run_for_monitor(monitor)
 
         now = datetime.now(timezone.utc)
         next_run = compute_next_run(monitor.cadence, now)
         await self._repo.advance_monitor(monitor_id, last_run_at=now, last_run_id=run.id, next_run_at=next_run)
         await self._session.commit()
+
+        self._dispatch_monitor_run(monitor.target_type, run.id, monitor.project_id, target_ids)
         logger.info("monitor_triggered", monitor_id=str(monitor_id), run_id=str(run.id))
         return run
 
@@ -875,8 +877,12 @@ class EvalService:
         result = await self._session.execute(stmt)
         return result.scalar_one() == 0
 
-    async def _spawn_run_for_monitor(self, monitor: EvalMonitor) -> EvalRun:
-        """Create and dispatch an eval run from a monitor's configuration."""
+    async def _spawn_run_for_monitor(self, monitor: EvalMonitor) -> tuple[EvalRun, list[str]]:
+        """Create an eval run from a monitor's config. Returns (run, target_ids).
+
+        The caller is responsible for committing the transaction and then
+        dispatching the Celery task so the worker can see the committed row.
+        """
         now = datetime.now(timezone.utc)
         run_name = f"[Monitor] {monitor.name}"
 
@@ -907,10 +913,7 @@ class EvalService:
             )
             await self._repo.create_eval_run(run)
             await self._session.flush()
-
-            from app.infrastructure.queue.tasks import execute_eval_run
-
-            execute_eval_run.delay(str(run.id), str(monitor.project_id), [str(t) for t in trace_ids])
+            return run, [str(t) for t in trace_ids]
 
         else:
             session_ids = await self._resolve_session_ids(monitor.project_id, monitor.filters)
@@ -939,12 +942,25 @@ class EvalService:
             )
             await self._repo.create_eval_run(run)
             await self._session.flush()
+            return run, session_ids
 
+    @staticmethod
+    def _dispatch_monitor_run(
+        target_type: str, run_id: UUID, project_id: UUID, target_ids: list[str]
+    ) -> None:
+        """Dispatch the Celery task for a monitor-spawned run.
+
+        Must only be called **after** the transaction that created the
+        eval run row has been committed.
+        """
+        if target_type == "TRACE":
+            from app.infrastructure.queue.tasks import execute_eval_run
+
+            execute_eval_run.delay(str(run_id), str(project_id), target_ids)
+        else:
             from app.infrastructure.queue.tasks import execute_session_eval_run
 
-            execute_session_eval_run.delay(str(run.id), str(monitor.project_id), session_ids)
-
-        return run
+            execute_session_eval_run.delay(str(run_id), str(project_id), target_ids)
 
     # -- Private helpers -------------------------------------------------------
 

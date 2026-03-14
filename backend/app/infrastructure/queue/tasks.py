@@ -363,7 +363,7 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
             logger.info("monitor_skipped_no_changes", monitor_id=monitor_id)
             return {"monitor_id": monitor_id, "status": "skipped"}
 
-        run = await svc._spawn_run_for_monitor(monitor)
+        run, target_ids = await svc._spawn_run_for_monitor(monitor)
 
         now = datetime.now(timezone.utc)
         next_run = compute_next_run(monitor.cadence, now)
@@ -374,6 +374,8 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
             next_run_at=next_run,
         )
         await session.commit()
+
+        svc._dispatch_monitor_run(monitor.target_type, run.id, monitor.project_id, target_ids)
 
         logger.info(
             "monitor_run_spawned",
