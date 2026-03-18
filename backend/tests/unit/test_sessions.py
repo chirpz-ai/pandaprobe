@@ -16,7 +16,7 @@ from app.api.v1.routes.sessions import (
     SessionDetail,
     SessionSummary,
 )
-from app.api.v1.routes.traces import TraceListItem
+from app.api.v1.routes.traces import TraceResponse
 from app.core.traces.entities import Span, Trace
 from app.registry.constants import SpanKind, SpanStatusCode, TraceStatus
 
@@ -145,20 +145,21 @@ def test_session_summary_span_stats_defaults() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_session_detail_includes_traces_and_io() -> None:
-    trace_item = TraceListItem(
+def test_session_detail_includes_full_traces() -> None:
+    trace_item = TraceResponse(
         trace_id=uuid4(),
+        project_id=uuid4(),
         name="t1",
         status=TraceStatus.COMPLETED,
+        input={"prompt": "hello"},
+        output={"response": "world"},
+        metadata={},
         started_at="2026-01-01T00:00:00+00:00",
         ended_at="2026-01-01T00:00:01+00:00",
         session_id="sess-1",
         user_id="user-a",
         tags=["tag1"],
-        latency_ms=1000.0,
-        span_count=3,
-        total_tokens=100,
-        total_cost=0.005,
+        spans=[],
     )
     detail = SessionDetail(
         session_id="sess-1",
@@ -172,18 +173,15 @@ def test_session_detail_includes_traces_and_io() -> None:
         total_span_count=3,
         total_tokens=100,
         total_cost=0.005,
-        input={"prompt": "hello"},
-        output={"response": "world"},
         traces=[trace_item],
     )
     assert len(detail.traces) == 1
-    assert detail.traces[0].span_count == 3
-    assert detail.input == {"prompt": "hello"}
-    assert detail.output == {"response": "world"}
+    assert detail.traces[0].input == {"prompt": "hello"}
+    assert detail.traces[0].output == {"response": "world"}
+    assert detail.traces[0].spans == []
 
 
-def test_session_detail_io_nullable() -> None:
-    """input/output default to None."""
+def test_session_detail_defaults_empty_traces() -> None:
     detail = SessionDetail(
         session_id="s",
         trace_count=0,
@@ -194,8 +192,6 @@ def test_session_detail_io_nullable() -> None:
         user_id=None,
         tags=[],
     )
-    assert detail.input is None
-    assert detail.output is None
     assert detail.traces == []
 
 

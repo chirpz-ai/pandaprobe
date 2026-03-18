@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.context import ApiContext
 from app.api.dependencies import require_project
-from app.api.v1.routes.traces import TraceListItem, _row_to_list_item
+from app.api.v1.routes.traces import TraceResponse, _trace_to_response
 from app.api.v1.schemas import PaginatedResponse
 from app.infrastructure.db.engine import get_db_session
 from app.registry.constants import (
@@ -52,11 +52,9 @@ class SessionSummary(BaseModel):
 
 
 class SessionDetail(SessionSummary):
-    """Single session with its ordered traces and I/O."""
+    """Single session with its ordered traces (full detail)."""
 
-    input: Any | None = None
-    output: Any | None = None
-    traces: list[TraceListItem] = Field(default_factory=list)
+    traces: list[TraceResponse] = Field(default_factory=list)
 
 
 class SessionDeleteResponse(BaseModel):
@@ -161,7 +159,7 @@ async def get_session(
     limit: int = Query(default=200, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
 ) -> SessionDetail:
-    """Retrieve a single session with its traces (including span stats).
+    """Retrieve a single session with its full traces (including spans).
 
     Summary fields (trace_count, latency, error, tags, tokens, cost)
     are computed via SQL aggregation over *all* traces in the session,
@@ -171,7 +169,7 @@ async def get_session(
     """
     svc = TraceService(session)
     summary = await svc.get_session_summary(ctx.project.id, session_id)
-    trace_rows, _total = await svc.list_session_traces_with_stats(
+    traces, _total = await svc.get_session_traces(
         ctx.project.id,
         session_id,
         limit=limit,
@@ -190,9 +188,7 @@ async def get_session(
         total_span_count=int(summary.total_span_count) if summary.total_span_count is not None else 0,
         total_tokens=int(summary.total_tokens) if summary.total_tokens is not None else 0,
         total_cost=float(summary.total_cost) if summary.total_cost is not None else 0.0,
-        input=summary.input,
-        output=summary.output,
-        traces=[_row_to_list_item(r) for r in trace_rows],
+        traces=[_trace_to_response(t) for t in traces],
     )
 
 

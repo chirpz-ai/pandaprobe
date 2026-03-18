@@ -487,6 +487,7 @@ class TraceRepository:
                                 *subq_where,
                                 TraceModel.session_id == t.c.session_id,
                             )
+                            .correlate(t)
                             .subquery()
                         )
                         .correlate(t)
@@ -539,28 +540,6 @@ class TraceRepository:
         t = TraceModel.__table__.alias("t")
         span_stats = self._span_stats_subquery(project_id)
 
-        input_subq = (
-            select(TraceModel.input)
-            .where(
-                TraceModel.project_id == project_id,
-                TraceModel.session_id == session_id,
-            )
-            .order_by(TraceModel.started_at.asc())
-            .limit(1)
-            .scalar_subquery()
-        )
-        output_subq = (
-            select(TraceModel.output)
-            .where(
-                TraceModel.project_id == project_id,
-                TraceModel.session_id == session_id,
-                TraceModel.output.isnot(None),
-            )
-            .order_by(TraceModel.started_at.desc())
-            .limit(1)
-            .scalar_subquery()
-        )
-
         stmt = (
             select(
                 t.c.session_id,
@@ -602,8 +581,6 @@ class TraceRepository:
                 func.coalesce(func.sum(span_stats.c.span_count), 0).label("total_span_count"),
                 func.coalesce(func.sum(span_stats.c.total_tokens), 0).label("total_tokens"),
                 func.coalesce(func.sum(span_stats.c.total_cost), 0.0).label("total_cost"),
-                input_subq.label("input"),
-                output_subq.label("output"),
             )
             .outerjoin(span_stats, t.c.trace_id == span_stats.c._trace_id)
             .where(t.c.project_id == project_id, t.c.session_id == session_id)
@@ -611,40 +588,31 @@ class TraceRepository:
         )
         return (await self._session.execute(stmt)).one_or_none()
 
-    async def list_session_traces_with_stats(
+    async def get_session_traces(
         self,
         project_id: UUID,
         session_id: str,
         limit: int = 200,
         offset: int = 0,
-    ) -> tuple[list[Row[Any]], int]:
-        """Return paginated traces for a session with span statistics.
-
-        Each Row contains trace columns plus span_count, total_tokens,
-        total_cost, latency_ms — matching the shape of ``list_traces``.
-        """
-        t = TraceModel.__table__
-        span_stats = self._span_stats_subquery(project_id)
-        latency_expr = func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000
-
-        base = (
-            select(
-                t,
-                func.coalesce(span_stats.c.span_count, 0).label("span_count"),
-                func.coalesce(span_stats.c.total_tokens, 0).label("total_tokens"),
-                func.coalesce(span_stats.c.total_cost, 0.0).label("total_cost"),
-                latency_expr.label("latency_ms"),
-            )
-            .outerjoin(span_stats, t.c.trace_id == span_stats.c._trace_id)
-            .where(t.c.project_id == project_id, t.c.session_id == session_id)
+    ) -> tuple[list[Trace], int]:
+        """Return paginated full Trace entities (with spans) for a session."""
+        count_stmt = (
+            select(func.count())
+            .select_from(TraceModel)
+            .where(TraceModel.project_id == project_id, TraceModel.session_id == session_id)
         )
-
-        count_stmt = select(func.count()).select_from(base.with_only_columns(t.c.trace_id).subquery())
         total = (await self._session.execute(count_stmt)).scalar_one()
 
-        data_stmt = base.order_by(t.c.started_at.asc()).offset(offset).limit(limit)
-        rows = (await self._session.execute(data_stmt)).all()
-        return rows, total
+        data_stmt = (
+            select(TraceModel)
+            .options(selectinload(TraceModel.spans))
+            .where(TraceModel.project_id == project_id, TraceModel.session_id == session_id)
+            .order_by(TraceModel.started_at.asc())
+            .offset(offset)
+            .limit(limit)
+        )
+        rows = (await self._session.execute(data_stmt)).scalars().all()
+        return [self._to_trace(r) for r in rows], total
 
     async def delete_session(self, project_id: UUID, session_id: str) -> int:
         """Delete all traces (CASCADE removes spans) for a session.  Returns count."""
