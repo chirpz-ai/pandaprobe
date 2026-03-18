@@ -25,8 +25,8 @@ async def test_get_session_detail(client: AsyncClient, seed_trace) -> None:
             name=f"detail-trace-{i}",
             started_at=started,
             ended_at=ended,
-            input={"prompt": f"hello-{i}"} if i == 0 else None,
-            output={"response": f"bye-{i}"} if i == 4 else None,
+            input={"prompt": f"hello-{i}"},
+            output={"response": f"bye-{i}"},
             spans=[span],
         )
 
@@ -40,13 +40,22 @@ async def test_get_session_detail(client: AsyncClient, seed_trace) -> None:
     assert body["total_cost"] > 0
     assert "first_trace_at" in body
     assert "last_trace_at" in body
-    assert len(body["traces"]) == 5
+    assert "input" not in body
+    assert "output" not in body
+
+    traces = body["traces"]
+    assert len(traces) == 5
+    for t in traces:
+        assert "input" in t
+        assert "output" in t
+        assert "spans" in t
+        assert "project_id" in t
 
 
-async def test_get_session_detail_io(client: AsyncClient, seed_trace) -> None:
-    """Verify input comes from earliest trace and output from latest."""
+async def test_get_session_detail_full_traces(client: AsyncClient, seed_trace) -> None:
+    """Each trace in the response includes input, output, and spans."""
     now = datetime.now(timezone.utc)
-    session_id = "io-sess"
+    session_id = "full-trace-sess"
     await seed_trace(
         session_id=session_id,
         name="first",
@@ -54,6 +63,10 @@ async def test_get_session_detail_io(client: AsyncClient, seed_trace) -> None:
         ended_at=now - timedelta(hours=1),
         input={"prompt": "first-input"},
         output={"response": "first-output"},
+        spans=[build_span_payload(
+            started_at=now - timedelta(hours=2),
+            ended_at=now - timedelta(hours=1),
+        )],
     )
     await seed_trace(
         session_id=session_id,
@@ -62,13 +75,24 @@ async def test_get_session_detail_io(client: AsyncClient, seed_trace) -> None:
         ended_at=now,
         input={"prompt": "last-input"},
         output={"response": "last-output"},
+        spans=[build_span_payload(
+            started_at=now - timedelta(minutes=10),
+            ended_at=now,
+        )],
     )
 
     resp = await client.get(f"/sessions/{session_id}")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["input"] == {"prompt": "first-input"}
-    assert body["output"] == {"response": "last-output"}
+    traces = body["traces"]
+    assert len(traces) == 2
+    assert traces[0]["name"] == "first"
+    assert traces[0]["input"] == {"prompt": "first-input"}
+    assert traces[0]["output"] == {"response": "first-output"}
+    assert len(traces[0]["spans"]) >= 1
+    assert traces[1]["name"] == "last"
+    assert traces[1]["input"] == {"prompt": "last-input"}
+    assert traces[1]["output"] == {"response": "last-output"}
 
 
 async def test_get_session_detail_pagination(client: AsyncClient, seed_trace) -> None:
