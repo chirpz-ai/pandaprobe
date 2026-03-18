@@ -63,10 +63,12 @@ async def test_get_session_detail_full_traces(client: AsyncClient, seed_trace) -
         ended_at=now - timedelta(hours=1),
         input={"prompt": "first-input"},
         output={"response": "first-output"},
-        spans=[build_span_payload(
-            started_at=now - timedelta(hours=2),
-            ended_at=now - timedelta(hours=1),
-        )],
+        spans=[
+            build_span_payload(
+                started_at=now - timedelta(hours=2),
+                ended_at=now - timedelta(hours=1),
+            )
+        ],
     )
     await seed_trace(
         session_id=session_id,
@@ -75,10 +77,12 @@ async def test_get_session_detail_full_traces(client: AsyncClient, seed_trace) -
         ended_at=now,
         input={"prompt": "last-input"},
         output={"response": "last-output"},
-        spans=[build_span_payload(
-            started_at=now - timedelta(minutes=10),
-            ended_at=now,
-        )],
+        spans=[
+            build_span_payload(
+                started_at=now - timedelta(minutes=10),
+                ended_at=now,
+            )
+        ],
     )
 
     resp = await client.get(f"/sessions/{session_id}")
