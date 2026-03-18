@@ -588,41 +588,6 @@ class TraceRepository:
         )
         return (await self._session.execute(stmt)).one_or_none()
 
-    async def list_session_traces_with_stats(
-        self,
-        project_id: UUID,
-        session_id: str,
-        limit: int = 200,
-        offset: int = 0,
-    ) -> tuple[list[Row[Any]], int]:
-        """Return paginated traces for a session with span statistics.
-
-        Each Row contains trace columns plus span_count, total_tokens,
-        total_cost, latency_ms — matching the shape of ``list_traces``.
-        """
-        t = TraceModel.__table__
-        span_stats = self._span_stats_subquery(project_id)
-        latency_expr = func.extract("epoch", t.c.ended_at - t.c.started_at) * 1000
-
-        base = (
-            select(
-                t,
-                func.coalesce(span_stats.c.span_count, 0).label("span_count"),
-                func.coalesce(span_stats.c.total_tokens, 0).label("total_tokens"),
-                func.coalesce(span_stats.c.total_cost, 0.0).label("total_cost"),
-                latency_expr.label("latency_ms"),
-            )
-            .outerjoin(span_stats, t.c.trace_id == span_stats.c._trace_id)
-            .where(t.c.project_id == project_id, t.c.session_id == session_id)
-        )
-
-        count_stmt = select(func.count()).select_from(base.with_only_columns(t.c.trace_id).subquery())
-        total = (await self._session.execute(count_stmt)).scalar_one()
-
-        data_stmt = base.order_by(t.c.started_at.asc()).offset(offset).limit(limit)
-        rows = (await self._session.execute(data_stmt)).all()
-        return rows, total
-
     async def get_session_traces(
         self,
         project_id: UUID,

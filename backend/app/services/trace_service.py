@@ -202,26 +202,6 @@ class TraceService:
             raise NotFoundError(f"Session '{session_id}' not found.")
         return row
 
-    async def list_session_traces_with_stats(
-        self,
-        project_id: UUID,
-        session_id: str,
-        limit: int = 200,
-        offset: int = 0,
-    ) -> tuple[list[Row[Any]], int]:
-        """Return paginated session traces with span stats.
-
-        Returns ``([], 0)`` when the session has no traces.  Callers
-        that need existence validation should check via
-        ``get_session_summary`` first.
-        """
-        return await self._repo.list_session_traces_with_stats(
-            project_id,
-            session_id,
-            limit=limit,
-            offset=offset,
-        )
-
     async def get_session_traces(
         self,
         project_id: UUID,
