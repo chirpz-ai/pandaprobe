@@ -52,7 +52,7 @@ class SpanCreate(BaseModel):
     input: Any | None = None
     output: Any | None = None
     model: str | None = Field(default=None, max_length=255)
-    token_usage: dict[str, int] | None = None
+    token_usage: dict[str, Any] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     started_at: datetime
     ended_at: datetime | None = None
@@ -71,7 +71,7 @@ class SpanUpdate(BaseModel):
     input: Any | None = Field(default=None)
     output: Any | None = Field(default=None)
     model: str | None = Field(default=None, max_length=255)
-    token_usage: dict[str, int] | None = None
+    token_usage: dict[str, Any] | None = None
     metadata: dict[str, Any] | None = None
     ended_at: datetime | None = None
     error: str | None = None
@@ -134,7 +134,7 @@ class SpanResponse(BaseModel):
     input: Any | None
     output: Any | None
     model: str | None
-    token_usage: dict[str, int] | None
+    token_usage: dict[str, Any] | None
     metadata: dict[str, Any]
     started_at: str
     ended_at: str | None
