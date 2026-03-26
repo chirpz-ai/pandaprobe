@@ -30,7 +30,7 @@ class Span(BaseModel):
     input: Any | None = None
     output: Any | None = None
     model: str | None = Field(default=None, max_length=255, description="LLM model name if applicable")
-    token_usage: dict[str, Any] | None = Field(
+    token_usage: dict[str, int] | None = Field(
         default=None,
         description="Token counts, e.g. {'prompt_tokens': 10, 'completion_tokens': 20}",
     )
