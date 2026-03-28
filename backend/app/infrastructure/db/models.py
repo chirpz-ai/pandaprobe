@@ -177,7 +177,11 @@ class TraceModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     project: Mapped["ProjectModel"] = relationship(back_populates="traces")
-    spans: Mapped[list["SpanModel"]] = relationship(back_populates="trace", cascade="all, delete-orphan")
+    spans: Mapped[list["SpanModel"]] = relationship(
+        back_populates="trace",
+        cascade="all, delete-orphan",
+        order_by="SpanModel.started_at.asc(), SpanModel.span_id.asc()",
+    )
     trace_scores: Mapped[list["TraceScoreModel"]] = relationship(back_populates="trace", passive_deletes=True)
 
     __table_args__ = (
