@@ -37,24 +37,26 @@
     "links": [
       {
         "label": "GitHub",
-        "href": "https://github.com/chirpz-ai/pandaprobe-sdk"
+        "icon": "github",
+        "href": "https://github.com/chirpz-ai"
       },
       {
-        "label": "Website",
-        "href": "https://www.pandaprobe.com"
+        "label": "Discord",
+        "icon": "discord",
+        "href": "https://discord.gg/A2VfrRhx"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Get Started",
-      "href": "/get-started/welcome"
+      "label": "Try PandaProbe",
+      "href": "https://www.pandaprobe.com/"
     }
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/chirpz-ai/pandaprobe-sdk",
+      "github": "https://github.com/chirpz-ai",
       "x": "https://x.com/pandaprobe",
-      "discord": "https://discord.gg/pandaprobe"
+      "discord": "https://discord.gg/A2VfrRhx"
     }
   },
   "navigation": {
@@ -63,18 +65,19 @@
         {
           "anchor": "GitHub",
           "icon": "github",
-          "href": "https://github.com/chirpz-ai/pandaprobe-sdk"
+          "href": "https://github.com/chirpz-ai"
         },
         {
           "anchor": "Community",
           "icon": "discord",
-          "href": "https://discord.gg/pandaprobe"
+          "href": "https://discord.gg/A2VfrRhx"
         }
       ]
     },
     "tabs": [
       {
         "tab": "Documentation",
+        "icon": "book",
         "groups": [
           {
             "group": "Get Started",
@@ -164,12 +167,14 @@
       },
       {
         "tab": "API Reference",
+        "icon": "terminal",
         "pages": [
           "api-reference/introduction"
         ]
       },
       {
         "tab": "Changelog",
+        "icon": "history",
         "pages": [
           "changelog/index"
         ]
