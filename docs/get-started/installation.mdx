@@ -1,0 +1,59 @@
+---
+title: "Installation"
+description: "Install the PandaProbe Python SDK and configure your environment"
+icon: "download"
+---
+
+### Prerequisites
+
+- Python 3.10 or later
+- A PandaProbe account with an API key
+
+### Install the SDK
+
+Base install:
+
+```bash
+pip install pandaprobe
+```
+
+Optional extras:
+
+| Extra | Install Command | Description |
+| --- | --- | --- |
+| OpenAI | `pip install pandaprobe[openai]` | Traces Chat Completions and Responses API |
+| Anthropic | `pip install pandaprobe[anthropic]` | Traces Messages API |
+| Gemini | `pip install pandaprobe[gemini]` | Traces generate_content API |
+| LangGraph | `pip install pandaprobe[langgraph]` | LangGraph callback handler |
+| Google ADK | `pip install pandaprobe[google-adk]` | Google Agent Development Kit adapter |
+| Claude Agent SDK | `pip install pandaprobe[claude-agent-sdk]` | Claude Agent SDK adapter |
+| CrewAI | `pip install pandaprobe[crewai]` | CrewAI adapter |
+| OpenAI Agents | `pip install pandaprobe[openai-agents]` | OpenAI Agents SDK adapter |
+
+Install multiple extras:
+
+```bash
+pip install pandaprobe[openai,anthropic,gemini]
+```
+
+### Configure environment variables
+
+Minimum required setup:
+
+```bash
+export PANDAPROBE_API_KEY="your-api-key"
+export PANDAPROBE_PROJECT_NAME="my-project"
+```
+
+<Tip>
+  You can also configure the SDK programmatically via `pandaprobe.init()`. See [Project Configuration](/tracing/configuration/project-configuration) for details.
+</Tip>
+
+For the full list of variables, see [Environment variables](/tracing/configuration/environment-variables).
+
+### Verify installation
+
+```python
+import pandaprobe
+print(pandaprobe.__version__)
+```
