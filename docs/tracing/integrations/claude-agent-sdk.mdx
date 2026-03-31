@@ -1,0 +1,75 @@
+---
+title: "Claude Agent SDK"
+description: "Trace Claude Agent SDK conversations with automatic tool and thinking capture"
+icon: "bot-message-square"
+---
+
+### Installation
+
+```bash
+pip install pandaprobe[claude-agent-sdk]
+```
+
+### Setup
+
+```python
+from pandaprobe.integrations.claude_agent_sdk import ClaudeAgentSDKAdapter
+
+adapter = ClaudeAgentSDKAdapter(
+    session_id="conversation-123",
+    user_id="user-abc",
+    tags=["production"],
+)
+adapter.instrument()
+```
+
+### Usage
+
+```python
+from claude_agent_sdk import ClaudeSDKClient
+
+client = ClaudeSDKClient(model="claude-sonnet-4-20250514")
+
+async for event in client.receive_response(
+    prompt="What is the weather in Paris?",
+    tools=[...],
+):
+    print(event)
+```
+
+### What gets traced
+
+| Claude Agent SDK Component | Span Kind | Description |
+| --- | --- | --- |
+| `receive_response` | `CHAIN` + `AGENT` | Root trace boundary with nested agent span |
+| Assistant messages | `LLM` | Thinking blocks extracted, content normalized |
+| `PreToolUse` / `PostToolUse` hooks | `TOOL` | Input from tool call, output from result |
+| Subagent `tool_use` blocks | `AGENT` | Subagent handoff tracking |
+
+### Tool tracing
+
+The adapter injects tracing hooks into the Claude SDK client at initialization:
+
+- **PreToolUse** — Creates a `TOOL` span with the tool's input arguments
+- **PostToolUse** — Sets the tool's output and marks the span as OK (or `ERROR` if `is_error` is true)
+- **PostToolUseFailure** — Records the error and marks the span as `ERROR`
+
+### Extended thinking
+
+Thinking blocks are automatically handled:
+
+- Thinking content is extracted and stored in metadata as `reasoning_summary`
+- Thinking-only messages are buffered and combined with the next message's thinking
+- Thinking blocks are stripped from the visible output
+
+### Conversation history
+
+The adapter maintains conversation history across turns on the client instance (`_pandaprobe_history`), allowing multi-turn tracing with proper context.
+
+### Token usage mapping
+
+| Claude SDK Field | PandaProbe Field |
+| --- | --- |
+| `input_tokens` | `prompt_tokens` |
+| `output_tokens` | `completion_tokens` |
+| `cache_read_input_tokens` | `cache_read_tokens` |
