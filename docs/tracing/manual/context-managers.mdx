@@ -1,0 +1,168 @@
+---
+title: "Context Managers"
+description: "Fine-grained tracing with start_trace() and span() context managers"
+icon: "braces"
+---
+
+Context managers give you full control over trace and span lifecycle. Use them when you need to set metadata, token usage, or model information imperatively.
+
+<Tip>
+  Prefer context managers over decorators when inputs and outputs are not simple function arguments/returns, or when you must attach token counts and costs after the fact.
+</Tip>
+
+## Starting a trace
+
+```python
+import pandaprobe
+
+with pandaprobe.start_trace("my-agent", input={"messages": [{"role": "user", "content": "Hello"}]}) as t:
+    # ... your logic ...
+    t.set_output({"messages": [{"role": "assistant", "content": "Hi there!"}]})
+```
+
+`pandaprobe.start_trace()` parameters:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `str` | *(required)* | Trace name |
+| `input` | `Any` | `None` | Trace input data |
+| `session_id` | `str \| None` | From context | Session identifier |
+| `user_id` | `str \| None` | From context | User identifier |
+| `tags` | `list[str] \| None` | `None` | String tags |
+| `metadata` | `dict \| None` | `None` | Key-value metadata |
+
+Returns a `TraceContext` with:
+
+- `trace_id` property — the auto-generated trace UUID (read-only)
+- `span()` method — creates child spans
+- `set_input(data)` — update trace input
+- `set_output(data)` — set trace output
+- `set_metadata(dict)` — merge metadata
+- `set_status(status)` — set `TraceStatus` (`PENDING`, `RUNNING`, `COMPLETED`, `ERROR`)
+
+## Creating spans
+
+```python
+with pandaprobe.start_trace("rag-pipeline") as t:
+    with t.span("retrieve", kind="RETRIEVER") as s:
+        s.set_input({"query": "What is PandaProbe?"})
+        docs = retrieve(query)
+        s.set_output({"documents": docs})
+
+    with t.span("generate", kind="LLM") as s:
+        s.set_input({"messages": [{"role": "user", "content": query}]})
+        s.set_model("gpt-4o")
+        s.set_model_parameters({"temperature": 0.7, "max_tokens": 1000})
+        response = call_llm(query, docs)
+        s.set_output({"messages": [{"role": "assistant", "content": response}]})
+        s.set_token_usage(prompt_tokens=150, completion_tokens=80)
+        s.set_cost(total=0.002)
+
+    t.set_output({"messages": [{"role": "assistant", "content": response}]})
+```
+
+`t.span()` parameters:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `str` | *(required)* | Span name |
+| `kind` | `str \| SpanKind` | `OTHER` | Span kind |
+| `model` | `str \| None` | `None` | Model name |
+| `metadata` | `dict \| None` | `None` | Key-value metadata |
+
+## SpanContext methods
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `set_input` | `(input: Any)` | Set span input data |
+| `set_output` | `(output: Any)` | Set span output data |
+| `set_model` | `(model: str)` | Set the LLM model name |
+| `set_token_usage` | `(*, prompt_tokens=0, completion_tokens=0, **extra)` | Set token counts. Extra keys like `reasoning_tokens`, `cache_read_tokens` are accepted. |
+| `set_model_parameters` | `(params: dict[str, Any])` | Set model params (temperature, etc.) |
+| `set_cost` | `(*, total: float, **extra)` | Set cost breakdown. Extra keys are accepted. |
+| `set_completion_start_time` | `(ts: datetime)` | Set time-to-first-token timestamp |
+| `set_error` | `(error: str)` | Record error message (also sets status to `ERROR`) |
+| `set_metadata` | `(metadata: dict[str, Any])` | Merge into existing metadata |
+
+`span_id` property — read-only UUID of the span.
+
+<AccordionGroup>
+  <Accordion title="Token and cost fields">
+    `set_token_usage` and `set_cost` accept additional keyword arguments so you can record provider-specific breakdowns without losing structured data in the UI.
+  </Accordion>
+</AccordionGroup>
+
+## Nested spans
+
+Spans can be nested to form a tree. Parent-child relationships are tracked automatically via a context-var span stack:
+
+```python
+with pandaprobe.start_trace("pipeline") as t:
+    with t.span("agent", kind="AGENT") as agent:
+        with t.span("llm-call", kind="LLM") as llm:
+            llm.set_model("gpt-4o")
+            ...
+        with t.span("tool-call", kind="TOOL") as tool:
+            ...
+```
+
+The `llm-call` and `tool-call` spans are automatically parented to the `agent` span.
+
+## Error handling
+
+On exception within a span, the status is automatically set to `ERROR` and the error message is captured. The exception is re-raised.
+
+```python
+with pandaprobe.start_trace("risky-operation") as t:
+    with t.span("might-fail", kind="LLM") as s:
+        s.set_model("gpt-4o")
+        raise ValueError("Something went wrong")
+        # span status = ERROR, error = "Something went wrong"
+    # trace status = ERROR
+```
+
+<Note>
+  Because exceptions propagate, you can rely on normal `try` / `except` boundaries around your instrumentation while still recording span-level failures.
+</Note>
+
+## Sync and async support
+
+Both `TraceContext` and `SpanContext` work as sync or async context managers.
+
+<Tabs>
+  <Tab title="Sync">
+    ```python
+    with pandaprobe.start_trace("agent") as t:
+        with t.span("llm-call", kind="LLM") as s:
+            s.set_model("gpt-4o")
+            result = sync_llm_call()
+            s.set_output(result)
+    ```
+  </Tab>
+  <Tab title="Async">
+    ```python
+    async with pandaprobe.start_trace("async-agent") as t:
+        async with t.span("llm-call", kind="LLM") as s:
+            s.set_model("gpt-4o")
+            result = await async_llm_call()
+            s.set_output(result)
+    ```
+  </Tab>
+</Tabs>
+
+<CodeGroup>
+```python trace-io.py
+with pandaprobe.start_trace("my-agent") as t:
+    t.set_input({"messages": [{"role": "user", "content": "Hello"}]})
+    reply = "Hi there!"
+    t.set_output({"messages": [{"role": "assistant", "content": reply}]})
+```
+
+```python pipeline-summary.py
+with pandaprobe.start_trace("pipeline") as t:
+    with t.span("generate", kind="LLM") as s:
+        s.set_input({"messages": [...]})
+        s.set_output({"messages": [...]})
+    t.set_output({"summary": "done"})
+```
+</CodeGroup>
