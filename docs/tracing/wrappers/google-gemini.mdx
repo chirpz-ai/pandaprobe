@@ -1,0 +1,90 @@
+---
+title: "Google Gemini"
+description: "Auto-trace Google Gemini generate_content API calls"
+icon: "zap"
+---
+
+### Installation
+
+```bash
+pip install pandaprobe[gemini]
+```
+
+### Setup
+
+```python
+from pandaprobe.wrappers import wrap_gemini
+from google import genai
+
+client = wrap_gemini(genai.Client())
+```
+
+## Generate content
+
+Span name: `"gemini-generate"`, SpanKind: `LLM`
+
+```python
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents="Explain quantum computing.",
+    config={"temperature": 0.7},
+)
+print(response.text)
+```
+
+**What gets traced**
+
+- Input: `contents` plus `system_instruction` normalized to messages format (role `"model"` mapped to `"assistant"`)
+- Output: answer text (non-thought parts)
+- Model name
+- Token usage
+- Model parameters: `temperature`, `top_p`, `top_k`, `max_output_tokens`, `stop_sequences`, and related fields
+- Thinking or reasoning parts stored in metadata as `reasoning_summary`
+
+### Streaming and async
+
+<CodeGroup>
+```python title="Streaming"
+stream = client.models.generate_content_stream(
+    model="gemini-2.5-flash",
+    contents="Hello!",
+)
+for chunk in stream:
+    print(chunk.text, end="")
+```
+
+```python title="Async"
+response = await client.aio.models.generate_content(
+    model="gemini-2.5-flash",
+    contents="Hello!",
+)
+
+async for chunk in client.aio.models.generate_content_stream(
+    model="gemini-2.5-flash",
+    contents="Hello!",
+):
+    print(chunk.text, end="")
+```
+</CodeGroup>
+
+<Note>
+  All four methods are traced: synchronous blocking, synchronous streaming, asynchronous blocking, asynchronous streaming.
+</Note>
+
+<Accordion title="Sync vs async streaming">
+  Use `models.generate_content_stream` for synchronous iterators and `aio.models.generate_content_stream` with `async for` when the call site is already async. The wrapper emits the same span fields in both cases; only the execution model differs.
+</Accordion>
+
+## Thinking mode
+
+When using Gemini's thinking mode, thought parts are automatically separated from answer parts. Thought content is stored in metadata as `reasoning_summary`, while the span output contains only the answer text.
+
+## Token usage mapping
+
+| Gemini Field | PandaProbe Field |
+| --- | --- |
+| `prompt_token_count` | `prompt_tokens` |
+| `candidates_token_count` | `completion_tokens` |
+| `total_token_count` | `total_tokens` |
+| `thoughts_token_count` | `reasoning_tokens` |
+| `cached_content_token_count` | `cache_read_tokens` |
