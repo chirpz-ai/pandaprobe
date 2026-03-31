@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "linden",
+  "theme": "almond",
   "name": "PandaProbe",
   "logo": {
     "light": "/assets/logo/android-chrome-512x512.png",
@@ -120,7 +120,7 @@
               "tracing/sessions-and-users",
               "tracing/scoring",
               {
-                "group": "Configuration & Troubleshooting",
+                "group": "Configuration",
                 "pages": [
                   "tracing/configuration/environment-variables",
                   "tracing/configuration/project-configuration",
@@ -150,7 +150,7 @@
                 ]
               },
               {
-                "group": "Set Up Evaluations",
+                "group": "Set Up Evaluation",
                 "pages": [
                   "evaluation/setup/introduction",
                   "evaluation/setup/run-eval-ui",
