@@ -1,0 +1,70 @@
+---
+title: "CrewAI"
+description: "Trace CrewAI crew executions with automatic agent and task tracking"
+icon: "users-round"
+---
+
+### Installation
+
+```bash
+pip install pandaprobe[crewai]
+```
+
+### Setup
+
+```python
+from pandaprobe.integrations.crewai import CrewAIAdapter
+
+adapter = CrewAIAdapter(
+    session_id="conversation-123",
+    user_id="user-abc",
+    tags=["production"],
+)
+adapter.instrument()
+```
+
+### Usage
+
+```python
+from crewai import Agent, Task, Crew
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find the latest AI trends",
+    backstory="You are an expert AI researcher.",
+)
+
+task = Task(
+    description="Research the latest developments in AI agents.",
+    expected_output="A summary of key trends.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+### What gets traced
+
+| CrewAI Component | Span Kind | Description |
+| --- | --- | --- |
+| `Crew.kickoff` / `kickoff_for_each` | `CHAIN` | Root trace boundary, crew configuration as system message |
+| `Agent.execute_task` | `AGENT` | Agent backstory as system message, prior agent context |
+| LLM completion calls | `LLM` | Token delta tracking (per-call usage), reasoning extraction |
+| `execute_tool_and_check_finality` | `TOOL` | Tool name from AgentAction, input/output |
+
+### Multi-agent support
+
+In multi-agent crews, PandaProbe tracks context propagation between agents. Each agent's output is made available as context for subsequent agents, and this is reflected in the trace hierarchy.
+
+### Token usage
+
+CrewAI token usage is computed using delta tracking: the adapter snapshots the agent's cumulative `_token_usage` before and after each LLM call to determine per-call token counts.
+
+| CrewAI Field | PandaProbe Field |
+| --- | --- |
+| `prompt_tokens` | `prompt_tokens` |
+| `completion_tokens` | `completion_tokens` |
+| `total_tokens` | `total_tokens` |
+| `cached_prompt_tokens` | `cache_read_tokens` |
+| `reasoning_tokens` | `reasoning_tokens` |
