@@ -1,0 +1,179 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "linden",
+  "name": "PandaProbe",
+  "logo": {
+    "light": "/assets/logo/android-chrome-512x512.png",
+    "dark": "/assets/logo/android-chrome-512x512.png"
+  },
+  "favicon": "/assets/logo/favicon.ico",
+  "colors": {
+    "primary": "#fcba03",
+    "light": "#056196",
+    "dark": "#056196"
+  },
+  "background": {
+    "color": {
+      "dark": "#18191b"
+    }
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ],
+    "display": "header"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/chirpz-ai/pandaprobe-sdk"
+      },
+      {
+        "label": "Website",
+        "href": "https://www.pandaprobe.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Get Started",
+      "href": "/get-started/welcome"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/chirpz-ai/pandaprobe-sdk",
+      "x": "https://x.com/pandaprobe",
+      "discord": "https://discord.gg/pandaprobe"
+    }
+  },
+  "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "icon": "github",
+          "href": "https://github.com/chirpz-ai/pandaprobe-sdk"
+        },
+        {
+          "anchor": "Community",
+          "icon": "discord",
+          "href": "https://discord.gg/pandaprobe"
+        }
+      ]
+    },
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "get-started/welcome",
+              "get-started/quickstart",
+              "get-started/installation"
+            ]
+          },
+          {
+            "group": "Tracing",
+            "pages": [
+              "tracing/overview",
+              "tracing/concepts",
+              {
+                "group": "Wrappers",
+                "pages": [
+                  "tracing/wrappers/overview",
+                  "tracing/wrappers/openai",
+                  "tracing/wrappers/anthropic",
+                  "tracing/wrappers/google-gemini"
+                ]
+              },
+              {
+                "group": "Integrations",
+                "pages": [
+                  "tracing/integrations/overview",
+                  "tracing/integrations/langgraph",
+                  "tracing/integrations/crewai",
+                  "tracing/integrations/google-adk",
+                  "tracing/integrations/claude-agent-sdk",
+                  "tracing/integrations/openai-agents-sdk"
+                ]
+              },
+              {
+                "group": "Manual Instrumentation",
+                "pages": [
+                  "tracing/manual/decorators",
+                  "tracing/manual/context-managers",
+                  "tracing/manual/low-level-client-api"
+                ]
+              },
+              "tracing/sessions-and-users",
+              "tracing/scoring",
+              {
+                "group": "Configuration & Troubleshooting",
+                "pages": [
+                  "tracing/configuration/environment-variables",
+                  "tracing/configuration/project-configuration",
+                  "tracing/configuration/conditional-tracing",
+                  "tracing/configuration/troubleshooting"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Evaluation",
+            "pages": [
+              "evaluation/overview",
+              "evaluation/concepts",
+              {
+                "group": "Trace Evaluation",
+                "pages": [
+                  "evaluation/trace-evaluation/introduction",
+                  "evaluation/trace-evaluation/metrics"
+                ]
+              },
+              {
+                "group": "Agent Evaluation",
+                "pages": [
+                  "evaluation/agent-evaluation/introduction",
+                  "evaluation/agent-evaluation/metrics"
+                ]
+              },
+              {
+                "group": "Set Up Evaluations",
+                "pages": [
+                  "evaluation/setup/introduction",
+                  "evaluation/setup/run-eval-ui",
+                  "evaluation/setup/run-eval-api",
+                  "evaluation/setup/scheduling"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "pages": [
+          "api-reference/introduction"
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "pages": [
+          "changelog/index"
+        ]
+      }
+    ]
+  }
+}
