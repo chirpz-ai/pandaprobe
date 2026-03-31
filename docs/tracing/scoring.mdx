@@ -1,0 +1,78 @@
+---
+title: "Scoring"
+description: "Attach programmatic scores to traces for evaluation and feedback tracking"
+icon: "star"
+---
+
+PandaProbe lets you attach **scores** to traces programmatically. Scores can represent user feedback, automated quality metrics, or any other evaluation signal you want to persist next to a trace.
+
+<Info>
+  Scores are first-class objects on the trace record: you can filter, sort, and build dashboards on them alongside latency, tokens, and cost.
+</Info>
+
+## Basic usage
+
+```python
+import pandaprobe
+
+pandaprobe.score(
+    trace_id="your-trace-id",
+    name="user_satisfaction",
+    value="0.9",
+    data_type="NUMERIC",
+    reason="User clicked thumbs up",
+)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `trace_id` | `str` or `UUID` | Yes | The trace to score |
+| `name` | `str` | Yes | Score name (for example, `accuracy`, `user_satisfaction`) |
+| `value` | `str` | Yes | The score value (always passed as a string) |
+| `data_type` | `str` | No | One of `NUMERIC`, `BOOLEAN`, `CATEGORICAL`. Default: `NUMERIC` |
+| `reason` | `str` or `None` | No | Human-readable explanation for the score |
+| `metadata` | `dict` or `None` | No | Arbitrary key-value pairs |
+
+## Score data types (`ScoreDataType`)
+
+<Tabs>
+  <Tab title="NUMERIC">
+    A numeric value (for example, `"0.95"`, `"4.5"`). Use for continuous metrics such as accuracy, latency, or satisfaction scores.
+  </Tab>
+  <Tab title="BOOLEAN">
+    A boolean value (`"true"` or `"false"`). Use for pass/fail checks.
+  </Tab>
+  <Tab title="CATEGORICAL">
+    A category label (for example, `"positive"`, `"neutral"`, `"negative"`). Use for classification-style scores.
+  </Tab>
+</Tabs>
+
+<Note>
+  `value` is always a string at the API boundary so serialization stays consistent across languages and storage backends; parse according to `data_type` in your pipelines.
+</Note>
+
+## Getting the trace ID
+
+From a context manager:
+
+```python
+with pandaprobe.start_trace("my-agent") as t:
+    trace_id = t.trace_id
+    # ... run your agent ...
+
+pandaprobe.score(trace_id=trace_id, name="quality", value="0.8")
+```
+
+<Tip>
+  When using wrappers, traces are created automatically. Use sessions to group related traces and score them via the PandaProbe API or dashboard.
+</Tip>
+
+## Multiple scores per trace
+
+```python
+pandaprobe.score(trace_id=tid, name="relevance", value="0.9", data_type="NUMERIC")
+pandaprobe.score(trace_id=tid, name="hallucination_free", value="true", data_type="BOOLEAN")
+pandaprobe.score(trace_id=tid, name="sentiment", value="positive", data_type="CATEGORICAL")
+```
