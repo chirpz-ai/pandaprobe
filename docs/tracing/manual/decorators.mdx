@@ -1,0 +1,158 @@
+---
+title: "Decorators"
+description: "Trace functions automatically with @trace and @span decorators"
+icon: "at-sign"
+---
+
+The `@pandaprobe.trace` and `@pandaprobe.span` decorators provide automatic instrumentation for your functions. They handle timing, error capture, and input/output extraction with minimal boilerplate.
+
+## `@pandaprobe.trace`
+
+Creates a new trace for the decorated function. Use this on your top-level entry points.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `str \| None` | Function name | Custom trace name |
+| `session_id` | `str \| None` | From context | Session identifier |
+| `user_id` | `str \| None` | From context | User identifier |
+| `tags` | `list[str] \| None` | `None` | String tags |
+| `metadata` | `dict \| None` | `None` | Key-value metadata |
+
+Can be used with or without parentheses:
+
+<CodeGroup>
+```python trace-default.py
+import pandaprobe
+
+@pandaprobe.trace
+def run_agent(query: str):
+    ...
+```
+
+```python trace-options.py
+import pandaprobe
+
+@pandaprobe.trace(name="custom-name", tags=["production"])
+def run_agent(query: str):
+    ...
+```
+</CodeGroup>
+
+**Input/output capture**
+
+- **Input:** Automatically captured from function arguments (uses `inspect.signature` to build a JSON-friendly dict).
+- **Output:** Automatically captured from the return value.
+- At the trace level, the SDK extracts only the last user message from input and the last assistant message from output.
+
+<AccordionGroup>
+  <Accordion title="Why trace-level message extraction?">
+    Trace views often focus on the conversational turn. Full structured arguments remain available in raw span data when you need deeper inspection.
+  </Accordion>
+</AccordionGroup>
+
+## `@pandaprobe.span`
+
+Creates a new span within the current trace. Use this on inner functions.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `str \| None` | Function name | Custom span name |
+| `kind` | `str \| SpanKind` | `OTHER` | Span kind (LLM, TOOL, AGENT, etc.) |
+| `model` | `str \| None` | `None` | Model name (for LLM spans) |
+| `metadata` | `dict \| None` | `None` | Key-value metadata |
+
+```python
+@pandaprobe.span(name="retrieve-docs", kind="RETRIEVER")
+def retrieve(query: str) -> list[str]:
+    ...
+
+@pandaprobe.span(name="llm-call", kind="LLM", model="gpt-4o")
+def call_llm(messages: list[dict]) -> str:
+    ...
+```
+
+<Warning>
+  `@pandaprobe.span` requires an active trace context. If no trace exists (no enclosing `@pandaprobe.trace` or `pandaprobe.start_trace()`), the function runs without instrumentation.
+</Warning>
+
+## Sync and async support
+
+Both decorators auto-detect sync vs async functions and wrap accordingly.
+
+<Tabs>
+  <Tab title="Sync">
+    ```python
+    @pandaprobe.trace(name="my-agent")
+    def run_agent(query: str) -> str:
+        result = call_llm(query)
+        return result
+
+    @pandaprobe.span(name="llm-call", kind="LLM")
+    def call_llm(query: str) -> str:
+        ...
+    ```
+  </Tab>
+  <Tab title="Async">
+    ```python
+    @pandaprobe.trace(name="my-agent")
+    async def run_agent(query: str) -> str:
+        result = await call_llm(query)
+        return result
+
+    @pandaprobe.span(name="llm-call", kind="LLM")
+    async def call_llm(query: str) -> str:
+        ...
+    ```
+  </Tab>
+</Tabs>
+
+## Nesting
+
+```python
+@pandaprobe.trace(name="support-agent")
+def handle_request(query: str) -> str:
+    docs = retrieve_docs(query)
+    answer = generate_answer(query, docs)
+    return answer
+
+@pandaprobe.span(name="retrieve", kind="RETRIEVER")
+def retrieve_docs(query: str) -> list[str]:
+    ...
+
+@pandaprobe.span(name="generate", kind="LLM", model="gpt-4o")
+def generate_answer(query: str, docs: list[str]) -> str:
+    ...
+```
+
+This produces: `Trace("support-agent")` → `Span("retrieve", RETRIEVER)` → `Span("generate", LLM)`.
+
+## Combining with wrappers
+
+```python
+from pandaprobe.wrappers import wrap_openai
+from openai import OpenAI
+
+client = wrap_openai(OpenAI())
+
+@pandaprobe.trace(name="my-agent")
+def run_agent(query: str) -> str:
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": query}],
+    )
+    return response.choices[0].message.content
+```
+
+The wrapper's LLM span is automatically nested as a child of the trace.
+
+<Tip>
+  Pair decorators with provider wrappers so LLM calls inherit hierarchy and you still get token usage and model metadata on child spans.
+</Tip>
+
+## No-op behavior
+
+If the SDK is disabled (`PANDAPROBE_ENABLED=false`) or no client is available, both decorators pass through transparently: the decorated function runs normally with no overhead.
+
+<Note>
+  No-op mode is intentional for local development and tests where you omit API keys or disable tracing globally.
+</Note>
