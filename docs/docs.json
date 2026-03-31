@@ -199,25 +199,15 @@
       "apple-mobile-web-app-title": "PandaProbe Docs",
       "application-name": "PandaProbe",
       "msapplication-TileColor": "#18191b",
-      "og:title": "PandaProbe - open source agent engineering platform",
       "og:type": "website",
-      "og:url": "https://docs.pandaprobe.com",
       "og:image": "https://docs.pandaprobe.com/assets/og-image-docs.png",
-      "og:description": "Open source agent engineering platform. Traces, evals, metrics, and live monitoring to debug and improve your AI agents.",
       "og:site_name": "PandaProbe Documentation",
       "og:locale": "en_US",
       "twitter:card": "summary_large_image",
       "twitter:site": "@pandaprobe",
       "twitter:creator": "@pandaprobe",
-      "twitter:title": "PandaProbe - open source agent engineering platform",
-      "twitter:description": "Open source agent engineering platform. Traces, evals, metrics, and live monitoring to debug and improve your AI agents.",
       "twitter:image": "https://docs.pandaprobe.com/assets/og-image-docs.png",
-      "twitter:image:alt": "PandaProbe logo - open source agent engineering platform",
-      "article:published_time": "2026-03-31T00:00:00+00:00",
-      "article:modified_time": "2026-03-31T00:00:00+00:00",
-      "article:author": "Chirpz AI team",
-      "article:section": "Technology",
-      "article:tag": "PandaProbe, AI agents, agent engineering, agent observability, agent tracing, agent evaluation, OpenAI tracing, Anthropic tracing, Google Gemini tracing, LangGraph, CrewAI, Google ADK, Python SDK, open source, agent debugging, agent monitoring"
+      "twitter:image:alt": "PandaProbe logo - open source agent engineering platform"
     }
   }
 }
