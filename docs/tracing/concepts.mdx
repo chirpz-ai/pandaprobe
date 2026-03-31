@@ -1,0 +1,103 @@
+---
+title: "Core Concepts"
+description: "Traces, spans, span kinds, and the data model behind PandaProbe tracing"
+icon: "book-open"
+---
+
+This page describes the tracing data model: what a trace and span contain, how status and kinds are interpreted, and how input/output are represented for LLM workloads.
+
+<Tip>
+  Think of a **trace** as the outer envelope for one logical run, and **spans** as the tree of steps inside it. Parent/child links preserve causality and nesting depth for UIs and exports.
+</Tip>
+
+## Traces
+
+A trace represents a single end-to-end operation in your application—typically one user request or agent run. Every trace has:
+
+- `trace_id` — auto-generated UUID
+- `name` — a descriptive name (for example, `customer-support-agent`)
+- `status` — one of: `PENDING`, `RUNNING`, `COMPLETED`, `ERROR`
+- `input` / `output` — the request and response data
+- `session_id` / `user_id` — for grouping related traces
+- `tags` — arbitrary string labels
+- `metadata` — arbitrary key-value pairs
+- `environment` / `release` — from SDK configuration
+- `spans` — ordered list of spans (maximum 500 per trace)
+
+## Spans
+
+A span represents a single unit of work within a trace. Spans can be nested to form a tree. Every span has:
+
+- `span_id` — auto-generated UUID
+- `parent_span_id` — links to the parent span (`null` for root spans)
+- `name` — descriptive name
+- `kind` — categorizes the type of work (see [SpanKind](#spankind) below)
+- `status` — `UNSET`, `OK`, or `ERROR`
+- `input` / `output` — span-level data
+- `model` — the LLM model name (for LLM spans)
+- `token_usage` — dict with `prompt_tokens`, `completion_tokens`, `total_tokens`, and optionally `reasoning_tokens`, `cache_read_tokens`
+- `model_parameters` — dict with `temperature`, `top_p`, `max_tokens`, and similar fields
+- `cost` — dict with `total` and optionally other breakdowns
+- `completion_start_time` — timestamp of first token (time-to-first-token)
+- `metadata` — arbitrary key-value pairs
+- `error` — error message string if the span failed
+
+## SpanKind
+
+| Value | Description |
+| --- | --- |
+| `LLM` | A call to a language model API |
+| `TOOL` | A tool or function call execution |
+| `AGENT` | An autonomous agent step or sub-agent |
+| `CHAIN` | A chain or pipeline of operations |
+| `RETRIEVER` | A retrieval operation (for example, vector search) |
+| `EMBEDDING` | An embedding generation call |
+| `OTHER` | Any other operation |
+
+## SpanStatusCode
+
+| Value | Description |
+| --- | --- |
+| `UNSET` | Status not explicitly set (default) |
+| `OK` | Operation completed successfully |
+| `ERROR` | Operation failed |
+
+On clean exit, spans auto-promote from `UNSET` to `OK`. On exception, status is set to `ERROR`.
+
+## TraceStatus
+
+| Value | Description |
+| --- | --- |
+| `PENDING` | Trace created but not started |
+| `RUNNING` | Trace is actively executing |
+| `COMPLETED` | Trace finished successfully |
+| `ERROR` | Trace failed with an error |
+
+## Input/Output convention
+
+LLM spans use a standard messages format:
+
+```python
+{
+    "messages": [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"},
+        {"role": "assistant", "content": "Hi there! How can I help?"}
+    ]
+}
+```
+
+At the trace level, `input` contains only the last user message and `output` contains only the last assistant message. This convention is enforced automatically by wrappers, integrations, and the `@trace` decorator.
+
+<Note>
+  The messages format is validated but non-conforming data is accepted with a warning. You can pass arbitrary JSON as input/output if needed.
+</Note>
+
+<AccordionGroup>
+  <Accordion title="Span status: UNSET to OK">
+    If a span exits without error and you never set an explicit status, the SDK promotes `UNSET` to `OK`. If an exception propagates out of the instrumented region, the span is marked `ERROR` and error details are attached when available.
+  </Accordion>
+  <Accordion title="Trace status lifecycle">
+    Traces typically move `PENDING` to `RUNNING` while work is in flight, then `COMPLETED` on success or `ERROR` when the trace fails. Final status drives aggregation and alerting in downstream tooling.
+  </Accordion>
+</AccordionGroup>
