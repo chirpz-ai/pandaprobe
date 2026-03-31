@@ -1,0 +1,91 @@
+---
+title: "Project Configuration"
+description: "Configure the SDK programmatically with pandaprobe.init()"
+icon: "settings"
+---
+
+While environment variables are the recommended way to configure PandaProbe, you can also configure the SDK programmatically using `pandaprobe.init()`.
+
+### Basic programmatic configuration
+
+```python
+import pandaprobe
+
+pandaprobe.init(
+    api_key="your-api-key",
+    project_name="my-project",
+    endpoint="https://your-instance.com",
+    environment="production",
+    release="v1.2.3",
+)
+```
+
+### Precedence rules
+
+Parameters passed to `pandaprobe.init()` always take precedence over environment variables:
+
+```python
+# Even if PANDAPROBE_ENDPOINT is set in the environment,
+# this will use the explicitly provided endpoint:
+pandaprobe.init(
+    endpoint="https://custom-endpoint.com",
+)
+```
+
+Precedence order (highest to lowest):
+
+1. Explicit keyword arguments to `pandaprobe.init()`
+2. `PANDAPROBE_*` environment variables
+3. SDK defaults
+
+### SdkConfig fields
+
+The resolved configuration is stored as a frozen `SdkConfig` dataclass. You can inspect it via the client:
+
+```python
+client = pandaprobe.init(api_key="...", project_name="...")
+print(client.config.endpoint)       # "https://api.pandaprobe.com"
+print(client.config.batch_size)     # 10
+print(client.config.flush_interval) # 5.0
+```
+
+| Field | Type | Default |
+| --- | --- | --- |
+| `api_key` | `str \| None` | `None` |
+| `project_name` | `str \| None` | `None` |
+| `endpoint` | `str` | `"https://api.pandaprobe.com"` |
+| `environment` | `str \| None` | `None` |
+| `release` | `str \| None` | `None` |
+| `enabled` | `bool` | `True` |
+| `batch_size` | `int` | `10` |
+| `flush_interval` | `float` | `5.0` |
+| `max_queue_size` | `int` | `1000` |
+| `debug` | `bool` | `False` |
+
+<Warning>
+  When `enabled=True`, both `api_key` and `project_name` are required. The SDK raises `ValueError` at initialization if either is missing.
+</Warning>
+
+### Re-initialization
+
+Calling `pandaprobe.init()` when a client already exists shuts down the previous client and creates a new one:
+
+```python
+pandaprobe.init(project_name="project-a")
+# ... traces go to project-a ...
+
+pandaprobe.init(project_name="project-b")
+# ... traces now go to project-b ...
+```
+
+### Auto-initialization
+
+If you don't call `pandaprobe.init()`, the SDK auto-initializes from environment variables on first use:
+
+```python
+# No init() call needed if env vars are set:
+with pandaprobe.start_trace("my-trace") as t:
+    ...
+```
+
+Auto-initialization is attempted once. If it fails (for example, missing API key), subsequent calls to `get_client()` return `None` and convenience functions like `flush()` and `shutdown()` silently no-op.

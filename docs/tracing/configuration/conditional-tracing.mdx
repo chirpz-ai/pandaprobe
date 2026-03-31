@@ -1,0 +1,68 @@
+---
+title: "Conditional Tracing"
+description: "Enable or disable tracing based on environment or runtime conditions"
+icon: "toggle-left"
+---
+
+PandaProbe supports fully disabling the SDK, making it safe to leave instrumentation in production code that you only want active in certain environments.
+
+### Disable via environment variable
+
+```bash
+export PANDAPROBE_ENABLED=false
+```
+
+When `PANDAPROBE_ENABLED=false`:
+
+- The SDK does not initialize a client
+- `pandaprobe.get_client()` returns `None`
+- `pandaprobe.flush()` and `pandaprobe.shutdown()` silently do nothing
+- `@pandaprobe.trace` and `@pandaprobe.span` decorators pass through transparently (zero overhead)
+- Wrappers return the original client unchanged
+- Integration adapters' `instrument()` calls are no-ops
+
+<Tip>
+  This makes it safe to leave PandaProbe instrumentation in all environments. The SDK adds zero overhead when disabled.
+</Tip>
+
+### Disable via init()
+
+```python
+import pandaprobe
+
+pandaprobe.init(enabled=False)
+```
+
+### Environment-based configuration
+
+Common pattern using different configurations per environment:
+
+```python
+import os
+import pandaprobe
+
+env = os.environ.get("APP_ENV", "development")
+
+pandaprobe.init(
+    api_key=os.environ.get("PANDAPROBE_API_KEY"),
+    project_name="my-project",
+    environment=env,
+    enabled=env != "testing",
+    debug=env == "development",
+)
+```
+
+### Conditional tracing without disabling
+
+If you want the SDK enabled but want to conditionally trace specific operations:
+
+```python
+import pandaprobe
+
+def handle_request(query: str):
+    if should_trace(query):
+        with pandaprobe.start_trace("agent", input={"messages": [{"role": "user", "content": query}]}) as t:
+            return process(query, t)
+    else:
+        return process(query, None)
+```

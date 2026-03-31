@@ -1,0 +1,79 @@
+---
+title: "LangGraph"
+description: "Trace LangGraph agent executions with automatic span capture"
+icon: "git-branch"
+---
+
+### Installation
+
+```bash
+pip install pandaprobe[langgraph]
+```
+
+### Setup
+
+```python
+from pandaprobe.integrations.langgraph import LangGraphCallbackHandler
+
+handler = LangGraphCallbackHandler(
+    session_id="conversation-123",
+    user_id="user-abc",
+    tags=["production"],
+)
+```
+
+### Usage
+
+Pass the handler via LangChain's `config["callbacks"]`:
+
+```python
+from langgraph.graph import StateGraph
+
+# ... define your graph ...
+
+result = graph.invoke(
+    {"messages": [{"role": "user", "content": "Hello!"}]},
+    config={"callbacks": [handler]},
+)
+```
+
+<Warning>
+  Unlike other integrations, LangGraph does not use the `instrument()` pattern. You must pass the handler in `config` for each invocation.
+</Warning>
+
+### What gets traced
+
+| LangChain Callback | Span Kind | Description |
+| --- | --- | --- |
+| `on_chain_start` / `on_chain_end` | `CHAIN` (root) or `AGENT` (nested) | Root chain creates the trace boundary |
+| `on_llm_start` / `on_chat_model_start` / `on_llm_end` | `LLM` | Model, parameters, token usage, reasoning |
+| `on_tool_start` / `on_tool_end` | `TOOL` | Tool name, input, output |
+| `on_retriever_start` / `on_retriever_end` | `RETRIEVER` | Retrieval queries and results |
+
+### Example with tools
+
+```python
+from langchain_openai import ChatOpenAI
+from langgraph.prebuilt import create_react_agent
+from langchain_core.tools import tool
+
+@tool
+def get_weather(city: str) -> str:
+    """Get the weather for a city."""
+    return f"The weather in {city} is sunny, 72F."
+
+model = ChatOpenAI(model="gpt-4o")
+agent = create_react_agent(model, [get_weather])
+
+handler = LangGraphCallbackHandler(session_id="s1")
+result = agent.invoke(
+    {"messages": [{"role": "user", "content": "What's the weather in Paris?"}]},
+    config={"callbacks": [handler]},
+)
+```
+
+This produces a trace with: `CHAIN` (root) → `LLM` (model call) → `TOOL` (`get_weather`) → `LLM` (final response).
+
+### Token usage
+
+Token usage is extracted from LangChain's `usage_metadata` (primary) or legacy `llm_output.token_usage` (fallback). The mapping is: `input_tokens` → `prompt_tokens`, `output_tokens` → `completion_tokens`. Reasoning tokens are subtracted from `output_tokens` when present.

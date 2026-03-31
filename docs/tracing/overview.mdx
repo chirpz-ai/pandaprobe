@@ -1,0 +1,51 @@
+---
+title: "Overview"
+description: "Understand how PandaProbe traces LLM applications across three layers of instrumentation"
+---
+
+PandaProbe captures the full execution flow of your LLM application as **traces** composed of **spans**. Each trace represents a single request or operation; spans represent individual steps within that trace. Together they give you a structured, queryable record of what ran, in what order, and with what inputs and outputs.
+
+<Info>
+  Traces and spans are persisted and indexed for search, filtering, and evaluation. Instrumentation is opt-in per deploy via environment configuration; when tracing is disabled, the SDK avoids network I/O and mutation.
+</Info>
+
+Instrumentation is organized into three layers, ordered from the least invasive (wrappers) to the most flexible (manual APIs).
+
+## Layer 1 — Wrappers (zero-code LLM tracing)
+
+Wrap an LLM provider client to automatically trace every API call. The wrapper returns the **same client type** as the underlying SDK—no refactors beyond the wrap call.
+
+- `wrap_openai(client)` — Chat Completions API and Responses API
+- `wrap_gemini(client)` — `generate_content` and `generate_content_stream`
+- `wrap_anthropic(client)` — `messages.create` and `messages.stream`
+
+## Layer 2 — Integrations (automatic agent framework tracing)
+
+Hook into an agent framework to trace the full lifecycle: LLM calls, tool invocations, sub-agent handoffs, guardrails, and related steps—without instrumenting each call yourself.
+
+Supported stacks include **LangGraph**, **Google ADK**, **Claude Agent SDK**, **CrewAI**, and **OpenAI Agents SDK**.
+
+## Layer 3 — Manual instrumentation (full control)
+
+Define exactly what gets traced, how spans are named, and what metadata you attach.
+
+- `@pandaprobe.trace` and `@pandaprobe.span` decorators
+- `pandaprobe.start_trace()` and `t.span()` context managers
+
+## When to use each layer
+
+- Use **Wrappers** when you want LLM call visibility with minimal code changes—especially for direct provider usage without a heavy agent framework.
+- Use **Integrations** when you run on a supported agent framework and want end-to-end traces (LLM + tools + orchestration) with consistent semantics.
+- Use **Manual instrumentation** when you need custom span names, kinds, metadata, or you are building your own agent runtime and wrappers do not fit.
+
+<CardGroup cols={3}>
+  <Card title="Wrappers" icon="zap" href="/tracing/wrappers/overview">
+    Zero-code LLM tracing
+  </Card>
+  <Card title="Integrations" icon="puzzle" href="/tracing/integrations/overview">
+    Agent framework tracing
+  </Card>
+  <Card title="Manual" icon="code" href="/tracing/manual/decorators">
+    Decorators and context managers
+  </Card>
+</CardGroup>

@@ -1,0 +1,125 @@
+---
+title: "OpenAI"
+description: "Auto-trace OpenAI Chat Completions and Responses API calls"
+icon: "zap"
+---
+
+### Installation
+
+```bash
+pip install pandaprobe[openai]
+```
+
+### Setup
+
+<Tabs>
+  <Tab title="Sync">
+    ```python
+    from pandaprobe.wrappers import wrap_openai
+    from openai import OpenAI
+
+    client = wrap_openai(OpenAI())
+    ```
+  </Tab>
+  <Tab title="Async">
+    ```python
+    from pandaprobe.wrappers import wrap_openai
+    from openai import AsyncOpenAI
+
+    async_client = wrap_openai(AsyncOpenAI())
+    ```
+  </Tab>
+</Tabs>
+
+Works with both synchronous and asynchronous clients; use the same `wrap_openai` entry point.
+
+## Chat Completions API
+
+Span name: `"openai-chat"`, SpanKind: `LLM`
+
+```python
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Explain quantum computing."},
+    ],
+    temperature=0.7,
+)
+```
+
+**What gets traced**
+
+- Input: messages array
+- Output: assistant message
+- Model name
+- Token usage: `prompt_tokens`, `completion_tokens`, `total_tokens`, plus detail fields (for example `reasoning_tokens` from `completion_tokens_details`)
+- Model parameters: `temperature`, `top_p`, `max_tokens`, and other safe parameters only
+
+### Streaming
+
+```python
+stream = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="")
+```
+
+Streaming is fully supported. The wrapper records `completion_start_time` on the first chunk for time-to-first-token tracking. Chunks are reduced to a single response for the span output.
+
+## Responses API
+
+Span name: `"openai-response"`, SpanKind: `LLM`
+
+```python
+response = client.responses.create(
+    model="gpt-4o",
+    instructions="You are a helpful assistant.",
+    input="What is the capital of France?",
+)
+```
+
+**What gets traced**
+
+- Input: `instructions` plus `input`, normalized to messages format
+- Output: response output items
+- Token usage: `input_tokens` mapped to prompt tokens, `output_tokens` mapped to completion tokens, plus detail fields
+- Reasoning summaries extracted from reasoning output items
+- Model parameters: `max_output_tokens`, `temperature`, `top_p`, `reasoning`, and related fields
+
+### Tool calls (Responses API)
+
+Built-in tools such as `web_search`, `file_search`, and `code_interpreter` are automatically traced as child spans with SpanKind `TOOL`:
+
+```python
+response = client.responses.create(
+    model="gpt-4o",
+    input="Search the web for PandaProbe",
+    tools=[{"type": "web_search"}],
+)
+```
+
+Each tool invocation produces a child `TOOL` span with the tool type as the span name (for example `"web_search_call"`, `"function_call"`).
+
+Function calls (`function_call` items) are also captured as `TOOL` child spans with arguments as input and results as output.
+
+## Token usage mapping
+
+| OpenAI Field | PandaProbe Field |
+| --- | --- |
+| `prompt_tokens` | `prompt_tokens` |
+| `completion_tokens` | `completion_tokens` |
+| `total_tokens` | `total_tokens` |
+| `completion_tokens_details.reasoning_tokens` | `reasoning_tokens` |
+| (Responses) `input_tokens` | `prompt_tokens` |
+| (Responses) `output_tokens` | `completion_tokens` |
+| (Responses) `input_tokens_details.cached_tokens` | `cache_read_tokens` |
+| (Responses) `output_tokens_details.reasoning_tokens` | `reasoning_tokens` |
+
+<Warning>
+  Chat Completions and Responses return different usage object shapes from the SDK. The wrapper normalizes both into the PandaProbe fields in this table; do not assume raw OpenAI field names are identical across APIs when reading span payloads in custom exporters.
+</Warning>

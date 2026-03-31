@@ -1,0 +1,170 @@
+---
+title: "Low-Level Client API"
+description: "Direct access to the PandaProbe Client for advanced use cases"
+icon: "settings"
+---
+
+For advanced use cases, you can work directly with the `Client` class. This gives you full control over initialization, trace submission, scoring, and lifecycle management.
+
+## Programmatic initialization
+
+```python
+import pandaprobe
+
+client = pandaprobe.init(
+    api_key="your-api-key",
+    project_name="my-project",
+    endpoint="https://your-instance.com",
+    environment="production",
+    release="v1.2.3",
+    enabled=True,
+    batch_size=10,
+    flush_interval=5.0,
+    max_queue_size=1000,
+    debug=False,
+)
+```
+
+`pandaprobe.init()` parameters:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `api_key` | `str \| None` | From env | PandaProbe API key |
+| `project_name` | `str \| None` | From env | Project name |
+| `endpoint` | `str \| None` | `https://api.pandaprobe.com` | Backend URL |
+| `environment` | `str \| None` | From env | Environment tag (e.g., `"production"`) |
+| `release` | `str \| None` | From env | Release/version tag |
+| `enabled` | `bool \| None` | `True` | Enable/disable SDK |
+| `batch_size` | `int \| None` | `10` | Traces per flush batch |
+| `flush_interval` | `float \| None` | `5.0` | Seconds between automatic flushes |
+| `max_queue_size` | `int \| None` | `1000` | Max queued items before dropping |
+| `debug` | `bool \| None` | `False` | Enable verbose debug logging |
+
+Returns the configured `Client` instance and sets it as the global singleton.
+
+<Note>
+  If `init()` is called when a client already exists, the existing client is shut down and replaced.
+</Note>
+
+## Creating traces via `Client`
+
+`client.trace()` has the same signature as `pandaprobe.start_trace()`.
+
+<Tabs>
+  <Tab title="Module API">
+    ```python
+    import pandaprobe
+
+    with pandaprobe.start_trace("my-agent", input={"messages": [...]}) as t:
+        with t.span("llm-call", kind="LLM") as s:
+            ...
+    ```
+  </Tab>
+  <Tab title="Client instance">
+    ```python
+    client = pandaprobe.get_client()
+
+    with client.trace("my-agent", input={"messages": [...]}) as t:
+        with t.span("llm-call", kind="LLM") as s:
+            ...
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  Use `get_client()` after `init()` when you inject dependencies in tests or pass the client through your application layer.
+</Tip>
+
+## Submitting pre-built traces
+
+```python
+from pandaprobe.schemas import TraceData, SpanData, SpanKind
+from datetime import datetime, timezone
+
+trace = TraceData(
+    name="my-trace",
+    input={"messages": [{"role": "user", "content": "Hello"}]},
+    output={"messages": [{"role": "assistant", "content": "Hi!"}]},
+    started_at=datetime.now(timezone.utc),
+    ended_at=datetime.now(timezone.utc),
+    session_id="session-1",
+    spans=[
+        SpanData(
+            name="llm-call",
+            kind=SpanKind.LLM,
+            model="gpt-4o",
+            started_at=datetime.now(timezone.utc),
+            ended_at=datetime.now(timezone.utc),
+        ),
+    ],
+)
+
+client.log_trace(trace)
+```
+
+<AccordionGroup>
+  <Accordion title="When to use `log_trace`">
+    Use pre-built `TraceData` when traces are assembled offline, replayed from logs, or produced by frameworks that already materialize a full trace object.
+  </Accordion>
+</AccordionGroup>
+
+## Scoring
+
+```python
+client.score(
+    trace_id="your-trace-id",
+    name="accuracy",
+    value="0.95",
+    data_type="NUMERIC",
+    reason="Matched expected output",
+)
+```
+
+## Lifecycle management
+
+<CodeGroup>
+```python short-lived.py
+client.flush(timeout=30.0)  # Block until all queued items are sent
+client.shutdown()            # Flush remaining items and release resources
+```
+
+```python module-level.py
+import pandaprobe
+
+pandaprobe.flush()
+# Process exit or explicit shutdown in your framework hook
+```
+</CodeGroup>
+
+<Warning>
+  Always call `flush()` before `shutdown()` in short-lived scripts. For long-running services, the SDK flushes automatically via a background thread and `atexit` handler.
+</Warning>
+
+## Error handling
+
+Register callbacks to be notified of transport errors:
+
+```python
+def on_error(exc: Exception):
+    print(f"PandaProbe error: {exc}")
+
+client.on_error(on_error)
+```
+
+## Properties
+
+- `client.enabled` — `bool`, whether the SDK is active
+- `client.config` — `SdkConfig`, the resolved configuration (frozen dataclass)
+
+## Auto-initialization
+
+The global client auto-initializes from environment variables on first use. You only need to call `pandaprobe.init()` if you want to configure the SDK programmatically or override environment variables.
+
+```python
+# These all trigger auto-init if needed:
+pandaprobe.start_trace(...)
+pandaprobe.flush()
+pandaprobe.score(...)
+```
+
+`pandaprobe.get_client()` returns `None` if auto-init fails (e.g., missing API key). `pandaprobe.start_trace()` raises `RuntimeError` if no client is available.

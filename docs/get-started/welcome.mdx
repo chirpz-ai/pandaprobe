@@ -1,0 +1,34 @@
+---
+title: "Welcome"
+description: "Open-source agent engineering platform for tracing and evaluation"
+icon: "heart-handshake"
+---
+
+PandaProbe is an open-source agent engineering platform that gives you deep observability into LLM applications. Use it to trace, debug, and evaluate your AI agents in development and production.
+
+## What PandaProbe provides
+
+- **Tracing** for LLM calls, agent frameworks, and your own logic
+- **Session and user tracking** so you can follow work across turns and identities
+- **Scoring and evaluation** to measure quality and regressions
+- **Environment-based configuration** so you can tune behavior per deploy without code changes
+
+The Python SDK (`pip install pandaprobe`) is the primary interface. It auto-initializes from environment variables, so you do not need an explicit `init()` call. When `PANDAPROBE_ENABLED=false`, the SDK is a complete no-op.
+
+## Three layers of tracing
+
+1. **Wrappers** — zero-code LLM tracing for major providers
+2. **Integrations** — automatic tracing for popular agent frameworks
+3. **Manual instrumentation** — full control when you need it
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/get-started/quickstart">
+    Trace your first LLM call in under 2 minutes
+  </Card>
+  <Card title="Tracing Overview" icon="search" href="/tracing/overview">
+    Understand the three layers of tracing
+  </Card>
+  <Card title="Installation" icon="download" href="/get-started/installation">
+    Install the SDK with optional extras
+  </Card>
+</CardGroup>

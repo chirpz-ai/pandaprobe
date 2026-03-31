@@ -1,0 +1,54 @@
+---
+title: "Environment Variables"
+description: "Complete reference for all PandaProbe SDK environment variables"
+icon: "sliders-horizontal"
+---
+
+All PandaProbe SDK behavior can be configured via environment variables. These are read at client initialization time.
+
+| Variable | Type | Default | Required | Description |
+| --- | --- | --- | --- | --- |
+| `PANDAPROBE_API_KEY` | `string` | — | Yes | Your PandaProbe API key. Required when the SDK is enabled. |
+| `PANDAPROBE_PROJECT_NAME` | `string` | — | Yes | The project name to associate traces with. Required when the SDK is enabled. |
+| `PANDAPROBE_ENDPOINT` | `string` | `https://api.pandaprobe.com` | No | The PandaProbe backend URL. Change this for self-hosted deployments. |
+| `PANDAPROBE_ENVIRONMENT` | `string` | `None` | No | Environment tag attached to all traces (for example, `production`, `staging`, `development`). |
+| `PANDAPROBE_RELEASE` | `string` | `None` | No | Release or version tag attached to all traces (for example, `v1.2.3`, a git SHA). |
+| `PANDAPROBE_ENABLED` | `boolean` | `true` | No | Set to `false` to completely disable the SDK. All operations become no-ops. Accepted values: `true`, `1`, `yes` (enabled) or any other value (disabled). |
+| `PANDAPROBE_BATCH_SIZE` | `integer` | `10` | No | Number of items per flush batch sent to the backend. |
+| `PANDAPROBE_FLUSH_INTERVAL` | `float` | `5.0` | No | Seconds between automatic background flushes. |
+| `PANDAPROBE_MAX_QUEUE_SIZE` | `integer` | `1000` | No | Maximum number of items in the send queue. When full, the oldest item is dropped with a warning log. |
+| `PANDAPROBE_DEBUG` | `boolean` | `false` | No | Enable verbose debug logging. Sets the `pandaprobe` logger to DEBUG level. Useful for troubleshooting. |
+
+### Setting environment variables
+
+<CodeGroup>
+```bash title="Bash"
+export PANDAPROBE_API_KEY="pk_..."
+export PANDAPROBE_PROJECT_NAME="my-project"
+export PANDAPROBE_ENDPOINT="https://your-instance.com"
+export PANDAPROBE_ENVIRONMENT="production"
+```
+
+```text title=".env"
+PANDAPROBE_API_KEY=pk_...
+PANDAPROBE_PROJECT_NAME=my-project
+PANDAPROBE_ENDPOINT=https://your-instance.com
+PANDAPROBE_ENVIRONMENT=production
+```
+
+```python title="Python"
+from dotenv import load_dotenv
+load_dotenv()
+
+import pandaprobe
+# SDK auto-initializes from environment variables
+```
+</CodeGroup>
+
+<Note>
+  The SDK reads environment variables via `os.environ.get()` at initialization time. Changes to environment variables after the client is created have no effect. Use `pandaprobe.init()` to reconfigure.
+</Note>
+
+### Boolean parsing
+
+Boolean environment variables (`PANDAPROBE_ENABLED`, `PANDAPROBE_DEBUG`) accept `true`, `1`, or `yes` (case-insensitive) as truthy. All other values are treated as falsy.

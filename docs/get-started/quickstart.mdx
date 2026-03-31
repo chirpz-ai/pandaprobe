@@ -1,0 +1,57 @@
+---
+title: "Quickstart"
+description: "Trace your first LLM call in under 2 minutes"
+icon: "rocket"
+---
+
+<Steps>
+  <Step title="Install the SDK">
+    ```bash
+    pip install pandaprobe[openai]
+    ```
+  </Step>
+  <Step title="Set environment variables">
+    ```bash
+    export PANDAPROBE_API_KEY="your-api-key"
+    export PANDAPROBE_PROJECT_NAME="my-first-project"
+    export PANDAPROBE_ENDPOINT="https://your-pandaprobe-instance.com"
+    ```
+  </Step>
+  <Step title="Wrap your OpenAI client">
+    ```python
+    import pandaprobe
+    from pandaprobe.wrappers import wrap_openai
+    from openai import OpenAI
+
+    client = wrap_openai(OpenAI())
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "What is PandaProbe?"}],
+    )
+
+    print(response.choices[0].message.content)
+    ```
+  </Step>
+  <Step title="View your trace">
+    Open the PandaProbe dashboard. You should see a trace with an LLM span containing the input messages, output, model name, and token usage, all captured automatically.
+  </Step>
+</Steps>
+
+## What's next?
+
+<CardGroup cols={3}>
+  <Card title="Wrappers" href="/tracing/wrappers/overview">
+    Auto-trace OpenAI, Anthropic, and Gemini
+  </Card>
+  <Card title="Integrations" href="/tracing/integrations/overview">
+    Trace LangGraph, CrewAI, and more
+  </Card>
+  <Card title="Manual Instrumentation" href="/tracing/manual/decorators">
+    Full control with decorators and context managers
+  </Card>
+</CardGroup>
+
+<Note>
+  For short-lived scripts, call `pandaprobe.flush()` before the process exits to ensure all traces are sent. Long-running services flush automatically.
+</Note>

@@ -1,0 +1,93 @@
+---
+title: "Troubleshooting"
+description: "Common issues and solutions for PandaProbe SDK"
+icon: "wrench"
+---
+
+<AccordionGroup>
+  <Accordion title="Traces not appearing in the dashboard">
+    Possible causes:
+
+    1. **Missing API key or project name** — The SDK requires both `PANDAPROBE_API_KEY` and `PANDAPROBE_PROJECT_NAME`. Without them, auto-initialization silently fails and no traces are sent.
+    2. **Wrong endpoint** — If using a self-hosted instance, ensure `PANDAPROBE_ENDPOINT` points to your server.
+    3. **SDK disabled** — Check that `PANDAPROBE_ENABLED` is not set to `false`.
+    4. **Short-lived script** — The background transport thread may not have time to flush before the process exits. Add `pandaprobe.flush()` before exit.
+    5. **Queue full** — If you're generating traces faster than they can be sent, older items are dropped. Increase `PANDAPROBE_MAX_QUEUE_SIZE` or `PANDAPROBE_BATCH_SIZE`.
+  </Accordion>
+
+  <Accordion title="ValueError: PandaProbe API key is required">
+    This error occurs when:
+
+    - `PANDAPROBE_ENABLED` is `true` (the default)
+    - But `PANDAPROBE_API_KEY` is not set
+
+    Solutions:
+
+    - Set the `PANDAPROBE_API_KEY` environment variable
+    - Pass `api_key=` to `pandaprobe.init()`
+    - Set `PANDAPROBE_ENABLED=false` if you don't want tracing in this environment
+  </Accordion>
+
+  <Accordion title="RuntimeError: No PandaProbe client available">
+    This error occurs when calling `pandaprobe.start_trace()` without a configured client. The other convenience functions (`flush`, `shutdown`, `score`) silently no-op instead.
+
+    Solutions:
+
+    - Set `PANDAPROBE_API_KEY` and `PANDAPROBE_PROJECT_NAME` environment variables
+    - Call `pandaprobe.init()` before using `start_trace()`
+  </Accordion>
+
+  <Accordion title="Traces are incomplete or missing spans">
+    - Ensure all wrappers are called before making API calls: `client = wrap_openai(OpenAI())`
+    - For integrations, call `adapter.instrument()` once at startup before using the framework
+    - For LangGraph, ensure the handler is passed in `config={"callbacks": [handler]}` for every invocation
+    - Check for exceptions in span code — exceptions set span status to ERROR but the trace still completes
+  </Accordion>
+
+  <Accordion title="How to enable debug logging">
+    ```bash
+    export PANDAPROBE_DEBUG=true
+    ```
+
+    Or programmatically:
+
+    ```python
+    pandaprobe.init(debug=True)
+    ```
+
+    This sets the `pandaprobe` logger to DEBUG level. You'll see detailed logs about initialization, span creation, transport batching, HTTP requests, and retry behavior.
+
+    You can also configure the logger directly:
+
+    ```python
+    import logging
+    logging.getLogger("pandaprobe").setLevel(logging.DEBUG)
+    ```
+  </Accordion>
+
+  <Accordion title="Flushing in short-lived scripts">
+    For scripts, notebooks, or Lambda functions that exit quickly:
+
+    ```python
+    import pandaprobe
+
+    # ... your tracing code ...
+
+    pandaprobe.flush()     # Block until all queued items are sent
+    pandaprobe.shutdown()  # Release resources
+    ```
+
+    For long-running services (web servers, workers), this is handled automatically via the background thread and `atexit` handler.
+  </Accordion>
+
+  <Accordion title="Queue full — dropping oldest item">
+    This warning appears when the send queue reaches `PANDAPROBE_MAX_QUEUE_SIZE` (default: 1000). The oldest item is dropped to make room.
+
+    Solutions:
+
+    - Increase `PANDAPROBE_MAX_QUEUE_SIZE`
+    - Increase `PANDAPROBE_BATCH_SIZE` for faster throughput
+    - Decrease `PANDAPROBE_FLUSH_INTERVAL` for more frequent flushes
+    - Check network connectivity to the PandaProbe backend
+  </Accordion>
+</AccordionGroup>

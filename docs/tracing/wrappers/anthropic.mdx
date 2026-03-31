@@ -1,0 +1,95 @@
+---
+title: "Anthropic"
+description: "Auto-trace Anthropic Messages API calls"
+icon: "zap"
+---
+
+### Installation
+
+```bash
+pip install pandaprobe[anthropic]
+```
+
+### Setup
+
+<Tabs>
+  <Tab title="Sync">
+    ```python
+    from pandaprobe.wrappers import wrap_anthropic
+    from anthropic import Anthropic
+
+    client = wrap_anthropic(Anthropic())
+    ```
+  </Tab>
+  <Tab title="Async">
+    ```python
+    from pandaprobe.wrappers import wrap_anthropic
+    from anthropic import AsyncAnthropic
+
+    async_client = wrap_anthropic(AsyncAnthropic())
+    ```
+  </Tab>
+</Tabs>
+
+## Messages API
+
+Span name: `"anthropic-messages"`, SpanKind: `LLM`
+
+```python
+response = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=1024,
+    system="You are a helpful assistant.",
+    messages=[{"role": "user", "content": "Explain quantum computing."}],
+)
+```
+
+**What gets traced**
+
+- Input: system prompt (from top-level `system` kwarg) plus messages, normalized to a standard format
+- Output: text content blocks
+- Model name
+- Token usage
+- Model parameters: `temperature`, `top_p`, `top_k`, `max_tokens`, `stop_sequences`, thinking configuration
+- Extended thinking or reasoning blocks stored in metadata as `reasoning_summary`
+
+### Streaming
+
+<CodeGroup>
+```python title="stream=True"
+response = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello!"}],
+    stream=True,
+)
+for event in response:
+    if hasattr(event, "delta") and hasattr(event.delta, "text"):
+        print(event.delta.text, end="")
+```
+
+```python title="messages.stream context manager"
+with client.messages.stream(
+    model="claude-sonnet-4-20250514",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello!"}],
+) as stream:
+    for text in stream.text_stream:
+        print(text, end="")
+```
+</CodeGroup>
+
+Both streaming patterns are fully supported with time-to-first-token tracking.
+
+## Extended thinking
+
+When using Anthropic's extended thinking feature, thinking blocks are automatically extracted and stored in the span metadata under the `reasoning_summary` key. Thinking content is stripped from the visible output.
+
+## Token usage mapping
+
+| Anthropic Field | PandaProbe Field |
+| --- | --- |
+| `input_tokens` | `prompt_tokens` |
+| `output_tokens` | `completion_tokens` |
+| `cache_read_input_tokens` | `cache_read_tokens` |
+| `cache_creation_input_tokens` | `cache_creation_tokens` |

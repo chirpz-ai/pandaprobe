@@ -1,0 +1,72 @@
+---
+title: "Google ADK"
+description: "Trace Google Agent Development Kit agents with automatic lifecycle capture"
+icon: "bot"
+---
+
+### Installation
+
+```bash
+pip install pandaprobe[google-adk]
+```
+
+### Setup
+
+```python
+from pandaprobe.integrations.google_adk import GoogleADKAdapter
+
+adapter = GoogleADKAdapter(
+    session_id="conversation-123",
+    user_id="user-abc",
+    tags=["production"],
+)
+adapter.instrument()
+```
+
+<Note>
+  Call `instrument()` once at application startup, before creating any ADK agents or runners.
+</Note>
+
+### Usage
+
+```python
+from google.adk.agents import LlmAgent
+from google.adk.runners import Runner
+
+agent = LlmAgent(
+    name="my-agent",
+    model="gemini-2.5-flash",
+    instruction="You are a helpful assistant.",
+)
+
+runner = Runner(agent=agent, app_name="my-app", session_service=session_service)
+
+async for event in runner.run_async(session_id=session.id, user_id="user-1", new_message=content):
+    if event.content and event.content.parts:
+        print(event.content.parts[0].text, end="")
+```
+
+### What gets traced
+
+| ADK Component | Span Kind | Description |
+| --- | --- | --- |
+| `Runner.run_async` | `CHAIN` | Root trace boundary |
+| `BaseAgent.run_async` | `AGENT` | Agent execution with session messages as input |
+| `BaseLlmFlow._call_llm_async` | `LLM` | LLM calls with model, params, thinking, token usage, TTFT |
+| `BaseTool.run_async` | `TOOL` | Base tool execution |
+| `FunctionTool.run_async` | `TOOL` | Function tool execution |
+| `McpTool.run_async` | `TOOL` | MCP tool execution |
+
+### Token usage mapping
+
+| ADK Field | PandaProbe Field |
+| --- | --- |
+| `prompt_token_count` | `prompt_tokens` |
+| `candidates_token_count` | `completion_tokens` |
+| `total_token_count` | `total_tokens` |
+| `thoughts_token_count` | `reasoning_tokens` |
+| `cached_content_token_count` | `cache_read_tokens` |
+
+### Thinking mode
+
+When using Gemini models with thinking enabled, thought parts are automatically separated from answer parts. Thinking content is stored in metadata as `reasoning_summary`.
