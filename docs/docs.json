@@ -60,20 +60,6 @@
     }
   },
   "navigation": {
-    "global": {
-      "anchors": [
-        {
-          "anchor": "GitHub",
-          "icon": "github",
-          "href": "https://github.com/chirpz-ai"
-        },
-        {
-          "anchor": "Community",
-          "icon": "discord",
-          "href": "https://discord.gg/A2VfrRhx"
-        }
-      ]
-    },
     "tabs": [
       {
         "tab": "Documentation",
@@ -89,6 +75,7 @@
           },
           {
             "group": "Tracing",
+            "icon": "fingerprint-pattern",
             "pages": [
               "tracing/overview",
               "tracing/concepts",
@@ -135,6 +122,7 @@
           },
           {
             "group": "Evaluation",
+            "icon": "chart-bar-big",
             "pages": [
               "evaluation/overview",
               "evaluation/concepts",
