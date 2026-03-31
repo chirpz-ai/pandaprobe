@@ -1,0 +1,95 @@
+---
+title: "OpenAI Agents SDK"
+description: "Trace OpenAI Agents SDK runs with first-class callback integration"
+icon: "cpu"
+---
+
+### Installation
+
+```bash
+pip install pandaprobe[openai-agents]
+```
+
+### Setup
+
+```python
+from pandaprobe.integrations.openai_agents import OpenAIAgentsAdapter
+
+adapter = OpenAIAgentsAdapter(
+    session_id="conversation-123",
+    user_id="user-abc",
+    tags=["production"],
+)
+adapter.instrument()
+```
+
+<Tip>
+  Unlike other integrations that use monkey-patching, the OpenAI Agents SDK integration registers a `TracingProcessor` via the SDK's first-class callback interface. This is the cleanest integration pattern.
+</Tip>
+
+### Usage
+
+```python
+from agents import Agent, Runner
+
+agent = Agent(
+    name="my-assistant",
+    instructions="You are a helpful assistant.",
+    model="gpt-4o",
+)
+
+result = Runner.run_sync(agent, "What is PandaProbe?")
+print(result.final_output)
+```
+
+### What gets traced
+
+| SDK Span Type | PandaProbe Kind | Description |
+| --- | --- | --- |
+| `agent` | `AGENT` | Agent execution with tools, handoffs, `output_type` metadata |
+| `handoff` | `AGENT` | Agent handoff with `from_agent` / `to_agent` metadata |
+| `response` | `LLM` | Responses API call with input, output, model, usage, reasoning |
+| `generation` | `LLM` | Chat Completions call with messages, model, usage |
+| `function` | `TOOL` | Function tool call with JSON-parsed input/output |
+| `guardrail` | `OTHER` | Guardrail check with `triggered` metadata |
+| `custom` | `OTHER` | Custom span with `custom_data` metadata |
+
+### I/O propagation
+
+The adapter automatically propagates input/output from LLM spans to their parent agent and the root trace:
+
+- First LLM input becomes the agent span's input
+- Last LLM output becomes the agent span's output
+- Last user message becomes the trace input; last assistant message becomes the trace output
+
+### Example with tools
+
+```python
+from agents import Agent, Runner, function_tool
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Get the weather for a city."""
+    return f"Sunny, 72F in {city}"
+
+agent = Agent(
+    name="weather-assistant",
+    instructions="Help users check the weather.",
+    model="gpt-4o",
+    tools=[get_weather],
+)
+
+result = Runner.run_sync(agent, "What's the weather in Tokyo?")
+```
+
+This produces: `CHAIN` (root) → `AGENT` (`weather-assistant`) → `LLM` (`response`) → `TOOL` (`get_weather`) → `LLM` (final response).
+
+### Token usage mapping
+
+| OpenAI Agents Field | PandaProbe Field |
+| --- | --- |
+| `input_tokens` / `prompt_tokens` | `prompt_tokens` |
+| `output_tokens` / `completion_tokens` | `completion_tokens` |
+| `total_tokens` | `total_tokens` |
+| `input_tokens_details.cached_tokens` | `cache_read_tokens` |
+| `output_tokens_details.reasoning_tokens` | `reasoning_tokens` |
