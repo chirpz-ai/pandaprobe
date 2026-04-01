@@ -90,7 +90,7 @@
               },
               {
                 "group": "Integrations",
-                "icon": "plug",
+                "icon": "link",
                 "pages": [
                   "tracing/integrations/overview",
                   "tracing/integrations/langgraph",
