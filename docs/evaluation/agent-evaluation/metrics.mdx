@@ -1,20 +1,264 @@
 ---
 title: "Metrics"
-description: "Metrics for evaluating agent behavior and performance"
-icon: "chart-line"
+description: "Detailed reference for session-level agent evaluation metrics: reliability and consistency."
+icon: "ruler"
 ---
 
-# Agent Evaluation Metrics
+PandaProbe includes two session-level metrics that aggregate trace-level signals into scores capturing agent behavior across an entire session. Both are pure mathematical functions — they receive precomputed per-trace signals and perform zero LLM or embedding calls.
 
-Metrics tailored for evaluating agent-level behavior, including task completion, tool selection accuracy, and multi-step reasoning quality.
+---
 
-<Info>This page is under construction. The agent metrics catalog is coming soon.</Info>
+## Agent Reliability
 
-## Topics to be covered
+<Info>
+**Registry name:** `agent_reliability` · **Default threshold:** 0.5 · **Method:** Max-compose + top-k tail risk
+</Info>
 
-- Task completion rate
-- Tool selection accuracy
-- Step efficiency (optimal vs actual step count)
-- Reasoning quality metrics
-- Cost and latency metrics
-- Custom agent metrics
+Measures worst-case failure risk across a session. A session with one catastrophic trace scores poorly even if all other traces are fine. Use this metric to catch agents that are generally good but occasionally fail badly.
+
+### Algorithm
+
+For each trace in the session, the metric computes a **per-trace risk** from the precomputed signals:
+
+<Steps>
+  <Step title="Convert signals to risks">
+    Each signal score is inverted to become a risk value:
+
+    ```
+    confidence_risk = 1.0 - confidence_score
+    loop_risk       = 1.0 - loop_detection_score
+    tool_risk       = 1.0 - tool_correctness_score
+    coherence_risk  = 1.0 - coherence_score
+    ```
+  </Step>
+  <Step title="Weight and max-compose per trace">
+    Each risk is multiplied by its signal weight, and the **maximum** weighted risk becomes the trace's risk:
+
+    ```
+    per_trace_risk = max(w_conf × confidence_risk,
+                         w_loop × loop_risk,
+                         w_tool × tool_risk,
+                         w_coh  × coherence_risk)
+    ```
+
+    Only signals that are present for a trace are included — missing signals are skipped, not treated as zero.
+  </Step>
+  <Step title="Top-k tail risk aggregation">
+    Per-trace risks are sorted in descending order. The top 15% (at least 1) are selected:
+
+    ```
+    k = max(1, ceil(num_traces × 0.15))
+    mean_top_k = mean(sorted_risks[:k])
+    max_risk   = sorted_risks[0]
+    ```
+  </Step>
+  <Step title="Ensemble and final score">
+    The raw session risk blends the top-k mean with the single worst trace:
+
+    ```
+    raw_risk = 0.9 × mean_top_k + 0.1 × max_risk
+    score    = clamp(1.0 - raw_risk, 0, 1)
+    ```
+  </Step>
+</Steps>
+
+### Why max-compose + top-k
+
+- **Max-compose** ensures each trace's risk is driven by its worst signal. An agent that has great tool selection but terrible coherence on one trace still gets flagged.
+- **Top-k** focuses on the tail of the distribution. A session with 100 traces where 3 have high risk will be scored based on those 3, not diluted by the 97 good ones.
+- **The 10% max-risk blend** gives extra weight to the single worst trace, preventing a handful of high-risk traces from being averaged away.
+
+### Flagged traces
+
+Traces with `per_trace_risk > 0.5` are flagged in the metadata. This lets you quickly identify which specific traces are dragging down the session's reliability score.
+
+### Metadata returned
+
+```json
+{
+  "total_traces_in_session": 12,
+  "traces_evaluated": 10,
+  "raw_risk": 0.3200,
+  "signal_weights": {
+    "confidence": 1.0,
+    "loop_detection": 1.0,
+    "tool_correctness": 0.8,
+    "coherence": 1.0
+  },
+  "per_trace_signals": {
+    "trace-id-1": {
+      "confidence_risk": 0.12,
+      "loop_risk": 0.05,
+      "tool_risk": 0.08,
+      "coherence_risk": 0.03,
+      "step_risk": 0.12
+    },
+    "trace-id-7": {
+      "confidence_risk": 0.65,
+      "loop_risk": 0.72,
+      "tool_risk": 0.10,
+      "coherence_risk": 0.15,
+      "step_risk": 0.72
+    }
+  },
+  "flagged_traces": ["trace-id-7"],
+  "aggregation": {
+    "method": "max_compose_top_k",
+    "top_k_percentile": 0.15,
+    "ensemble_weight": 0.1,
+    "mean_top_k_risk": 0.72,
+    "max_risk": 0.72
+  }
+}
+```
+
+### Interpreting the score
+
+| Score range | Meaning |
+|---|---|
+| 0.9–1.0 | Highly reliable — no elevated risk in any trace |
+| 0.7–0.89 | Generally reliable — minor risk in a few traces |
+| 0.5–0.69 | Moderate risk — some traces show concerning behavior |
+| 0.3–0.49 | Elevated risk — multiple traces with significant issues |
+| 0.0–0.29 | High risk — session contains catastrophic failures |
+
+---
+
+## Agent Consistency
+
+<Info>
+**Registry name:** `agent_consistency` · **Default threshold:** 0.5 · **Method:** Weighted RMS aggregation
+</Info>
+
+Measures overall stability across a session. Unlike reliability (which focuses on worst moments), consistency penalizes **any** trace that deviates from smooth operation. Many moderate issues score poorly even if no single trace is catastrophic.
+
+### Algorithm
+
+<Steps>
+  <Step title="Filter traces">
+    Only traces with a `confidence` signal are included. Traces missing confidence are skipped entirely (unlike reliability, which includes traces with any signal subset).
+  </Step>
+  <Step title="Compute weighted uncertainty per trace">
+    For each trace:
+
+    ```
+    confidence_risk = 1.0 - confidence_score
+
+    penalty = w_loop × (1 - loop_detection)      # if present
+            + w_tool × (1 - tool_correctness)     # if present
+            + w_coh  × (1 - coherence)            # if present
+
+    amplification = 1.0 + penalty
+    weighted_uncertainty = amplification × (w_conf × confidence_risk)
+    ```
+
+    The penalty terms **amplify** the confidence risk. A trace with low confidence *and* poor tool correctness gets a higher uncertainty than one with low confidence alone.
+  </Step>
+  <Step title="RMS aggregation">
+    The root mean square of all weighted uncertainties becomes the raw instability:
+
+    ```
+    rms = sqrt(sum(wu² for wu in weighted_uncertainties) / n)
+    score = clamp(1.0 - rms, 0, 1)
+    ```
+  </Step>
+</Steps>
+
+### Why RMS
+
+RMS (root mean square) is sensitive to **variation**. Unlike a simple average:
+- A session where all traces have moderate uncertainty (e.g., all at 0.3) gets the same RMS as that average
+- A session where most traces are fine but a few have high uncertainty gets a **higher** RMS due to the squaring
+
+This means consistency captures the *spread* of issues, not just their average severity.
+
+### Why amplification
+
+The confidence signal is the foundation — it's the only required signal. But confidence alone doesn't tell the whole story. The penalty terms from other signals **amplify** the base confidence risk:
+
+- If an agent is uncertain (low confidence) *and* using wrong tools, the combined uncertainty is worse than either alone
+- If an agent is uncertain but coherent with correct tools, the uncertainty is less concerning
+
+This multiplicative interaction captures real-world failure modes where problems compound.
+
+### Metadata returned
+
+```json
+{
+  "total_traces_in_session": 12,
+  "traces_evaluated": 10,
+  "raw_instability": 0.2800,
+  "signal_weights": {
+    "confidence": 1.0,
+    "loop_detection": 1.0,
+    "tool_correctness": 0.8,
+    "coherence": 1.0
+  },
+  "per_trace_signals": {
+    "trace-id-1": {
+      "confidence_risk": 0.12,
+      "loop_risk": 0.05,
+      "tool_risk": 0.08,
+      "coherence_risk": 0.03,
+      "situational_penalty": 0.134,
+      "weighted_uncertainty": 0.136
+    }
+  },
+  "aggregation": {
+    "method": "weighted_rms",
+    "rms_value": 0.2800
+  }
+}
+```
+
+### Interpreting the score
+
+| Score range | Meaning |
+|---|---|
+| 0.9–1.0 | Highly consistent — smooth operation across all traces |
+| 0.7–0.89 | Generally consistent — minor fluctuations |
+| 0.5–0.69 | Moderate instability — some traces deviate noticeably |
+| 0.3–0.49 | High instability — frequent or severe deviations |
+| 0.0–0.29 | Unstable — multiple signals compounding across traces |
+
+---
+
+## Reliability vs. Consistency
+
+These two metrics complement each other:
+
+| | Agent Reliability | Agent Consistency |
+|---|---|---|
+| **Focus** | Worst-case failures | Overall stability |
+| **Question** | "Did the agent ever fail badly?" | "Did the agent perform smoothly?" |
+| **Sensitive to** | Tail risk — a single bad trace | Variance — spread of uncertainty |
+| **Signal handling** | Uses any available subset | Requires confidence signal |
+| **Aggregation** | Max-compose + top-k tail risk | Weighted RMS |
+| **Use case** | Safety-critical applications | Quality-sensitive applications |
+
+A session can have:
+- **High reliability + High consistency** — agent is both safe and smooth
+- **High reliability + Low consistency** — no catastrophic failures, but uneven performance
+- **Low reliability + High consistency** — consistently mediocre (not great, but predictable)
+- **Low reliability + Low consistency** — unreliable and unstable
+
+## Edge cases
+
+Both metrics handle edge cases gracefully:
+
+| Scenario | Score | Reason |
+|---|---|---|
+| No traces or no precomputed signals | 1.0 | "No traces or signals to evaluate." |
+| No evaluable traces after filtering | 1.0 | "No evaluable traces." |
+| Single trace in session | Evaluated normally | Top-k degenerates to k=1 |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+    Create session eval runs programmatically.
+  </Card>
+  <Card title="Scheduling" icon="clock" href="/evaluation/setup/scheduling">
+    Set up automated recurring evaluations.
+  </Card>
+</CardGroup>
