@@ -37,7 +37,7 @@ Span name: `"anthropic-messages"`, SpanKind: `LLM`
 
 ```python
 response = client.messages.create(
-    model="claude-sonnet-4-20250514",
+    model="claude-sonnet-4-6",
     max_tokens=1024,
     system="You are a helpful assistant.",
     messages=[{"role": "user", "content": "Explain quantum computing."}],
@@ -58,7 +58,7 @@ response = client.messages.create(
 <CodeGroup>
 ```python title="stream=True"
 response = client.messages.create(
-    model="claude-sonnet-4-20250514",
+    model="claude-sonnet-4-6",
     max_tokens=1024,
     messages=[{"role": "user", "content": "Hello!"}],
     stream=True,
@@ -70,7 +70,7 @@ for event in response:
 
 ```python title="messages.stream context manager"
 with client.messages.stream(
-    model="claude-sonnet-4-20250514",
+    model="claude-sonnet-4-6",
     max_tokens=1024,
     messages=[{"role": "user", "content": "Hello!"}],
 ) as stream:
