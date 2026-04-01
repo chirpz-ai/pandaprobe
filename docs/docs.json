@@ -75,12 +75,12 @@
           },
           {
             "group": "Tracing",
-            "icon": "fingerprint-pattern",
             "pages": [
               "tracing/overview",
               "tracing/concepts",
               {
                 "group": "Wrappers",
+                "icon": "package",
                 "pages": [
                   "tracing/wrappers/overview",
                   "tracing/wrappers/openai",
@@ -90,6 +90,7 @@
               },
               {
                 "group": "Integrations",
+                "icon": "plug",
                 "pages": [
                   "tracing/integrations/overview",
                   "tracing/integrations/langgraph",
@@ -101,6 +102,7 @@
               },
               {
                 "group": "Manual Instrumentation",
+                "icon": "wrench",
                 "pages": [
                   "tracing/manual/decorators",
                   "tracing/manual/context-managers",
@@ -111,6 +113,7 @@
               "tracing/scoring",
               {
                 "group": "Configuration",
+                "icon": "cog",
                 "pages": [
                   "tracing/configuration/environment-variables",
                   "tracing/configuration/project-configuration",
@@ -122,12 +125,12 @@
           },
           {
             "group": "Evaluation",
-            "icon": "chart-bar-big",
             "pages": [
               "evaluation/overview",
               "evaluation/concepts",
               {
                 "group": "Trace Evaluation",
+                "icon": "drafting-compass",
                 "pages": [
                   "evaluation/trace-evaluation/introduction",
                   "evaluation/trace-evaluation/metrics"
@@ -135,6 +138,7 @@
               },
               {
                 "group": "Agent Evaluation",
+                "icon": "bot",
                 "pages": [
                   "evaluation/agent-evaluation/introduction",
                   "evaluation/agent-evaluation/metrics"
@@ -142,6 +146,7 @@
               },
               {
                 "group": "Set Up Evaluation",
+                "icon": "cog",
                 "pages": [
                   "evaluation/setup/introduction",
                   "evaluation/setup/run-eval-ui",
