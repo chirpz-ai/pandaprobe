@@ -1,19 +1,119 @@
 ---
 title: "Introduction"
-description: "Evaluate individual trace outputs for quality and correctness"
-icon: "rocket"
+description: "Evaluate individual traces with LLM-as-judge metrics and embedding analysis."
+icon: "route"
 ---
 
-# Trace Evaluation
+Trace evaluation scores a single agent execution — one trace with all its spans — to answer questions like "Did the agent complete the task?", "Were the right tools used?", and "Was the output coherent?"
 
-Trace evaluation lets you assess the quality of individual LLM interactions captured by PandaProbe tracing. Compare trace outputs against expected results, run automated quality checks, and track metrics over time.
+PandaProbe ships with **9 built-in trace-level metrics**. Most use a multi-stage LLM-as-judge approach where an LLM analyzes the trace and returns structured scores. Two metrics use embedding-based analysis instead, avoiding LLM calls entirely.
 
-<Info>This page is under construction. Detailed trace evaluation documentation is coming soon.</Info>
+## Available metrics
 
-## Topics to be covered
+<CardGroup cols={2}>
+  <Card title="Task Completion" icon="circle-check">
+    Did the agent accomplish the user's stated objective?
+  </Card>
+  <Card title="Tool Correctness" icon="wrench">
+    Did the agent select appropriate tools for the task?
+  </Card>
+  <Card title="Argument Correctness" icon="brackets-curly">
+    Were tool call arguments correctly specified?
+  </Card>
+  <Card title="Step Efficiency" icon="zap">
+    Did the agent execute with minimal unnecessary steps?
+  </Card>
+  <Card title="Confidence" icon="shield-check">
+    Were the agent's actions decisive and well-founded?
+  </Card>
+  <Card title="Plan Adherence" icon="list-checks">
+    Did the agent follow its declared plan?
+  </Card>
+  <Card title="Plan Quality" icon="drafting-compass">
+    Was the agent's plan complete and well-structured?
+  </Card>
+  <Card title="Coherence" icon="link">
+    Does the output logically follow from the input?
+  </Card>
+  <Card title="Loop Detection" icon="repeat">
+    Is the agent stuck repeating itself across traces?
+  </Card>
+</CardGroup>
 
-- Setting up trace evaluation datasets
-- Defining evaluation criteria
-- Running evaluations against historical traces
-- Interpreting evaluation results
-- Connecting evaluation scores to traces
+## How trace metrics work
+
+Each metric receives the full trace (including all nested spans) and produces a `MetricResult` with a score between 0 and 1, a human-readable reason, and structured metadata.
+
+### LLM-as-judge metrics
+
+Most metrics follow a multi-stage pipeline:
+
+```
+Trace ──▶ Stage 1: Extract context ──▶ Stage 2: Score / Verdict ──▶ MetricResult
+          (parse trace into structured    (LLM judges quality on
+           inputs: task, outcome,          a 0-1 scale with
+           tool calls, plan, etc.)         structured reasoning)
+```
+
+The multi-stage design separates **information extraction** from **judgment**. This improves reliability — the judge LLM receives clean, focused inputs rather than raw trace data.
+
+**Example: Task Completion (2-stage)**
+1. **Extract** — LLM identifies the user's task and the agent's factual outcome from the trace
+2. **Score** — LLM compares task vs. outcome and returns a 0–1 verdict with explanation
+
+**Example: Argument Correctness (3-stage)**
+1. **Extract** — LLM identifies user input and all tool calls (name, parameters, reasoning)
+2. **Verdict** — LLM evaluates each tool call's arguments individually (yes/no per call)
+3. **Reason** — LLM produces an overall explanation from the per-call verdicts
+
+### Embedding-based metrics
+
+Two metrics skip LLM calls entirely:
+
+- **Coherence** computes the cosine distance between input and output embeddings. A small distance means high coherence (score close to 1.0).
+- **Loop Detection** uses a hybrid approach: cosine similarity (semantic overlap) multiplied by Jaccard similarity (lexical overlap) across recent traces. High scores on *both* indicate the agent is stuck repeating itself.
+
+## Metric interface
+
+Every trace metric implements the same `evaluate()` method:
+
+```python
+async def evaluate(
+    self,
+    trace: Trace,
+    llm: LLMEngine,
+    *,
+    threshold: float | None = None,
+    model: str | None = None,
+    session_traces: list[Trace] | None = None,
+) -> MetricResult
+```
+
+| Parameter | Description |
+|---|---|
+| `trace` | The full trace entity with all spans |
+| `llm` | LLM engine for judge calls and embeddings |
+| `threshold` | Override the metric's default pass/fail threshold |
+| `model` | Override the default LLM model (e.g., `openai/gpt-4o`) |
+| `session_traces` | Previous traces in the same session (only used by `loop_detection`) |
+
+## Standalone vs. session-context metrics
+
+Most trace metrics evaluate a trace **in isolation** — they don't need other traces. These are available for standalone eval runs.
+
+One metric, `loop_detection`, requires **session context** (the `session_traces` parameter) to compare the current trace against previous outputs. It is excluded from standalone trace eval runs but is automatically computed as a signal during session-level evaluation.
+
+<Note>
+When you run a session eval, PandaProbe first computes trace-level signals (confidence, loop_detection, tool_correctness, coherence) for each trace in the session, then feeds those signals into the session-level aggregation metrics.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Trace Metrics Reference" icon="book-open" href="/evaluation/trace-evaluation/metrics">
+    Detailed documentation for each trace-level metric.
+  </Card>
+  <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+    Create trace eval runs programmatically.
+  </Card>
+</CardGroup>
