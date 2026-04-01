@@ -1,19 +1,93 @@
 ---
 title: "Introduction"
-description: "End-to-end evaluation of multi-step agent workflows"
-icon: "rocket"
+description: "Evaluate agent reliability and consistency across entire sessions."
+icon: "route"
 ---
 
-# Agent Evaluation
+Agent evaluation operates at the **session level**. While trace evaluation scores individual requests in isolation, agent evaluation answers a broader question: *How reliable and consistent is this agent across a full conversation or workflow?*
 
-Agent evaluation goes beyond individual LLM calls to assess the full agent workflow — tool usage, reasoning chains, multi-step planning, and final output quality.
+In PandaProbe, a **session** represents a series of traces from a single user interaction — an entire conversation, a multi-step workflow, or an agent's lifetime. Agent evaluation aggregates per-trace signals into session-level scores that capture patterns only visible across multiple interactions.
 
-<Info>This page is under construction. Detailed agent evaluation documentation is coming soon.</Info>
+## Why session-level evaluation?
 
-## Topics to be covered
+A trace-level score tells you about one moment. But agents fail in patterns:
 
-- Defining agent evaluation scenarios
-- Multi-step workflow assessment
-- Tool usage correctness
-- Reasoning chain evaluation
-- Agent comparison and regression testing
+- An agent might handle 9 out of 10 requests well but catastrophically fail on the 10th
+- An agent might show gradually declining confidence across a long conversation
+- An agent might get stuck in a loop, repeating the same response over and over
+
+These patterns are invisible at the trace level. Session-level metrics surface them by looking at the **distribution** of trace-level signals across the entire session.
+
+## How it works
+
+Session evaluation is a two-phase process:
+
+```
+Phase 1: Compute trace-level signals          Phase 2: Aggregate into session scores
+┌─────────┐                                   ┌────────────────────┐
+│ Trace 1  │──▶ confidence, coherence,         │                    │
+├─────────┤    tool_correctness,              │  agent_reliability  │
+│ Trace 2  │──▶ loop_detection                 │  agent_consistency  │
+├─────────┤                          ──────▶  │                    │
+│ Trace 3  │──▶ (4 signals per trace)          │  (pure math, no    │
+├─────────┤                                   │   LLM calls)       │
+│  ...     │                                   └────────────────────┘
+└─────────┘
+```
+
+### Phase 1: Trace-level signals
+
+For each trace in the session, PandaProbe computes four signals using the trace-level metrics:
+
+| Signal | Source metric | What it captures |
+|---|---|---|
+| `confidence` | Confidence metric (LLM judge) | Decisiveness and appropriateness of actions |
+| `loop_detection` | Loop Detection metric (hybrid similarity) | Repetition across traces |
+| `tool_correctness` | Tool Correctness metric (LLM judge) | Quality of tool selection |
+| `coherence` | Coherence metric (embedding distance) | Input-output alignment |
+
+These signals are precomputed and stored as a mapping: `{trace_id: {signal_name: score}}`.
+
+### Phase 2: Session-level aggregation
+
+The two session metrics receive the precomputed signals and aggregate them using pure mathematical functions — **no additional LLM or embedding calls**. This makes the aggregation fast, deterministic, and cost-free.
+
+Each signal is converted to a **risk** value (`1 - signal_score`), then weighted and combined differently by each metric:
+
+- **Agent Reliability** focuses on the **worst moments** — a single catastrophic trace drags the score down
+- **Agent Consistency** focuses on **overall stability** — many moderate issues compound even if no single trace is terrible
+
+## Signal weights
+
+Both session metrics apply configurable weights to each signal:
+
+| Signal | Default weight | Rationale |
+|---|---|---|
+| `confidence` | 1.0 | Core indicator of agent behavior quality |
+| `loop_detection` | 1.0 | Critical for detecting stuck agents |
+| `tool_correctness` | 0.8 | Slightly lower — not all traces involve tools |
+| `coherence` | 1.0 | Fundamental quality signal |
+
+Weights can be overridden per eval run via the API's `signal_weights` parameter. This lets you emphasize the signals most important for your use case.
+
+## Available session metrics
+
+<CardGroup cols={2}>
+  <Card title="Agent Reliability" icon="shield">
+    Worst-case failure risk across the session. A single catastrophic trace scores poorly even if all others are fine.
+  </Card>
+  <Card title="Agent Consistency" icon="activity">
+    Overall stability via weighted RMS. Many moderate issues compound even without a single catastrophic failure.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Session Metrics Reference" icon="book-open" href="/evaluation/agent-evaluation/metrics">
+    Detailed documentation for agent_reliability and agent_consistency.
+  </Card>
+  <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+    Create session eval runs programmatically.
+  </Card>
+</CardGroup>
