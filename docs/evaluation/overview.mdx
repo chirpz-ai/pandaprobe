@@ -1,26 +1,92 @@
 ---
 title: "Overview"
-description: "Evaluate the quality and reliability of your AI agents."
-icon: "globe"
+description: "Evaluate the quality and reliability of your AI agents with LLM-as-judge metrics."
+icon: "gauge"
 ---
 
-# Evaluation Overview
+PandaProbe's evaluation framework scores your AI agents automatically using LLM-as-judge metrics and embedding-based analysis. Evaluate individual traces to measure task completion and tool usage, or evaluate entire sessions to assess agent reliability and consistency over time.
 
-PandaProbe provides a comprehensive evaluation framework for measuring the quality, reliability, and performance of your agent. Evaluate individual traces or entire agent workflows using built-in and custom metrics.
+## Two levels of evaluation
 
-<Info>This page is under construction. Detailed evaluation documentation is coming soon.</Info>
-
-## What you'll find here
-
-- **Trace Evaluation** — Score and assess individual trace outputs against expected results
-- **Agent Evaluation** — End-to-end evaluation of multi-step agent workflows
-- **Evaluation Setup** — Configure and run evaluations via the UI or API
+PandaProbe operates at two distinct levels, each designed for a different question:
 
 <CardGroup cols={2}>
-  <Card title="Trace Evaluation" icon="scan-search" href="/evaluation/trace-evaluation/introduction">
-    Evaluate individual traces
+  <Card title="Trace Evaluation" icon="route" href="/evaluation/trace-evaluation/introduction">
+    **"How well did the agent handle this single request?"**
+
+    Scores individual traces using 9 built-in metrics covering task completion, tool usage, planning, coherence, and more. Each metric uses an LLM judge or embedding analysis to produce a 0–1 score.
   </Card>
   <Card title="Agent Evaluation" icon="bot" href="/evaluation/agent-evaluation/introduction">
-    Evaluate agent workflows
+    **"How reliable is this agent across an entire session?"**
+
+    Aggregates trace-level signals into session-level scores that capture worst-case failures and overall consistency. Pure mathematical aggregation — no additional LLM calls.
+  </Card>
+</CardGroup>
+
+## How it works
+
+Evaluations run asynchronously in the background. You submit an eval run (via the API or dashboard), PandaProbe dispatches it to a worker, and results are written as scores attached to your traces or sessions.
+
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌────────────┐
+│  Create run  │────▶│ Resolve data │────▶│ LLM judge /  │────▶│   Scores   │
+│  (API / UI)  │     │  (filters)   │     │  embeddings  │     │  persisted │
+└─────────────┘     └──────────────┘     └──────────────┘     └────────────┘
+```
+
+<Steps>
+  <Step title="Create an eval run">
+    Select metrics and filters to define which traces or sessions to evaluate. You can target all data in a project, filter by date range, status, session, user, or tags, and sample a fraction of matching items.
+  </Step>
+  <Step title="Background processing">
+    A Celery worker picks up the run and executes each metric against the selected data. Trace-level metrics call an LLM judge or compute embeddings. Session-level metrics aggregate precomputed trace signals using pure math.
+  </Step>
+  <Step title="Scores are persisted">
+    Each metric produces a score (0–1), a reason, and rich metadata. Scores are stored and linked to the originating eval run, trace, or session.
+  </Step>
+  <Step title="Review and iterate">
+    View scores in the dashboard, query them via the API, track trends over time, and set up recurring monitors to evaluate new data automatically.
+  </Step>
+</Steps>
+
+## Built-in metrics at a glance
+
+### Trace-level metrics
+
+| Metric | Method | What it measures |
+|---|---|---|
+| `task_completion` | LLM judge (2-stage) | Did the agent accomplish the user's objective? |
+| `tool_correctness` | LLM judge (2-stage) | Did the agent select the right tools? |
+| `argument_correctness` | LLM judge (3-stage) | Were tool call arguments correct? |
+| `step_efficiency` | LLM judge (2-stage) | Did the agent execute with minimal unnecessary steps? |
+| `confidence` | LLM judge (1-stage) | Were the agent's actions decisive and well-founded? |
+| `plan_adherence` | LLM judge (3-stage) | Did the agent follow its declared plan? |
+| `plan_quality` | LLM judge (3-stage) | Is the agent's plan complete and well-structured? |
+| `coherence` | Embedding distance | Does the output logically follow from the input? |
+| `loop_detection` | Hybrid similarity | Is the agent stuck repeating itself across traces? |
+
+### Session-level metrics
+
+| Metric | Method | What it measures |
+|---|---|---|
+| `agent_reliability` | Max-compose + top-k tail risk | Worst-case failure risk across the session |
+| `agent_consistency` | Weighted RMS aggregation | Overall stability and smooth operation |
+
+## Scheduling evaluations
+
+Beyond one-off eval runs, PandaProbe supports **monitors** — recurring evaluation schedules that automatically create eval runs on a cadence (`every_6h`, `daily`, `weekly`, or custom cron). Monitors can be configured to skip runs when no new data has arrived, saving LLM costs.
+
+<Card title="Scheduling Evaluations" icon="clock" href="/evaluation/setup/scheduling">
+  Set up automated evaluation monitors with custom cadences and filters.
+</Card>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Core Concepts" icon="lightbulb" href="/evaluation/concepts">
+    Understand the evaluation model: runs, scores, signals, and aggregation.
+  </Card>
+  <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+    Create eval runs programmatically using the evaluation API.
   </Card>
 </CardGroup>
