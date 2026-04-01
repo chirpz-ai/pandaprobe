@@ -51,7 +51,7 @@ with pandaprobe.start_trace("rag-pipeline") as t:
 
     with t.span("generate", kind="LLM") as s:
         s.set_input({"messages": [{"role": "user", "content": query}]})
-        s.set_model("gpt-4o")
+        s.set_model("gpt-5.4")
         s.set_model_parameters({"temperature": 0.7, "max_tokens": 1000})
         response = call_llm(query, docs)
         s.set_output({"messages": [{"role": "assistant", "content": response}]})
@@ -100,7 +100,7 @@ Spans can be nested to form a tree. Parent-child relationships are tracked autom
 with pandaprobe.start_trace("pipeline") as t:
     with t.span("agent", kind="AGENT") as agent:
         with t.span("llm-call", kind="LLM") as llm:
-            llm.set_model("gpt-4o")
+            llm.set_model("gpt-5.4")
             ...
         with t.span("tool-call", kind="TOOL") as tool:
             ...
@@ -115,7 +115,7 @@ On exception within a span, the status is automatically set to `ERROR` and the e
 ```python
 with pandaprobe.start_trace("risky-operation") as t:
     with t.span("might-fail", kind="LLM") as s:
-        s.set_model("gpt-4o")
+        s.set_model("gpt-5.4")
         raise ValueError("Something went wrong")
         # span status = ERROR, error = "Something went wrong"
     # trace status = ERROR
@@ -134,7 +134,7 @@ Both `TraceContext` and `SpanContext` work as sync or async context managers.
     ```python
     with pandaprobe.start_trace("agent") as t:
         with t.span("llm-call", kind="LLM") as s:
-            s.set_model("gpt-4o")
+            s.set_model("gpt-5.4")
             result = sync_llm_call()
             s.set_output(result)
     ```
@@ -143,7 +143,7 @@ Both `TraceContext` and `SpanContext` work as sync or async context managers.
     ```python
     async with pandaprobe.start_trace("async-agent") as t:
         async with t.span("llm-call", kind="LLM") as s:
-            s.set_model("gpt-4o")
+            s.set_model("gpt-5.4")
             result = await async_llm_call()
             s.set_output(result)
     ```

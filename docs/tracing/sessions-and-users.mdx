@@ -98,7 +98,7 @@ with pandaprobe.session("conversation-123"), pandaprobe.user("user-abc"):
             break
         history.append({"role": "user", "content": user_input})
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5.4",
             messages=history,
         )
         assistant_msg = response.choices[0].message.content
