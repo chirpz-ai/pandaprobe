@@ -40,18 +40,6 @@ Two metrics use **embedding-based** analysis instead, avoiding LLM calls entirel
 - **Coherence** measures input-output alignment via cosine distance between embeddings
 - **Loop detection** uses a hybrid semantic + Jaccard similarity approach to detect repetition
 
-Every trace metric implements the same interface:
-
-```python
-async def evaluate(
-    trace: Trace,
-    llm: LLMEngine,
-    *,
-    threshold: float | None = None,
-    model: str | None = None,
-    session_traces: list[Trace] | None = None,
-) -> MetricResult
-```
 
 ### Session-level metrics
 

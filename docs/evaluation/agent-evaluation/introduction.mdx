@@ -6,7 +6,7 @@ icon: "route"
 
 Agent evaluation operates at the **session level**. While trace evaluation scores individual requests in isolation, agent evaluation answers a broader question: *How reliable and consistent is this agent across a full conversation or workflow?*
 
-In PandaProbe, a **session** represents a series of traces from a single user interaction — an entire conversation, a multi-step workflow, or an agent's lifetime. Agent evaluation aggregates per-trace signals into session-level scores that capture patterns only visible across multiple interactions.
+In PandaProbe, a **session** represents a series of traces from a single user interaction with an agent — an entire conversation, a multi-step workflow, or an agent's lifetime. Agent evaluation aggregates per-trace signals into session-level scores that capture patterns only visible across multiple interactions.
 
 ## Why session-level evaluation?
 
@@ -24,13 +24,13 @@ Session evaluation is a two-phase process:
 
 ```
 Phase 1: Compute trace-level signals          Phase 2: Aggregate into session scores
-┌─────────┐                                   ┌────────────────────┐
-│ Trace 1  │──▶ confidence, coherence,         │                    │
-├─────────┤    tool_correctness,              │  agent_reliability  │
-│ Trace 2  │──▶ loop_detection                 │  agent_consistency  │
-├─────────┤                          ──────▶  │                    │
-│ Trace 3  │──▶ (4 signals per trace)          │  (pure math, no    │
-├─────────┤                                   │   LLM calls)       │
+┌─────────┐                              ┌────────────────────┐
+│ Trace 1  │──▶ confidence, coherence,         │                              │
+├─────────┤    tool_correctness,              │  agent_reliability         │
+│ Trace 2  │──▶ loop_detection                 │  agent_consistency           │
+├─────────┤                          ──────▶  │                         │
+│ Trace 3  │──▶ (4 signals per trace)          │  (pure math, no              │
+├─────────┤                                   │   LLM calls)               │
 │  ...     │                                   └────────────────────┘
 └─────────┘
 ```

@@ -9,7 +9,7 @@ Evaluation **monitors** let you automate recurring evaluations. Instead of manua
 ## Creating a monitor
 
 ```bash
-POST /api/v1/evaluations/monitors
+POST /evaluations/monitors
 ```
 
 ```json
@@ -23,7 +23,7 @@ POST /api/v1/evaluations/monitors
   },
   "cadence": "daily",
   "sampling_rate": 0.3,
-  "model": "openai/gpt-4o",
+  "model": "openai/gpt-5.4",
   "only_if_changed": true
 }
 ```
@@ -110,7 +110,7 @@ Monitors have two states:
 ### Pause a monitor
 
 ```bash
-POST /api/v1/evaluations/monitors/{monitor_id}/pause
+POST /evaluations/monitors/{monitor_id}/pause
 ```
 
 Idempotent — safe to call on an already-paused monitor.
@@ -118,7 +118,7 @@ Idempotent — safe to call on an already-paused monitor.
 ### Resume a monitor
 
 ```bash
-POST /api/v1/evaluations/monitors/{monitor_id}/resume
+POST /evaluations/monitors/{monitor_id}/resume
 ```
 
 Idempotent — safe to call on an already-active monitor.
@@ -128,7 +128,7 @@ Idempotent — safe to call on an already-active monitor.
 Force an immediate eval run from a monitor, ignoring its cadence schedule:
 
 ```bash
-POST /api/v1/evaluations/monitors/{monitor_id}/trigger
+POST /evaluations/monitors/{monitor_id}/trigger
 ```
 
 This creates a new eval run using the monitor's saved configuration (metrics, filters, sampling rate, model) and returns the run details. Useful for testing a monitor's configuration or triggering an ad-hoc evaluation.
@@ -140,7 +140,7 @@ This creates a new eval run using the monitor's saved configuration (metrics, fi
 ### List all monitors
 
 ```bash
-GET /api/v1/evaluations/monitors?status=ACTIVE&limit=50
+GET /evaluations/monitors?status=ACTIVE&limit=50
 ```
 
 | Parameter | Description |
@@ -151,7 +151,7 @@ GET /api/v1/evaluations/monitors?status=ACTIVE&limit=50
 ### Get monitor details
 
 ```bash
-GET /api/v1/evaluations/monitors/{monitor_id}
+GET /evaluations/monitors/{monitor_id}
 ```
 
 Returns full configuration including `last_run_at`, `last_run_id`, and `next_run_at`.
@@ -167,7 +167,7 @@ Returns full configuration including `last_run_at`, `last_run_id`, and `next_run
   "metric_names": ["task_completion", "tool_correctness", "confidence"],
   "filters": {"status": "COMPLETED", "tags": ["production"]},
   "sampling_rate": 0.3,
-  "model": "openai/gpt-4o",
+  "model": "openai/gpt-5.4",
   "cadence": "daily",
   "only_if_changed": true,
   "status": "ACTIVE",
@@ -182,7 +182,7 @@ Returns full configuration including `last_run_at`, `last_run_id`, and `next_run
 ### Update a monitor
 
 ```bash
-PATCH /api/v1/evaluations/monitors/{monitor_id}
+PATCH /evaluations/monitors/{monitor_id}
 ```
 
 Partial update — only provided fields are changed:
@@ -198,7 +198,7 @@ Partial update — only provided fields are changed:
 ### Delete a monitor
 
 ```bash
-DELETE /api/v1/evaluations/monitors/{monitor_id}
+DELETE /evaluations/monitors/{monitor_id}
 ```
 
 Deletes the monitor configuration. Eval runs previously spawned by this monitor are preserved.
@@ -206,7 +206,7 @@ Deletes the monitor configuration. Eval runs previously spawned by this monitor 
 ### List runs spawned by a monitor
 
 ```bash
-GET /api/v1/evaluations/monitors/{monitor_id}/runs?limit=20
+GET /evaluations/monitors/{monitor_id}/runs?limit=20
 ```
 
 Returns the history of eval runs created by this monitor, ordered by creation time.
@@ -218,7 +218,7 @@ Here's a typical setup for a production environment with both trace and session 
 ### 1. Daily trace evaluation
 
 ```bash
-curl -X POST https://api.pandaprobe.com/api/v1/evaluations/monitors \
+curl -X POST https://api.pandaprobe.com/evaluations/monitors \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Project-ID: $PROJECT_ID" \
   -H "Content-Type: application/json" \
@@ -236,7 +236,7 @@ curl -X POST https://api.pandaprobe.com/api/v1/evaluations/monitors \
 ### 2. Weekly session evaluation
 
 ```bash
-curl -X POST https://api.pandaprobe.com/api/v1/evaluations/monitors \
+curl -X POST https://api.pandaprobe.com/evaluations/monitors \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Project-ID: $PROJECT_ID" \
   -H "Content-Type: application/json" \
@@ -255,7 +255,7 @@ curl -X POST https://api.pandaprobe.com/api/v1/evaluations/monitors \
 ### 3. Monitor the monitors
 
 ```bash
-curl https://api.pandaprobe.com/api/v1/evaluations/monitors \
+curl https://api.pandaprobe.com/evaluations/monitors \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Project-ID: $PROJECT_ID"
 ```

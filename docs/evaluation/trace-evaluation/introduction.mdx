@@ -17,7 +17,7 @@ PandaProbe ships with **9 built-in trace-level metrics**. Most use a multi-stage
   <Card title="Tool Correctness" icon="wrench">
     Did the agent select appropriate tools for the task?
   </Card>
-  <Card title="Argument Correctness" icon="brackets-curly">
+  <Card title="Argument Correctness" icon="braces">
     Were tool call arguments correctly specified?
   </Card>
   <Card title="Step Efficiency" icon="zap">
@@ -94,7 +94,7 @@ async def evaluate(
 | `trace` | The full trace entity with all spans |
 | `llm` | LLM engine for judge calls and embeddings |
 | `threshold` | Override the metric's default pass/fail threshold |
-| `model` | Override the default LLM model (e.g., `openai/gpt-4o`) |
+| `model` | Override the default LLM model (e.g., `openai/gpt-5.4`) |
 | `session_traces` | Previous traces in the same session (only used by `loop_detection`) |
 
 ## Standalone vs. session-context metrics

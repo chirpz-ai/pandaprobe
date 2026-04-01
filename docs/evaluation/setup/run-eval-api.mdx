@@ -4,7 +4,7 @@ description: "Create and manage evaluation runs programmatically using the Panda
 icon: "terminal"
 ---
 
-All evaluation features are accessible through the REST API at `/api/v1/evaluations`. This page covers every endpoint for running trace-level and session-level evaluations.
+All evaluation features are accessible through the REST API at `/evaluations`. This page covers every endpoint for running trace-level and session-level evaluations.
 
 <Note>
 All endpoints require authentication via **Bearer JWT** with `X-Project-ID` header, or **API key** with `X-API-Key` and `X-Project-Name` headers.
@@ -17,7 +17,7 @@ Before creating eval runs, check which metrics are available.
 ### List trace metrics
 
 ```bash
-GET /api/v1/evaluations/trace-metrics
+GET /evaluations/trace-metrics
 ```
 
 Returns all registered trace-level metrics:
@@ -40,7 +40,7 @@ Returns all registered trace-level metrics:
 ### List session metrics
 
 ```bash
-GET /api/v1/evaluations/session-metrics
+GET /evaluations/session-metrics
 ```
 
 Returns all registered session-level metrics:
@@ -63,7 +63,7 @@ Returns all registered session-level metrics:
 ### Check LLM provider availability
 
 ```bash
-GET /api/v1/evaluations/providers
+GET /evaluations/providers
 ```
 
 Returns which LLM providers are configured and available for judge calls.
@@ -75,7 +75,7 @@ Returns which LLM providers are configured and available for judge calls.
 ### Create a filtered trace eval run
 
 ```bash
-POST /api/v1/evaluations/trace-runs
+POST /evaluations/trace-runs
 ```
 
 Resolves traces matching your filters, samples them, and dispatches background evaluation. Returns `202 Accepted` immediately.
@@ -93,7 +93,7 @@ Resolves traces matching your filters, samples them, and dispatches background e
     "tags": ["production"]
   },
   "sampling_rate": 0.5,
-  "model": "openai/gpt-4o"
+  "model": "openai/gpt-5.4"
 }
 ```
 
@@ -128,7 +128,7 @@ Resolves traces matching your filters, samples them, and dispatches background e
   "target_type": "TRACE",
   "filters": {"status": "COMPLETED", "tags": ["production"]},
   "sampling_rate": 0.5,
-  "model": "openai/gpt-4o",
+  "model": "openai/gpt-5.4",
   "monitor_id": null,
   "error_message": null
 }
@@ -139,7 +139,7 @@ Resolves traces matching your filters, samples them, and dispatches background e
 ### Create a batch trace eval run
 
 ```bash
-POST /api/v1/evaluations/trace-runs/batch
+POST /evaluations/trace-runs/batch
 ```
 
 Evaluate specific traces by ID instead of using filters.
@@ -168,7 +168,7 @@ Evaluate specific traces by ID instead of using filters.
 ### Poll eval run status
 
 ```bash
-GET /api/v1/evaluations/trace-runs/{run_id}
+GET /evaluations/trace-runs/{run_id}
 ```
 
 Check the progress of an eval run. Poll this endpoint until `status` is `COMPLETED` or `FAILED`.
@@ -176,7 +176,7 @@ Check the progress of an eval run. Poll this endpoint until `status` is `COMPLET
 ### List eval runs
 
 ```bash
-GET /api/v1/evaluations/trace-runs?status=COMPLETED&limit=20&offset=0
+GET /evaluations/trace-runs?status=COMPLETED&limit=20&offset=0
 ```
 
 | Parameter | Type | Description |
@@ -188,7 +188,7 @@ GET /api/v1/evaluations/trace-runs?status=COMPLETED&limit=20&offset=0
 ### Get scores for a run
 
 ```bash
-GET /api/v1/evaluations/trace-runs/{run_id}/scores
+GET /evaluations/trace-runs/{run_id}/scores
 ```
 
 Returns all trace scores produced by a specific eval run.
@@ -196,7 +196,7 @@ Returns all trace scores produced by a specific eval run.
 ### Retry failed metrics
 
 ```bash
-POST /api/v1/evaluations/trace-runs/{run_id}/retry
+POST /evaluations/trace-runs/{run_id}/retry
 ```
 
 Creates a new eval run targeting only the trace+metric pairs that failed in the original run. Returns `422` if the original run has no failures.
@@ -206,7 +206,7 @@ Creates a new eval run targeting only the trace+metric pairs that failed in the 
 ### Delete an eval run
 
 ```bash
-DELETE /api/v1/evaluations/trace-runs/{run_id}?delete_scores=false
+DELETE /evaluations/trace-runs/{run_id}?delete_scores=false
 ```
 
 By default, only the run record is deleted — scores are preserved with `eval_run_id` set to null. Pass `?delete_scores=true` to also delete all scores from this run.
@@ -218,7 +218,7 @@ By default, only the run record is deleted — scores are preserved with `eval_r
 ### Create a manual score
 
 ```bash
-POST /api/v1/evaluations/trace-scores
+POST /evaluations/trace-scores
 ```
 
 Manually attach a score to a trace (human annotation or programmatic submission).
@@ -251,7 +251,7 @@ NUMERIC scores must be in the range [0.0, 1.0]. BOOLEAN scores must be `"true"` 
 ### List trace scores
 
 ```bash
-GET /api/v1/evaluations/trace-scores
+GET /evaluations/trace-scores
 ```
 
 Comprehensive filtering:
@@ -271,7 +271,7 @@ Comprehensive filtering:
 ### Get latest scores for a trace
 
 ```bash
-GET /api/v1/evaluations/trace-scores/{trace_id}
+GET /evaluations/trace-scores/{trace_id}
 ```
 
 Returns one score per metric name, deduplicated by most recent `created_at`. Use this to display a score overview panel for a specific trace.
@@ -279,7 +279,7 @@ Returns one score per metric name, deduplicated by most recent `created_at`. Use
 ### Update a score
 
 ```bash
-PATCH /api/v1/evaluations/trace-scores/{score_id}
+PATCH /evaluations/trace-scores/{score_id}
 ```
 
 ```json
@@ -294,7 +294,7 @@ Only `value`, `reason`, and `metadata` can be changed. `status` is automatically
 ### Delete a score
 
 ```bash
-DELETE /api/v1/evaluations/trace-scores/{score_id}
+DELETE /evaluations/trace-scores/{score_id}
 ```
 
 ---
@@ -306,7 +306,7 @@ Session eval runs follow the same pattern as trace eval runs but target sessions
 ### Create a filtered session eval run
 
 ```bash
-POST /api/v1/evaluations/session-runs
+POST /evaluations/session-runs
 ```
 
 ```json
@@ -319,7 +319,7 @@ POST /api/v1/evaluations/session-runs
     "min_trace_count": 3
   },
   "sampling_rate": 1.0,
-  "model": "openai/gpt-4o",
+  "model": "openai/gpt-5.4",
   "signal_weights": {
     "confidence": 1.0,
     "loop_detection": 1.5,
@@ -348,7 +348,7 @@ POST /api/v1/evaluations/session-runs
 ### Create a batch session eval run
 
 ```bash
-POST /api/v1/evaluations/session-runs/batch
+POST /evaluations/session-runs/batch
 ```
 
 ```json
@@ -390,7 +390,7 @@ PandaProbe provides analytics endpoints for both trace and session scores.
 **Summary** — aggregated stats per metric:
 
 ```bash
-GET /api/v1/evaluations/analytics/trace-scores/summary?date_from=2026-03-01T00:00:00Z
+GET /evaluations/analytics/trace-scores/summary?date_from=2026-03-01T00:00:00Z
 ```
 
 ```json
@@ -411,7 +411,7 @@ GET /api/v1/evaluations/analytics/trace-scores/summary?date_from=2026-03-01T00:0
 **Trend** — time series of average scores:
 
 ```bash
-GET /api/v1/evaluations/analytics/trace-scores/trend?metric_name=task_completion&granularity=day
+GET /evaluations/analytics/trace-scores/trend?metric_name=task_completion&granularity=day
 ```
 
 | Parameter | Options |
@@ -423,7 +423,7 @@ GET /api/v1/evaluations/analytics/trace-scores/trend?metric_name=task_completion
 **Distribution** — histogram of score values:
 
 ```bash
-GET /api/v1/evaluations/analytics/trace-scores/distribution?metric_name=task_completion&buckets=10
+GET /evaluations/analytics/trace-scores/distribution?metric_name=task_completion&buckets=10
 ```
 
 | Parameter | Description |
@@ -446,13 +446,13 @@ Session score analytics mirror the trace analytics:
 **Session score history** — track how a session's score evolves over re-evaluations:
 
 ```bash
-GET /api/v1/evaluations/analytics/session-scores/history/{session_id}?metric_name=agent_reliability&limit=50
+GET /evaluations/analytics/session-scores/history/{session_id}?metric_name=agent_reliability&limit=50
 ```
 
 **Session comparison** — rank sessions by a metric (useful for finding worst-performing sessions):
 
 ```bash
-GET /api/v1/evaluations/analytics/session-scores/comparison?metric_name=agent_reliability&sort_order=asc&limit=10
+GET /evaluations/analytics/session-scores/comparison?metric_name=agent_reliability&sort_order=asc&limit=10
 ```
 
 Pass `sort_order=asc` to surface the worst sessions first.
@@ -464,7 +464,7 @@ Pass `sort_order=asc` to surface the worst sessions first.
 To help build eval run requests, PandaProbe can generate a pre-filled template for a metric:
 
 ```bash
-GET /api/v1/evaluations/trace-runs/template?metric=task_completion
+GET /evaluations/trace-runs/template?metric=task_completion
 ```
 
 Returns the metric's full info (including prompt previews), default filters, sampling rate, and the default model. Use this to populate a form in your own tooling.
