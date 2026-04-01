@@ -1,19 +1,51 @@
 ---
 title: "Run Evaluations via UI"
-description: "Run and manage evaluations through the PandaProbe dashboard"
-icon: "globe"
+description: "Create and manage evaluation runs through the PandaProbe dashboard."
+icon: "layout-dashboard"
 ---
 
-# Run Evaluations via UI
+<Info>
+This page is under construction. The dashboard UI for evaluations is actively being developed. Screenshots and step-by-step visual guides will be added once the UI is finalized.
+</Info>
 
-The PandaProbe dashboard provides a visual interface for creating, running, and reviewing evaluations without writing code.
+The PandaProbe dashboard provides a visual interface for creating eval runs, selecting metrics, configuring filters, and reviewing results. This page will document the full dashboard workflow.
 
-<Info>This page is under construction. UI evaluation documentation is coming soon.</Info>
+## Planned features
 
-## Topics to be covered
+### Creating a trace eval run
 
-- Creating an evaluation from the dashboard
-- Selecting traces and datasets
-- Configuring metrics
-- Viewing evaluation results
-- Comparing evaluation runs
+1. Navigate to the **Evaluations** section in the dashboard
+2. Select one or more trace-level metrics (e.g., `task_completion`, `tool_correctness`)
+3. Configure filters to target specific traces (date range, status, session, tags)
+4. Set a sampling rate to control how many traces are evaluated
+5. Optionally override the LLM model used for judging
+6. Submit the eval run and monitor progress
+
+### Creating a session eval run
+
+1. Select session-level metrics (`agent_reliability`, `agent_consistency`)
+2. Configure session filters (date range, user, minimum trace count)
+3. Optionally customize signal weights
+4. Submit and monitor the session eval run
+
+### Reviewing results
+
+- View per-trace and per-session scores with reasons and metadata
+- Track score trends over time with built-in charts
+- Explore score distributions across metrics
+- Compare session scores in a leaderboard view
+- Drill into flagged traces from agent reliability results
+
+### Manual annotations
+
+- Score individual traces manually from the trace detail view
+- Edit existing automated scores to correct or override them
+- All annotations are tracked as `ANNOTATION` source scores
+
+## API alternative
+
+While the dashboard UI is under development, all evaluation features are fully available via the API.
+
+<Card title="Run Evaluations via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+  Create and manage eval runs programmatically with the evaluation API.
+</Card>

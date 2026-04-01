@@ -1,20 +1,97 @@
 ---
 title: "Introduction"
-description: "Configure and run evaluations in PandaProbe"
-icon: "scan-search"
+description: "Set up and run evaluations via the PandaProbe dashboard or API."
+icon: "route"
 ---
 
-# Set Up Evaluations
+PandaProbe provides three ways to run evaluations:
 
-PandaProbe supports running evaluations through both the web UI and the API. This section covers how to configure evaluation pipelines, create datasets, and execute evaluation runs.
+<CardGroup cols={3}>
+  <Card title="Dashboard UI" icon="layout-dashboard" href="/evaluation/setup/run-eval-ui">
+    Visual interface for creating eval runs, selecting metrics, and reviewing results.
+  </Card>
+  <Card title="API" icon="terminal" href="/evaluation/setup/run-eval-api">
+    Programmatic access for CI/CD pipelines, automated workflows, and custom tooling.
+  </Card>
+  <Card title="Scheduled Monitors" icon="clock" href="/evaluation/setup/scheduling">
+    Recurring evaluations that run automatically on a cadence.
+  </Card>
+</CardGroup>
 
-<Info>This page is under construction. Setup documentation is coming soon.</Info>
+## Prerequisites
 
-## Topics to be covered
+Before running evaluations, make sure you have:
 
-- Creating evaluation datasets
-- Configuring evaluation pipelines
-- Choosing metrics and evaluators
-- Running evaluations via the UI
-- Running evaluations via the API
-- Scheduling recurring evaluations
+<Steps>
+  <Step title="Traces or sessions to evaluate">
+    Evaluations run against data already captured by PandaProbe tracing. You need at least one trace in your project. For session-level evaluations, you need traces grouped by session ID.
+  </Step>
+  <Step title="An LLM provider configured">
+    Most trace-level metrics use an LLM-as-judge approach. PandaProbe needs access to at least one LLM provider (e.g., OpenAI, Anthropic) to run these metrics. Check available providers:
+
+    ```bash
+    curl -H "Authorization: Bearer $TOKEN" \
+         -H "X-Project-ID: $PROJECT_ID" \
+         https://api.pandaprobe.com/evaluations/providers
+    ```
+  </Step>
+  <Step title="Authentication">
+    All evaluation endpoints require authentication. You can use either:
+    - **Bearer JWT** with `X-Project-ID` header
+    - **API key** with `X-API-Key` and `X-Project-Name` headers
+  </Step>
+</Steps>
+
+## What you can evaluate
+
+### Trace-level evaluation
+
+Run metrics against individual traces to score task completion, tool usage, planning, coherence, and more. You can target traces by:
+
+- **Filters** — date range, status, session, user, tags, or name substring
+- **Explicit IDs** — provide a list of specific trace UUIDs
+- **Sampling** — evaluate a random fraction of matching traces to control cost
+
+### Session-level evaluation
+
+Run metrics against entire sessions to assess agent reliability and consistency. You can target sessions by:
+
+- **Filters** — date range, user, error status, tags, minimum trace count
+- **Explicit IDs** — provide a list of specific session ID strings
+- **Sampling** — evaluate a fraction of matching sessions
+
+## Understanding eval run results
+
+Every eval run produces **scores** attached to your traces or sessions. Each score includes:
+
+| Field | Description |
+|---|---|
+| `name` | The metric name (e.g., `task_completion`) |
+| `value` | Score as a string (e.g., `"0.85"`) |
+| `status` | `SUCCESS` or `FAILED` |
+| `reason` | LLM-generated explanation |
+| `metadata` | Structured data with threshold, intermediate results, and breakdowns |
+
+You can query scores in aggregate (summaries, trends, distributions) or per trace/session to understand individual results.
+
+## Manual scores
+
+Beyond automated evaluations, you can create scores manually:
+
+- **Annotations** — human reviewers score traces in the dashboard
+- **Programmatic** — submit scores from your own evaluation pipelines via the API
+
+Manual scores use the same schema as automated scores and appear alongside them in analytics.
+
+## Next steps
+
+Choose your preferred method to start evaluating:
+
+<CardGroup cols={2}>
+  <Card title="Run via Dashboard" icon="layout-dashboard" href="/evaluation/setup/run-eval-ui">
+    Visual guide to creating eval runs in the dashboard.
+  </Card>
+  <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+    Complete API reference for evaluation endpoints.
+  </Card>
+</CardGroup>

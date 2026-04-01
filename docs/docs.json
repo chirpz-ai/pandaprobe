@@ -17,6 +17,16 @@
       "dark": "#18191b"
     }
   },
+  "api": {
+    "playground": {
+      "display": "interactive"
+    },
+    "examples": {
+      "languages": ["curl", "python", "javascript", "go"],
+      "defaults": "required",
+      "prefill": true
+    }
+  },
   "icons": {
     "library": "lucide"
   },
@@ -75,12 +85,12 @@
           },
           {
             "group": "Tracing",
-            "icon": "fingerprint-pattern",
             "pages": [
               "tracing/overview",
               "tracing/concepts",
               {
                 "group": "Wrappers",
+                "icon": "package",
                 "pages": [
                   "tracing/wrappers/overview",
                   "tracing/wrappers/openai",
@@ -90,6 +100,7 @@
               },
               {
                 "group": "Integrations",
+                "icon": "link",
                 "pages": [
                   "tracing/integrations/overview",
                   "tracing/integrations/langgraph",
@@ -101,6 +112,7 @@
               },
               {
                 "group": "Manual Instrumentation",
+                "icon": "wrench",
                 "pages": [
                   "tracing/manual/decorators",
                   "tracing/manual/context-managers",
@@ -111,6 +123,7 @@
               "tracing/scoring",
               {
                 "group": "Configuration",
+                "icon": "cog",
                 "pages": [
                   "tracing/configuration/environment-variables",
                   "tracing/configuration/project-configuration",
@@ -122,12 +135,12 @@
           },
           {
             "group": "Evaluation",
-            "icon": "chart-bar-big",
             "pages": [
               "evaluation/overview",
               "evaluation/concepts",
               {
                 "group": "Trace Evaluation",
+                "icon": "drafting-compass",
                 "pages": [
                   "evaluation/trace-evaluation/introduction",
                   "evaluation/trace-evaluation/metrics"
@@ -135,6 +148,7 @@
               },
               {
                 "group": "Agent Evaluation",
+                "icon": "bot",
                 "pages": [
                   "evaluation/agent-evaluation/introduction",
                   "evaluation/agent-evaluation/metrics"
@@ -142,6 +156,7 @@
               },
               {
                 "group": "Set Up Evaluation",
+                "icon": "cog",
                 "pages": [
                   "evaluation/setup/introduction",
                   "evaluation/setup/run-eval-ui",
@@ -156,8 +171,119 @@
       {
         "tab": "API Reference",
         "icon": "terminal",
-        "pages": [
-          "api-reference/introduction"
+        "openapi": "openapi.json",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Traces",
+            "icon": "fingerprint",
+            "pages": [
+              {
+                "group": "Traces",
+                "pages": [
+                  "POST /traces",
+                  "GET /traces",
+                  "GET /traces/analytics",
+                  "GET /traces/users",
+                  "POST /traces/batch/delete",
+                  "POST /traces/batch/tags",
+                  "GET /traces/{trace_id}",
+                  "PATCH /traces/{trace_id}",
+                  "DELETE /traces/{trace_id}",
+                  "POST /traces/{trace_id}/spans",
+                  "PATCH /traces/{trace_id}/spans/{span_id}"
+                ]
+              },
+              {
+                "group": "Sessions",
+                "pages": [
+                  "GET /sessions",
+                  "GET /sessions/analytics",
+                  "GET /sessions/{session_id}",
+                  "DELETE /sessions/{session_id}"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Evaluations",
+            "icon": "drafting-compass",
+            "pages": [
+              {
+                "group": "Trace Eval Runs",
+                "pages": [
+                  "GET /evaluations/providers",
+                  "GET /evaluations/trace-metrics",
+                  "GET /evaluations/trace-runs/template",
+                  "POST /evaluations/trace-runs",
+                  "GET /evaluations/trace-runs",
+                  "POST /evaluations/trace-runs/batch",
+                  "GET /evaluations/trace-runs/{run_id}",
+                  "DELETE /evaluations/trace-runs/{run_id}",
+                  "POST /evaluations/trace-runs/{run_id}/retry",
+                  "GET /evaluations/trace-runs/{run_id}/scores"
+                ]
+              },
+              {
+                "group": "Trace Scores",
+                "pages": [
+                  "POST /evaluations/trace-scores",
+                  "GET /evaluations/trace-scores",
+                  "GET /evaluations/trace-scores/{trace_id}",
+                  "PATCH /evaluations/trace-scores/{score_id}",
+                  "DELETE /evaluations/trace-scores/{score_id}",
+                  "GET /evaluations/analytics/trace-scores/summary",
+                  "GET /evaluations/analytics/trace-scores/trend",
+                  "GET /evaluations/analytics/trace-scores/distribution"
+                ]
+              },
+              {
+                "group": "Session Eval Runs",
+                "pages": [
+                  "GET /evaluations/session-metrics",
+                  "POST /evaluations/session-runs",
+                  "GET /evaluations/session-runs",
+                  "POST /evaluations/session-runs/batch",
+                  "GET /evaluations/session-runs/{run_id}",
+                  "DELETE /evaluations/session-runs/{run_id}",
+                  "POST /evaluations/session-runs/{run_id}/retry",
+                  "GET /evaluations/session-runs/{run_id}/scores"
+                ]
+              },
+              {
+                "group": "Session Scores",
+                "pages": [
+                  "GET /evaluations/session-scores",
+                  "GET /evaluations/session-scores/{session_id}",
+                  "DELETE /evaluations/session-scores/{score_id}",
+                  "GET /evaluations/analytics/session-scores/summary",
+                  "GET /evaluations/analytics/session-scores/trend",
+                  "GET /evaluations/analytics/session-scores/distribution",
+                  "GET /evaluations/analytics/session-scores/history/{session_id}",
+                  "GET /evaluations/analytics/session-scores/comparison"
+                ]
+              },
+              {
+                "group": "Monitors",
+                "pages": [
+                  "POST /evaluations/monitors",
+                  "GET /evaluations/monitors",
+                  "GET /evaluations/monitors/{monitor_id}",
+                  "PATCH /evaluations/monitors/{monitor_id}",
+                  "DELETE /evaluations/monitors/{monitor_id}",
+                  "POST /evaluations/monitors/{monitor_id}/pause",
+                  "POST /evaluations/monitors/{monitor_id}/resume",
+                  "POST /evaluations/monitors/{monitor_id}/trigger",
+                  "GET /evaluations/monitors/{monitor_id}/runs"
+                ]
+              }
+            ]
+          }
         ]
       },
       {

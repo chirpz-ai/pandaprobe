@@ -35,7 +35,7 @@ from agents import Agent, Runner
 agent = Agent(
     name="my-assistant",
     instructions="You are a helpful assistant.",
-    model="gpt-4o",
+    model="gpt-5.4",
 )
 
 result = Runner.run_sync(agent, "What is PandaProbe?")
@@ -75,7 +75,7 @@ def get_weather(city: str) -> str:
 agent = Agent(
     name="weather-assistant",
     instructions="Help users check the weather.",
-    model="gpt-4o",
+    model="gpt-5.4",
     tools=[get_weather],
 )
 

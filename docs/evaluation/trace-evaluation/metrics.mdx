@@ -1,19 +1,383 @@
 ---
 title: "Metrics"
-description: "Built-in and custom metrics for evaluating trace quality"
-icon: "chart-line"
+description: "Reference for all 9 built-in trace-level evaluation metrics."
+icon: "ruler"
 ---
 
-# Trace Evaluation Metrics
+This page provides a comprehensive reference for every trace-level metric in PandaProbe. Each metric produces a score between 0.0 and 1.0, where higher is better (except where noted).
 
-Metrics provide quantitative measures of trace quality across dimensions like accuracy, relevance, and faithfulness.
+---
 
-<Info>This page is under construction. The metrics catalog and custom metric documentation are coming soon.</Info>
+## Task Completion
 
-## Topics to be covered
+<Info>
+**Registry name:** `task_completion` · **Default threshold:** 0.5 · **Method:** LLM judge (2-stage)
+</Info>
 
-- Built-in metric catalog (accuracy, relevance, faithfulness, toxicity, etc.)
-- Custom metric definitions
-- LLM-as-judge metrics
-- Deterministic metrics (exact match, BLEU, ROUGE, etc.)
-- Metric configuration and thresholds
+Evaluates whether the agent accomplished the user's stated objective. This is typically the most important metric — it answers the fundamental question: *Did the agent do what was asked?*
+
+### How it works
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract** | LLM identifies the user's task and a strictly factual description of what the agent did from the trace. Subjective language (e.g., "successfully") is explicitly excluded. | `task` (string), `outcome` (string) |
+| **2. Score** | LLM compares the extracted task against the actual outcome and scores fulfillment on a 0–1 scale. | `verdict` (float 0–1), `reason` (string) |
+
+### Scoring guide
+
+| Score | Meaning |
+|---|---|
+| 1.0 | Task perfectly accomplished |
+| 0.75–0.99 | Mostly complete, minor aspects missing |
+| 0.5–0.74 | Partially complete |
+| 0.25–0.49 | Significant gaps in completion |
+| 0.0–0.24 | Task not meaningfully addressed |
+
+### Metadata returned
+
+```json
+{
+  "task": "Book a round-trip flight from SFO to JFK for next Friday",
+  "outcome": "Found 3 available flights, selected the cheapest option, and completed booking confirmation",
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+---
+
+## Tool Correctness
+
+<Info>
+**Registry name:** `tool_correctness` · **Default threshold:** 0.5 · **Method:** LLM judge (2-stage)
+</Info>
+
+Evaluates whether the agent selected appropriate tools for its task. Catches over-selection (unnecessary tools), under-selection (missing tools), and mis-selection (wrong tools).
+
+### How it works
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract** | LLM extracts the user's goal, all tool calls made (name + parameters), and all available tools (name + description) from trace spans. | `user_input`, `tools_called` (list), `available_tools` (list) |
+| **2. Score** | LLM judges tool selection quality considering correct selection, over-selection, under-selection, and mis-selection. | `score` (float 0–1), `reason` (string) |
+
+### What the judge evaluates
+
+- **Correct selection** — Were the tools used appropriate and sufficient?
+- **Over-selection** — Were unnecessary or redundant tools called?
+- **Under-selection** — Were useful available tools ignored?
+- **Mis-selection** — Were wrong or irrelevant tools chosen?
+
+### Metadata returned
+
+```json
+{
+  "user_input": "Look up the weather in Tokyo and book a restaurant",
+  "tools_called": [
+    {"name": "weather_lookup", "parameters": {"city": "Tokyo"}},
+    {"name": "restaurant_booking", "parameters": {"city": "Tokyo", "cuisine": "sushi"}}
+  ],
+  "available_tools": [
+    {"name": "weather_lookup", "description": "Get weather forecast"},
+    {"name": "restaurant_booking", "description": "Book a restaurant"},
+    {"name": "flight_search", "description": "Search flights"}
+  ],
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+---
+
+## Argument Correctness
+
+<Info>
+**Registry name:** `argument_correctness` · **Default threshold:** 0.5 · **Method:** LLM judge (3-stage)
+</Info>
+
+Evaluates whether the arguments passed to each tool call were correct for the user's task. While Tool Correctness checks *which* tools were called, Argument Correctness checks *how* they were called.
+
+### How it works
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract** | LLM identifies the user input and all tool calls with their parameters and reasoning from the trace. | `user_input` (string), `tool_calls` (list of name/parameters/reasoning) |
+| **2. Verdicts** | LLM evaluates each tool call individually, returning a `yes`/`no` verdict on whether its arguments correctly address the task. | `verdicts` (list of verdict + reason) |
+| **3. Reason** | LLM produces a concise overall explanation from the score and list of incorrect-call reasons. | `reason` (string) |
+
+### Score calculation
+
+The score is computed deterministically from the verdicts:
+
+```
+score = correct_count / total_verdicts
+```
+
+If a trace has no tool calls, the metric returns a perfect 1.0 score (nothing to evaluate).
+
+### Metadata returned
+
+```json
+{
+  "user_input": "Find flights from SFO to JFK under $500",
+  "verdicts": [
+    {"verdict": "yes", "reason": null},
+    {"verdict": "no", "reason": "Price filter was set to $1000 instead of $500"}
+  ],
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+---
+
+## Step Efficiency
+
+<Info>
+**Registry name:** `step_efficiency` · **Default threshold:** 0.5 · **Method:** LLM judge (2-stage)
+</Info>
+
+Evaluates how efficiently the agent executed its task, penalizing redundant steps, unnecessary tool calls, and speculative work.
+
+### How it works
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract** | LLM extracts the user's original goal from the trace. | `task` (string) |
+| **2. Score** | LLM scores execution efficiency based on minimality of actions, penalizing redundant steps, unnecessary tool calls, and speculative work. | `score` (float 0–1), `reason` (string) |
+
+### What lowers the score
+
+- Redundant or duplicate tool calls
+- Unnecessary intermediate steps
+- Speculative work that wasn't needed for the task
+- Overly verbose reasoning chains that don't add value
+
+### Metadata returned
+
+```json
+{
+  "task": "Get the current Bitcoin price",
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+---
+
+## Confidence
+
+<Info>
+**Registry name:** `confidence` · **Default threshold:** 0.5 · **Method:** LLM judge (1-stage)
+</Info>
+
+Evaluates whether the agent's actions were decisive, appropriate, and well-founded. This metric is also used as a **signal** for session-level aggregation in `agent_reliability` and `agent_consistency`.
+
+### How it works
+
+A single LLM call evaluates the entire trace against four criteria:
+
+- **Decisiveness** — Did the agent act without unnecessary hesitation or contradictory steps?
+- **Appropriateness** — Were the actions relevant to the user's goal?
+- **Consistency** — Did the agent maintain a coherent strategy throughout?
+- **Indicators of low confidence** — hedging language, contradictions, unnecessary retries, vague outputs, repeated tool calls with identical parameters, or abandoned strategies
+
+### Scoring guide
+
+| Score | Meaning |
+|---|---|
+| 1.0 | Fully confident, decisive execution |
+| 0.75 | Minor hesitation or suboptimal strategy |
+| 0.5 | Noticeable indecision or inconsistency |
+| 0.25 | Significant uncertainty, multiple abandoned approaches |
+| 0.0 | Completely uncertain, contradictory actions |
+
+### Metadata returned
+
+```json
+{
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+---
+
+## Plan Adherence
+
+<Info>
+**Registry name:** `plan_adherence` · **Default threshold:** 0.5 · **Method:** LLM judge (3-stage)
+</Info>
+
+Evaluates how closely the agent followed its declared or implied plan during execution. Useful for agents that produce a plan before acting.
+
+### How it works
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract task** | LLM extracts the user's task from the trace (reuses the Step Efficiency extraction prompt). | `task` (string) |
+| **2. Extract plan** | LLM extracts the agent's explicit or implied plan from reasoning/thought fields. Every step must be supported by trace evidence — no hallucination. | `plan` (list of strings) |
+| **3. Score** | LLM scores how strictly execution followed the plan, checking step order and completeness. | `score` (float 0–1), `reason` (string) |
+
+If no plan is found in the trace, the metric returns **1.0** (no plan to deviate from).
+
+### Scoring guide
+
+| Score | Meaning |
+|---|---|
+| 1.0 | Perfect adherence — execution matches plan exactly |
+| 0.75 | Nearly all steps in order, minor deviations |
+| 0.5 | Partial adherence, some steps skipped or reordered |
+| 0.25 | Weak adherence, significant deviation from plan |
+| 0.0 | No adherence, execution bears little relation to plan |
+
+### What the judge evaluates
+
+- Were all planned steps executed?
+- Were steps followed in the intended order?
+- Were there extraneous actions not in the plan?
+- Were any planned steps skipped?
+
+---
+
+## Plan Quality
+
+<Info>
+**Registry name:** `plan_quality` · **Default threshold:** 0.5 · **Method:** LLM judge (3-stage)
+</Info>
+
+Evaluates the intrinsic quality of the agent's plan, independent of whether the plan was followed. While Plan Adherence checks execution vs. plan, Plan Quality checks whether the plan itself was good.
+
+### How it works
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract task** | LLM extracts the user's task from the trace. | `task` (string) |
+| **2. Extract plan** | LLM extracts the agent's plan from reasoning fields. | `plan` (list of strings) |
+| **3. Score quality** | LLM scores plan quality based on completeness, logical coherence, optimality, detail level, and alignment with the task. | `score` (float 0–1), `reason` (string) |
+
+If no plan is found, the metric returns **1.0**.
+
+### What the judge evaluates
+
+- **Completeness** — Does the plan address all aspects of the task?
+- **Logical coherence** — Are steps ordered and structured sensibly?
+- **Optimality/efficiency** — Could the plan be streamlined?
+- **Level of detail** — Sufficiently detailed without being overly verbose?
+- **Alignment with task** — Does the plan match the user's intent?
+
+### Scoring guide
+
+| Score | Meaning |
+|---|---|
+| 1.0 | Excellent plan — complete, coherent, optimal |
+| 0.75 | Good plan — minor flaws or suboptimal choices |
+| 0.5 | Adequate but flawed — works but has notable gaps |
+| 0.25 | Weak plan — significant issues |
+| 0.0 | Inadequate — does not address the task |
+
+---
+
+## Coherence
+
+<Info>
+**Registry name:** `coherence` · **Default threshold:** 0.5 · **Method:** Embedding distance (no LLM call)
+</Info>
+
+Measures whether the agent's output logically follows from its input using embedding-based cosine distance. This metric is fast and deterministic — it only requires embedding API calls, no LLM generation.
+
+### How it works
+
+1. The trace's `input` and `output` are serialized to text
+2. Both texts are embedded using the configured embedding model
+3. The cosine distance between the two embeddings is computed
+4. Score = `1.0 - cosine_distance` (clamped to [0, 1])
+
+A small distance (high score) means the output is semantically aligned with the input. A large distance (low score) suggests the output is unrelated or off-topic.
+
+### Edge cases
+
+- If either input or output is empty, the metric returns **1.0** with a note explaining coherence was assumed
+- The metric also serves as a **signal** for session-level aggregation
+
+### Metadata returned
+
+```json
+{
+  "coherence_gap": 0.1234,
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+---
+
+## Loop Detection
+
+<Info>
+**Registry name:** `loop_detection` · **Default threshold:** 0.5 · **Method:** Hybrid semantic + Jaccard similarity
+</Info>
+
+Detects whether the agent is stuck repeating itself across traces in the same session. This metric **requires session context** — it compares the current trace's output against previous traces.
+
+<Warning>
+Loop Detection is excluded from standalone trace eval runs. It runs automatically as a signal during session-level evaluations.
+</Warning>
+
+### How it works
+
+1. The current trace's output and the previous traces' outputs (up to a window of 3) are collected
+2. All outputs are embedded using the configured embedding model
+3. For each previous trace, two similarity scores are computed:
+   - **Cosine similarity** (semantic overlap) between embeddings
+   - **Jaccard similarity** (lexical overlap) between tokenized word sets (with stop-word removal)
+4. A **hybrid score** = cosine × Jaccard is computed for each pair
+5. Final score = `1.0 - max(hybrid_scores)` (clamped to [0, 1])
+
+### Why the hybrid approach
+
+| Scenario | Cosine | Jaccard | Hybrid | Interpretation |
+|---|---|---|---|---|
+| Agent repeating exact same response | High | High | High → Low score | Stuck in a loop |
+| Agent enumerating related items | High | Low | Low → High score | Valid exploration |
+| Completely unrelated outputs | Low | Low | Low → High score | No repetition |
+
+The multiplication of cosine × Jaccard ensures that only outputs that are **both** semantically and lexically similar are flagged as loops.
+
+### Metadata returned
+
+```json
+{
+  "window_size": 3,
+  "max_hybrid": 0.7234,
+  "comparisons": [
+    {
+      "trace_index": 2,
+      "cosine_similarity": 0.9512,
+      "jaccard_similarity": 0.7608,
+      "hybrid_score": 0.7234
+    }
+  ],
+  "threshold": 0.5,
+  "success": false
+}
+```
+
+---
+
+## Model override
+
+All LLM-based metrics support a **model override** parameter. When creating an eval run, you can specify `model` (e.g., `"openai/gpt-5.4"`) to change which LLM serves as the judge. If omitted, the system default is used.
+
+This lets you balance cost and accuracy — use a faster model for quick checks and a more capable model for production evaluations.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Agent Evaluation Metrics" icon="bot" href="/evaluation/agent-evaluation/metrics">
+    Learn about session-level aggregation metrics.
+  </Card>
+  <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+    Create trace eval runs programmatically.
+  </Card>
+</CardGroup>

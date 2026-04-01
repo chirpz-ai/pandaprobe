@@ -1,21 +1,131 @@
 ---
-title: "API Reference"
-description: "PandaProbe REST API reference documentation"
-icon: "code"
+title: "Introduction"
+description: "PandaProbe REST API — authentication, base URL, conventions, and error handling."
+icon: "rocket"
 ---
 
-# API Reference
+The PandaProbe API provides programmatic access to traces, sessions, and evaluations. All endpoints are served over HTTPS.
 
-The PandaProbe REST API provides programmatic access to traces, evaluations, scores, and project management.
+Every endpoint page in this reference includes an **interactive playground** — you can fill in parameters and send real requests directly from the docs.
 
-<Info>This page is under construction. Full API reference documentation is coming soon.</Info>
+## Base URL
 
-## Topics to be covered
+```
+https://api.pandaprobe.com
+```
 
-- Authentication (API keys)
-- Traces API (create, list, get, update)
-- Spans API (create, list, update)
-- Scores API (create, list)
-- Evaluations API (create, run, get results)
-- Projects API (create, list, configure)
-- Rate limits and error handling
+## Authentication
+
+PandaProbe supports two authentication methods depending on the endpoint type.
+
+### Bearer JWT (management endpoints)
+
+Used for organization management, project management, API key management, and user profile. Send the token from your identity provider in the `Authorization` header:
+
+```
+Authorization: Bearer <token>
+```
+
+Some endpoints also accept an optional `X-Organization-ID` header to specify which organization to operate on (defaults to your first membership).
+
+### API Key (data-plane endpoints)
+
+Used for trace ingestion, trace/session queries, and evaluations. Send your org-scoped API key via the `X-API-Key` header along with `X-Project-Name` to scope the request to a project:
+
+```
+X-API-Key: pp_abc123...
+X-Project-Name: my-project
+```
+
+Projects are **auto-created** on first use if they don't exist yet.
+
+### Bearer JWT (data-plane endpoints)
+
+You can also use Bearer JWT for data-plane endpoints by providing `X-Project-ID` instead of `X-Project-Name`:
+
+```
+Authorization: Bearer <token>
+X-Project-ID: 550e8400-e29b-41d4-a716-446655440000
+```
+
+<Note>
+If both `Authorization: Bearer` and `X-API-Key` are present in a request, the API key takes precedence.
+</Note>
+
+### Summary
+
+| Endpoint category | Auth method | Required headers |
+|---|---|---|
+| Organizations, Projects, API Keys, User | Bearer JWT | `Authorization: Bearer <token>` |
+| Traces, Sessions, Evaluations | API Key | `X-API-Key`, `X-Project-Name` |
+| Traces, Sessions, Evaluations | Bearer JWT | `Authorization: Bearer <token>`, `X-Project-ID` |
+
+## Pagination
+
+List endpoints return a `PaginatedResponse` wrapper:
+
+```json
+{
+  "items": [...],
+  "total": 150,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+Control pagination with query parameters:
+
+| Parameter | Default | Range | Description |
+|---|---|---|---|
+| `limit` | 50 | 1–200 | Number of items per page |
+| `offset` | 0 | 0+ | Number of items to skip |
+
+## Error handling
+
+The API returns structured JSON errors:
+
+```json
+{
+  "detail": "Project not found or does not belong to your organization."
+}
+```
+
+Validation errors include field-level detail:
+
+```json
+{
+  "detail": "Validation error",
+  "errors": [
+    {"field": "name", "message": "String should have at least 1 character"}
+  ]
+}
+```
+
+### HTTP status codes
+
+| Code | Meaning |
+|---|---|
+| 200 | Success |
+| 201 | Resource created |
+| 202 | Accepted (async processing) |
+| 204 | Deleted (no content) |
+| 400 | Bad request |
+| 401 | Authentication required or invalid |
+| 403 | Insufficient permissions |
+| 404 | Resource not found |
+| 409 | Conflict (e.g., duplicate name) |
+| 422 | Validation error |
+| 429 | Rate limit exceeded |
+
+## Rate limits
+
+Certain endpoints enforce per-client rate limits:
+
+| Endpoint | Limit |
+|---|---|
+| `POST /traces` | 100/min |
+| `POST /evaluations/trace-runs` | 50/min |
+| `POST /evaluations/session-runs` | 50/min |
+| `POST /evaluations/monitors/{id}/trigger` | 10/min |
+
+Rate-limited responses return `429 Too Many Requests` with a `Retry-After` header.

@@ -1,19 +1,495 @@
 ---
 title: "Run Evaluations via API"
-description: "Programmatically run evaluations using the PandaProbe API"
-icon: "code"
+description: "Create and manage evaluation runs programmatically using the PandaProbe API."
+icon: "terminal"
 ---
 
-# Run Evaluations via API
+All evaluation features are accessible through the REST API at `/evaluations`. This page covers every endpoint for running trace-level and session-level evaluations.
 
-Use the PandaProbe API to programmatically create datasets, run evaluations, and retrieve results. Ideal for CI/CD pipelines and automated testing.
+<Note>
+All endpoints require authentication via **Bearer JWT** with `X-Project-ID` header, or **API key** with `X-API-Key` and `X-Project-Name` headers.
+</Note>
 
-<Info>This page is under construction. API evaluation documentation is coming soon.</Info>
+## Discover available metrics
 
-## Topics to be covered
+Before creating eval runs, check which metrics are available.
 
-- API authentication for evaluations
-- Creating and managing datasets
-- Triggering evaluation runs
-- Polling for results
-- Integrating with CI/CD pipelines
+### List trace metrics
+
+```bash
+GET /evaluations/trace-metrics
+```
+
+Returns all registered trace-level metrics:
+
+```json
+[
+  {
+    "name": "task_completion",
+    "description": "Evaluates whether the agent accomplished the user's stated objective.",
+    "category": "trace"
+  },
+  {
+    "name": "tool_correctness",
+    "description": "Evaluates whether the agent selected appropriate tools for the task.",
+    "category": "trace"
+  }
+]
+```
+
+### List session metrics
+
+```bash
+GET /evaluations/session-metrics
+```
+
+Returns all registered session-level metrics:
+
+```json
+[
+  {
+    "name": "agent_reliability",
+    "description": "Evaluates worst-case failure risk across a session.",
+    "category": "session"
+  },
+  {
+    "name": "agent_consistency",
+    "description": "Evaluates overall stability across a session.",
+    "category": "session"
+  }
+]
+```
+
+### Check LLM provider availability
+
+```bash
+GET /evaluations/providers
+```
+
+Returns which LLM providers are configured and available for judge calls.
+
+---
+
+## Trace evaluation runs
+
+### Create a filtered trace eval run
+
+```bash
+POST /evaluations/trace-runs
+```
+
+Resolves traces matching your filters, samples them, and dispatches background evaluation. Returns `202 Accepted` immediately.
+
+**Request body:**
+
+```json
+{
+  "name": "Weekly production eval",
+  "metrics": ["task_completion", "tool_correctness", "step_efficiency"],
+  "filters": {
+    "date_from": "2026-03-01T00:00:00Z",
+    "date_to": "2026-03-29T00:00:00Z",
+    "status": "COMPLETED",
+    "tags": ["production"]
+  },
+  "sampling_rate": 0.5,
+  "model": "openai/gpt-5.4"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | No | Human-readable label for the run |
+| `metrics` | string[] | Yes | Metric names to run (at least one) |
+| `filters.date_from` | ISO 8601 | No | Include traces started on or after this time |
+| `filters.date_to` | ISO 8601 | No | Include traces started before this time (exclusive) |
+| `filters.status` | string | No | `PENDING`, `RUNNING`, `COMPLETED`, or `ERROR` |
+| `filters.session_id` | string | No | Exact session ID |
+| `filters.user_id` | string | No | Exact user ID |
+| `filters.tags` | string[] | No | Match traces with ANY of these tags |
+| `filters.name` | string | No | Substring match on trace name (case-insensitive) |
+| `sampling_rate` | float | No | Fraction of matches to evaluate (default: 1.0) |
+| `model` | string | No | LLM model override (default: system default) |
+
+**Response (202):**
+
+```json
+{
+  "id": "a1b2c3d4-...",
+  "name": "Weekly production eval",
+  "status": "PENDING",
+  "metric_names": ["task_completion", "tool_correctness", "step_efficiency"],
+  "total_traces": 150,
+  "evaluated_count": 0,
+  "failed_count": 0,
+  "created_at": "2026-03-29T10:00:00Z",
+  "completed_at": null,
+  "project_id": "...",
+  "target_type": "TRACE",
+  "filters": {"status": "COMPLETED", "tags": ["production"]},
+  "sampling_rate": 0.5,
+  "model": "openai/gpt-5.4",
+  "monitor_id": null,
+  "error_message": null
+}
+```
+
+**Rate limit:** 50/min
+
+### Create a batch trace eval run
+
+```bash
+POST /evaluations/trace-runs/batch
+```
+
+Evaluate specific traces by ID instead of using filters.
+
+```json
+{
+  "trace_ids": [
+    "11111111-1111-1111-1111-111111111111",
+    "22222222-2222-2222-2222-222222222222"
+  ],
+  "metrics": ["task_completion", "argument_correctness"],
+  "name": "Manual review batch",
+  "model": null
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `trace_ids` | UUID[] | Yes | Specific traces to evaluate (at least one) |
+| `metrics` | string[] | Yes | Metric names to run |
+| `name` | string | No | Human-readable label |
+| `model` | string | No | LLM model override |
+
+**Rate limit:** 50/min
+
+### Poll eval run status
+
+```bash
+GET /evaluations/trace-runs/{run_id}
+```
+
+Check the progress of an eval run. Poll this endpoint until `status` is `COMPLETED` or `FAILED`.
+
+### List eval runs
+
+```bash
+GET /evaluations/trace-runs?status=COMPLETED&limit=20&offset=0
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `status` | string | Filter by status: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` |
+| `limit` | int | Page size (1–200, default 50) |
+| `offset` | int | Items to skip (default 0) |
+
+### Get scores for a run
+
+```bash
+GET /evaluations/trace-runs/{run_id}/scores
+```
+
+Returns all trace scores produced by a specific eval run.
+
+### Retry failed metrics
+
+```bash
+POST /evaluations/trace-runs/{run_id}/retry
+```
+
+Creates a new eval run targeting only the trace+metric pairs that failed in the original run. Returns `422` if the original run has no failures.
+
+**Rate limit:** 50/min
+
+### Delete an eval run
+
+```bash
+DELETE /evaluations/trace-runs/{run_id}?delete_scores=false
+```
+
+By default, only the run record is deleted — scores are preserved with `eval_run_id` set to null. Pass `?delete_scores=true` to also delete all scores from this run.
+
+---
+
+## Trace scores
+
+### Create a manual score
+
+```bash
+POST /evaluations/trace-scores
+```
+
+Manually attach a score to a trace (human annotation or programmatic submission).
+
+```json
+{
+  "trace_id": "11111111-1111-1111-1111-111111111111",
+  "name": "quality",
+  "value": "0.9",
+  "data_type": "NUMERIC",
+  "source": "ANNOTATION",
+  "reason": "High quality response with accurate information"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `trace_id` | UUID | Yes | Trace to score |
+| `name` | string | Yes | Score name (e.g., metric name or custom label) |
+| `value` | string | Yes | Score value: `"0.85"` (NUMERIC), `"true"` (BOOLEAN), `"PASS"` (CATEGORICAL) |
+| `data_type` | string | No | `NUMERIC` (default), `BOOLEAN`, or `CATEGORICAL` |
+| `source` | string | No | `ANNOTATION` (default) or `PROGRAMMATIC` |
+| `reason` | string | No | Explanation or annotation note |
+| `metadata` | object | No | Custom metadata |
+
+<Note>
+NUMERIC scores must be in the range [0.0, 1.0]. BOOLEAN scores must be `"true"` or `"false"`.
+</Note>
+
+### List trace scores
+
+```bash
+GET /evaluations/trace-scores
+```
+
+Comprehensive filtering:
+
+| Parameter | Description |
+|---|---|
+| `trace_id` | Filter by trace UUID |
+| `name` | Filter by metric name (exact match) |
+| `source` | `AUTOMATED`, `ANNOTATION`, or `PROGRAMMATIC` |
+| `status` | `SUCCESS`, `FAILED`, or `PENDING` |
+| `data_type` | `NUMERIC`, `BOOLEAN`, or `CATEGORICAL` |
+| `eval_run_id` | Filter by eval run UUID |
+| `environment` | Filter by trace environment |
+| `date_from` / `date_to` | ISO 8601 datetime range |
+| `limit` / `offset` | Pagination (default 50, max 200) |
+
+### Get latest scores for a trace
+
+```bash
+GET /evaluations/trace-scores/{trace_id}
+```
+
+Returns one score per metric name, deduplicated by most recent `created_at`. Use this to display a score overview panel for a specific trace.
+
+### Update a score
+
+```bash
+PATCH /evaluations/trace-scores/{score_id}
+```
+
+```json
+{
+  "value": "0.95",
+  "reason": "Revised after manual review"
+}
+```
+
+Only `value`, `reason`, and `metadata` can be changed. `status` is automatically set to `SUCCESS` and `source` to `ANNOTATION`.
+
+### Delete a score
+
+```bash
+DELETE /evaluations/trace-scores/{score_id}
+```
+
+---
+
+## Session evaluation runs
+
+Session eval runs follow the same pattern as trace eval runs but target sessions instead of traces.
+
+### Create a filtered session eval run
+
+```bash
+POST /evaluations/session-runs
+```
+
+```json
+{
+  "name": "Agent reliability check",
+  "metrics": ["agent_reliability", "agent_consistency"],
+  "filters": {
+    "date_from": "2026-03-01T00:00:00Z",
+    "date_to": "2026-03-29T00:00:00Z",
+    "min_trace_count": 3
+  },
+  "sampling_rate": 1.0,
+  "model": "openai/gpt-5.4",
+  "signal_weights": {
+    "confidence": 1.0,
+    "loop_detection": 1.5,
+    "tool_correctness": 0.8,
+    "coherence": 1.0
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | No | Human-readable label |
+| `metrics` | string[] | Yes | Session metric names (at least one) |
+| `filters.date_from` | ISO 8601 | No | Include sessions from this time |
+| `filters.date_to` | ISO 8601 | No | Include sessions before this time |
+| `filters.user_id` | string | No | Exact user ID |
+| `filters.has_error` | boolean | No | Only sessions with/without errors |
+| `filters.tags` | string[] | No | Match traces with ANY of these tags |
+| `filters.min_trace_count` | int | No | Minimum traces in session (≥1) |
+| `sampling_rate` | float | No | Fraction of sessions to evaluate (default: 1.0) |
+| `model` | string | No | LLM model override for trace-level signal computation |
+| `signal_weights` | object | No | Override signal weights for aggregation |
+
+**Rate limit:** 50/min
+
+### Create a batch session eval run
+
+```bash
+POST /evaluations/session-runs/batch
+```
+
+```json
+{
+  "session_ids": ["session-abc-123", "session-def-456"],
+  "metrics": ["agent_reliability"],
+  "signal_weights": {"confidence": 1.0, "loop_detection": 2.0}
+}
+```
+
+**Rate limit:** 50/min
+
+### Other session run endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/session-runs` | GET | List session eval runs (supports `status`, `limit`, `offset`) |
+| `/session-runs/{run_id}` | GET | Get session eval run detail |
+| `/session-runs/{run_id}` | DELETE | Delete a session eval run (`?delete_scores=true` optional) |
+| `/session-runs/{run_id}/retry` | POST | Retry failed session+metric pairs |
+| `/session-runs/{run_id}/scores` | GET | List session scores from a run |
+
+### Session scores
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/session-scores` | GET | List session scores (supports filtering by `session_id`, `name`, `source`, `status`, `eval_run_id`, date range) |
+| `/session-scores/{session_id}` | GET | Get all scores for a specific session |
+| `/session-scores/{score_id}` | DELETE | Delete a single session score |
+
+---
+
+## Analytics
+
+PandaProbe provides analytics endpoints for both trace and session scores.
+
+### Trace score analytics
+
+**Summary** — aggregated stats per metric:
+
+```bash
+GET /evaluations/analytics/trace-scores/summary?date_from=2026-03-01T00:00:00Z
+```
+
+```json
+[
+  {
+    "metric_name": "task_completion",
+    "avg_score": 0.82,
+    "min_score": 0.15,
+    "max_score": 1.0,
+    "median_score": 0.87,
+    "success_count": 145,
+    "failed_count": 5,
+    "latest_score_at": "2026-03-29T09:30:00Z"
+  }
+]
+```
+
+**Trend** — time series of average scores:
+
+```bash
+GET /evaluations/analytics/trace-scores/trend?metric_name=task_completion&granularity=day
+```
+
+| Parameter | Options |
+|---|---|
+| `metric_name` | Required — metric to track |
+| `granularity` | `hour`, `day`, `week` (default: `day`) |
+| `date_from` / `date_to` | Optional date range |
+
+**Distribution** — histogram of score values:
+
+```bash
+GET /evaluations/analytics/trace-scores/distribution?metric_name=task_completion&buckets=10
+```
+
+| Parameter | Description |
+|---|---|
+| `metric_name` | Required — metric to analyze |
+| `buckets` | Number of histogram buckets (1–100, default 10) |
+
+### Session score analytics
+
+Session score analytics mirror the trace analytics:
+
+| Endpoint | Description |
+|---|---|
+| `/analytics/session-scores/summary` | Aggregated stats per session metric |
+| `/analytics/session-scores/trend` | Time series of session scores |
+| `/analytics/session-scores/distribution` | Histogram of session score values |
+| `/analytics/session-scores/history/{session_id}` | Score evolution for a session across re-evaluations |
+| `/analytics/session-scores/comparison` | Leaderboard — sessions ranked by a metric |
+
+**Session score history** — track how a session's score evolves over re-evaluations:
+
+```bash
+GET /evaluations/analytics/session-scores/history/{session_id}?metric_name=agent_reliability&limit=50
+```
+
+**Session comparison** — rank sessions by a metric (useful for finding worst-performing sessions):
+
+```bash
+GET /evaluations/analytics/session-scores/comparison?metric_name=agent_reliability&sort_order=asc&limit=10
+```
+
+Pass `sort_order=asc` to surface the worst sessions first.
+
+---
+
+## Get an eval run template
+
+To help build eval run requests, PandaProbe can generate a pre-filled template for a metric:
+
+```bash
+GET /evaluations/trace-runs/template?metric=task_completion
+```
+
+Returns the metric's full info (including prompt previews), default filters, sampling rate, and the default model. Use this to populate a form in your own tooling.
+
+---
+
+## Error handling
+
+| HTTP Code | Meaning |
+|---|---|
+| 202 | Eval run created and dispatched (async) |
+| 201 | Score created |
+| 204 | Resource deleted |
+| 400 | Bad request (invalid filters, unknown metric, etc.) |
+| 404 | Resource not found |
+| 422 | Validation error (e.g., NUMERIC score out of range, retry on run with no failures) |
+| 429 | Rate limit exceeded |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Scheduling Evaluations" icon="clock" href="/evaluation/setup/scheduling">
+    Set up automated recurring evaluations with monitors.
+  </Card>
+  <Card title="Trace Metrics Reference" icon="ruler" href="/evaluation/trace-evaluation/metrics">
+    Detailed documentation for each trace metric.
+  </Card>
+</CardGroup>

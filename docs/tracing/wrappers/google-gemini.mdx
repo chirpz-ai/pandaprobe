@@ -25,7 +25,7 @@ Span name: `"gemini-generate"`, SpanKind: `LLM`
 
 ```python
 response = client.models.generate_content(
-    model="gemini-2.5-flash",
+    model="gemini-3.1-flash-preview",
     contents="Explain quantum computing.",
     config={"temperature": 0.7},
 )
@@ -46,7 +46,7 @@ print(response.text)
 <CodeGroup>
 ```python title="Streaming"
 stream = client.models.generate_content_stream(
-    model="gemini-2.5-flash",
+    model="gemini-3.1-flash-preview",
     contents="Hello!",
 )
 for chunk in stream:
@@ -55,12 +55,12 @@ for chunk in stream:
 
 ```python title="Async"
 response = await client.aio.models.generate_content(
-    model="gemini-2.5-flash",
+    model="gemini-3.1-flash-preview",
     contents="Hello!",
 )
 
 async for chunk in client.aio.models.generate_content_stream(
-    model="gemini-2.5-flash",
+    model="gemini-3.1-flash-preview",
     contents="Hello!",
 ):
     print(chunk.text, end="")
