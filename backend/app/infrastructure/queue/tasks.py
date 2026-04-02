@@ -805,28 +805,42 @@ def process_overage_billing(self: Any) -> dict[str, Any]:
 
 
 async def _process_overage_billing() -> dict[str, Any]:
+    import redis.asyncio as aioredis
+
     from app.infrastructure.db.repositories.billing_repo import BillingRepository
     from app.services.billing_service import BillingService
+    from app.services.usage_service import UsageService
 
     reported = 0
     async with _worker_session() as session:
         billing_repo = BillingRepository(session)
-        billing_svc = BillingService(session)
+        redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        billing_svc = BillingService(session, redis_client=redis_client)
+        usage_svc = UsageService(redis_client, session)
 
         paid_subs = await billing_repo.list_paid_subscriptions_active()
-        for sub in paid_subs:
-            try:
-                result = await billing_svc.report_overages_to_stripe(sub.org_id)
-                if result:
-                    reported += 1
-            except Exception as exc:
-                logger.error(
-                    "overage_billing_error",
-                    org_id=str(sub.org_id),
-                    error=str(exc),
-                )
-
-        await session.commit()
+        try:
+            for sub in paid_subs:
+                if not await billing_svc.acquire_overage_lock(sub.org_id):
+                    logger.info("overage_billing_skipped_locked", org_id=str(sub.org_id))
+                    continue
+                try:
+                    await usage_svc.sync_to_database(sub.org_id)
+                    await session.flush()
+                    result = await billing_svc.report_overages_to_stripe(sub.org_id)
+                    if result:
+                        reported += 1
+                    await session.commit()
+                except Exception as exc:
+                    logger.error(
+                        "overage_billing_error",
+                        org_id=str(sub.org_id),
+                        error=str(exc),
+                    )
+                finally:
+                    await billing_svc.release_overage_lock(sub.org_id)
+        finally:
+            await redis_client.aclose()
 
     logger.info("process_overage_billing_done", reported=reported)
     return {"status": "completed", "reported": reported}
