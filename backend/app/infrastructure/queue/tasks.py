@@ -739,162 +739,218 @@ async def _run_session_eval(
 
 
 # ---------------------------------------------------------------------------
-# Usage sync & billing tasks
+# Usage sync & billing tasks  (dispatcher + per-org worker pattern)
+#
+# Each beat task is a lightweight *dispatcher* that queries eligible org
+# IDs, then fans out one Celery sub-task per org.  The sub-tasks run in
+# parallel across all available workers, each with its own DB session
+# and transaction, so one failure is isolated to a single org.
 # ---------------------------------------------------------------------------
 
 
-@celery.task(name="sync_usage_to_db", bind=True, max_retries=1)
-def sync_usage_to_db(self: Any) -> dict[str, Any]:
-    """Persist Redis usage counters into the usage_records table.
+# -- Usage sync ---------------------------------------------------------------
 
-    Runs every 5 minutes via Celery beat.  Iterates all active
-    subscriptions and syncs their Redis counters to PostgreSQL.
-    """
+
+@celery.task(name="dispatch_sync_usage", bind=True, max_retries=0)
+def dispatch_sync_usage(self: Any) -> dict[str, Any]:
+    """Dispatcher: query all active org IDs and fan out sync tasks."""
     try:
-        return asyncio.run(_sync_usage_to_db())
+        return asyncio.run(_dispatch_sync_usage())
     except Exception as exc:
-        logger.error("sync_usage_to_db_failed", error=str(exc))
+        logger.error("dispatch_sync_usage_failed", error=str(exc))
         return {"error": str(exc)}
 
 
-async def _sync_usage_to_db() -> dict[str, Any]:
+async def _dispatch_sync_usage() -> dict[str, Any]:
+    from app.infrastructure.db.repositories.billing_repo import BillingRepository
+
+    async with _worker_session() as session:
+        org_ids = await BillingRepository(session).list_all_active_org_ids()
+
+    for oid in org_ids:
+        sync_single_org_usage.delay(str(oid))
+
+    logger.info("dispatch_sync_usage_done", dispatched=len(org_ids))
+    return {"status": "dispatched", "count": len(org_ids)}
+
+
+@celery.task(name="sync_single_org_usage", bind=True, max_retries=2, default_retry_delay=10)
+def sync_single_org_usage(self: Any, org_id_str: str) -> dict[str, str]:
+    """Worker: sync Redis counters to PostgreSQL for a single org."""
+    try:
+        return asyncio.run(_sync_single_org_usage(org_id_str))
+    except Exception as exc:
+        logger.error("sync_single_org_usage_failed", org_id=org_id_str, error=str(exc))
+        raise self.retry(exc=exc)
+
+
+async def _sync_single_org_usage(org_id_str: str) -> dict[str, str]:
+    from uuid import UUID
+
     import redis.asyncio as aioredis
 
-    from app.infrastructure.db.repositories.billing_repo import BillingRepository
     from app.services.usage_service import UsageService
 
-    synced = 0
+    org_id = UUID(org_id_str)
     async with _worker_session() as session:
-        billing_repo = BillingRepository(session)
-
-        all_subs: list = []
-        for plan_val in ("HOBBY", "PRO", "STARTUP", "ENTERPRISE"):
-            from app.registry.constants import SubscriptionPlan
-
-            subs = await billing_repo.list_subscriptions_by_plan(SubscriptionPlan(plan_val))
-            all_subs.extend(subs)
-
-        if not all_subs:
-            return {"status": "completed", "synced": 0}
-
         redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
         try:
-            for sub in all_subs:
-                usage_svc = UsageService(redis_client, session)
-                await usage_svc.sync_to_database(sub.org_id)
-                synced += 1
+            usage_svc = UsageService(redis_client, session)
+            await usage_svc.sync_to_database(org_id)
             await session.commit()
         finally:
             await redis_client.aclose()
 
-    logger.info("sync_usage_to_db_done", synced=synced)
-    return {"status": "completed", "synced": synced}
+    return {"org_id": org_id_str, "status": "synced"}
 
 
-@celery.task(name="process_overage_billing", bind=True, max_retries=1)
-def process_overage_billing(self: Any) -> dict[str, Any]:
-    """Calculate and report overages to Stripe for paid subscriptions.
+# -- Overage billing ----------------------------------------------------------
 
-    Runs daily at midnight UTC via Celery beat.
-    """
+
+@celery.task(name="dispatch_overage_billing", bind=True, max_retries=0)
+def dispatch_overage_billing(self: Any) -> dict[str, Any]:
+    """Dispatcher: query paid org IDs and fan out billing tasks."""
     try:
-        return asyncio.run(_process_overage_billing())
+        return asyncio.run(_dispatch_overage_billing())
     except Exception as exc:
-        logger.error("process_overage_billing_failed", error=str(exc))
+        logger.error("dispatch_overage_billing_failed", error=str(exc))
         return {"error": str(exc)}
 
 
-async def _process_overage_billing() -> dict[str, Any]:
+async def _dispatch_overage_billing() -> dict[str, Any]:
+    from app.infrastructure.db.repositories.billing_repo import BillingRepository
+
+    async with _worker_session() as session:
+        org_ids = await BillingRepository(session).list_paid_active_org_ids()
+
+    for oid in org_ids:
+        bill_single_org.delay(str(oid))
+
+    logger.info("dispatch_overage_billing_done", dispatched=len(org_ids))
+    return {"status": "dispatched", "count": len(org_ids)}
+
+
+@celery.task(
+    name="bill_single_org",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=15,
+    rate_limit="80/s",
+)
+def bill_single_org(self: Any, org_id_str: str) -> dict[str, str]:
+    """Worker: sync usage, compute delta, report to Stripe for one org.
+
+    ``rate_limit="80/s"`` keeps the total Stripe API call rate across
+    all workers safely below Stripe's 100 req/s live-mode limit.
+    """
+    try:
+        return asyncio.run(_bill_single_org(org_id_str))
+    except Exception as exc:
+        logger.error("bill_single_org_failed", org_id=org_id_str, error=str(exc))
+        raise self.retry(exc=exc)
+
+
+async def _bill_single_org(org_id_str: str) -> dict[str, str]:
+    from uuid import UUID
+
     import redis.asyncio as aioredis
 
-    from app.infrastructure.db.repositories.billing_repo import BillingRepository
     from app.services.billing_service import BillingService
     from app.services.usage_service import UsageService
 
-    reported = 0
+    org_id = UUID(org_id_str)
     async with _worker_session() as session:
-        billing_repo = BillingRepository(session)
         redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-        billing_svc = BillingService(session, redis_client=redis_client)
-        usage_svc = UsageService(redis_client, session)
-
-        paid_subs = await billing_repo.list_paid_subscriptions_active()
         try:
-            for sub in paid_subs:
-                if not await billing_svc.acquire_overage_lock(sub.org_id):
-                    logger.info("overage_billing_skipped_locked", org_id=str(sub.org_id))
-                    continue
-                try:
-                    await usage_svc.sync_to_database(sub.org_id)
-                    await session.flush()
-                    result = await billing_svc.report_overages_to_stripe(sub.org_id)
-                    if result:
-                        reported += 1
-                    await session.commit()
-                except Exception as exc:
-                    logger.error(
-                        "overage_billing_error",
-                        org_id=str(sub.org_id),
-                        error=str(exc),
-                    )
-                finally:
-                    await billing_svc.release_overage_lock(sub.org_id)
+            billing_svc = BillingService(session, redis_client=redis_client)
+            usage_svc = UsageService(redis_client, session)
+
+            if not await billing_svc.acquire_overage_lock(org_id):
+                logger.info("bill_single_org_skipped_locked", org_id=org_id_str)
+                return {"org_id": org_id_str, "status": "skipped_locked"}
+
+            try:
+                await usage_svc.sync_to_database(org_id)
+                await session.flush()
+                reported = await billing_svc.report_overages_to_stripe(org_id)
+                await session.commit()
+            finally:
+                await billing_svc.release_overage_lock(org_id)
         finally:
             await redis_client.aclose()
 
-    logger.info("process_overage_billing_done", reported=reported)
-    return {"status": "completed", "reported": reported}
+    return {"org_id": org_id_str, "status": "reported" if reported else "no_overage"}
 
 
-@celery.task(name="reset_hobby_periods", bind=True, max_retries=1)
-def reset_hobby_periods(self: Any) -> dict[str, Any]:
-    """Advance HOBBY subscriptions whose period has ended.
+# -- HOBBY period reset -------------------------------------------------------
 
-    Runs every 6 hours via Celery beat.  Creates a fresh usage
-    record for the new period and clears the old Redis counters.
-    """
+
+@celery.task(name="dispatch_hobby_reset", bind=True, max_retries=0)
+def dispatch_hobby_reset(self: Any) -> dict[str, Any]:
+    """Dispatcher: query HOBBY org IDs due for reset and fan out tasks."""
     try:
-        return asyncio.run(_reset_hobby_periods())
+        return asyncio.run(_dispatch_hobby_reset())
     except Exception as exc:
-        logger.error("reset_hobby_periods_failed", error=str(exc))
+        logger.error("dispatch_hobby_reset_failed", error=str(exc))
         return {"error": str(exc)}
 
 
-async def _reset_hobby_periods() -> dict[str, Any]:
-    from datetime import datetime, timedelta, timezone
+async def _dispatch_hobby_reset() -> dict[str, Any]:
+    from datetime import datetime, timezone
+
+    from app.infrastructure.db.repositories.billing_repo import BillingRepository
+
+    now = datetime.now(timezone.utc)
+    async with _worker_session() as session:
+        org_ids = await BillingRepository(session).list_hobby_org_ids_due_for_reset(now)
+
+    for oid in org_ids:
+        reset_single_hobby_org.delay(str(oid))
+
+    logger.info("dispatch_hobby_reset_done", dispatched=len(org_ids))
+    return {"status": "dispatched", "count": len(org_ids)}
+
+
+@celery.task(name="reset_single_hobby_org", bind=True, max_retries=2, default_retry_delay=10)
+def reset_single_hobby_org(self: Any, org_id_str: str) -> dict[str, str]:
+    """Worker: advance period and clear Redis counters for one HOBBY org."""
+    try:
+        return asyncio.run(_reset_single_hobby_org(org_id_str))
+    except Exception as exc:
+        logger.error("reset_single_hobby_org_failed", org_id=org_id_str, error=str(exc))
+        raise self.retry(exc=exc)
+
+
+async def _reset_single_hobby_org(org_id_str: str) -> dict[str, str]:
+    from datetime import timedelta
+    from uuid import UUID
 
     import redis.asyncio as aioredis
 
     from app.infrastructure.db.repositories.billing_repo import BillingRepository
     from app.services.usage_service import UsageService
 
-    now = datetime.now(timezone.utc)
-    reset_count = 0
-
+    org_id = UUID(org_id_str)
     async with _worker_session() as session:
         billing_repo = BillingRepository(session)
-        due_subs = await billing_repo.list_hobby_subscriptions_due_for_reset(now)
+        sub = await billing_repo.get_subscription_by_org(org_id)
+        if sub is None:
+            return {"org_id": org_id_str, "status": "no_subscription"}
 
-        if not due_subs:
-            return {"status": "completed", "reset": 0}
+        new_start = sub.current_period_end
+        new_end = new_start + timedelta(days=30)
+
+        await billing_repo.advance_period(org_id, new_start, new_end)
+        await billing_repo.create_usage_record(org_id, new_start, new_end)
 
         redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
         try:
-            for sub in due_subs:
-                new_start = sub.current_period_end
-                new_end = new_start + timedelta(days=30)
-
-                await billing_repo.advance_period(sub.org_id, new_start, new_end)
-                await billing_repo.create_usage_record(sub.org_id, new_start, new_end)
-
-                usage_svc = UsageService(redis_client, session)
-                await usage_svc.delete_usage_key(sub.org_id, sub.current_period_start)
-                await usage_svc.invalidate_subscription_cache(sub.org_id)
-                reset_count += 1
-
-            await session.commit()
+            usage_svc = UsageService(redis_client, session)
+            await usage_svc.delete_usage_key(org_id, sub.current_period_start)
+            await usage_svc.invalidate_subscription_cache(org_id)
         finally:
             await redis_client.aclose()
 
-    logger.info("reset_hobby_periods_done", reset=reset_count)
-    return {"status": "completed", "reset": reset_count}
+        await session.commit()
+
+    return {"org_id": org_id_str, "status": "reset"}
