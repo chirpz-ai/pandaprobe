@@ -28,6 +28,9 @@ _HANDLED_EVENTS = {
     "customer.subscription.deleted",
 }
 
+_IDEMPOTENCY_PREFIX = "pp:stripe_evt:"
+_IDEMPOTENCY_TTL = 259200  # 72 hours
+
 
 @router.post("/stripe")
 async def stripe_webhook(request: Request) -> JSONResponse:
@@ -53,32 +56,37 @@ async def stripe_webhook(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"detail": "Invalid signature"})
 
     event_type = event["type"]
+    event_id = event["id"]
     event_data = event["data"]
 
     if event_type not in _HANDLED_EVENTS:
         return JSONResponse(status_code=200, content={"received": True})
 
     redis_client = aioredis.Redis(connection_pool=redis_pool)
+
+    already_processed = not await redis_client.set(
+        f"{_IDEMPOTENCY_PREFIX}{event_id}", "1", nx=True, ex=_IDEMPOTENCY_TTL,
+    )
+    if already_processed:
+        logger.info("stripe_webhook_duplicate", event_id=event_id, event_type=event_type)
+        return JSONResponse(status_code=200, content={"received": True})
+
     async for session in get_db_session():
         billing_svc = BillingService(session, redis_client=redis_client)
 
-        try:
-            match event_type:
-                case "checkout.session.completed":
-                    await billing_svc.handle_checkout_completed(event_data)
-                case "invoice.created":
-                    await billing_svc.handle_invoice_created(event_data)
-                case "invoice.paid":
-                    await billing_svc.handle_invoice_paid(event_data)
-                case "invoice.payment_failed":
-                    await billing_svc.handle_invoice_payment_failed(event_data)
-                case "customer.subscription.updated":
-                    await billing_svc.handle_subscription_updated(event_data)
-                case "customer.subscription.deleted":
-                    await billing_svc.handle_subscription_deleted(event_data)
-        except Exception:
-            logger.exception("stripe_webhook_handler_error", event_type=event_type)
-            return JSONResponse(status_code=500, content={"detail": "Internal error"})
+        match event_type:
+            case "checkout.session.completed":
+                await billing_svc.handle_checkout_completed(event_data)
+            case "invoice.created":
+                await billing_svc.handle_invoice_created(event_data)
+            case "invoice.paid":
+                await billing_svc.handle_invoice_paid(event_data)
+            case "invoice.payment_failed":
+                await billing_svc.handle_invoice_payment_failed(event_data)
+            case "customer.subscription.updated":
+                await billing_svc.handle_subscription_updated(event_data)
+            case "customer.subscription.deleted":
+                await billing_svc.handle_subscription_deleted(event_data)
 
-    logger.info("stripe_webhook_processed", event_type=event_type)
+    logger.info("stripe_webhook_processed", event_type=event_type, event_id=event_id)
     return JSONResponse(status_code=200, content={"received": True})
