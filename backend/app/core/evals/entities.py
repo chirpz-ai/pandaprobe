@@ -108,7 +108,7 @@ class EvalRun(BaseModel):
     model: str | None = None
     monitor_id: UUID | None = None
     status: EvaluationStatus = EvaluationStatus.PENDING
-    total_traces: int = 0
+    total_targets: int = 0
     evaluated_count: int = 0
     failed_count: int = 0
     error_message: str | None = None
