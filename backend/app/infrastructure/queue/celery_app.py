@@ -6,7 +6,6 @@ queue package.
 """
 
 from celery import Celery
-from celery.schedules import crontab
 
 from app.registry.settings import settings
 
@@ -39,7 +38,7 @@ celery.conf.beat_schedule = {
     },
     "process-overage-billing": {
         "task": "process_overage_billing",
-        "schedule": crontab(hour=0, minute=0),
+        "schedule": 21600.0,  # every 6 hours
     },
     "reset-hobby-periods": {
         "task": "reset_hobby_periods",
