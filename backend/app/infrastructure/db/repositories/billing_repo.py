@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.billing.entities import Subscription, UsageRecord
@@ -110,6 +110,40 @@ class BillingRepository:
         )
         rows = (await self._session.execute(stmt)).scalars().all()
         return [self._to_subscription(r) for r in rows]
+
+    async def list_all_active_org_ids(self) -> list[UUID]:
+        """Return org IDs for all active subscriptions (any plan)."""
+        stmt = (
+            select(SubscriptionModel.org_id)
+            .where(SubscriptionModel.status == SubscriptionStatus.ACTIVE.value)
+        )
+        rows = (await self._session.execute(stmt)).scalars().all()
+        return list(rows)
+
+    async def list_paid_active_org_ids(self) -> list[UUID]:
+        """Return org IDs for active paid subscriptions only."""
+        stmt = (
+            select(SubscriptionModel.org_id)
+            .where(
+                SubscriptionModel.plan != SubscriptionPlan.HOBBY.value,
+                SubscriptionModel.status == SubscriptionStatus.ACTIVE.value,
+            )
+        )
+        rows = (await self._session.execute(stmt)).scalars().all()
+        return list(rows)
+
+    async def list_hobby_org_ids_due_for_reset(self, now: datetime) -> list[UUID]:
+        """Return org IDs for HOBBY subscriptions whose period has ended."""
+        stmt = (
+            select(SubscriptionModel.org_id)
+            .where(
+                SubscriptionModel.plan == SubscriptionPlan.HOBBY.value,
+                SubscriptionModel.status == SubscriptionStatus.ACTIVE.value,
+                SubscriptionModel.current_period_end <= now,
+            )
+        )
+        rows = (await self._session.execute(stmt)).scalars().all()
+        return list(rows)
 
     async def advance_period(
         self, org_id: UUID, new_start: datetime, new_end: datetime
@@ -244,8 +278,6 @@ class BillingRepository:
 
     async def count_org_members(self, org_id: UUID) -> int:
         """Count active memberships for an organization."""
-        from sqlalchemy import func
-
         from app.infrastructure.db.models import MembershipModel
 
         stmt = select(func.count()).where(MembershipModel.org_id == org_id)
