@@ -6,6 +6,7 @@ queue package.
 """
 
 from celery import Celery
+from celery.schedules import crontab
 
 from app.registry.settings import settings
 
@@ -31,6 +32,18 @@ celery.conf.beat_schedule = {
     "check-eval-monitors": {
         "task": "check_eval_monitors",
         "schedule": 300.0,
+    },
+    "sync-usage-to-db": {
+        "task": "sync_usage_to_db",
+        "schedule": 300.0,
+    },
+    "process-overage-billing": {
+        "task": "process_overage_billing",
+        "schedule": crontab(hour=0, minute=0),
+    },
+    "reset-hobby-periods": {
+        "task": "reset_hobby_periods",
+        "schedule": 21600.0,
     },
 }
 
