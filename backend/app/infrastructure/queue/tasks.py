@@ -874,6 +874,9 @@ async def _bill_single_org(org_id_str: str) -> dict[str, str]:
                 await session.flush()
                 reported = await billing_svc.report_overages_to_stripe(org_id)
                 await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
             finally:
                 await billing_svc.release_overage_lock(org_id)
         finally:
