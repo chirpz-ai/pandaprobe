@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,7 @@ from app.api.context import ApiContext
 from app.api.dependencies import require_project
 from app.api.rate_limit import limiter
 from app.api.v1.schemas import PaginatedResponse
+from app.core.billing.plans import get_plan_config
 from app.core.evals.entities import validate_score_value
 from app.core.evals.metrics import (
     get_metric_info,
@@ -29,6 +31,7 @@ from app.core.evals.metrics import (
     list_session_metrics,
 )
 from app.infrastructure.db.engine import get_db_session
+from app.infrastructure.redis.client import get_redis
 from app.registry.constants import (
     AnalyticsGranularity,
     EvaluationStatus,
@@ -36,9 +39,13 @@ from app.registry.constants import (
     ScoreDataType,
     ScoreSource,
     ScoreStatus,
+    SubscriptionPlan,
     TraceStatus,
+    UsageCategory,
 )
+from app.registry.exceptions import QuotaExceededError
 from app.services.eval_service import EvalService
+from app.services.usage_service import UsageService
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
@@ -192,7 +199,7 @@ class EvalRunResponse(BaseModel):
     name: str | None
     status: EvaluationStatus
     metric_names: list[str]
-    total_traces: int
+    total_targets: int
     evaluated_count: int
     failed_count: int
     created_at: str
@@ -447,6 +454,7 @@ async def create_eval_run(
     body: CreateEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Create a filtered eval run.
 
@@ -487,6 +495,12 @@ async def create_eval_run(
         model=body.model,
         name=body.name,
     )
+    usage_svc = UsageService(redis_client, session)
+    await usage_svc.check_and_increment(
+        ctx.organization.id,
+        UsageCategory.TRACE_EVALS,
+        count=run.total_targets * len(body.metrics),
+    )
     return _run_to_detail(run)
 
 
@@ -497,6 +511,7 @@ async def create_batch_eval_run(
     body: CreateBatchEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Create an eval run for an explicit list of trace IDs.
 
@@ -515,6 +530,12 @@ async def create_batch_eval_run(
         metric_names=body.metrics,
         model=body.model,
         name=body.name,
+    )
+    usage_svc = UsageService(redis_client, session)
+    await usage_svc.check_and_increment(
+        ctx.organization.id,
+        UsageCategory.TRACE_EVALS,
+        count=run.total_targets * len(body.metrics),
     )
     return _run_to_detail(run)
 
@@ -584,6 +605,7 @@ async def retry_failed_eval_run(
     run_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Retry failed metrics from a completed eval run.
 
@@ -597,6 +619,12 @@ async def retry_failed_eval_run(
     """
     svc = EvalService(session)
     run = await svc.retry_failed_run(run_id, ctx.project.id)
+    usage_svc = UsageService(redis_client, session)
+    await usage_svc.check_and_increment(
+        ctx.organization.id,
+        UsageCategory.TRACE_EVALS,
+        count=run.total_targets * len(run.metric_names),
+    )
     return _run_to_detail(run)
 
 
@@ -858,7 +886,7 @@ def _run_to_detail(run) -> EvalRunResponse:
         name=run.name,
         status=run.status,
         metric_names=run.metric_names,
-        total_traces=run.total_traces,
+        total_targets=run.total_targets,
         evaluated_count=run.evaluated_count,
         failed_count=run.failed_count,
         created_at=run.created_at.isoformat(),
@@ -945,6 +973,7 @@ async def create_session_eval_run(
     body: CreateSessionEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Create a filter-based session eval run.
 
@@ -967,6 +996,12 @@ async def create_session_eval_run(
         name=body.name,
         signal_weights=body.signal_weights,
     )
+    usage_svc = UsageService(redis_client, session)
+    await usage_svc.check_and_increment(
+        ctx.organization.id,
+        UsageCategory.SESSION_EVALS,
+        count=run.total_targets * len(body.metrics),
+    )
     return _run_to_detail(run)
 
 
@@ -977,6 +1012,7 @@ async def create_batch_session_eval_run(
     body: CreateBatchSessionEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Create a session eval run for explicit session IDs.
 
@@ -992,6 +1028,12 @@ async def create_batch_session_eval_run(
         model=body.model,
         name=body.name,
         signal_weights=body.signal_weights,
+    )
+    usage_svc = UsageService(redis_client, session)
+    await usage_svc.check_and_increment(
+        ctx.organization.id,
+        UsageCategory.SESSION_EVALS,
+        count=run.total_targets * len(body.metrics),
     )
     return _run_to_detail(run)
 
@@ -1057,6 +1099,7 @@ async def retry_failed_session_eval_run(
     run_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Retry failed metrics from a completed session eval run.
 
@@ -1070,6 +1113,12 @@ async def retry_failed_session_eval_run(
     """
     svc = EvalService(session)
     run = await svc.retry_failed_session_run(run_id, ctx.project.id)
+    usage_svc = UsageService(redis_client, session)
+    await usage_svc.check_and_increment(
+        ctx.organization.id,
+        UsageCategory.SESSION_EVALS,
+        count=run.total_targets * len(run.metric_names),
+    )
     return _run_to_detail(run)
 
 
@@ -1436,6 +1485,7 @@ async def create_monitor(
     body: CreateMonitorRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> MonitorResponse:
     """Create an evaluation monitor that spawns eval runs on a recurring schedule.
 
@@ -1473,6 +1523,16 @@ async def create_monitor(
 
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
+    usage_svc = UsageService(redis_client, session)
+    sub = await usage_svc._get_subscription_cached(ctx.organization.id)
+    if sub is None:
+        raise QuotaExceededError("No active subscription found for this organization.")
+    plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
+    if not plan_cfg.monitoring_allowed:
+        raise QuotaExceededError(
+            f"Monitoring is not available on your {sub.plan} plan. Please upgrade."
+        )
+
     svc = EvalService(session)
     monitor = await svc.create_monitor(
         project_id=ctx.project.id,
