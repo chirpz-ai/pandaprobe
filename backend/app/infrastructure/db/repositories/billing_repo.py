@@ -216,6 +216,30 @@ class BillingRepository:
         )
         await self._session.execute(stmt)
 
+    async def update_reported_usage(
+        self,
+        org_id: UUID,
+        period_start: datetime,
+        *,
+        reported_trace_count: int,
+        reported_trace_eval_count: int,
+        reported_session_eval_count: int,
+    ) -> None:
+        """Advance the high-water mark after reporting overages to Stripe."""
+        stmt = (
+            update(UsageRecordModel)
+            .where(
+                UsageRecordModel.org_id == org_id,
+                UsageRecordModel.period_start == period_start,
+            )
+            .values(
+                reported_trace_count=reported_trace_count,
+                reported_trace_eval_count=reported_trace_eval_count,
+                reported_session_eval_count=reported_session_eval_count,
+            )
+        )
+        await self._session.execute(stmt)
+
     # -- Member count helper --------------------------------------------------
 
     async def count_org_members(self, org_id: UUID) -> int:
@@ -256,6 +280,9 @@ class BillingRepository:
             trace_count=row.trace_count,
             trace_eval_count=row.trace_eval_count,
             session_eval_count=row.session_eval_count,
+            reported_trace_count=row.reported_trace_count,
+            reported_trace_eval_count=row.reported_trace_eval_count,
+            reported_session_eval_count=row.reported_session_eval_count,
             billed=row.billed,
             stripe_invoice_id=row.stripe_invoice_id,
             created_at=row.created_at,
