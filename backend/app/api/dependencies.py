@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.context import ApiContext, AuthMethod
 from app.infrastructure.auth.adapters import get_auth_adapter
 from app.infrastructure.db.engine import get_db_session
+from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
 from app.infrastructure.db.repositories.user_repo import UserRepository
@@ -142,6 +143,15 @@ async def _resolve_jwt(
             org_name = "Personal Organization"
         org = await identity_repo.create_organization(name=org_name)
         await identity_repo.create_membership(user_id=user.id, org_id=org.id, role=MembershipRole.OWNER)
+
+        billing_repo = BillingRepository(session)
+        sub = await billing_repo.create_subscription(org_id=org.id)
+        await billing_repo.create_usage_record(
+            org_id=org.id,
+            period_start=sub.current_period_start,
+            period_end=sub.current_period_end,
+        )
+
         memberships = await identity_repo.list_user_orgs(user.id)
 
     org_id_header = request.headers.get("X-Organization-ID")
