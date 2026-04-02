@@ -94,7 +94,7 @@ class EvalService:
             sampling_rate=sampling_rate,
             model=resolved_model,
             status=EvaluationStatus.PENDING,
-            total_traces=len(trace_ids),
+            total_targets=len(trace_ids),
             evaluated_count=0,
             created_at=now,
         )
@@ -106,7 +106,7 @@ class EvalService:
 
         execute_eval_run.delay(str(run.id), str(project_id), [str(tid) for tid in trace_ids])
 
-        logger.info("eval_run_created", run_id=str(run.id), total_traces=len(trace_ids))
+        logger.info("eval_run_created", run_id=str(run.id), total_targets=len(trace_ids))
         return run
 
     async def create_batch_eval_run(
@@ -142,7 +142,7 @@ class EvalService:
             sampling_rate=1.0,
             model=resolved_model,
             status=EvaluationStatus.PENDING,
-            total_traces=len(unique_ids),
+            total_targets=len(unique_ids),
             evaluated_count=0,
             created_at=now,
         )
@@ -154,7 +154,7 @@ class EvalService:
 
         execute_eval_run.delay(str(run.id), str(project_id), [str(tid) for tid in unique_ids])
 
-        logger.info("batch_eval_run_created", run_id=str(run.id), total_traces=len(unique_ids))
+        logger.info("batch_eval_run_created", run_id=str(run.id), total_targets=len(unique_ids))
         return run
 
     # -- Eval run queries ------------------------------------------------------
@@ -211,7 +211,7 @@ class EvalService:
             sampling_rate=1.0,
             model=original.model,
             status=EvaluationStatus.PENDING,
-            total_traces=len(trace_ids),
+            total_targets=len(trace_ids),
             evaluated_count=0,
             created_at=now,
         )
@@ -230,7 +230,7 @@ class EvalService:
         )
 
         logger.info(
-            "retry_eval_run_created", run_id=str(run.id), original_run_id=str(run_id), total_traces=len(trace_ids)
+            "retry_eval_run_created", run_id=str(run.id), original_run_id=str(run_id), total_targets=len(trace_ids)
         )
         return run
 
@@ -458,7 +458,7 @@ class EvalService:
             sampling_rate=sampling_rate,
             model=resolved_model,
             status=EvaluationStatus.PENDING,
-            total_traces=len(session_ids),
+            total_targets=len(session_ids),
             evaluated_count=0,
             created_at=now,
         )
@@ -511,7 +511,7 @@ class EvalService:
             sampling_rate=1.0,
             model=resolved_model,
             status=EvaluationStatus.PENDING,
-            total_traces=len(unique_ids),
+            total_targets=len(unique_ids),
             evaluated_count=0,
             created_at=now,
         )
@@ -557,7 +557,7 @@ class EvalService:
             sampling_rate=1.0,
             model=resolved_model,
             status=EvaluationStatus.PENDING,
-            total_traces=len(session_ids),
+            total_targets=len(session_ids),
             evaluated_count=0,
             created_at=now,
         )
@@ -928,7 +928,7 @@ class EvalService:
                 model=resolved_model,
                 monitor_id=monitor.id,
                 status=EvaluationStatus.PENDING,
-                total_traces=len(trace_ids),
+                total_targets=len(trace_ids),
                 evaluated_count=0,
                 created_at=now,
             )
@@ -957,7 +957,7 @@ class EvalService:
                 model=resolved_model,
                 monitor_id=monitor.id,
                 status=EvaluationStatus.PENDING,
-                total_traces=len(session_ids),
+                total_targets=len(session_ids),
                 evaluated_count=0,
                 created_at=now,
             )
