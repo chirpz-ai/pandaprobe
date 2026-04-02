@@ -349,8 +349,13 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
     from datetime import datetime, timezone
     from uuid import UUID
 
+    import redis.asyncio as aioredis
+
+    from app.infrastructure.db.models import ProjectModel
     from app.infrastructure.db.repositories.eval_repo import EvalRepository
+    from app.registry.constants import UsageCategory
     from app.services.eval_service import EvalService
+    from app.services.usage_service import UsageService
 
     mid = UUID(monitor_id)
     pid = UUID(project_id)
@@ -370,6 +375,23 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
 
         run, target_ids = await svc._spawn_run_for_monitor(monitor)
 
+        project = await session.get(ProjectModel, pid)
+        org_id = project.org_id if project else None
+
+        if org_id is not None:
+            category = (
+                UsageCategory.TRACE_EVALS
+                if monitor.target_type == "TRACE"
+                else UsageCategory.SESSION_EVALS
+            )
+            billable_units = run.total_targets * len(run.metric_names)
+            redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+            try:
+                usage_svc = UsageService(redis_client, session)
+                await usage_svc.check_and_increment(org_id, category, count=billable_units)
+            finally:
+                await redis_client.aclose()
+
         now = datetime.now(timezone.utc)
         await eval_repo.advance_monitor(
             mid,
@@ -384,6 +406,7 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
             "monitor_run_spawned",
             monitor_id=monitor_id,
             run_id=str(run.id),
+            billable_units=run.total_targets * len(run.metric_names),
         )
         return {"monitor_id": monitor_id, "status": "spawned", "run_id": str(run.id)}
 
@@ -713,3 +736,151 @@ async def _run_session_eval(
 
     logger.info("session_eval_run_completed", run_id=run_id)
     return {"run_id": run_id, "status": "completed"}
+
+
+# ---------------------------------------------------------------------------
+# Usage sync & billing tasks
+# ---------------------------------------------------------------------------
+
+
+@celery.task(name="sync_usage_to_db", bind=True, max_retries=1)
+def sync_usage_to_db(self: Any) -> dict[str, Any]:
+    """Persist Redis usage counters into the usage_records table.
+
+    Runs every 5 minutes via Celery beat.  Iterates all active
+    subscriptions and syncs their Redis counters to PostgreSQL.
+    """
+    try:
+        return asyncio.run(_sync_usage_to_db())
+    except Exception as exc:
+        logger.error("sync_usage_to_db_failed", error=str(exc))
+        return {"error": str(exc)}
+
+
+async def _sync_usage_to_db() -> dict[str, Any]:
+    import redis.asyncio as aioredis
+
+    from app.infrastructure.db.repositories.billing_repo import BillingRepository
+    from app.services.usage_service import UsageService
+
+    synced = 0
+    async with _worker_session() as session:
+        billing_repo = BillingRepository(session)
+
+        all_subs: list = []
+        for plan_val in ("HOBBY", "PRO", "STARTUP", "ENTERPRISE"):
+            from app.registry.constants import SubscriptionPlan
+
+            subs = await billing_repo.list_subscriptions_by_plan(SubscriptionPlan(plan_val))
+            all_subs.extend(subs)
+
+        if not all_subs:
+            return {"status": "completed", "synced": 0}
+
+        redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        try:
+            for sub in all_subs:
+                usage_svc = UsageService(redis_client, session)
+                await usage_svc.sync_to_database(sub.org_id)
+                synced += 1
+            await session.commit()
+        finally:
+            await redis_client.aclose()
+
+    logger.info("sync_usage_to_db_done", synced=synced)
+    return {"status": "completed", "synced": synced}
+
+
+@celery.task(name="process_overage_billing", bind=True, max_retries=1)
+def process_overage_billing(self: Any) -> dict[str, Any]:
+    """Calculate and report overages to Stripe for paid subscriptions.
+
+    Runs daily at midnight UTC via Celery beat.
+    """
+    try:
+        return asyncio.run(_process_overage_billing())
+    except Exception as exc:
+        logger.error("process_overage_billing_failed", error=str(exc))
+        return {"error": str(exc)}
+
+
+async def _process_overage_billing() -> dict[str, Any]:
+    from app.infrastructure.db.repositories.billing_repo import BillingRepository
+    from app.services.billing_service import BillingService
+
+    reported = 0
+    async with _worker_session() as session:
+        billing_repo = BillingRepository(session)
+        billing_svc = BillingService(session)
+
+        paid_subs = await billing_repo.list_paid_subscriptions_active()
+        for sub in paid_subs:
+            try:
+                result = await billing_svc.report_overages_to_stripe(sub.org_id)
+                if result:
+                    reported += 1
+            except Exception as exc:
+                logger.error(
+                    "overage_billing_error",
+                    org_id=str(sub.org_id),
+                    error=str(exc),
+                )
+
+        await session.commit()
+
+    logger.info("process_overage_billing_done", reported=reported)
+    return {"status": "completed", "reported": reported}
+
+
+@celery.task(name="reset_hobby_periods", bind=True, max_retries=1)
+def reset_hobby_periods(self: Any) -> dict[str, Any]:
+    """Advance HOBBY subscriptions whose period has ended.
+
+    Runs every 6 hours via Celery beat.  Creates a fresh usage
+    record for the new period and clears the old Redis counters.
+    """
+    try:
+        return asyncio.run(_reset_hobby_periods())
+    except Exception as exc:
+        logger.error("reset_hobby_periods_failed", error=str(exc))
+        return {"error": str(exc)}
+
+
+async def _reset_hobby_periods() -> dict[str, Any]:
+    from datetime import datetime, timedelta, timezone
+
+    import redis.asyncio as aioredis
+
+    from app.infrastructure.db.repositories.billing_repo import BillingRepository
+    from app.services.usage_service import UsageService
+
+    now = datetime.now(timezone.utc)
+    reset_count = 0
+
+    async with _worker_session() as session:
+        billing_repo = BillingRepository(session)
+        due_subs = await billing_repo.list_hobby_subscriptions_due_for_reset(now)
+
+        if not due_subs:
+            return {"status": "completed", "reset": 0}
+
+        redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        try:
+            for sub in due_subs:
+                new_start = sub.current_period_end
+                new_end = new_start + timedelta(days=30)
+
+                await billing_repo.advance_period(sub.org_id, new_start, new_end)
+                await billing_repo.create_usage_record(sub.org_id, new_start, new_end)
+
+                usage_svc = UsageService(redis_client, session)
+                await usage_svc.delete_usage_key(sub.org_id, sub.current_period_start)
+                await usage_svc.invalidate_subscription_cache(sub.org_id)
+                reset_count += 1
+
+            await session.commit()
+        finally:
+            await redis_client.aclose()
+
+    logger.info("reset_hobby_periods_done", reset=reset_count)
+    return {"status": "completed", "reset": reset_count}
