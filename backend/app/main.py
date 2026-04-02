@@ -15,6 +15,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.api.middleware import RequestContextMiddleware
 from app.api.rate_limit import limiter
 from app.api.v1.router import v1_router
+from app.infrastructure.redis.client import close_redis_pool
 from app.logging import logger
 from app.registry.exceptions import PandaProbeError
 from app.registry.settings import settings
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI):
         environment=settings.APP_ENV.value,
     )
     yield
+    await close_redis_pool()
     logger.info("application_shutdown")
 
 
