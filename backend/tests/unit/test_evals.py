@@ -205,12 +205,12 @@ def test_eval_run_creation():
         project_id=uuid4(),
         metric_names=["task_completion", "tool_correctness"],
         status=EvaluationStatus.PENDING,
-        total_traces=10,
+        total_targets=10,
         created_at=now,
     )
     assert run.status == EvaluationStatus.PENDING
     assert len(run.metric_names) == 2
-    assert run.total_traces == 10
+    assert run.total_targets == 10
     assert run.sampling_rate == 1.0
 
 
