@@ -144,6 +144,32 @@ class MonitorCadence(StrEnum):
     CUSTOM = "custom"
 
 
+class SubscriptionPlan(StrEnum):
+    """Tier of an organization's subscription."""
+
+    HOBBY = "HOBBY"
+    PRO = "PRO"
+    STARTUP = "STARTUP"
+    ENTERPRISE = "ENTERPRISE"
+
+
+class SubscriptionStatus(StrEnum):
+    """Lifecycle status of a Stripe-backed subscription."""
+
+    ACTIVE = "ACTIVE"
+    PAST_DUE = "PAST_DUE"
+    CANCELED = "CANCELED"
+    INCOMPLETE = "INCOMPLETE"
+
+
+class UsageCategory(StrEnum):
+    """Billable usage categories tracked per billing period."""
+
+    TRACES = "traces"
+    TRACE_EVALS = "trace_evals"
+    SESSION_EVALS = "session_evals"
+
+
 # Prefix prepended to every generated API key.
 API_KEY_PREFIX = "sk_pp_"
 
