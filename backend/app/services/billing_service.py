@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
 
+import redis.asyncio as aioredis
 import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +21,10 @@ from app.logging import logger
 from app.registry.constants import SubscriptionPlan, SubscriptionStatus
 from app.registry.settings import settings
 
+_SUB_CACHE_PREFIX = "pp:sub:"
+_OVERAGE_LOCK_PREFIX = "pp:overage_lock:"
+_OVERAGE_LOCK_TTL = 60
+
 
 def _stripe_client() -> None:
     """Configure the stripe module with the secret key."""
@@ -29,10 +34,34 @@ def _stripe_client() -> None:
 class BillingService:
     """Orchestrates Stripe billing operations and overage calculations."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, *, redis_client: aioredis.Redis | None = None) -> None:
         self._session = session
         self._repo = BillingRepository(session)
+        self._redis = redis_client
         _stripe_client()
+
+    async def _invalidate_sub_cache(self, org_id: UUID) -> None:
+        """Clear the Redis subscription cache so enforcement picks up changes immediately."""
+        if self._redis is None:
+            return
+        cache_key = f"{_SUB_CACHE_PREFIX}{org_id}"
+        await self._redis.delete(cache_key)
+
+    # -- Overage lock ---------------------------------------------------------
+
+    async def acquire_overage_lock(self, org_id: UUID) -> bool:
+        """Acquire a short-lived Redis lock to prevent concurrent overage reporting."""
+        if self._redis is None:
+            return True
+        return bool(await self._redis.set(
+            f"{_OVERAGE_LOCK_PREFIX}{org_id}", "1", nx=True, ex=_OVERAGE_LOCK_TTL,
+        ))
+
+    async def release_overage_lock(self, org_id: UUID) -> None:
+        """Release the per-org overage reporting lock."""
+        if self._redis is None:
+            return
+        await self._redis.delete(f"{_OVERAGE_LOCK_PREFIX}{org_id}")
 
     # -- Checkout & Portal ----------------------------------------------------
 
@@ -87,8 +116,12 @@ class BillingService:
 
     # -- Overage calculation --------------------------------------------------
 
-    async def calculate_overages(self, org_id: UUID) -> OverageDetail:
-        """Calculate overage charges for the current billing period."""
+    async def calculate_unreported_overages(self, org_id: UUID) -> OverageDetail:
+        """Calculate NEW overage charges not yet reported to Stripe.
+
+        Uses a high-water mark (``reported_*_count``) to compute only
+        the delta since the last successful report, preventing double-billing.
+        """
         sub = await self._repo.get_subscription_by_org(org_id)
         if sub is None:
             return OverageDetail()
@@ -98,35 +131,56 @@ class BillingService:
             return OverageDetail()
 
         usage = await self._repo.get_current_usage_record(org_id, sub.current_period_start)
-        if usage is None:
+        if usage is None or usage.billed:
             return OverageDetail()
 
-        trace_over = max(0, usage.trace_count - (plan_cfg.base_traces or 0))
-        eval_over = max(0, usage.trace_eval_count - (plan_cfg.base_trace_evals or 0))
-        sess_over = max(0, usage.session_eval_count - (plan_cfg.base_session_evals or 0))
+        base_t = plan_cfg.base_traces or 0
+        base_e = plan_cfg.base_trace_evals or 0
+        base_s = plan_cfg.base_session_evals or 0
+
+        total_t_over = max(0, usage.trace_count - base_t)
+        total_e_over = max(0, usage.trace_eval_count - base_e)
+        total_s_over = max(0, usage.session_eval_count - base_s)
+
+        prev_t_over = max(0, usage.reported_trace_count - base_t)
+        prev_e_over = max(0, usage.reported_trace_eval_count - base_e)
+        prev_s_over = max(0, usage.reported_session_eval_count - base_s)
+
+        dt = max(0, total_t_over - prev_t_over)
+        de = max(0, total_e_over - prev_e_over)
+        ds = max(0, total_s_over - prev_s_over)
 
         return OverageDetail(
-            trace_overage=trace_over,
-            trace_eval_overage=eval_over,
-            session_eval_overage=sess_over,
-            trace_overage_cost=OVERAGE_UNIT_PRICE * trace_over,
-            trace_eval_overage_cost=OVERAGE_UNIT_PRICE * eval_over,
-            session_eval_overage_cost=OVERAGE_UNIT_PRICE * sess_over,
-            total_cost=OVERAGE_UNIT_PRICE * (trace_over + eval_over + sess_over),
+            trace_overage=dt,
+            trace_eval_overage=de,
+            session_eval_overage=ds,
+            trace_overage_cost=OVERAGE_UNIT_PRICE * dt,
+            trace_eval_overage_cost=OVERAGE_UNIT_PRICE * de,
+            session_eval_overage_cost=OVERAGE_UNIT_PRICE * ds,
+            total_cost=OVERAGE_UNIT_PRICE * (dt + de + ds),
+            snapshot_trace_count=usage.trace_count,
+            snapshot_trace_eval_count=usage.trace_eval_count,
+            snapshot_session_eval_count=usage.session_eval_count,
         )
 
-    async def report_overages_to_stripe(self, org_id: UUID) -> str | None:
-        """Create Stripe Invoice Items for overages on the upcoming invoice.
+    async def report_overages_to_stripe(self, org_id: UUID) -> bool:
+        """Create Stripe InvoiceItems for the unreported overage delta.
 
-        Returns the invoice ID if items were created, else None.
+        Ordering: Stripe items are created **before** the watermark is
+        advanced.  If the DB commit fails after Stripe items exist, the
+        next run re-creates the same delta (small, observable over-charge
+        that self-corrects).  The reverse (watermark advanced, Stripe
+        call fails) would silently lose revenue — hence this ordering.
+
+        Returns ``True`` when items were created.
         """
         sub = await self._repo.get_subscription_by_org(org_id)
         if sub is None or sub.stripe_customer_id is None:
-            return None
+            return False
 
-        overages = await self.calculate_overages(org_id)
+        overages = await self.calculate_unreported_overages(org_id)
         if overages.total_cost <= 0:
-            return None
+            return False
 
         items: list[tuple[str, int, Decimal]] = []
         if overages.trace_overage > 0:
@@ -144,19 +198,23 @@ class BillingService:
                 description=f"{description} ({qty} units @ ${OVERAGE_UNIT_PRICE}/unit)",
             )
 
+        await self._repo.update_reported_usage(
+            org_id=org_id,
+            period_start=sub.current_period_start,
+            reported_trace_count=overages.snapshot_trace_count,
+            reported_trace_eval_count=overages.snapshot_trace_eval_count,
+            reported_session_eval_count=overages.snapshot_session_eval_count,
+        )
+
         logger.info(
             "overages_reported",
             org_id=str(org_id),
             total_cost=str(overages.total_cost),
+            trace_delta=overages.trace_overage,
+            eval_delta=overages.trace_eval_overage,
+            sess_delta=overages.session_eval_overage,
         )
-
-        await self._repo.mark_billed(
-            org_id,
-            sub.current_period_start,
-            stripe_invoice_id="pending",
-        )
-
-        return "pending"
+        return True
 
     # -- Webhook event handlers -----------------------------------------------
 
@@ -196,10 +254,47 @@ class BillingService:
 
         await self._repo.get_or_create_usage_record(org_id, period_start, period_end)
         await self._session.commit()
+        await self._invalidate_sub_cache(org_id)
         logger.info("checkout_completed", org_id=str(org_id), plan=plan.value)
 
+    async def handle_invoice_created(self, event_data: dict) -> None:
+        """Process ``invoice.created`` -- last-chance overage capture.
+
+        Stripe fires this ~1 hour before the invoice is finalized.
+        Items added here land on THIS invoice rather than spilling to
+        the next billing period.
+        """
+        obj = event_data["object"]
+        subscription_id = obj.get("subscription")
+        if not subscription_id:
+            return
+
+        sub = await self._repo.get_subscription_by_stripe_subscription(subscription_id)
+        if sub is None:
+            return
+
+        plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
+        if not plan_cfg.pay_as_you_go:
+            return
+
+        if self._redis is not None:
+            from app.services.usage_service import UsageService
+
+            usage_svc = UsageService(self._redis, self._session)
+            await usage_svc.sync_to_database(sub.org_id)
+            await self._session.flush()
+
+        if await self.acquire_overage_lock(sub.org_id):
+            try:
+                await self.report_overages_to_stripe(sub.org_id)
+                await self._session.commit()
+            finally:
+                await self.release_overage_lock(sub.org_id)
+
+        logger.info("invoice_created_overages_synced", org_id=str(sub.org_id))
+
     async def handle_invoice_paid(self, event_data: dict) -> None:
-        """Process ``invoice.paid`` -- advance billing period."""
+        """Process ``invoice.paid`` -- final overage report, then advance billing period."""
         obj = event_data["object"]
         subscription_id = obj.get("subscription")
         invoice_id = obj["id"]
@@ -212,13 +307,31 @@ class BillingService:
             logger.warning("invoice_paid_unknown_subscription", subscription_id=subscription_id)
             return
 
-        stripe_sub = stripe.Subscription.retrieve(subscription_id)
-        new_start = datetime.fromtimestamp(stripe_sub["current_period_start"], tz=timezone.utc)
-        new_end = datetime.fromtimestamp(stripe_sub["current_period_end"], tz=timezone.utc)
+        # Final sync: flush Redis counters to DB so the delta calc is up-to-date
+        if self._redis is not None:
+            from app.services.usage_service import UsageService
 
+            usage_svc = UsageService(self._redis, self._session)
+            await usage_svc.sync_to_database(sub.org_id)
+            await self._session.flush()
+
+        # Report any remaining unreported overages for the ending period.
+        # Items created here land on the *next* invoice (this one is already paid).
+        if await self.acquire_overage_lock(sub.org_id):
+            try:
+                await self.report_overages_to_stripe(sub.org_id)
+            finally:
+                await self.release_overage_lock(sub.org_id)
+
+        # Mark the ending period as fully billed
         old_usage = await self._repo.get_current_usage_record(sub.org_id, sub.current_period_start)
         if old_usage and not old_usage.billed:
             await self._repo.mark_billed(sub.org_id, sub.current_period_start, invoice_id)
+
+        # Advance to the new billing period
+        stripe_sub = stripe.Subscription.retrieve(subscription_id)
+        new_start = datetime.fromtimestamp(stripe_sub["current_period_start"], tz=timezone.utc)
+        new_end = datetime.fromtimestamp(stripe_sub["current_period_end"], tz=timezone.utc)
 
         await self._repo.advance_period(sub.org_id, new_start, new_end)
         await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
@@ -226,6 +339,7 @@ class BillingService:
             sub.org_id, status=SubscriptionStatus.ACTIVE.value
         )
         await self._session.commit()
+        await self._invalidate_sub_cache(sub.org_id)
         logger.info("invoice_paid", org_id=str(sub.org_id), invoice_id=invoice_id)
 
     async def handle_invoice_payment_failed(self, event_data: dict) -> None:
@@ -241,6 +355,7 @@ class BillingService:
 
         await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.PAST_DUE.value)
         await self._session.commit()
+        await self._invalidate_sub_cache(sub.org_id)
         logger.warning("invoice_payment_failed", org_id=str(sub.org_id))
 
     async def handle_subscription_updated(self, event_data: dict) -> None:
@@ -275,6 +390,7 @@ class BillingService:
 
         await self._repo.update_subscription(sub.org_id, **updates)
         await self._session.commit()
+        await self._invalidate_sub_cache(sub.org_id)
         logger.info("subscription_updated", org_id=str(sub.org_id), status=mapped_status.value)
 
     async def handle_subscription_deleted(self, event_data: dict) -> None:
@@ -300,4 +416,5 @@ class BillingService:
             sub.org_id, now, now + timedelta(days=30)
         )
         await self._session.commit()
+        await self._invalidate_sub_cache(sub.org_id)
         logger.info("subscription_deleted_downgraded", org_id=str(sub.org_id))
