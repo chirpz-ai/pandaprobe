@@ -238,7 +238,7 @@ class BillingRepository:
         row.session_eval_count = session_eval_count
         await self._session.flush()
 
-    async def mark_billed(self, org_id: UUID, period_start: datetime, stripe_invoice_id: str) -> None:
+    async def mark_billed(self, org_id: UUID, period_start: datetime, stripe_invoice_id: str | None) -> None:
         """Mark a usage record as billed with the Stripe invoice ID."""
         stmt = (
             update(UsageRecordModel)
@@ -273,6 +273,17 @@ class BillingRepository:
             )
         )
         await self._session.execute(stmt)
+
+    async def list_usage_history(self, org_id: UUID, *, limit: int = 12) -> list[UsageRecord]:
+        """Return past usage records for an org, most recent first."""
+        stmt = (
+            select(UsageRecordModel)
+            .where(UsageRecordModel.org_id == org_id)
+            .order_by(UsageRecordModel.period_start.desc())
+            .limit(limit)
+        )
+        rows = (await self._session.execute(stmt)).scalars().all()
+        return [self._to_usage(r) for r in rows]
 
     # -- Member count helper --------------------------------------------------
 
