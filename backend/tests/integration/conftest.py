@@ -25,6 +25,7 @@ from uuid import UUID
 
 import nest_asyncio
 import pytest
+import redis.asyncio as aioredis
 import structlog
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine, text
@@ -36,9 +37,11 @@ from app.core.identity.entities import Organization, Project
 from app.core.traces.entities import Span, Trace
 from app.infrastructure.db.engine import async_session_factory, engine as async_engine, get_db_session
 from app.infrastructure.db.models import Base, OrganizationModel, ProjectModel
+from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.trace_repo import TraceRepository
+from app.infrastructure.redis.client import get_redis
 from app.main import app
-from app.registry.constants import SpanKind, SpanStatusCode, TraceStatus
+from app.registry.constants import SpanKind, SpanStatusCode, SubscriptionPlan, TraceStatus
 from app.registry.settings import settings
 
 from .factories import build_trace_payload
@@ -49,6 +52,7 @@ nest_asyncio.apply()
 # Fixed UUIDs so every fixture in the same test shares the same identity.
 TEST_ORG_ID = UUID("00000000-0000-4000-a000-000000000001")
 TEST_PROJECT_ID = UUID("00000000-0000-4000-a000-000000000002")
+BILLING_ISOLATED_ORG_ID = UUID("00000000-0000-4000-a000-0000000000d1")
 
 
 # ---------------------------------------------------------------------------
@@ -91,12 +95,23 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     )
     await session.commit()
 
+    billing_repo = BillingRepository(session)
+    await billing_repo.create_subscription(
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_subscription_id="sub_integration_seed",
+    )
+    sub = await billing_repo.get_subscription_by_org(TEST_ORG_ID)
+    assert sub is not None
+    await billing_repo.create_usage_record(TEST_ORG_ID, sub.current_period_start, sub.current_period_end)
+    await session.commit()
+
     yield session
 
     # Remove all data while preserving the schema.
     await session.execute(
         text(
-            "TRUNCATE eval_monitors, session_scores, trace_scores, eval_runs, spans, traces, api_keys, memberships, projects, organizations CASCADE"
+            "TRUNCATE eval_monitors, session_scores, trace_scores, eval_runs, spans, traces, api_keys, memberships, users, projects, subscriptions, usage_records, organizations CASCADE"
         )
     )
     await session.commit()
@@ -120,6 +135,15 @@ def test_org() -> Organization:
         name="Test Org",
         created_at=datetime.now(timezone.utc),
     )
+
+
+@pytest.fixture
+async def billing_isolated_org(db_session: AsyncSession) -> AsyncGenerator[UUID, None]:
+    """Extra org with no subscription for billing CRUD tests that insert their own row."""
+    now = datetime.now(timezone.utc)
+    db_session.add(OrganizationModel(id=BILLING_ISOLATED_ORG_ID, name="Billing Isolated", created_at=now))
+    await db_session.commit()
+    yield BILLING_ISOLATED_ORG_ID
 
 
 @pytest.fixture
@@ -171,9 +195,22 @@ async def _override_deps(
             logger=structlog.get_logger(),
         )
 
+    async def _get_redis():
+        client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        try:
+            yield client
+        finally:
+            await client.aclose()
+
     app.dependency_overrides[get_db_session] = _get_db_session
     app.dependency_overrides[require_project] = _require_project
+    app.dependency_overrides[get_redis] = _get_redis
     yield
+    flush_redis = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    try:
+        await flush_redis.flushdb()
+    finally:
+        await flush_redis.aclose()
     app.dependency_overrides.clear()
 
 
