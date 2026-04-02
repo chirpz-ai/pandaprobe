@@ -25,10 +25,15 @@ _SUB_CACHE_PREFIX = "pp:sub:"
 _OVERAGE_LOCK_PREFIX = "pp:overage_lock:"
 _OVERAGE_LOCK_TTL = 60
 
+_stripe_configured = False
 
-def _stripe_client() -> None:
-    """Configure the stripe module with the secret key."""
-    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+def _ensure_stripe_configured() -> None:
+    """Set the stripe API key once at first use."""
+    global _stripe_configured
+    if not _stripe_configured:
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        _stripe_configured = True
 
 
 class BillingService:
@@ -38,7 +43,7 @@ class BillingService:
         self._session = session
         self._repo = BillingRepository(session)
         self._redis = redis_client
-        _stripe_client()
+        _ensure_stripe_configured()
 
     async def _invalidate_sub_cache(self, org_id: UUID) -> None:
         """Clear the Redis subscription cache so enforcement picks up changes immediately."""
@@ -394,12 +399,31 @@ class BillingService:
         logger.info("subscription_updated", org_id=str(sub.org_id), status=mapped_status.value)
 
     async def handle_subscription_deleted(self, event_data: dict) -> None:
-        """Process ``customer.subscription.deleted`` -- downgrade to HOBBY."""
+        """Process ``customer.subscription.deleted`` -- finalize overages, then downgrade to HOBBY."""
         obj = event_data["object"]
         subscription_id = obj["id"]
         sub = await self._repo.get_subscription_by_stripe_subscription(subscription_id)
         if sub is None:
             return
+
+        plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
+        if plan_cfg.pay_as_you_go and sub.stripe_customer_id:
+            if self._redis is not None:
+                from app.services.usage_service import UsageService
+
+                usage_svc = UsageService(self._redis, self._session)
+                await usage_svc.sync_to_database(sub.org_id)
+                await self._session.flush()
+
+            if await self.acquire_overage_lock(sub.org_id):
+                try:
+                    await self.report_overages_to_stripe(sub.org_id)
+                finally:
+                    await self.release_overage_lock(sub.org_id)
+
+            old_usage = await self._repo.get_current_usage_record(sub.org_id, sub.current_period_start)
+            if old_usage and not old_usage.billed:
+                await self._repo.mark_billed(sub.org_id, sub.current_period_start, stripe_invoice_id=None)
 
         now = datetime.now(timezone.utc)
         await self._repo.update_subscription(
