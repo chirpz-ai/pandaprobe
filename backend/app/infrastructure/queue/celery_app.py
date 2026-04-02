@@ -32,16 +32,16 @@ celery.conf.beat_schedule = {
         "task": "check_eval_monitors",
         "schedule": 300.0,
     },
-    "sync-usage-to-db": {
-        "task": "sync_usage_to_db",
+    "dispatch-sync-usage": {
+        "task": "dispatch_sync_usage",
         "schedule": 300.0,
     },
-    "process-overage-billing": {
-        "task": "process_overage_billing",
-        "schedule": 21600.0,  # every 6 hours
+    "dispatch-overage-billing": {
+        "task": "dispatch_overage_billing",
+        "schedule": 21600.0,
     },
-    "reset-hobby-periods": {
-        "task": "reset_hobby_periods",
+    "dispatch-hobby-reset": {
+        "task": "dispatch_hobby_reset",
         "schedule": 21600.0,
     },
 }
