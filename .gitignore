@@ -26,6 +26,7 @@ uv.lock
 .idea/
 .vscode/
 .cursor/plans/
+.cursor/settings.json
 
 # macOS
 .DS_Store
