@@ -40,6 +40,9 @@ class UsageRecord(BaseModel):
     trace_count: int = 0
     trace_eval_count: int = 0
     session_eval_count: int = 0
+    reported_trace_count: int = 0
+    reported_trace_eval_count: int = 0
+    reported_session_eval_count: int = 0
     billed: bool = False
     stripe_invoice_id: str | None = None
     created_at: datetime
@@ -72,7 +75,12 @@ class UsageSummary(BaseModel):
 
 
 class OverageDetail(BaseModel):
-    """Breakdown of overage charges for a billing period."""
+    """Breakdown of overage charges for a billing period.
+
+    The ``snapshot_*`` fields record the absolute counter values at the
+    time of calculation so the caller can advance the high-water mark
+    after successfully reporting the delta to Stripe.
+    """
 
     trace_overage: int = 0
     trace_eval_overage: int = 0
@@ -81,3 +89,6 @@ class OverageDetail(BaseModel):
     trace_eval_overage_cost: Decimal = Decimal("0")
     session_eval_overage_cost: Decimal = Decimal("0")
     total_cost: Decimal = Decimal("0")
+    snapshot_trace_count: int = 0
+    snapshot_trace_eval_count: int = 0
+    snapshot_session_eval_count: int = 0
