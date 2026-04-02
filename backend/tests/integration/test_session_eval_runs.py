@@ -28,7 +28,7 @@ async def test_create_session_eval_run_returns_202(client: AsyncClient, seed_tra
     data = resp.json()
     assert data["status"] == "PENDING"
     assert data["target_type"] == "SESSION"
-    assert data["total_traces"] >= 1
+    assert data["total_targets"] >= 1
     assert data["metric_names"] == ["agent_reliability"]
 
 
@@ -169,7 +169,7 @@ async def test_retry_session_run_no_failures_returns_422(client: AsyncClient, se
             filters={},
             sampling_rate=1.0,
             status=EvaluationStatus.COMPLETED,
-            total_traces=1,
+            total_targets=1,
             evaluated_count=1,
             created_at=now,
         )
@@ -210,7 +210,7 @@ async def test_retry_session_run_with_failures_returns_202(client: AsyncClient, 
             filters={},
             sampling_rate=1.0,
             status=EvaluationStatus.COMPLETED,
-            total_traces=1,
+            total_targets=1,
             evaluated_count=1,
             failed_count=1,
             created_at=now,
