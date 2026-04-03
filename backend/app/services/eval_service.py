@@ -11,7 +11,14 @@ from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.evals.cadence import compute_next_run, validate_cadence
-from app.core.evals.entities import EvalMonitor, EvalRun, SessionScore, TraceScore, validate_score_value
+from app.core.evals.entities import (
+    EvalMonitor,
+    EvalRun,
+    PreparedRun,
+    SessionScore,
+    TraceScore,
+    validate_score_value,
+)
 from app.core.evals.metrics import list_metrics, list_session_metrics
 from app.infrastructure.db.models import TraceModel
 from app.infrastructure.db.repositories.eval_repo import EvalRepository
@@ -49,7 +56,7 @@ class EvalService:
 
     # -- Eval run creation -----------------------------------------------------
 
-    async def create_eval_run(
+    async def prepare_eval_run(
         self,
         project_id: UUID,
         metric_names: list[str],
@@ -59,8 +66,12 @@ class EvalService:
         model: str | None = None,
         name: str | None = None,
         target_type: str = "TRACE",
-    ) -> EvalRun:
-        """Validate metrics, resolve traces, and enqueue an eval run."""
+    ) -> PreparedRun:
+        """Validate, resolve targets, and add an eval run to the session (without committing).
+
+        Returns a ``PreparedRun`` so the caller can perform quota checks
+        before calling ``dispatch_run`` to commit and enqueue Celery.
+        """
         available = list_metrics()
         invalid = [m for m in metric_names if m not in available]
         if invalid:
@@ -100,16 +111,15 @@ class EvalService:
         )
 
         await self._repo.create_eval_run(run)
-        await self._session.commit()
 
-        from app.infrastructure.queue.tasks import execute_eval_run
+        return PreparedRun(
+            run=run,
+            project_id=project_id,
+            target_ids=[str(tid) for tid in trace_ids],
+            target_type="TRACE",
+        )
 
-        execute_eval_run.delay(str(run.id), str(project_id), [str(tid) for tid in trace_ids])
-
-        logger.info("eval_run_created", run_id=str(run.id), total_targets=len(trace_ids))
-        return run
-
-    async def create_batch_eval_run(
+    async def prepare_batch_eval_run(
         self,
         project_id: UUID,
         trace_ids: list[UUID],
@@ -117,8 +127,8 @@ class EvalService:
         *,
         model: str | None = None,
         name: str | None = None,
-    ) -> EvalRun:
-        """Create an eval run for an explicit list of trace IDs."""
+    ) -> PreparedRun:
+        """Validate and add a batch eval run to the session (without committing)."""
         available = list_metrics()
         invalid = [m for m in metric_names if m not in available]
         if invalid:
@@ -148,14 +158,50 @@ class EvalService:
         )
 
         await self._repo.create_eval_run(run)
+
+        return PreparedRun(
+            run=run,
+            project_id=project_id,
+            target_ids=[str(tid) for tid in unique_ids],
+            target_type="TRACE",
+        )
+
+    async def dispatch_run(self, prepared: PreparedRun) -> EvalRun:
+        """Commit the prepared run to the database and enqueue the Celery task."""
         await self._session.commit()
 
-        from app.infrastructure.queue.tasks import execute_eval_run
+        if prepared.target_type == "SESSION":
+            from app.infrastructure.queue.tasks import execute_session_eval_run
 
-        execute_eval_run.delay(str(run.id), str(project_id), [str(tid) for tid in unique_ids])
+            execute_session_eval_run.delay(
+                str(prepared.run.id),
+                str(prepared.project_id),
+                prepared.target_ids,
+            )
+        else:
+            from app.infrastructure.queue.tasks import execute_eval_run
 
-        logger.info("batch_eval_run_created", run_id=str(run.id), total_targets=len(unique_ids))
-        return run
+            if prepared.trace_metric_map is not None:
+                execute_eval_run.delay(
+                    str(prepared.run.id),
+                    str(prepared.project_id),
+                    prepared.target_ids,
+                    trace_metric_map=prepared.trace_metric_map,
+                )
+            else:
+                execute_eval_run.delay(
+                    str(prepared.run.id),
+                    str(prepared.project_id),
+                    prepared.target_ids,
+                )
+
+        logger.info(
+            "eval_run_dispatched",
+            run_id=str(prepared.run.id),
+            target_type=prepared.target_type,
+            total_targets=prepared.run.total_targets,
+        )
+        return prepared.run
 
     # -- Eval run queries ------------------------------------------------------
 
@@ -180,8 +226,8 @@ class EvalService:
             project_id, status=status, target_type=target_type, limit=limit, offset=offset
         )
 
-    async def retry_failed_run(self, run_id: UUID, project_id: UUID) -> EvalRun:
-        """Create a new run retrying only the exact failed trace+metric pairs."""
+    async def prepare_retry_failed_run(self, run_id: UUID, project_id: UUID) -> PreparedRun:
+        """Validate and add a retry run to the session (without committing)."""
         from collections import defaultdict
 
         original = await self._repo.get_eval_run(run_id, project_id)
@@ -217,22 +263,15 @@ class EvalService:
         )
 
         await self._repo.create_eval_run(run)
-        await self._session.commit()
-
-        from app.infrastructure.queue.tasks import execute_eval_run
 
         serialized_map = {str(tid): metrics for tid, metrics in trace_metric_map.items()}
-        execute_eval_run.delay(
-            str(run.id),
-            str(project_id),
-            [str(tid) for tid in trace_ids],
+        return PreparedRun(
+            run=run,
+            project_id=project_id,
+            target_ids=[str(tid) for tid in trace_ids],
+            target_type="TRACE",
             trace_metric_map=serialized_map,
         )
-
-        logger.info(
-            "retry_eval_run_created", run_id=str(run.id), original_run_id=str(run_id), total_targets=len(trace_ids)
-        )
-        return run
 
     async def get_scores_for_run(self, run_id: UUID, project_id: UUID) -> list[TraceScore]:
         """Fetch all scores produced by a specific eval run."""
@@ -412,7 +451,7 @@ class EvalService:
 
     # -- Session eval run creation ---------------------------------------------
 
-    async def create_session_eval_run(
+    async def prepare_session_eval_run(
         self,
         project_id: UUID,
         metric_names: list[str],
@@ -422,8 +461,8 @@ class EvalService:
         model: str | None = None,
         name: str | None = None,
         signal_weights: dict[str, float] | None = None,
-    ) -> EvalRun:
-        """Create a session eval run using filter-based session resolution."""
+    ) -> PreparedRun:
+        """Validate, resolve sessions, and add the run to the session (without committing)."""
         available = list_session_metrics()
         invalid = [m for m in metric_names if m not in available]
         if invalid:
@@ -464,16 +503,15 @@ class EvalService:
         )
 
         await self._repo.create_eval_run(run)
-        await self._session.commit()
 
-        from app.infrastructure.queue.tasks import execute_session_eval_run
+        return PreparedRun(
+            run=run,
+            project_id=project_id,
+            target_ids=session_ids,
+            target_type="SESSION",
+        )
 
-        execute_session_eval_run.delay(str(run.id), str(project_id), session_ids)
-
-        logger.info("session_eval_run_created", run_id=str(run.id), total_sessions=len(session_ids))
-        return run
-
-    async def create_batch_session_eval_run(
+    async def prepare_batch_session_eval_run(
         self,
         project_id: UUID,
         session_ids: list[str],
@@ -482,8 +520,8 @@ class EvalService:
         model: str | None = None,
         name: str | None = None,
         signal_weights: dict[str, float] | None = None,
-    ) -> EvalRun:
-        """Create a session eval run for an explicit list of session IDs."""
+    ) -> PreparedRun:
+        """Validate and add a batch session eval run to the session (without committing)."""
         available = list_session_metrics()
         invalid = [m for m in metric_names if m not in available]
         if invalid:
@@ -517,17 +555,16 @@ class EvalService:
         )
 
         await self._repo.create_eval_run(run)
-        await self._session.commit()
 
-        from app.infrastructure.queue.tasks import execute_session_eval_run
+        return PreparedRun(
+            run=run,
+            project_id=project_id,
+            target_ids=unique_ids,
+            target_type="SESSION",
+        )
 
-        execute_session_eval_run.delay(str(run.id), str(project_id), unique_ids)
-
-        logger.info("batch_session_eval_run_created", run_id=str(run.id), total_sessions=len(unique_ids))
-        return run
-
-    async def retry_failed_session_run(self, run_id: UUID, project_id: UUID) -> EvalRun:
-        """Create a new session run retrying only the sessions with failed scores."""
+    async def prepare_retry_failed_session_run(self, run_id: UUID, project_id: UUID) -> PreparedRun:
+        """Validate and add a session retry run to the session (without committing)."""
         original = await self._repo.get_eval_run(run_id, project_id)
         if original is None:
             raise NotFoundError(f"Eval run {run_id} not found.")
@@ -563,19 +600,13 @@ class EvalService:
         )
 
         await self._repo.create_eval_run(run)
-        await self._session.commit()
 
-        from app.infrastructure.queue.tasks import execute_session_eval_run
-
-        execute_session_eval_run.delay(str(run.id), str(project_id), session_ids)
-
-        logger.info(
-            "retry_session_eval_run_created",
-            run_id=str(run.id),
-            original_run_id=str(run_id),
-            total_sessions=len(session_ids),
+        return PreparedRun(
+            run=run,
+            project_id=project_id,
+            target_ids=session_ids,
+            target_type="SESSION",
         )
-        return run
 
     # -- Session score queries -------------------------------------------------
 
@@ -840,8 +871,8 @@ class EvalService:
         await self._session.commit()
         return await self.get_monitor(monitor_id, project_id)
 
-    async def trigger_monitor(self, monitor_id: UUID, project_id: UUID) -> EvalRun:
-        """Force-spawn an eval run immediately regardless of cadence."""
+    async def prepare_trigger_monitor(self, monitor_id: UUID, project_id: UUID) -> PreparedRun:
+        """Prepare a monitor-triggered run without committing."""
         monitor = await self._repo.get_monitor(monitor_id, project_id)
         if monitor is None:
             raise NotFoundError(f"Eval monitor {monitor_id} not found.")
@@ -851,11 +882,22 @@ class EvalService:
         now = datetime.now(timezone.utc)
         next_run = compute_next_run(monitor.cadence, now)
         await self._repo.advance_monitor(monitor_id, last_run_at=now, last_run_id=run.id, next_run_at=next_run)
-        await self._session.commit()
 
-        self._dispatch_monitor_run(monitor.target_type, run.id, monitor.project_id, target_ids)
-        logger.info("monitor_triggered", monitor_id=str(monitor_id), run_id=str(run.id))
-        return run
+        return PreparedRun(
+            run=run,
+            project_id=project_id,
+            target_ids=target_ids,
+            target_type=monitor.target_type,
+        )
+
+    async def dispatch_trigger_monitor(self, prepared: PreparedRun) -> EvalRun:
+        """Commit and dispatch a previously prepared monitor-triggered run."""
+        await self._session.commit()
+        self._dispatch_monitor_run(
+            prepared.target_type, prepared.run.id, prepared.project_id, prepared.target_ids,
+        )
+        logger.info("monitor_triggered", run_id=str(prepared.run.id))
+        return prepared.run
 
     async def list_monitor_runs(  # noqa: D102
         self,
