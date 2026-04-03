@@ -618,11 +618,16 @@ async def retry_failed_eval_run(
     """
     svc = EvalService(session)
     prepared = await svc.prepare_retry_failed_run(run_id, ctx.project.id)
+    billable = (
+        sum(len(metrics) for metrics in prepared.trace_metric_map.values())
+        if prepared.trace_metric_map
+        else prepared.run.total_targets * len(prepared.run.metric_names)
+    )
     usage_svc = UsageService(redis_client, session)
     await usage_svc.check_and_increment(
         ctx.organization.id,
         UsageCategory.TRACE_EVALS,
-        count=prepared.run.total_targets * len(prepared.run.metric_names),
+        count=billable,
     )
     run = await svc.dispatch_run(prepared)
     return _run_to_detail(run)
