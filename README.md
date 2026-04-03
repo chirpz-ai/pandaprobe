@@ -28,6 +28,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
 </p>
 
+---
 
 ### What is PandaProbe?
 PandaProbe is an open source agent engineering platform. It helps teams collaboratively trace, evaluate, monitor, and debug AI agents. You can use PandaProbe cloud or self host the service.
