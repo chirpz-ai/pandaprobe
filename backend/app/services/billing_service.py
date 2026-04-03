@@ -36,6 +36,15 @@ def _ensure_stripe_configured() -> None:
         _stripe_configured = True
 
 
+def _resolve_plan_from_price_id(price_id: str) -> SubscriptionPlan | None:
+    """Map a Stripe price ID to a local plan. Returns None if unrecognised."""
+    mapping = {
+        settings.STRIPE_PRO_PRICE_ID: SubscriptionPlan.PRO,
+        settings.STRIPE_STARTUP_PRICE_ID: SubscriptionPlan.STARTUP,
+    }
+    return mapping.get(price_id)
+
+
 class BillingService:
     """Orchestrates Stripe billing operations and overage calculations."""
 
@@ -382,6 +391,20 @@ class BillingService:
 
         updates: dict = {"status": mapped_status.value}
 
+        items = obj.get("items", {}).get("data", [])
+        if items:
+            price_id = items[0].get("price", {}).get("id")
+            if price_id:
+                resolved_plan = _resolve_plan_from_price_id(price_id)
+                if resolved_plan:
+                    updates["plan"] = resolved_plan.value
+                else:
+                    logger.warning(
+                        "subscription_updated_unknown_price",
+                        org_id=str(sub.org_id),
+                        price_id=price_id,
+                    )
+
         cancel_at = obj.get("cancel_at")
         if cancel_at:
             updates["canceled_at"] = datetime.fromtimestamp(cancel_at, tz=timezone.utc)
@@ -396,7 +419,14 @@ class BillingService:
         await self._repo.update_subscription(sub.org_id, **updates)
         await self._session.commit()
         await self._invalidate_sub_cache(sub.org_id)
-        logger.info("subscription_updated", org_id=str(sub.org_id), status=mapped_status.value)
+
+        plan_label = updates.get("plan", sub.plan)
+        logger.info(
+            "subscription_updated",
+            org_id=str(sub.org_id),
+            status=mapped_status.value,
+            plan=plan_label,
+        )
 
     async def handle_subscription_deleted(self, event_data: dict) -> None:
         """Process ``customer.subscription.deleted`` -- finalize overages, then downgrade to HOBBY."""
