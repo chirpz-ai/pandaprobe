@@ -380,20 +380,21 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
             logger.info("monitor_skipped_no_changes", monitor_id=monitor_id)
             return {"monitor_id": monitor_id, "status": "skipped"}
 
+        project = await session.get(ProjectModel, pid)
+        if project is None:
+            logger.error("process_single_monitor_project_missing", monitor_id=monitor_id, project_id=project_id)
+            return {"monitor_id": monitor_id, "status": "project_missing"}
+
         run, target_ids = await svc._spawn_run_for_monitor(monitor)
 
-        project = await session.get(ProjectModel, pid)
-        org_id = project.org_id if project else None
-
-        if org_id is not None:
-            category = UsageCategory.TRACE_EVALS if monitor.target_type == "TRACE" else UsageCategory.SESSION_EVALS
-            billable_units = run.total_targets * len(run.metric_names)
-            redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-            try:
-                usage_svc = UsageService(redis_client, session)
-                await usage_svc.check_and_increment(org_id, category, count=billable_units)
-            finally:
-                await redis_client.aclose()
+        category = UsageCategory.TRACE_EVALS if monitor.target_type == "TRACE" else UsageCategory.SESSION_EVALS
+        billable_units = run.total_targets * len(run.metric_names)
+        redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        try:
+            usage_svc = UsageService(redis_client, session)
+            await usage_svc.check_and_increment(project.org_id, category, count=billable_units)
+        finally:
+            await redis_client.aclose()
 
         now = datetime.now(timezone.utc)
         await eval_repo.advance_monitor(
