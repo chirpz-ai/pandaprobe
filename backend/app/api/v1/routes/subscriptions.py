@@ -3,7 +3,7 @@
 All endpoints require a valid Bearer JWT.
 """
 
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 from uuid import UUID
 
@@ -244,7 +244,9 @@ async def get_billing(
         )
     pending_overage = total_overage - reported_overage
 
-    estimated_total_cents = plan_cfg.monthly_price_cents + int(total_overage * 100)
+    estimated_total_cents = plan_cfg.monthly_price_cents + int(
+        (total_overage * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    )
 
     return BillingResponse(
         plan=plan,

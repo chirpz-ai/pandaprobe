@@ -7,7 +7,7 @@ webhook event processing for subscription lifecycle management.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
 
 import redis.asyncio as aioredis
@@ -197,9 +197,10 @@ class BillingService:
             items.append(("Session eval overage", overages.session_eval_overage, overages.session_eval_overage_cost))
 
         for description, qty, cost in items:
+            amount_cents = int((cost * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
             stripe.InvoiceItem.create(
                 customer=sub.stripe_customer_id,
-                amount=int(cost * 100),
+                amount=amount_cents,
                 currency="usd",
                 description=f"{description} ({qty} units @ ${OVERAGE_UNIT_PRICE}/unit)",
             )
