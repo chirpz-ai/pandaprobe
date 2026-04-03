@@ -142,6 +142,17 @@ class UsageService:
             },
         )
 
+    async def require_monitoring_allowed(self, org_id: UUID) -> None:
+        """Raise ``QuotaExceededError`` if the org's plan doesn't permit monitors."""
+        sub = await self._get_subscription_cached(org_id)
+        if sub is None:
+            raise QuotaExceededError("No active subscription found for this organization.")
+        plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
+        if not plan_cfg.monitoring_allowed:
+            raise QuotaExceededError(
+                f"Monitoring is not available on your {sub.plan} plan. Please upgrade."
+            )
+
     async def sync_to_database(self, org_id: UUID) -> None:
         """Persist Redis counters into the ``usage_records`` table."""
         sub = await self._billing_repo.get_subscription_by_org(org_id)

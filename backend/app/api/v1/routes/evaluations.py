@@ -21,7 +21,6 @@ from app.api.context import ApiContext
 from app.api.dependencies import require_project
 from app.api.rate_limit import limiter
 from app.api.v1.schemas import PaginatedResponse
-from app.core.billing.plans import get_plan_config
 from app.core.evals.entities import validate_score_value
 from app.core.evals.metrics import (
     get_metric_info,
@@ -39,11 +38,9 @@ from app.registry.constants import (
     ScoreDataType,
     ScoreSource,
     ScoreStatus,
-    SubscriptionPlan,
     TraceStatus,
     UsageCategory,
 )
-from app.registry.exceptions import QuotaExceededError
 from app.services.eval_service import EvalService
 from app.services.usage_service import UsageService
 
@@ -1530,12 +1527,7 @@ async def create_monitor(
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
     usage_svc = UsageService(redis_client, session)
-    sub = await usage_svc._get_subscription_cached(ctx.organization.id)
-    if sub is None:
-        raise QuotaExceededError("No active subscription found for this organization.")
-    plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
-    if not plan_cfg.monitoring_allowed:
-        raise QuotaExceededError(f"Monitoring is not available on your {sub.plan} plan. Please upgrade.")
+    await usage_svc.require_monitoring_allowed(ctx.organization.id)
 
     svc = EvalService(session)
     monitor = await svc.create_monitor(
