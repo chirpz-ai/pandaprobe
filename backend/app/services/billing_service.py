@@ -58,9 +58,14 @@ class BillingService:
         """Acquire a short-lived Redis lock to prevent concurrent overage reporting."""
         if self._redis is None:
             return True
-        return bool(await self._redis.set(
-            f"{_OVERAGE_LOCK_PREFIX}{org_id}", "1", nx=True, ex=_OVERAGE_LOCK_TTL,
-        ))
+        return bool(
+            await self._redis.set(
+                f"{_OVERAGE_LOCK_PREFIX}{org_id}",
+                "1",
+                nx=True,
+                ex=_OVERAGE_LOCK_TTL,
+            )
+        )
 
     async def release_overage_lock(self, org_id: UUID) -> None:
         """Release the per-org overage reporting lock."""
@@ -86,11 +91,7 @@ class BillingService:
         if plan not in (SubscriptionPlan.PRO, SubscriptionPlan.STARTUP):
             raise ValueError("Checkout is only available for PRO and STARTUP plans.")
 
-        price_id = (
-            settings.STRIPE_PRO_PRICE_ID
-            if plan == SubscriptionPlan.PRO
-            else settings.STRIPE_STARTUP_PRICE_ID
-        )
+        price_id = settings.STRIPE_PRO_PRICE_ID if plan == SubscriptionPlan.PRO else settings.STRIPE_STARTUP_PRICE_ID
 
         sub = await self._repo.get_subscription_by_org(org_id)
 
@@ -340,9 +341,7 @@ class BillingService:
 
         await self._repo.advance_period(sub.org_id, new_start, new_end)
         await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
-        await self._repo.update_subscription(
-            sub.org_id, status=SubscriptionStatus.ACTIVE.value
-        )
+        await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.ACTIVE.value)
         await self._session.commit()
         await self._invalidate_sub_cache(sub.org_id)
         logger.info("invoice_paid", org_id=str(sub.org_id), invoice_id=invoice_id)
@@ -436,9 +435,7 @@ class BillingService:
             current_period_end=now + timedelta(days=30),
         )
 
-        await self._repo.create_usage_record(
-            sub.org_id, now, now + timedelta(days=30)
-        )
+        await self._repo.create_usage_record(sub.org_id, now, now + timedelta(days=30))
         await self._session.commit()
         await self._invalidate_sub_cache(sub.org_id)
         logger.info("subscription_deleted_downgraded", org_id=str(sub.org_id))

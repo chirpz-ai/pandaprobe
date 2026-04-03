@@ -65,7 +65,10 @@ async def stripe_webhook(request: Request) -> JSONResponse:
     redis_client = aioredis.Redis(connection_pool=redis_pool)
 
     already_processed = not await redis_client.set(
-        f"{_IDEMPOTENCY_PREFIX}{event_id}", "1", nx=True, ex=_IDEMPOTENCY_TTL,
+        f"{_IDEMPOTENCY_PREFIX}{event_id}",
+        "1",
+        nx=True,
+        ex=_IDEMPOTENCY_TTL,
     )
     if already_processed:
         logger.info("stripe_webhook_duplicate", event_id=event_id, event_type=event_type)

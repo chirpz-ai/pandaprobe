@@ -15,7 +15,13 @@ from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
 from app.registry.constants import MembershipRole, SubscriptionPlan, sanitize_text, validate_resource_name
-from app.registry.exceptions import AuthorizationError, ConflictError, NotFoundError, QuotaExceededError, ValidationError
+from app.registry.exceptions import (
+    AuthorizationError,
+    ConflictError,
+    NotFoundError,
+    QuotaExceededError,
+    ValidationError,
+)
 from app.registry.security import generate_api_key, hash_api_key, key_prefix
 
 
@@ -130,8 +136,7 @@ class IdentityService:
                 current_count = await self._billing_repo.count_org_members(org_id)
                 if current_count >= plan_cfg.max_members:
                     raise QuotaExceededError(
-                        f"Your {subscription.plan} plan allows up to "
-                        f"{plan_cfg.max_members} member(s). Please upgrade."
+                        f"Your {subscription.plan} plan allows up to {plan_cfg.max_members} member(s). Please upgrade."
                     )
 
         return await self._repo.create_membership(user_id=user_id, org_id=org_id, role=role)

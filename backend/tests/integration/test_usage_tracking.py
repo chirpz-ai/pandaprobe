@@ -266,11 +266,17 @@ async def test_unreported_overages_computes_correct_delta(db_session, redis_clie
     """With watermark at 5000 and current at 5100 (base=5000), delta should be 100."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
-        TEST_ORG_ID, plan=SubscriptionPlan.PRO, stripe_subscription_id="sub_delta",
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_subscription_id="sub_delta",
     )
     await repo.upsert_usage_counters(
-        TEST_ORG_ID, sub.current_period_start, sub.current_period_end,
-        trace_count=5100, trace_eval_count=5000, session_eval_count=50,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        sub.current_period_end,
+        trace_count=5100,
+        trace_eval_count=5000,
+        session_eval_count=50,
     )
     await db_session.commit()
 
@@ -287,15 +293,23 @@ async def test_unreported_overages_second_call_yields_only_new_delta(db_session,
     """After watermark advances, the next delta only covers new usage."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
-        TEST_ORG_ID, plan=SubscriptionPlan.PRO, stripe_subscription_id="sub_delta2",
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_subscription_id="sub_delta2",
     )
     await repo.upsert_usage_counters(
-        TEST_ORG_ID, sub.current_period_start, sub.current_period_end,
-        trace_count=5100, trace_eval_count=5000, session_eval_count=50,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        sub.current_period_end,
+        trace_count=5100,
+        trace_eval_count=5000,
+        session_eval_count=50,
     )
     await repo.update_reported_usage(
-        TEST_ORG_ID, sub.current_period_start,
-        reported_trace_count=5100, reported_trace_eval_count=5000,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        reported_trace_count=5100,
+        reported_trace_eval_count=5000,
         reported_session_eval_count=50,
     )
     await db_session.commit()
@@ -310,15 +324,23 @@ async def test_unreported_overages_incremental_growth(db_session, redis_client):
     """Watermark at 5100, usage grows to 5150 — delta should be 50."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
-        TEST_ORG_ID, plan=SubscriptionPlan.PRO, stripe_subscription_id="sub_inc",
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_subscription_id="sub_inc",
     )
     await repo.upsert_usage_counters(
-        TEST_ORG_ID, sub.current_period_start, sub.current_period_end,
-        trace_count=5150, trace_eval_count=5000, session_eval_count=50,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        sub.current_period_end,
+        trace_count=5150,
+        trace_eval_count=5000,
+        session_eval_count=50,
     )
     await repo.update_reported_usage(
-        TEST_ORG_ID, sub.current_period_start,
-        reported_trace_count=5100, reported_trace_eval_count=5000,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        reported_trace_count=5100,
+        reported_trace_eval_count=5000,
         reported_session_eval_count=50,
     )
     await db_session.commit()
@@ -333,11 +355,17 @@ async def test_unreported_overages_below_base_returns_zero(db_session, redis_cli
     """Usage below the base limit produces zero overage regardless of watermark."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
-        TEST_ORG_ID, plan=SubscriptionPlan.PRO, stripe_subscription_id="sub_below",
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_subscription_id="sub_below",
     )
     await repo.upsert_usage_counters(
-        TEST_ORG_ID, sub.current_period_start, sub.current_period_end,
-        trace_count=4000, trace_eval_count=3000, session_eval_count=50,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        sub.current_period_end,
+        trace_count=4000,
+        trace_eval_count=3000,
+        session_eval_count=50,
     )
     await db_session.commit()
 
@@ -352,15 +380,23 @@ async def test_unreported_overages_cross_base_transition(db_session, redis_clien
     """Watermark below base (4800), current above base (5100) — delta = 100."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
-        TEST_ORG_ID, plan=SubscriptionPlan.PRO, stripe_subscription_id="sub_cross",
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_subscription_id="sub_cross",
     )
     await repo.upsert_usage_counters(
-        TEST_ORG_ID, sub.current_period_start, sub.current_period_end,
-        trace_count=5100, trace_eval_count=4000, session_eval_count=50,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        sub.current_period_end,
+        trace_count=5100,
+        trace_eval_count=4000,
+        session_eval_count=50,
     )
     await repo.update_reported_usage(
-        TEST_ORG_ID, sub.current_period_start,
-        reported_trace_count=4800, reported_trace_eval_count=4000,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        reported_trace_count=4800,
+        reported_trace_eval_count=4000,
         reported_session_eval_count=50,
     )
     await db_session.commit()
@@ -374,11 +410,17 @@ async def test_unreported_overages_billed_period_returns_zero(db_session, redis_
     """A billed usage record should produce zero overages."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
-        TEST_ORG_ID, plan=SubscriptionPlan.PRO, stripe_subscription_id="sub_billed",
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_subscription_id="sub_billed",
     )
     await repo.upsert_usage_counters(
-        TEST_ORG_ID, sub.current_period_start, sub.current_period_end,
-        trace_count=10000, trace_eval_count=10000, session_eval_count=500,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        sub.current_period_end,
+        trace_count=10000,
+        trace_eval_count=10000,
+        session_eval_count=500,
     )
     await repo.mark_billed(TEST_ORG_ID, sub.current_period_start, "inv_xxx")
     await db_session.commit()
@@ -393,8 +435,12 @@ async def test_unreported_overages_hobby_returns_zero(db_session, redis_client):
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(TEST_ORG_ID)
     await repo.upsert_usage_counters(
-        TEST_ORG_ID, sub.current_period_start, sub.current_period_end,
-        trace_count=200, trace_eval_count=200, session_eval_count=20,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        sub.current_period_end,
+        trace_count=200,
+        trace_eval_count=200,
+        session_eval_count=20,
     )
     await db_session.commit()
 
@@ -407,12 +453,18 @@ async def test_report_overages_advances_watermark(db_session, redis_client):
     """After reporting, the watermark should match the current usage snapshot."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
-        TEST_ORG_ID, plan=SubscriptionPlan.PRO,
-        stripe_customer_id="cus_test", stripe_subscription_id="sub_wm",
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_customer_id="cus_test",
+        stripe_subscription_id="sub_wm",
     )
     await repo.upsert_usage_counters(
-        TEST_ORG_ID, sub.current_period_start, sub.current_period_end,
-        trace_count=5200, trace_eval_count=5000, session_eval_count=50,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        sub.current_period_end,
+        trace_count=5200,
+        trace_eval_count=5000,
+        session_eval_count=50,
     )
     await db_session.commit()
 
@@ -435,12 +487,18 @@ async def test_report_overages_idempotent_on_second_call(db_session, redis_clien
     """Second call after watermark advance should be a no-op."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
-        TEST_ORG_ID, plan=SubscriptionPlan.PRO,
-        stripe_customer_id="cus_test2", stripe_subscription_id="sub_idem",
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_customer_id="cus_test2",
+        stripe_subscription_id="sub_idem",
     )
     await repo.upsert_usage_counters(
-        TEST_ORG_ID, sub.current_period_start, sub.current_period_end,
-        trace_count=5200, trace_eval_count=5000, session_eval_count=50,
+        TEST_ORG_ID,
+        sub.current_period_start,
+        sub.current_period_end,
+        trace_count=5200,
+        trace_eval_count=5000,
+        session_eval_count=50,
     )
     await db_session.commit()
 

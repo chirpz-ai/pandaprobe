@@ -24,15 +24,10 @@ from app.registry.settings import Environment, settings
 def _validate_stripe_settings() -> None:
     """Fail fast if Stripe keys are missing in staging/production."""
     if settings.APP_ENV in (Environment.STAGING, Environment.PRODUCTION):
-        missing = [
-            name
-            for name in ("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET")
-            if not getattr(settings, name, "")
-        ]
+        missing = [name for name in ("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET") if not getattr(settings, name, "")]
         if missing:
             raise RuntimeError(
-                f"Stripe configuration incomplete for {settings.APP_ENV.value}: "
-                f"missing {', '.join(missing)}"
+                f"Stripe configuration incomplete for {settings.APP_ENV.value}: missing {', '.join(missing)}"
             )
 
 

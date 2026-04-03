@@ -168,9 +168,7 @@ async def test_billing_repository_list_hobby_subscriptions_due_for_reset(db_sess
     assert due[0].org_id == billing_isolated_org
 
 
-async def test_billing_repository_list_paid_subscriptions_active_excludes_hobby(
-    db_session, billing_isolated_org
-):
+async def test_billing_repository_list_paid_subscriptions_active_excludes_hobby(db_session, billing_isolated_org):
     repo = BillingRepository(db_session)
     await db_session.execute(delete(UsageRecordModel).where(UsageRecordModel.org_id == TEST_ORG_ID))
     await db_session.execute(delete(SubscriptionModel).where(SubscriptionModel.org_id == TEST_ORG_ID))
@@ -241,9 +239,7 @@ async def test_get_subscription_returns_404_without_subscription(client: AsyncCl
 
 def _seed_user(db_session, uid: UUID, email: str) -> None:
     now = datetime.now(timezone.utc)
-    db_session.add(
-        UserModel(id=uid, external_id=f"ext-{uid}", email=email, display_name="U", created_at=now)
-    )
+    db_session.add(UserModel(id=uid, external_id=f"ext-{uid}", email=email, display_name="U", created_at=now))
 
 
 async def test_identity_hobby_blocks_adding_second_member(db_session):

@@ -379,11 +379,7 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
         org_id = project.org_id if project else None
 
         if org_id is not None:
-            category = (
-                UsageCategory.TRACE_EVALS
-                if monitor.target_type == "TRACE"
-                else UsageCategory.SESSION_EVALS
-            )
+            category = UsageCategory.TRACE_EVALS if monitor.target_type == "TRACE" else UsageCategory.SESSION_EVALS
             billable_units = run.total_targets * len(run.metric_names)
             redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
             try:

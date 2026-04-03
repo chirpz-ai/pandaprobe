@@ -60,18 +60,14 @@ class BillingRepository:
 
     async def get_subscription_by_stripe_subscription(self, stripe_subscription_id: str) -> Subscription | None:
         """Look up a subscription by Stripe subscription ID."""
-        stmt = select(SubscriptionModel).where(
-            SubscriptionModel.stripe_subscription_id == stripe_subscription_id
-        )
+        stmt = select(SubscriptionModel).where(SubscriptionModel.stripe_subscription_id == stripe_subscription_id)
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return self._to_subscription(row) if row else None
 
     async def update_subscription(self, org_id: UUID, **fields: object) -> Subscription | None:
         """Update subscription fields for an organization."""
         row = (
-            await self._session.execute(
-                select(SubscriptionModel).where(SubscriptionModel.org_id == org_id)
-            )
+            await self._session.execute(select(SubscriptionModel).where(SubscriptionModel.org_id == org_id))
         ).scalar_one_or_none()
         if row is None:
             return None
@@ -113,41 +109,30 @@ class BillingRepository:
 
     async def list_all_active_org_ids(self) -> list[UUID]:
         """Return org IDs for all active subscriptions (any plan)."""
-        stmt = (
-            select(SubscriptionModel.org_id)
-            .where(SubscriptionModel.status == SubscriptionStatus.ACTIVE.value)
-        )
+        stmt = select(SubscriptionModel.org_id).where(SubscriptionModel.status == SubscriptionStatus.ACTIVE.value)
         rows = (await self._session.execute(stmt)).scalars().all()
         return list(rows)
 
     async def list_paid_active_org_ids(self) -> list[UUID]:
         """Return org IDs for active paid subscriptions only."""
-        stmt = (
-            select(SubscriptionModel.org_id)
-            .where(
-                SubscriptionModel.plan != SubscriptionPlan.HOBBY.value,
-                SubscriptionModel.status == SubscriptionStatus.ACTIVE.value,
-            )
+        stmt = select(SubscriptionModel.org_id).where(
+            SubscriptionModel.plan != SubscriptionPlan.HOBBY.value,
+            SubscriptionModel.status == SubscriptionStatus.ACTIVE.value,
         )
         rows = (await self._session.execute(stmt)).scalars().all()
         return list(rows)
 
     async def list_hobby_org_ids_due_for_reset(self, now: datetime) -> list[UUID]:
         """Return org IDs for HOBBY subscriptions whose period has ended."""
-        stmt = (
-            select(SubscriptionModel.org_id)
-            .where(
-                SubscriptionModel.plan == SubscriptionPlan.HOBBY.value,
-                SubscriptionModel.status == SubscriptionStatus.ACTIVE.value,
-                SubscriptionModel.current_period_end <= now,
-            )
+        stmt = select(SubscriptionModel.org_id).where(
+            SubscriptionModel.plan == SubscriptionPlan.HOBBY.value,
+            SubscriptionModel.status == SubscriptionStatus.ACTIVE.value,
+            SubscriptionModel.current_period_end <= now,
         )
         rows = (await self._session.execute(stmt)).scalars().all()
         return list(rows)
 
-    async def advance_period(
-        self, org_id: UUID, new_start: datetime, new_end: datetime
-    ) -> None:
+    async def advance_period(self, org_id: UUID, new_start: datetime, new_end: datetime) -> None:
         """Move a subscription to a new billing period."""
         stmt = (
             update(SubscriptionModel)
@@ -198,10 +183,14 @@ class BillingRepository:
 
     async def get_unbilled_usage_records(self, org_id: UUID) -> list[UsageRecord]:
         """Return all un-billed usage records for an org."""
-        stmt = select(UsageRecordModel).where(
-            UsageRecordModel.org_id == org_id,
-            UsageRecordModel.billed.is_(False),
-        ).order_by(UsageRecordModel.period_start)
+        stmt = (
+            select(UsageRecordModel)
+            .where(
+                UsageRecordModel.org_id == org_id,
+                UsageRecordModel.billed.is_(False),
+            )
+            .order_by(UsageRecordModel.period_start)
+        )
         rows = (await self._session.execute(stmt)).scalars().all()
         return [self._to_usage(r) for r in rows]
 

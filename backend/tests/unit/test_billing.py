@@ -69,7 +69,6 @@ def test_get_limit_for_category_hobby() -> None:
     assert get_limit_for_category(plan, UsageCategory.SESSION_EVALS) == 10
 
 
-
 def test_get_limit_for_category_pro() -> None:
     plan = SubscriptionPlan.PRO
     assert get_limit_for_category(plan, UsageCategory.TRACES) == 5_000
