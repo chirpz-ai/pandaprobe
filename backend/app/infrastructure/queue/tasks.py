@@ -26,6 +26,7 @@ from sqlalchemy.pool import NullPool
 
 from app.infrastructure.queue.celery_app import celery
 from app.logging import logger
+from app.registry.exceptions import QuotaExceededError
 from app.registry.settings import settings
 
 _worker_engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
@@ -340,6 +341,12 @@ def process_single_monitor(self: Any, monitor_id: str, project_id: str) -> dict[
     """
     try:
         return asyncio.run(_process_single_monitor(monitor_id, project_id))
+    except QuotaExceededError:
+        logger.warning(
+            "process_single_monitor_quota_exceeded",
+            monitor_id=monitor_id,
+        )
+        return {"monitor_id": monitor_id, "status": "quota_exceeded"}
     except Exception as exc:
         logger.error("process_single_monitor_failed", monitor_id=monitor_id, error=str(exc))
         raise self.retry(exc=exc)
