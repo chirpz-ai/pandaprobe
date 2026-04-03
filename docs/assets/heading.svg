@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="100" viewBox="0 0 800 100">
+  <foreignObject x="0" y="0" width="800" height="100">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; text-align: center;">
+      <style>
+        .h1 { font-size: 32px; font-weight: 600; margin: 0 0 8px 0; line-height: 1.2; color: #1f2328; }
+        .h3 { font-size: 18px; font-weight: 400; margin: 0; color: #57606a; }
+        @media (prefers-color-scheme: dark) {
+          .h1 { color: #e6edf3; }
+          .h3 { color: #8b949e; }
+        }
+      </style>
+      <p class="h1">open source agent engineering platform</p>
+      <p class="h3">By Chirpz AI</p>
+    </div>
+  </foreignObject>
+</svg>
