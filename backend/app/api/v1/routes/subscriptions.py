@@ -83,6 +83,8 @@ class BillingResponse(BaseModel):
     trace_evals: CategoryBreakdown
     session_evals: CategoryBreakdown
     total_overage_cost: str
+    reported_overage_cost: str
+    pending_overage_cost: str
     estimated_total_cents: int
 
 
@@ -222,25 +224,24 @@ async def get_billing(
     usage_svc = UsageService(redis_client, session)
     summary = await usage_svc.get_current_usage(ctx.organization.id)
 
-    billing_svc = BillingService(session, redis_client=redis_client)
-    overages = await billing_svc.calculate_unreported_overages(ctx.organization.id)
-
     base_t = plan_cfg.base_traces or 0
     base_e = plan_cfg.base_trace_evals or 0
     base_s = plan_cfg.base_session_evals or 0
-
-    usage_record = await repo.get_current_usage_record(ctx.organization.id, sub.current_period_start)
-    already_reported_cost = Decimal("0")
-    if usage_record:
-        prev_t = max(0, usage_record.reported_trace_count - base_t)
-        prev_e = max(0, usage_record.reported_trace_eval_count - base_e)
-        prev_s = max(0, usage_record.reported_session_eval_count - base_s)
-        already_reported_cost = OVERAGE_UNIT_PRICE * (prev_t + prev_e + prev_s)
 
     total_t_over = max(0, summary.traces - base_t)
     total_e_over = max(0, summary.trace_evals - base_e)
     total_s_over = max(0, summary.session_evals - base_s)
     total_overage = OVERAGE_UNIT_PRICE * (total_t_over + total_e_over + total_s_over)
+
+    reported_overage = Decimal("0")
+    usage_record = await repo.get_current_usage_record(ctx.organization.id, sub.current_period_start)
+    if usage_record:
+        reported_overage = OVERAGE_UNIT_PRICE * (
+            max(0, usage_record.reported_trace_count - base_t)
+            + max(0, usage_record.reported_trace_eval_count - base_e)
+            + max(0, usage_record.reported_session_eval_count - base_s)
+        )
+    pending_overage = total_overage - reported_overage
 
     estimated_total_cents = plan_cfg.monthly_price_cents + int(total_overage * 100)
 
@@ -269,6 +270,8 @@ async def get_billing(
             overage_cost=str(OVERAGE_UNIT_PRICE * total_s_over),
         ),
         total_overage_cost=str(total_overage),
+        reported_overage_cost=str(reported_overage),
+        pending_overage_cost=str(pending_overage),
         estimated_total_cents=estimated_total_cents,
     )
 
@@ -305,11 +308,14 @@ async def get_invoices(
 
 
 @router.get("/plans", response_model=list[PlanInfo])
-async def get_plans() -> list[PlanInfo]:
+async def get_plans(
+    ctx: ApiContext = Depends(get_api_context),
+) -> list[PlanInfo]:
     """Return all available plans with their limits and pricing.
 
-    No auth required — public data for plan comparison UI.
+    Auth: `Bearer`
     """
+    _require_user(ctx)
     return [
         PlanInfo(
             name=plan.value,
