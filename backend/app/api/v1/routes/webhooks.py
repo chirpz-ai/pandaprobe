@@ -72,41 +72,44 @@ async def stripe_webhook(request: Request) -> JSONResponse:
         return JSONResponse(status_code=200, content={"received": True})
 
     redis_client = aioredis.Redis(connection_pool=redis_pool)
-    idempotency_key = f"{_IDEMPOTENCY_PREFIX}{event_id}"
-
-    already_processing = not await redis_client.set(
-        idempotency_key,
-        "1",
-        nx=True,
-        ex=_PROCESSING_LOCK_TTL,
-    )
-    if already_processing:
-        logger.info("stripe_webhook_duplicate", event_id=event_id, event_type=event_type)
-        return JSONResponse(status_code=200, content={"received": True})
-
     try:
-        async for session in get_db_session():
-            billing_svc = BillingService(session, redis_client=redis_client)
+        idempotency_key = f"{_IDEMPOTENCY_PREFIX}{event_id}"
 
-            match event_type:
-                case "checkout.session.completed":
-                    await billing_svc.handle_checkout_completed(event_data)
-                case "invoice.created":
-                    await billing_svc.handle_invoice_created(event_data)
-                case "invoice.paid":
-                    await billing_svc.handle_invoice_paid(event_data)
-                case "invoice.payment_failed":
-                    await billing_svc.handle_invoice_payment_failed(event_data)
-                case "customer.subscription.updated":
-                    await billing_svc.handle_subscription_updated(event_data)
-                case "customer.subscription.deleted":
-                    await billing_svc.handle_subscription_deleted(event_data)
-    except Exception:
-        await redis_client.delete(idempotency_key)
-        logger.exception("stripe_webhook_failed", event_type=event_type, event_id=event_id)
-        raise
+        already_processing = not await redis_client.set(
+            idempotency_key,
+            "1",
+            nx=True,
+            ex=_PROCESSING_LOCK_TTL,
+        )
+        if already_processing:
+            logger.info("stripe_webhook_duplicate", event_id=event_id, event_type=event_type)
+            return JSONResponse(status_code=200, content={"received": True})
 
-    await redis_client.expire(idempotency_key, _IDEMPOTENCY_TTL)
+        try:
+            async for session in get_db_session():
+                billing_svc = BillingService(session, redis_client=redis_client)
 
-    logger.info("stripe_webhook_processed", event_type=event_type, event_id=event_id)
-    return JSONResponse(status_code=200, content={"received": True})
+                match event_type:
+                    case "checkout.session.completed":
+                        await billing_svc.handle_checkout_completed(event_data)
+                    case "invoice.created":
+                        await billing_svc.handle_invoice_created(event_data)
+                    case "invoice.paid":
+                        await billing_svc.handle_invoice_paid(event_data)
+                    case "invoice.payment_failed":
+                        await billing_svc.handle_invoice_payment_failed(event_data)
+                    case "customer.subscription.updated":
+                        await billing_svc.handle_subscription_updated(event_data)
+                    case "customer.subscription.deleted":
+                        await billing_svc.handle_subscription_deleted(event_data)
+        except Exception:
+            await redis_client.delete(idempotency_key)
+            logger.exception("stripe_webhook_failed", event_type=event_type, event_id=event_id)
+            raise
+
+        await redis_client.expire(idempotency_key, _IDEMPOTENCY_TTL)
+
+        logger.info("stripe_webhook_processed", event_type=event_type, event_id=event_id)
+        return JSONResponse(status_code=200, content={"received": True})
+    finally:
+        await redis_client.aclose()
