@@ -149,9 +149,7 @@ class UsageService:
             raise QuotaExceededError("No active subscription found for this organization.")
         plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
         if not plan_cfg.monitoring_allowed:
-            raise QuotaExceededError(
-                f"Monitoring is not available on your {sub.plan} plan. Please upgrade."
-            )
+            raise QuotaExceededError(f"Monitoring is not available on your {sub.plan} plan. Please upgrade.")
 
     async def sync_to_database(self, org_id: UUID) -> None:
         """Persist Redis counters into the ``usage_records`` table."""
