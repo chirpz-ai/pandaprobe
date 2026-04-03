@@ -21,6 +21,7 @@ from app.infrastructure.redis.client import get_redis
 from app.registry.constants import SubscriptionPlan, SubscriptionStatus
 from app.registry.exceptions import AuthenticationError, NotFoundError, ValidationError
 from app.services.billing_service import BillingService
+from app.services.identity_service import IdentityService
 from app.services.usage_service import UsageService
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
@@ -343,6 +344,7 @@ async def create_checkout(
     Auth: `Bearer` - role: `OWNER` or `ADMIN`
     """
     _require_user(ctx)
+    await IdentityService(session).require_admin(ctx.user.id, ctx.organization.id)
     if body.plan not in (SubscriptionPlan.PRO, SubscriptionPlan.STARTUP):
         raise ValidationError("Checkout is only available for PRO and STARTUP plans.")
 
@@ -367,6 +369,7 @@ async def create_portal(
     Auth: `Bearer` - role: `OWNER` or `ADMIN`
     """
     _require_user(ctx)
+    await IdentityService(session).require_admin(ctx.user.id, ctx.organization.id)
     billing_svc = BillingService(session)
     url = await billing_svc.create_portal_session(
         org_id=ctx.organization.id,
