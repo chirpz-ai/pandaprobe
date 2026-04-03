@@ -75,7 +75,10 @@ async def stripe_webhook(request: Request) -> JSONResponse:
     idempotency_key = f"{_IDEMPOTENCY_PREFIX}{event_id}"
 
     already_processing = not await redis_client.set(
-        idempotency_key, "1", nx=True, ex=_PROCESSING_LOCK_TTL,
+        idempotency_key,
+        "1",
+        nx=True,
+        ex=_PROCESSING_LOCK_TTL,
     )
     if already_processing:
         logger.info("stripe_webhook_duplicate", event_id=event_id, event_type=event_type)

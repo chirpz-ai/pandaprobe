@@ -894,7 +894,10 @@ class EvalService:
         """Commit and dispatch a previously prepared monitor-triggered run."""
         await self._session.commit()
         self._dispatch_monitor_run(
-            prepared.target_type, prepared.run.id, prepared.project_id, prepared.target_ids,
+            prepared.target_type,
+            prepared.run.id,
+            prepared.project_id,
+            prepared.target_ids,
         )
         logger.info("monitor_triggered", run_id=str(prepared.run.id))
         return prepared.run
