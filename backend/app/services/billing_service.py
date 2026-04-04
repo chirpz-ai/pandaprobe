@@ -218,26 +218,32 @@ class BillingService:
 
         items: list[tuple[str, int, Decimal, str]] = []
         if overages.trace_overage > 0:
-            items.append((
-                "Trace overage",
-                overages.trace_overage,
-                overages.trace_overage_cost,
-                f"traces:{overages.snapshot_trace_count}",
-            ))
+            items.append(
+                (
+                    "Trace overage",
+                    overages.trace_overage,
+                    overages.trace_overage_cost,
+                    f"traces:{overages.snapshot_trace_count}",
+                )
+            )
         if overages.trace_eval_overage > 0:
-            items.append((
-                "Trace eval overage",
-                overages.trace_eval_overage,
-                overages.trace_eval_overage_cost,
-                f"trace_evals:{overages.snapshot_trace_eval_count}",
-            ))
+            items.append(
+                (
+                    "Trace eval overage",
+                    overages.trace_eval_overage,
+                    overages.trace_eval_overage_cost,
+                    f"trace_evals:{overages.snapshot_trace_eval_count}",
+                )
+            )
         if overages.session_eval_overage > 0:
-            items.append((
-                "Session eval overage",
-                overages.session_eval_overage,
-                overages.session_eval_overage_cost,
-                f"session_evals:{overages.snapshot_session_eval_count}",
-            ))
+            items.append(
+                (
+                    "Session eval overage",
+                    overages.session_eval_overage,
+                    overages.session_eval_overage_cost,
+                    f"session_evals:{overages.snapshot_session_eval_count}",
+                )
+            )
 
         for description, qty, cost, key_suffix in items:
             amount_cents = int((cost * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
