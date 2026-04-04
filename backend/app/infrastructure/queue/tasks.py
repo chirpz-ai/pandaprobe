@@ -952,6 +952,7 @@ async def _reset_single_hobby_org(org_id_str: str) -> dict[str, str]:
 
         await billing_repo.advance_period(org_id, new_start, new_end)
         await billing_repo.create_usage_record(org_id, new_start, new_end)
+        await session.commit()
 
         redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
         try:
@@ -960,7 +961,5 @@ async def _reset_single_hobby_org(org_id_str: str) -> dict[str, str]:
             await usage_svc.invalidate_subscription_cache(org_id)
         finally:
             await redis_client.aclose()
-
-        await session.commit()
 
     return {"org_id": org_id_str, "status": "reset"}
