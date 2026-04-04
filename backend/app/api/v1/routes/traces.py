@@ -285,47 +285,49 @@ async def ingest_trace(
     """
     usage_svc = UsageService(redis_client, session)
     await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.TRACES)
-
-    trace = Trace(
-        trace_id=body.trace_id,
-        project_id=ctx.project.id,
-        name=body.name,
-        status=body.status,
-        input=body.input,
-        output=body.output,
-        metadata=body.metadata,
-        started_at=body.started_at,
-        ended_at=body.ended_at,
-        session_id=body.session_id,
-        user_id=body.user_id,
-        tags=body.tags,
-        environment=body.environment,
-        release=body.release,
-        spans=[
-            Span(
-                span_id=s.span_id,
-                trace_id=body.trace_id,
-                parent_span_id=s.parent_span_id,
-                name=s.name,
-                kind=s.kind,
-                status=s.status,
-                input=s.input,
-                output=s.output,
-                model=s.model,
-                token_usage=s.token_usage,
-                metadata=s.metadata,
-                started_at=s.started_at,
-                ended_at=s.ended_at,
-                error=s.error,
-                completion_start_time=s.completion_start_time,
-                model_parameters=s.model_parameters,
-                cost=s.cost,
-            )
-            for s in body.spans
-        ],
-    )
-
-    task_id = TraceService.enqueue_trace(trace)
+    try:
+        trace = Trace(
+            trace_id=body.trace_id,
+            project_id=ctx.project.id,
+            name=body.name,
+            status=body.status,
+            input=body.input,
+            output=body.output,
+            metadata=body.metadata,
+            started_at=body.started_at,
+            ended_at=body.ended_at,
+            session_id=body.session_id,
+            user_id=body.user_id,
+            tags=body.tags,
+            environment=body.environment,
+            release=body.release,
+            spans=[
+                Span(
+                    span_id=s.span_id,
+                    trace_id=body.trace_id,
+                    parent_span_id=s.parent_span_id,
+                    name=s.name,
+                    kind=s.kind,
+                    status=s.status,
+                    input=s.input,
+                    output=s.output,
+                    model=s.model,
+                    token_usage=s.token_usage,
+                    metadata=s.metadata,
+                    started_at=s.started_at,
+                    ended_at=s.ended_at,
+                    error=s.error,
+                    completion_start_time=s.completion_start_time,
+                    model_parameters=s.model_parameters,
+                    cost=s.cost,
+                )
+                for s in body.spans
+            ],
+        )
+        task_id = TraceService.enqueue_trace(trace)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACES)
+        raise
     return TraceAccepted(trace_id=trace.trace_id, task_id=task_id)
 
 

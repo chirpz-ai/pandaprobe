@@ -393,14 +393,13 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
         try:
             usage_svc = UsageService(redis_client, session)
             await usage_svc.check_and_increment(project.org_id, category, count=billable_units)
-
-            now = datetime.now(timezone.utc)
-            await eval_repo.advance_monitor(
-                mid,
-                last_run_at=now,
-                last_run_id=run.id,
-            )
             try:
+                now = datetime.now(timezone.utc)
+                await eval_repo.advance_monitor(
+                    mid,
+                    last_run_at=now,
+                    last_run_id=run.id,
+                )
                 await session.commit()
             except Exception:
                 await usage_svc.rollback_increment(project.org_id, category, count=billable_units)
