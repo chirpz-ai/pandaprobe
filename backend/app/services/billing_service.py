@@ -448,9 +448,12 @@ class BillingService:
                         price_id=price_id,
                     )
 
-        cancel_at = obj.get("cancel_at")
-        if cancel_at:
-            updates["canceled_at"] = datetime.fromtimestamp(cancel_at, tz=timezone.utc)
+        stripe_canceled_at = obj.get("canceled_at")
+        updates["canceled_at"] = (
+            datetime.fromtimestamp(stripe_canceled_at, tz=timezone.utc)
+            if stripe_canceled_at
+            else None
+        )
 
         period_start = obj.get("current_period_start")
         period_end = obj.get("current_period_end")
