@@ -19,7 +19,7 @@ import stripe
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from app.infrastructure.db.engine import get_db_session
+from app.infrastructure.db.engine import async_session_factory
 from app.infrastructure.redis.client import redis_pool
 from app.logging import logger
 from app.registry.settings import settings
@@ -86,7 +86,7 @@ async def stripe_webhook(request: Request) -> JSONResponse:
             return JSONResponse(status_code=200, content={"received": True})
 
         try:
-            async for session in get_db_session():
+            async with async_session_factory() as session:
                 billing_svc = BillingService(session, redis_client=redis_client)
 
                 match event_type:

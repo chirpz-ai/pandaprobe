@@ -59,16 +59,24 @@ class BillingService:
         _ensure_stripe_configured()
 
     async def _warm_sub_cache(self, org_id: UUID) -> None:
-        """Re-read the subscription from DB and write it into the Redis cache."""
+        """Best-effort: re-read subscription from DB and write to Redis cache.
+
+        Exceptions are swallowed so a cache failure after a successful
+        DB commit never propagates to the caller (which would delete the
+        webhook idempotency key and trigger a spurious Stripe retry).
+        """
         if self._redis is None:
             return
-        cache_key = f"{SUB_CACHE_PREFIX}{org_id}"
-        sub = await self._repo.get_subscription_by_org(org_id)
-        if sub is None:
-            await self._redis.delete(cache_key)
-            return
-        payload = sub.model_dump(mode="json")
-        await self._redis.set(cache_key, json.dumps(payload), ex=SUB_CACHE_TTL)
+        try:
+            cache_key = f"{SUB_CACHE_PREFIX}{org_id}"
+            sub = await self._repo.get_subscription_by_org(org_id)
+            if sub is None:
+                await self._redis.delete(cache_key)
+                return
+            payload = sub.model_dump(mode="json")
+            await self._redis.set(cache_key, json.dumps(payload), ex=SUB_CACHE_TTL)
+        except Exception:
+            logger.warning("warm_sub_cache_failed", org_id=str(org_id))
 
     # -- Overage lock ---------------------------------------------------------
 
@@ -191,10 +199,10 @@ class BillingService:
         """Create Stripe InvoiceItems for the unreported overage delta.
 
         Ordering: Stripe items are created **before** the watermark is
-        advanced.  If the DB commit fails after Stripe items exist, the
-        next run re-creates the same delta (small, observable over-charge
-        that self-corrects).  The reverse (watermark advanced, Stripe
-        call fails) would silently lose revenue — hence this ordering.
+        advanced.  Each ``InvoiceItem.create`` call carries a
+        deterministic ``idempotency_key`` derived from the org, period,
+        category, and snapshot count so that a retry with the same
+        watermark state is a no-op at Stripe's end (24-hour window).
 
         Returns ``True`` when items were created.
         """
@@ -206,21 +214,39 @@ class BillingService:
         if overages.total_cost <= 0:
             return False
 
-        items: list[tuple[str, int, Decimal]] = []
-        if overages.trace_overage > 0:
-            items.append(("Trace overage", overages.trace_overage, overages.trace_overage_cost))
-        if overages.trace_eval_overage > 0:
-            items.append(("Trace eval overage", overages.trace_eval_overage, overages.trace_eval_overage_cost))
-        if overages.session_eval_overage > 0:
-            items.append(("Session eval overage", overages.session_eval_overage, overages.session_eval_overage_cost))
+        period_ts = int(sub.current_period_start.timestamp())
 
-        for description, qty, cost in items:
+        items: list[tuple[str, int, Decimal, str]] = []
+        if overages.trace_overage > 0:
+            items.append((
+                "Trace overage",
+                overages.trace_overage,
+                overages.trace_overage_cost,
+                f"traces:{overages.snapshot_trace_count}",
+            ))
+        if overages.trace_eval_overage > 0:
+            items.append((
+                "Trace eval overage",
+                overages.trace_eval_overage,
+                overages.trace_eval_overage_cost,
+                f"trace_evals:{overages.snapshot_trace_eval_count}",
+            ))
+        if overages.session_eval_overage > 0:
+            items.append((
+                "Session eval overage",
+                overages.session_eval_overage,
+                overages.session_eval_overage_cost,
+                f"session_evals:{overages.snapshot_session_eval_count}",
+            ))
+
+        for description, qty, cost, key_suffix in items:
             amount_cents = int((cost * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
             stripe.InvoiceItem.create(
                 customer=sub.stripe_customer_id,
                 amount=amount_cents,
                 currency="usd",
                 description=f"{description} ({qty} units @ ${OVERAGE_UNIT_PRICE}/unit)",
+                idempotency_key=f"pp:overage:{org_id}:{period_ts}:{key_suffix}",
             )
 
         await self._repo.update_reported_usage(
@@ -315,6 +341,8 @@ class BillingService:
                 await self._session.commit()
             finally:
                 await self.release_overage_lock(sub.org_id)
+        else:
+            await self._session.commit()
 
         logger.info("invoice_created_overages_synced", org_id=str(sub.org_id))
 
