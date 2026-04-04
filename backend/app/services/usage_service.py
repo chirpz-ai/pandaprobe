@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.billing.entities import Subscription, UsageSummary
 from app.core.billing.plans import get_limit_for_category, get_plan_config
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
+from app.logging import logger
 from app.registry.constants import (
     SUB_CACHE_PREFIX,
     SUB_CACHE_TTL,
@@ -106,6 +107,26 @@ class UsageService:
             )
 
         return int(new_val)
+
+    async def rollback_increment(
+        self,
+        org_id: UUID,
+        category: UsageCategory | str,
+        count: int = 1,
+    ) -> None:
+        """Best-effort compensating decrement after a failed downstream operation.
+
+        Swallows exceptions so a Redis hiccup never masks the original error.
+        """
+        try:
+            category = UsageCategory(category)
+            sub = await self._get_subscription_cached(org_id)
+            if sub is None:
+                return
+            usage_key = self._usage_key(org_id, sub.current_period_start)
+            await self._redis.hincrby(usage_key, category.value, -count)  # type: ignore[union-attr]
+        except Exception:
+            logger.warning("rollback_increment_failed", org_id=str(org_id), category=str(category), count=count)
 
     async def get_current_usage(self, org_id: UUID) -> UsageSummary:
         """Return a snapshot of the current period's usage."""

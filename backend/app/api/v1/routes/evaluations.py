@@ -493,12 +493,13 @@ async def create_eval_run(
         name=body.name,
     )
     usage_svc = UsageService(redis_client, session)
-    await usage_svc.check_and_increment(
-        ctx.organization.id,
-        UsageCategory.TRACE_EVALS,
-        count=prepared.run.total_targets * len(body.metrics),
-    )
-    run = await svc.dispatch_run(prepared)
+    billable = prepared.run.total_targets * len(body.metrics)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -530,12 +531,13 @@ async def create_batch_eval_run(
         name=body.name,
     )
     usage_svc = UsageService(redis_client, session)
-    await usage_svc.check_and_increment(
-        ctx.organization.id,
-        UsageCategory.TRACE_EVALS,
-        count=prepared.run.total_targets * len(body.metrics),
-    )
-    run = await svc.dispatch_run(prepared)
+    billable = prepared.run.total_targets * len(body.metrics)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -624,12 +626,12 @@ async def retry_failed_eval_run(
         else prepared.run.total_targets * len(prepared.run.metric_names)
     )
     usage_svc = UsageService(redis_client, session)
-    await usage_svc.check_and_increment(
-        ctx.organization.id,
-        UsageCategory.TRACE_EVALS,
-        count=billable,
-    )
-    run = await svc.dispatch_run(prepared)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -1002,12 +1004,13 @@ async def create_session_eval_run(
         signal_weights=body.signal_weights,
     )
     usage_svc = UsageService(redis_client, session)
-    await usage_svc.check_and_increment(
-        ctx.organization.id,
-        UsageCategory.SESSION_EVALS,
-        count=prepared.run.total_targets * len(body.metrics),
-    )
-    run = await svc.dispatch_run(prepared)
+    billable = prepared.run.total_targets * len(body.metrics)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -1036,12 +1039,13 @@ async def create_batch_session_eval_run(
         signal_weights=body.signal_weights,
     )
     usage_svc = UsageService(redis_client, session)
-    await usage_svc.check_and_increment(
-        ctx.organization.id,
-        UsageCategory.SESSION_EVALS,
-        count=prepared.run.total_targets * len(body.metrics),
-    )
-    run = await svc.dispatch_run(prepared)
+    billable = prepared.run.total_targets * len(body.metrics)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -1121,12 +1125,13 @@ async def retry_failed_session_eval_run(
     svc = EvalService(session)
     prepared = await svc.prepare_retry_failed_session_run(run_id, ctx.project.id)
     usage_svc = UsageService(redis_client, session)
-    await usage_svc.check_and_increment(
-        ctx.organization.id,
-        UsageCategory.SESSION_EVALS,
-        count=prepared.run.total_targets * len(prepared.run.metric_names),
-    )
-    run = await svc.dispatch_run(prepared)
+    billable = prepared.run.total_targets * len(prepared.run.metric_names)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -1667,12 +1672,13 @@ async def trigger_monitor(
     prepared = await svc.prepare_trigger_monitor(monitor_id, ctx.project.id)
     category = UsageCategory.TRACE_EVALS if prepared.target_type == "TRACE" else UsageCategory.SESSION_EVALS
     usage_svc = UsageService(redis_client, session)
-    await usage_svc.check_and_increment(
-        ctx.organization.id,
-        category,
-        count=prepared.run.total_targets * len(prepared.run.metric_names),
-    )
-    run = await svc.dispatch_trigger_monitor(prepared)
+    billable = prepared.run.total_targets * len(prepared.run.metric_names)
+    await usage_svc.check_and_increment(ctx.organization.id, category, count=billable)
+    try:
+        run = await svc.dispatch_trigger_monitor(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, category, count=billable)
+        raise
     return _run_to_detail(run)
 
 

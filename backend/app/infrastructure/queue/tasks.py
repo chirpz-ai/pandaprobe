@@ -393,16 +393,20 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
         try:
             usage_svc = UsageService(redis_client, session)
             await usage_svc.check_and_increment(project.org_id, category, count=billable_units)
+
+            now = datetime.now(timezone.utc)
+            await eval_repo.advance_monitor(
+                mid,
+                last_run_at=now,
+                last_run_id=run.id,
+            )
+            try:
+                await session.commit()
+            except Exception:
+                await usage_svc.rollback_increment(project.org_id, category, count=billable_units)
+                raise
         finally:
             await redis_client.aclose()
-
-        now = datetime.now(timezone.utc)
-        await eval_repo.advance_monitor(
-            mid,
-            last_run_at=now,
-            last_run_id=run.id,
-        )
-        await session.commit()
 
         svc._dispatch_monitor_run(monitor.target_type, run.id, monitor.project_id, target_ids)
 
@@ -410,7 +414,7 @@ async def _process_single_monitor(monitor_id: str, project_id: str) -> dict[str,
             "monitor_run_spawned",
             monitor_id=monitor_id,
             run_id=str(run.id),
-            billable_units=run.total_targets * len(run.metric_names),
+            billable_units=billable_units,
         )
         return {"monitor_id": monitor_id, "status": "spawned", "run_id": str(run.id)}
 
