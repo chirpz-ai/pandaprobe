@@ -275,7 +275,6 @@ async def ingest_trace(
     body: TraceCreate,
     ctx: ApiContext = Depends(require_project),
     redis_client: aioredis.Redis = Depends(get_redis),
-    session: AsyncSession = Depends(get_db_session),
 ) -> TraceAccepted:
     """Accept a trace payload for asynchronous persistence (upsert).
 
@@ -283,7 +282,7 @@ async def ingest_trace(
 
     Rate limit: `100/min`
     """
-    usage_svc = UsageService(redis_client, session)
+    usage_svc = UsageService(redis_client)
     await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.TRACES)
 
     trace = Trace(
