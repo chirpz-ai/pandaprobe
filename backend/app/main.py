@@ -15,14 +15,26 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.api.middleware import RequestContextMiddleware
 from app.api.rate_limit import limiter
 from app.api.v1.router import v1_router
+from app.infrastructure.redis.client import close_redis_pool
 from app.logging import logger
 from app.registry.exceptions import PandaProbeError
-from app.registry.settings import settings
+from app.registry.settings import Environment, settings
+
+
+def _validate_stripe_settings() -> None:
+    """Fail fast if Stripe keys are missing in staging/production."""
+    if settings.APP_ENV in (Environment.STAGING, Environment.PRODUCTION):
+        missing = [name for name in ("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET") if not getattr(settings, name, "")]
+        if missing:
+            raise RuntimeError(
+                f"Stripe configuration incomplete for {settings.APP_ENV.value}: missing {', '.join(missing)}"
+            )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle startup and shutdown lifecycle events."""
+    _validate_stripe_settings()
     logger.info(
         "application_startup",
         project=settings.PROJECT_NAME,
@@ -30,6 +42,7 @@ async def lifespan(app: FastAPI):
         environment=settings.APP_ENV.value,
     )
     yield
+    await close_redis_pool()
     logger.info("application_shutdown")
 
 

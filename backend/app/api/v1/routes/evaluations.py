@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +30,7 @@ from app.core.evals.metrics import (
     list_session_metrics,
 )
 from app.infrastructure.db.engine import get_db_session
+from app.infrastructure.redis.client import get_redis
 from app.registry.constants import (
     AnalyticsGranularity,
     EvaluationStatus,
@@ -37,8 +39,10 @@ from app.registry.constants import (
     ScoreSource,
     ScoreStatus,
     TraceStatus,
+    UsageCategory,
 )
 from app.services.eval_service import EvalService
+from app.services.usage_service import UsageService
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
@@ -192,7 +196,7 @@ class EvalRunResponse(BaseModel):
     name: str | None
     status: EvaluationStatus
     metric_names: list[str]
-    total_traces: int
+    total_targets: int
     evaluated_count: int
     failed_count: int
     created_at: str
@@ -447,6 +451,7 @@ async def create_eval_run(
     body: CreateEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Create a filtered eval run.
 
@@ -479,7 +484,7 @@ async def create_eval_run(
     """
     svc = EvalService(session)
     filters_dict = body.filters.model_dump(exclude_none=True)
-    run = await svc.create_eval_run(
+    prepared = await svc.prepare_eval_run(
         project_id=ctx.project.id,
         metric_names=body.metrics,
         filters=filters_dict,
@@ -487,6 +492,14 @@ async def create_eval_run(
         model=body.model,
         name=body.name,
     )
+    usage_svc = UsageService(redis_client, session)
+    billable = prepared.run.total_targets * len(body.metrics)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -497,6 +510,7 @@ async def create_batch_eval_run(
     body: CreateBatchEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Create an eval run for an explicit list of trace IDs.
 
@@ -509,13 +523,21 @@ async def create_batch_eval_run(
     Rate limit: ``50/min``
     """
     svc = EvalService(session)
-    run = await svc.create_batch_eval_run(
+    prepared = await svc.prepare_batch_eval_run(
         project_id=ctx.project.id,
         trace_ids=body.trace_ids,
         metric_names=body.metrics,
         model=body.model,
         name=body.name,
     )
+    usage_svc = UsageService(redis_client, session)
+    billable = prepared.run.total_targets * len(body.metrics)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -584,6 +606,7 @@ async def retry_failed_eval_run(
     run_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Retry failed metrics from a completed eval run.
 
@@ -596,7 +619,19 @@ async def retry_failed_eval_run(
     Rate limit: ``50/min``
     """
     svc = EvalService(session)
-    run = await svc.retry_failed_run(run_id, ctx.project.id)
+    prepared = await svc.prepare_retry_failed_run(run_id, ctx.project.id)
+    billable = (
+        sum(len(metrics) for metrics in prepared.trace_metric_map.values())
+        if prepared.trace_metric_map
+        else prepared.run.total_targets * len(prepared.run.metric_names)
+    )
+    usage_svc = UsageService(redis_client, session)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -858,7 +893,7 @@ def _run_to_detail(run) -> EvalRunResponse:
         name=run.name,
         status=run.status,
         metric_names=run.metric_names,
-        total_traces=run.total_traces,
+        total_targets=run.total_targets,
         evaluated_count=run.evaluated_count,
         failed_count=run.failed_count,
         created_at=run.created_at.isoformat(),
@@ -945,6 +980,7 @@ async def create_session_eval_run(
     body: CreateSessionEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Create a filter-based session eval run.
 
@@ -958,7 +994,7 @@ async def create_session_eval_run(
     """
     svc = EvalService(session)
     filters_dict = body.filters.model_dump(exclude_none=True)
-    run = await svc.create_session_eval_run(
+    prepared = await svc.prepare_session_eval_run(
         project_id=ctx.project.id,
         metric_names=body.metrics,
         filters=filters_dict,
@@ -967,6 +1003,14 @@ async def create_session_eval_run(
         name=body.name,
         signal_weights=body.signal_weights,
     )
+    usage_svc = UsageService(redis_client, session)
+    billable = prepared.run.total_targets * len(body.metrics)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -977,6 +1021,7 @@ async def create_batch_session_eval_run(
     body: CreateBatchSessionEvalRunRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Create a session eval run for explicit session IDs.
 
@@ -985,7 +1030,7 @@ async def create_batch_session_eval_run(
     Rate limit: ``50/min``
     """
     svc = EvalService(session)
-    run = await svc.create_batch_session_eval_run(
+    prepared = await svc.prepare_batch_session_eval_run(
         project_id=ctx.project.id,
         session_ids=body.session_ids,
         metric_names=body.metrics,
@@ -993,6 +1038,14 @@ async def create_batch_session_eval_run(
         name=body.name,
         signal_weights=body.signal_weights,
     )
+    usage_svc = UsageService(redis_client, session)
+    billable = prepared.run.total_targets * len(body.metrics)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -1057,6 +1110,7 @@ async def retry_failed_session_eval_run(
     run_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Retry failed metrics from a completed session eval run.
 
@@ -1069,7 +1123,15 @@ async def retry_failed_session_eval_run(
     Rate limit: ``50/min``
     """
     svc = EvalService(session)
-    run = await svc.retry_failed_session_run(run_id, ctx.project.id)
+    prepared = await svc.prepare_retry_failed_session_run(run_id, ctx.project.id)
+    usage_svc = UsageService(redis_client, session)
+    billable = prepared.run.total_targets * len(prepared.run.metric_names)
+    await usage_svc.check_and_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+    try:
+        run = await svc.dispatch_run(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
+        raise
     return _run_to_detail(run)
 
 
@@ -1436,6 +1498,7 @@ async def create_monitor(
     body: CreateMonitorRequest,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> MonitorResponse:
     """Create an evaluation monitor that spawns eval runs on a recurring schedule.
 
@@ -1473,6 +1536,9 @@ async def create_monitor(
 
     Auth: ``Bearer`` + ``X-Project-ID`` | ``X-API-Key`` + ``X-Project-Name``
     """
+    usage_svc = UsageService(redis_client, session)
+    await usage_svc.require_monitoring_allowed(ctx.organization.id)
+
     svc = EvalService(session)
     monitor = await svc.create_monitor(
         project_id=ctx.project.id,
@@ -1594,6 +1660,7 @@ async def trigger_monitor(
     monitor_id: UUID,
     ctx: ApiContext = Depends(require_project),
     session: AsyncSession = Depends(get_db_session),
+    redis_client: aioredis.Redis = Depends(get_redis),
 ) -> EvalRunResponse:
     """Force an immediate eval run from a monitor, ignoring cadence.
 
@@ -1602,7 +1669,16 @@ async def trigger_monitor(
     Rate limit: ``10/min``
     """
     svc = EvalService(session)
-    run = await svc.trigger_monitor(monitor_id, ctx.project.id)
+    prepared = await svc.prepare_trigger_monitor(monitor_id, ctx.project.id)
+    category = UsageCategory.TRACE_EVALS if prepared.target_type == "TRACE" else UsageCategory.SESSION_EVALS
+    usage_svc = UsageService(redis_client, session)
+    billable = prepared.run.total_targets * len(prepared.run.metric_names)
+    await usage_svc.check_and_increment(ctx.organization.id, category, count=billable)
+    try:
+        run = await svc.dispatch_trigger_monitor(prepared)
+    except Exception:
+        await usage_svc.rollback_increment(ctx.organization.id, category, count=billable)
+        raise
     return _run_to_detail(run)
 
 

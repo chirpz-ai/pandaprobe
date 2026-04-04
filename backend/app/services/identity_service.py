@@ -9,11 +9,19 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.billing.plans import get_plan_config
 from app.core.identity.entities import APIKey, Membership, Organization, Project
+from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
-from app.registry.constants import MembershipRole, sanitize_text, validate_resource_name
-from app.registry.exceptions import AuthorizationError, ConflictError, NotFoundError, ValidationError
+from app.registry.constants import MembershipRole, SubscriptionPlan, sanitize_text, validate_resource_name
+from app.registry.exceptions import (
+    AuthorizationError,
+    ConflictError,
+    NotFoundError,
+    QuotaExceededError,
+    ValidationError,
+)
 from app.registry.security import generate_api_key, hash_api_key, key_prefix
 
 
@@ -22,8 +30,10 @@ class IdentityService:
 
     def __init__(self, session: AsyncSession) -> None:
         """Initialise with an async database session."""
+        self._session = session
         self._repo = IdentityRepository(session)
         self._project_repo = ProjectRepository(session)
+        self._billing_repo = BillingRepository(session)
 
     # -- organization ---------------------------------------------------------
 
@@ -36,6 +46,14 @@ class IdentityService:
 
         org = await self._repo.create_organization(name=clean)
         await self._repo.create_membership(user_id=owner_id, org_id=org.id, role=MembershipRole.OWNER)
+
+        sub = await self._billing_repo.create_subscription(org_id=org.id)
+        await self._billing_repo.create_usage_record(
+            org_id=org.id,
+            period_start=sub.current_period_start,
+            period_end=sub.current_period_end,
+        )
+
         return org
 
     async def get_organization(self, org_id: UUID) -> Organization:
@@ -110,6 +128,17 @@ class IdentityService:
         existing = await self._repo.get_membership(user_id, org_id)
         if existing:
             raise ConflictError("User is already a member of this organization.")
+
+        subscription = await self._billing_repo.get_subscription_by_org(org_id)
+        if subscription:
+            plan_cfg = get_plan_config(SubscriptionPlan(subscription.plan))
+            if plan_cfg.max_members is not None:
+                current_count = await self._billing_repo.count_org_members(org_id)
+                if current_count >= plan_cfg.max_members:
+                    raise QuotaExceededError(
+                        f"Your {subscription.plan} plan allows up to {plan_cfg.max_members} member(s). Please upgrade."
+                    )
+
         return await self._repo.create_membership(user_id=user_id, org_id=org_id, role=role)
 
     async def update_member_role(

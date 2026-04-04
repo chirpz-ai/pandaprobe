@@ -7,6 +7,7 @@ filtered set of traces.  Each metric + trace pair produces a
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -108,7 +109,7 @@ class EvalRun(BaseModel):
     model: str | None = None
     monitor_id: UUID | None = None
     status: EvaluationStatus = EvaluationStatus.PENDING
-    total_traces: int = 0
+    total_targets: int = 0
     evaluated_count: int = 0
     failed_count: int = 0
     error_message: str | None = None
@@ -135,3 +136,19 @@ class EvalMonitor(BaseModel):
     next_run_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass
+class PreparedRun:
+    """An eval run that has been validated and added to the DB session but not yet committed.
+
+    The caller is expected to perform quota checks between ``prepare_*``
+    and ``dispatch_run``.  If the quota check fails the session can be
+    rolled back and no Celery task will ever fire.
+    """
+
+    run: EvalRun
+    project_id: UUID
+    target_ids: list[str]
+    target_type: str
+    trace_metric_map: dict[str, list[str]] | None = field(default=None)

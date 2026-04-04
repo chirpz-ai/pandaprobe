@@ -144,11 +144,48 @@ class MonitorCadence(StrEnum):
     CUSTOM = "custom"
 
 
+class SubscriptionPlan(StrEnum):
+    """Tier of an organization's subscription."""
+
+    HOBBY = "HOBBY"
+    PRO = "PRO"
+    STARTUP = "STARTUP"
+    ENTERPRISE = "ENTERPRISE"
+
+
+class SubscriptionStatus(StrEnum):
+    """Lifecycle status of a Stripe-backed subscription."""
+
+    ACTIVE = "ACTIVE"
+    PAST_DUE = "PAST_DUE"
+    CANCELED = "CANCELED"
+    INCOMPLETE = "INCOMPLETE"
+
+
+class UsageCategory(StrEnum):
+    """Billable usage categories tracked per billing period."""
+
+    TRACES = "traces"
+    TRACE_EVALS = "trace_evals"
+    SESSION_EVALS = "session_evals"
+
+
 # Prefix prepended to every generated API key.
 API_KEY_PREFIX = "sk_pp_"
 
 # Length of the random portion of an API key (bytes, hex-encoded).
 API_KEY_RANDOM_BYTES = 32
+
+# ---------------------------------------------------------------------------
+# Billing / Redis key constants
+# ---------------------------------------------------------------------------
+
+SUB_CACHE_PREFIX = "pp:sub:"
+SUB_CACHE_TTL = 300  # seconds (5 minutes)
+USAGE_KEY_PREFIX = "pp:usage:"
+USAGE_KEY_BUFFER_DAYS = 7
+OVERAGE_LOCK_PREFIX = "pp:overage_lock:"
+OVERAGE_LOCK_TTL = 60  # seconds
 
 # ---------------------------------------------------------------------------
 # Resource name validation

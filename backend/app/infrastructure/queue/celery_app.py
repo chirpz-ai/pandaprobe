@@ -32,6 +32,18 @@ celery.conf.beat_schedule = {
         "task": "check_eval_monitors",
         "schedule": 300.0,
     },
+    "dispatch-sync-usage": {
+        "task": "dispatch_sync_usage",
+        "schedule": 300.0,
+    },
+    "dispatch-overage-billing": {
+        "task": "dispatch_overage_billing",
+        "schedule": 21600.0,
+    },
+    "dispatch-hobby-reset": {
+        "task": "dispatch_hobby_reset",
+        "schedule": 21600.0,
+    },
 }
 
 celery.autodiscover_tasks(["app.infrastructure.queue"])

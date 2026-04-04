@@ -50,3 +50,10 @@ class ValidationError(PandaProbeError):
 
     status_code = 422
     detail = "Validation error."
+
+
+class QuotaExceededError(PandaProbeError):
+    """Raised when an organization exceeds its plan's usage quota."""
+
+    status_code = 429
+    detail = "Usage quota exceeded for your current plan."

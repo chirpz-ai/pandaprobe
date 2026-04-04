@@ -31,6 +31,8 @@ from app.registry.constants import (
     ScoreStatus,
     SpanKind,
     SpanStatusCode,
+    SubscriptionPlan,
+    SubscriptionStatus,
     TraceStatus,
 )
 
@@ -79,6 +81,12 @@ class OrganizationModel(Base):
     )
     projects: Mapped[list["ProjectModel"]] = relationship(back_populates="organization", cascade="all, delete-orphan")
     api_keys: Mapped[list["APIKeyModel"]] = relationship(back_populates="organization", cascade="all, delete-orphan")
+    subscription: Mapped["SubscriptionModel | None"] = relationship(
+        back_populates="organization", uselist=False, cascade="all, delete-orphan"
+    )
+    usage_records: Mapped[list["UsageRecordModel"]] = relationship(
+        back_populates="organization", cascade="all, delete-orphan"
+    )
 
 
 class MembershipModel(Base):
@@ -310,7 +318,7 @@ class EvalRunModel(Base):
         default=EvaluationStatus.PENDING,
         nullable=False,
     )
-    total_traces: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_targets: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     evaluated_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     failed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -438,4 +446,75 @@ class SessionScoreModel(Base):
         Index("ix_session_scores_project_session", "project_id", "session_id"),
         Index("ix_session_scores_project_name", "project_id", "name", "created_at"),
         Index("ix_session_scores_eval_run", "eval_run_id"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Subscriptions & Usage
+# ---------------------------------------------------------------------------
+
+
+class SubscriptionModel(Base):
+    """An organization's subscription to a PandaProbe plan."""
+
+    __tablename__ = "subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    plan: Mapped[str] = mapped_column(
+        SAEnum(SubscriptionPlan, name="subscription_plan", create_constraint=False, native_enum=False, length=20),
+        default=SubscriptionPlan.HOBBY,
+        nullable=False,
+    )
+    status: Mapped[str] = mapped_column(
+        SAEnum(SubscriptionStatus, name="subscription_status", create_constraint=False, native_enum=False, length=20),
+        default=SubscriptionStatus.ACTIVE,
+        nullable=False,
+    )
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    current_period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    current_period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    organization: Mapped["OrganizationModel"] = relationship(back_populates="subscription")
+
+    __table_args__ = (Index("ix_subscriptions_org_id", "org_id"),)
+
+
+class UsageRecordModel(Base):
+    """Aggregated usage counters for a single billing period."""
+
+    __tablename__ = "usage_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    trace_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    trace_eval_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    session_eval_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reported_trace_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reported_trace_eval_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reported_session_eval_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    billed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    stripe_invoice_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    organization: Mapped["OrganizationModel"] = relationship(back_populates="usage_records")
+
+    __table_args__ = (
+        UniqueConstraint("org_id", "period_start", name="uq_usage_record_org_period"),
+        Index("ix_usage_records_org_period", "org_id", "period_start"),
     )

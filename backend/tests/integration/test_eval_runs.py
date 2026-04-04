@@ -22,7 +22,7 @@ async def test_create_eval_run_returns_202(client: AsyncClient, seed_trace):
     assert resp.status_code == 202
     data = resp.json()
     assert data["status"] == "PENDING"
-    assert data["total_traces"] >= 1
+    assert data["total_targets"] >= 1
     assert data["metric_names"] == ["task_completion"]
     assert "project_id" in data
     assert "filters" in data
@@ -64,7 +64,7 @@ async def test_create_batch_eval_run(client: AsyncClient, seed_trace):
     assert resp.status_code == 202
     data = resp.json()
     assert data["status"] == "PENDING"
-    assert data["total_traces"] == 1
+    assert data["total_targets"] == 1
     assert set(data["metric_names"]) == {"task_completion", "step_efficiency"}
 
 
@@ -168,7 +168,7 @@ async def test_retry_no_failures_returns_422(client: AsyncClient, seed_trace, db
             filters={},
             sampling_rate=1.0,
             status=EvaluationStatus.COMPLETED,
-            total_traces=1,
+            total_targets=1,
             evaluated_count=1,
             created_at=now,
         )
