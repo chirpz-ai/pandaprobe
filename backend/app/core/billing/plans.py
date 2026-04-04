@@ -59,8 +59,7 @@ def get_limit_for_category(plan: SubscriptionPlan, category: UsageCategory) -> i
     """Return the included-unit count for a usage category under the given plan.
 
     Returns ``0`` for ENTERPRISE (unlimited access, all usage billed as
-    overage).  Returns ``None`` when no config exists.  Returns ``-1``
-    when the category is entirely disallowed (e.g. HOBBY monitoring).
+    overage).  Returns ``None`` when no config exists.
     """
     cfg = PLAN_LIMITS[plan]
     match category:

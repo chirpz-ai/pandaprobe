@@ -85,9 +85,6 @@ class UsageService:
 
         limit = get_limit_for_category(SubscriptionPlan(sub.plan), category)
 
-        if limit is not None and limit == -1:
-            raise QuotaExceededError(f"Your {sub.plan} plan does not include {category.value}. Please upgrade.")
-
         hard_limit: int
         if not get_plan_config(SubscriptionPlan(sub.plan)).pay_as_you_go:
             hard_limit = limit if limit is not None else -1
