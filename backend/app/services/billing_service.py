@@ -450,9 +450,7 @@ class BillingService:
 
         stripe_canceled_at = obj.get("canceled_at")
         updates["canceled_at"] = (
-            datetime.fromtimestamp(stripe_canceled_at, tz=timezone.utc)
-            if stripe_canceled_at
-            else None
+            datetime.fromtimestamp(stripe_canceled_at, tz=timezone.utc) if stripe_canceled_at else None
         )
 
         period_start = obj.get("current_period_start")
