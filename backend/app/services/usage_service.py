@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.billing.entities import Subscription, UsageSummary
 from app.core.billing.plans import get_limit_for_category, get_plan_config
-from app.infrastructure.db.engine import async_session_factory
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.registry.constants import (
     SUB_CACHE_PREFIX,
@@ -49,13 +48,9 @@ return current
 
 
 class UsageService:
-    """Tracks billable actions with Redis atomicity and DB persistence.
+    """Tracks billable actions with Redis atomicity and DB persistence."""
 
-    ``session`` is optional — on cache miss an ephemeral session is
-    used when none is provided, keeping the hot path DB-free.
-    """
-
-    def __init__(self, redis: aioredis.Redis, session: AsyncSession | None = None) -> None:
+    def __init__(self, redis: aioredis.Redis, session: AsyncSession) -> None:
         self._redis = redis
         self._session = session
 
@@ -155,10 +150,7 @@ class UsageService:
             raise QuotaExceededError(f"Monitoring is not available on your {sub.plan} plan. Please upgrade.")
 
     async def sync_to_database(self, org_id: UUID) -> None:
-        """Persist Redis counters into the ``usage_records`` table. Requires a session."""
-        if self._session is None:
-            raise RuntimeError("sync_to_database requires a database session")
-
+        """Persist Redis counters into the ``usage_records`` table."""
         billing_repo = BillingRepository(self._session)
         sub = await billing_repo.get_subscription_by_org(org_id)
         if sub is None:
@@ -207,12 +199,8 @@ class UsageService:
         return sub
 
     async def _fetch_subscription_from_db(self, org_id: UUID) -> Subscription | None:
-        """Load subscription from PostgreSQL, using existing or ephemeral session."""
-        if self._session is not None:
-            return await BillingRepository(self._session).get_subscription_by_org(org_id)
-
-        async with async_session_factory() as ephemeral:
-            return await BillingRepository(ephemeral).get_subscription_by_org(org_id)
+        """Load subscription from PostgreSQL."""
+        return await BillingRepository(self._session).get_subscription_by_org(org_id)
 
     @staticmethod
     def _usage_key(org_id: UUID, period_start: datetime) -> str:
