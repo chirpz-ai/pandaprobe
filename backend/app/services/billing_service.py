@@ -6,6 +6,7 @@ webhook event processing for subscription lifecycle management.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
@@ -18,12 +19,15 @@ from app.core.billing.entities import OverageDetail, Subscription
 from app.core.billing.plans import OVERAGE_UNIT_PRICE, get_plan_config
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.logging import logger
-from app.registry.constants import SubscriptionPlan, SubscriptionStatus
+from app.registry.constants import (
+    OVERAGE_LOCK_PREFIX,
+    OVERAGE_LOCK_TTL,
+    SUB_CACHE_PREFIX,
+    SUB_CACHE_TTL,
+    SubscriptionPlan,
+    SubscriptionStatus,
+)
 from app.registry.settings import settings
-
-_SUB_CACHE_PREFIX = "pp:sub:"
-_OVERAGE_LOCK_PREFIX = "pp:overage_lock:"
-_OVERAGE_LOCK_TTL = 60
 
 _stripe_configured = False
 
@@ -54,12 +58,17 @@ class BillingService:
         self._redis = redis_client
         _ensure_stripe_configured()
 
-    async def _invalidate_sub_cache(self, org_id: UUID) -> None:
-        """Clear the Redis subscription cache so enforcement picks up changes immediately."""
+    async def _warm_sub_cache(self, org_id: UUID) -> None:
+        """Re-read the subscription from DB and write it into the Redis cache."""
         if self._redis is None:
             return
-        cache_key = f"{_SUB_CACHE_PREFIX}{org_id}"
-        await self._redis.delete(cache_key)
+        cache_key = f"{SUB_CACHE_PREFIX}{org_id}"
+        sub = await self._repo.get_subscription_by_org(org_id)
+        if sub is None:
+            await self._redis.delete(cache_key)
+            return
+        payload = sub.model_dump(mode="json")
+        await self._redis.set(cache_key, json.dumps(payload), ex=SUB_CACHE_TTL)
 
     # -- Overage lock ---------------------------------------------------------
 
@@ -69,10 +78,10 @@ class BillingService:
             return True
         return bool(
             await self._redis.set(
-                f"{_OVERAGE_LOCK_PREFIX}{org_id}",
+                f"{OVERAGE_LOCK_PREFIX}{org_id}",
                 "1",
                 nx=True,
-                ex=_OVERAGE_LOCK_TTL,
+                ex=OVERAGE_LOCK_TTL,
             )
         )
 
@@ -80,7 +89,7 @@ class BillingService:
         """Release the per-org overage reporting lock."""
         if self._redis is None:
             return
-        await self._redis.delete(f"{_OVERAGE_LOCK_PREFIX}{org_id}")
+        await self._redis.delete(f"{OVERAGE_LOCK_PREFIX}{org_id}")
 
     # -- Checkout & Portal ----------------------------------------------------
 
@@ -270,7 +279,7 @@ class BillingService:
 
         await self._repo.get_or_create_usage_record(org_id, period_start, period_end)
         await self._session.commit()
-        await self._invalidate_sub_cache(org_id)
+        await self._warm_sub_cache(org_id)
         logger.info("checkout_completed", org_id=str(org_id), plan=plan.value)
 
     async def handle_invoice_created(self, event_data: dict) -> None:
@@ -353,7 +362,7 @@ class BillingService:
         await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
         await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.ACTIVE.value)
         await self._session.commit()
-        await self._invalidate_sub_cache(sub.org_id)
+        await self._warm_sub_cache(sub.org_id)
         logger.info("invoice_paid", org_id=str(sub.org_id), invoice_id=invoice_id)
 
     async def handle_invoice_payment_failed(self, event_data: dict) -> None:
@@ -369,7 +378,7 @@ class BillingService:
 
         await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.PAST_DUE.value)
         await self._session.commit()
-        await self._invalidate_sub_cache(sub.org_id)
+        await self._warm_sub_cache(sub.org_id)
         logger.warning("invoice_payment_failed", org_id=str(sub.org_id))
 
     async def handle_subscription_updated(self, event_data: dict) -> None:
@@ -418,7 +427,7 @@ class BillingService:
 
         await self._repo.update_subscription(sub.org_id, **updates)
         await self._session.commit()
-        await self._invalidate_sub_cache(sub.org_id)
+        await self._warm_sub_cache(sub.org_id)
 
         plan_label = updates.get("plan", sub.plan)
         logger.info(
@@ -468,5 +477,5 @@ class BillingService:
 
         await self._repo.create_usage_record(sub.org_id, now, now + timedelta(days=30))
         await self._session.commit()
-        await self._invalidate_sub_cache(sub.org_id)
+        await self._warm_sub_cache(sub.org_id)
         logger.info("subscription_deleted_downgraded", org_id=str(sub.org_id))

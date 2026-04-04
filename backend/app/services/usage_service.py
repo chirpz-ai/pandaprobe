@@ -16,15 +16,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.billing.entities import Subscription, UsageSummary
 from app.core.billing.plans import get_limit_for_category, get_plan_config
+from app.infrastructure.db.engine import async_session_factory
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
-from app.logging import logger
-from app.registry.constants import SubscriptionPlan, SubscriptionStatus, UsageCategory
+from app.registry.constants import (
+    SUB_CACHE_PREFIX,
+    SUB_CACHE_TTL,
+    USAGE_KEY_BUFFER_DAYS,
+    USAGE_KEY_PREFIX,
+    SubscriptionPlan,
+    SubscriptionStatus,
+    UsageCategory,
+)
 from app.registry.exceptions import QuotaExceededError
-
-_SUB_CACHE_PREFIX = "pp:sub:"
-_USAGE_PREFIX = "pp:usage:"
-_SUB_CACHE_TTL = 300  # 5 minutes
-_USAGE_KEY_BUFFER_DAYS = 7
 
 # Lua script: atomic check-and-increment with optional hard limit.
 #   KEYS[1] = usage hash key
@@ -46,12 +49,15 @@ return current
 
 
 class UsageService:
-    """Tracks billable actions with Redis atomicity and DB persistence."""
+    """Tracks billable actions with Redis atomicity and DB persistence.
 
-    def __init__(self, redis: aioredis.Redis, session: AsyncSession) -> None:
+    ``session`` is optional — on cache miss an ephemeral session is
+    used when none is provided, keeping the hot path DB-free.
+    """
+
+    def __init__(self, redis: aioredis.Redis, session: AsyncSession | None = None) -> None:
         self._redis = redis
         self._session = session
-        self._billing_repo = BillingRepository(session)
 
     # -- Public API -----------------------------------------------------------
 
@@ -152,8 +158,12 @@ class UsageService:
             raise QuotaExceededError(f"Monitoring is not available on your {sub.plan} plan. Please upgrade.")
 
     async def sync_to_database(self, org_id: UUID) -> None:
-        """Persist Redis counters into the ``usage_records`` table."""
-        sub = await self._billing_repo.get_subscription_by_org(org_id)
+        """Persist Redis counters into the ``usage_records`` table. Requires a session."""
+        if self._session is None:
+            raise RuntimeError("sync_to_database requires a database session")
+
+        billing_repo = BillingRepository(self._session)
+        sub = await billing_repo.get_subscription_by_org(org_id)
         if sub is None:
             return
 
@@ -162,7 +172,7 @@ class UsageService:
         if not raw:
             return
 
-        await self._billing_repo.upsert_usage_counters(
+        await billing_repo.upsert_usage_counters(
             org_id=org_id,
             period_start=sub.current_period_start,
             period_end=sub.current_period_end,
@@ -173,7 +183,7 @@ class UsageService:
 
     async def invalidate_subscription_cache(self, org_id: UUID) -> None:
         """Remove the cached subscription so the next lookup fetches from DB."""
-        cache_key = f"{_SUB_CACHE_PREFIX}{org_id}"
+        cache_key = f"{SUB_CACHE_PREFIX}{org_id}"
         await self._redis.delete(cache_key)  # type: ignore[union-attr]
 
     async def delete_usage_key(self, org_id: UUID, period_start: datetime) -> None:
@@ -184,30 +194,37 @@ class UsageService:
     # -- Internal helpers -----------------------------------------------------
 
     async def _get_subscription_cached(self, org_id: UUID) -> Subscription | None:
-        """Fetch the subscription, using Redis as a 5-minute read-through cache."""
-        cache_key = f"{_SUB_CACHE_PREFIX}{org_id}"
+        """Read-through Redis cache for subscription data."""
+        cache_key = f"{SUB_CACHE_PREFIX}{org_id}"
         cached = await self._redis.get(cache_key)  # type: ignore[union-attr]
 
         if cached is not None:
-            data = json.loads(cached)
-            return Subscription(**data)
+            return Subscription(**json.loads(cached))
 
-        sub = await self._billing_repo.get_subscription_by_org(org_id)
+        sub = await self._fetch_subscription_from_db(org_id)
         if sub is None:
             return None
 
         payload = sub.model_dump(mode="json")
-        await self._redis.set(cache_key, json.dumps(payload), ex=_SUB_CACHE_TTL)  # type: ignore[union-attr]
+        await self._redis.set(cache_key, json.dumps(payload), ex=SUB_CACHE_TTL)  # type: ignore[union-attr]
         return sub
+
+    async def _fetch_subscription_from_db(self, org_id: UUID) -> Subscription | None:
+        """Load subscription from PostgreSQL, using existing or ephemeral session."""
+        if self._session is not None:
+            return await BillingRepository(self._session).get_subscription_by_org(org_id)
+
+        async with async_session_factory() as ephemeral:
+            return await BillingRepository(ephemeral).get_subscription_by_org(org_id)
 
     @staticmethod
     def _usage_key(org_id: UUID, period_start: datetime) -> str:
         date_str = period_start.strftime("%Y-%m-%d")
-        return f"{_USAGE_PREFIX}{org_id}:{date_str}"
+        return f"{USAGE_KEY_PREFIX}{org_id}:{date_str}"
 
     @staticmethod
     def _compute_ttl(period_end: datetime) -> int:
         """TTL for the usage hash: period duration + buffer."""
         remaining = (period_end - datetime.now(timezone.utc)).total_seconds()
-        buffer = _USAGE_KEY_BUFFER_DAYS * 86400
+        buffer = USAGE_KEY_BUFFER_DAYS * 86400
         return max(int(remaining) + buffer, buffer)
