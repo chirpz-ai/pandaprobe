@@ -49,6 +49,8 @@ PLAN_LIMITS: dict[SubscriptionPlan, PlanConfig] = {
 
 OVERAGE_UNIT_PRICE = Decimal("0.004")
 
+MAX_OWNED_ORGS = 2
+
 
 def get_plan_config(plan: SubscriptionPlan) -> PlanConfig:
     """Return the static configuration for a plan tier."""
