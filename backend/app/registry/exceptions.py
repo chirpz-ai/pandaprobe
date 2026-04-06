@@ -57,3 +57,10 @@ class QuotaExceededError(PandaProbeError):
 
     status_code = 429
     detail = "Usage quota exceeded for your current plan."
+
+
+class OrgLimitReachedError(PandaProbeError):
+    """Raised when a user tries to create more organizations than allowed."""
+
+    status_code = 403
+    detail = "Organization ownership limit reached."
