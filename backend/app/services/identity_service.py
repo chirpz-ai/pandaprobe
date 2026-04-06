@@ -9,7 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.billing.plans import get_plan_config
+from app.core.billing.plans import MAX_OWNED_ORGS, get_plan_config
 from app.core.identity.entities import APIKey, Membership, Organization, Project
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
@@ -19,6 +19,7 @@ from app.registry.exceptions import (
     AuthorizationError,
     ConflictError,
     NotFoundError,
+    OrgLimitReachedError,
     QuotaExceededError,
     ValidationError,
 )
@@ -39,6 +40,10 @@ class IdentityService:
 
     async def create_organization(self, name: str, owner_id: UUID) -> Organization:
         """Create a new tenant organization and assign the owner membership."""
+        owned_count = await self._repo.count_user_owned_orgs(owner_id)
+        if owned_count >= MAX_OWNED_ORGS:
+            raise OrgLimitReachedError()
+
         try:
             clean = validate_resource_name(name, "Organization name")
         except ValueError as exc:
