@@ -7,7 +7,7 @@ flows through this class.
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import delete, inspect as sa_inspect, select, update
+from sqlalchemy import delete, func, inspect as sa_inspect, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -112,6 +112,15 @@ class IdentityRepository:
         row.role = role.value
         await self._session.flush()
         return self._to_membership(row)
+
+    async def count_user_owned_orgs(self, user_id: UUID) -> int:
+        """Count organizations where the user holds the OWNER role."""
+        stmt = select(func.count()).where(
+            MembershipModel.user_id == user_id,
+            MembershipModel.role == MembershipRole.OWNER.value,
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one()
 
     async def delete_membership(self, user_id: UUID, org_id: UUID) -> None:
         """Remove a user from an organization."""
