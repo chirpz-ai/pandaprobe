@@ -21,4 +21,5 @@ class DevelopmentAdapter(AuthAdapter):
     """Auth adapter that bypasses JWT verification for local development."""
 
     def verify_token(self, token: str) -> AuthClaims:
+        """Return fixed dev-user claims, ignoring the token entirely."""
         return _DEV_CLAIMS
