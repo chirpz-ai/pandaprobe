@@ -26,10 +26,11 @@ from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
 from app.infrastructure.db.repositories.user_repo import UserRepository
-from app.registry.constants import MembershipRole
+from app.registry.constants import MembershipRole, SubscriptionPlan
 from app.registry.constants import validate_resource_name
 from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
+from app.registry.settings import settings
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 _api_key_scheme = APIKeyHeader(name="X-API-Key", scheme_name="ApiKey", auto_error=False)
@@ -49,9 +50,14 @@ async def get_api_context(
     request_id: str = getattr(request.state, "request_id", "unknown")
 
     if not bearer:
-        raise AuthenticationError("Bearer token required. Provide Authorization: Bearer <token>.")
+        if not settings.AUTH_ENABLED:
+            bearer_token = "dev-no-auth"
+        else:
+            raise AuthenticationError("Bearer token required. Provide Authorization: Bearer <token>.")
+    else:
+        bearer_token = bearer.credentials
 
-    ctx = await _resolve_jwt(bearer.credentials, request, session, request_id)
+    ctx = await _resolve_jwt(bearer_token, request, session, request_id)
     request.state.api_context = ctx
     return ctx
 
@@ -92,9 +98,14 @@ async def get_data_plane_context(
             project_name=x_project_name,
         )
     else:
-        raise AuthenticationError(
-            "Missing credentials. Provide Authorization: Bearer <token> (with X-Project-ID) or X-API-Key header."
-        )
+        if not settings.AUTH_ENABLED:
+            ctx = await _resolve_jwt(
+                "dev-no-auth", request, session, request_id, project_id_raw=x_project_id
+            )
+        else:
+            raise AuthenticationError(
+                "Missing credentials. Provide Authorization: Bearer <token> (with X-Project-ID) or X-API-Key header."
+            )
 
     request.state.api_context = ctx
     return ctx
@@ -145,7 +156,10 @@ async def _resolve_jwt(
         await identity_repo.create_membership(user_id=user.id, org_id=org.id, role=MembershipRole.OWNER)
 
         billing_repo = BillingRepository(session)
-        sub = await billing_repo.create_subscription(org_id=org.id)
+        sub = await billing_repo.create_subscription(
+            org_id=org.id,
+            **({"plan": SubscriptionPlan.DEVELOPMENT} if not settings.AUTH_ENABLED else {}),
+        )
         await billing_repo.create_usage_record(
             org_id=org.id,
             period_start=sub.current_period_start,
