@@ -31,10 +31,21 @@ def _validate_stripe_settings() -> None:
             )
 
 
+def _warn_auth_disabled() -> None:
+    """Log a prominent warning when JWT authentication is turned off."""
+    if not settings.AUTH_ENABLED:
+        logger.warning(
+            "auth_disabled",
+            message="Authentication is DISABLED. All management routes are accessible without a JWT. "
+            "This must only be used for local development.",
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle startup and shutdown lifecycle events."""
     _validate_stripe_settings()
+    _warn_auth_disabled()
     logger.info(
         "application_startup",
         project=settings.PROJECT_NAME,
