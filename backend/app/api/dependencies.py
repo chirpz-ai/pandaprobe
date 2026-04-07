@@ -99,9 +99,7 @@ async def get_data_plane_context(
         )
     else:
         if not settings.AUTH_ENABLED:
-            ctx = await _resolve_jwt(
-                "dev-no-auth", request, session, request_id, project_id_raw=x_project_id
-            )
+            ctx = await _resolve_jwt("dev-no-auth", request, session, request_id, project_id_raw=x_project_id)
         else:
             raise AuthenticationError(
                 "Missing credentials. Provide Authorization: Bearer <token> (with X-Project-ID) or X-API-Key header."
