@@ -91,12 +91,13 @@ def test_get_limit_for_category_enterprise() -> None:
 
 
 def test_plan_limits_has_four_entries() -> None:
-    assert len(PLAN_LIMITS) == 4
+    assert len(PLAN_LIMITS) == 5
     assert set(PLAN_LIMITS.keys()) == {
         SubscriptionPlan.HOBBY,
         SubscriptionPlan.PRO,
         SubscriptionPlan.STARTUP,
         SubscriptionPlan.ENTERPRISE,
+        SubscriptionPlan.DEVELOPMENT,
     }
 
 
@@ -227,6 +228,7 @@ def test_subscription_plan_enum_members() -> None:
         SubscriptionPlan.PRO,
         SubscriptionPlan.STARTUP,
         SubscriptionPlan.ENTERPRISE,
+        SubscriptionPlan.DEVELOPMENT,
     ]
 
 
