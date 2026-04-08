@@ -332,6 +332,7 @@ async def get_plans(
             overage_unit_price=str(OVERAGE_UNIT_PRICE),
         )
         for plan, cfg in PLAN_LIMITS.items()
+        if plan != SubscriptionPlan.DEVELOPMENT
     ]
 
 

@@ -123,6 +123,7 @@ class Settings(BaseSettings):
     # "supabase" = Supabase Auth (cloud-hosted, uses SUPABASE_URL + anon key)
     # "firebase" = Firebase Admin SDK (uses GOOGLE_CLOUD_PROJECT + ADC)
     AUTH_PROVIDER: str = "supabase"
+    AUTH_ENABLED: bool = True
     SUPABASE_URL: str = ""
     SUPABASE_KEY: str = ""
 
@@ -169,6 +170,16 @@ class Settings(BaseSettings):
         for key, value in _ENV_DEFAULTS.get(self.APP_ENV, {}).items():
             if key not in os.environ:
                 object.__setattr__(self, key, value)
+
+        if not self.AUTH_ENABLED and self.APP_ENV != Environment.DEVELOPMENT:
+            import structlog
+
+            structlog.get_logger().warning(
+                "auth_enabled_override",
+                message="AUTH_ENABLED=false is only allowed in development. Forcing AUTH_ENABLED=true.",
+                app_env=self.APP_ENV.value,
+            )
+            object.__setattr__(self, "AUTH_ENABLED", True)
 
 
 settings = Settings()

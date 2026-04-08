@@ -11,10 +11,17 @@ from app.registry.settings import settings
 
 
 def get_auth_adapter() -> AuthAdapter:
-    """Return the configured auth adapter instance based on ``AUTH_PROVIDER``.
+    """Return the configured auth adapter instance.
 
-    Supported values: ``"supabase"`` (default), ``"firebase"``.
+    When ``AUTH_ENABLED`` is ``False`` (development only), returns a
+    no-op adapter that skips JWT verification.  Otherwise dispatches
+    on ``AUTH_PROVIDER``: ``"supabase"`` (default) or ``"firebase"``.
     """
+    if not settings.AUTH_ENABLED:
+        from app.infrastructure.auth.development import DevelopmentAdapter
+
+        return DevelopmentAdapter()
+
     provider = settings.AUTH_PROVIDER.lower()
     if provider == "firebase":
         from app.infrastructure.auth.firebase import FirebaseAdapter

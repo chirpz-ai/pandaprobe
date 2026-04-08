@@ -151,6 +151,7 @@ class SubscriptionPlan(StrEnum):
     PRO = "PRO"
     STARTUP = "STARTUP"
     ENTERPRISE = "ENTERPRISE"
+    DEVELOPMENT = "DEVELOPMENT"
 
 
 class SubscriptionStatus(StrEnum):
