@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { listSessions, type ListSessionsParams } from "@/lib/api/sessions";
@@ -11,7 +11,6 @@ import { SearchBar } from "@/components/common/SearchBar";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
-import { usePagination } from "@/hooks/usePagination";
 import {
   Select,
   SelectTrigger,
@@ -20,27 +19,36 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { SessionSortBy, SortOrder } from "@/lib/api/enums";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useUrlState } from "@/hooks/useUrlState";
+import { extractErrorMessage } from "@/lib/api/client";
+
+const URL_CONFIG = {
+  page: { default: "1" },
+  query: { default: "" },
+  sortBy: { default: SessionSortBy.recent },
+  sortOrder: { default: SortOrder.desc },
+} as const;
 
 export default function SessionsPage() {
   const { currentProject } = useProject();
-  const pagination = usePagination();
-
-  const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState<string>(SessionSortBy.recent);
-  const [sortOrder, setSortOrder] = useState<string>(SortOrder.desc);
-
   const projectId = currentProject?.id ?? "";
 
-  const params: ListSessionsParams = {
-    limit: pagination.limit,
-    offset: pagination.offset,
-    sort_by: sortBy as ListSessionsParams["sort_by"],
-    sort_order: sortOrder as ListSessionsParams["sort_order"],
-    ...(query ? { query } : {}),
-  };
+  const { values, set, page, limit, offset, setPage, totalPages } =
+    useUrlState(URL_CONFIG);
+
+  useDocumentTitle("Sessions");
+
+  const params = useMemo<ListSessionsParams>(() => ({
+    limit,
+    offset,
+    sort_by: values.sortBy as ListSessionsParams["sort_by"],
+    sort_order: values.sortOrder as ListSessionsParams["sort_order"],
+    ...(values.query ? { query: values.query } : {}),
+  }), [limit, offset, values.sortBy, values.sortOrder, values.query]);
 
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.sessions.list(projectId, params as Record<string, unknown>),
+    queryKey: queryKeys.sessions.list(projectId, params as unknown as Record<string, unknown>),
     queryFn: () => listSessions(params),
     enabled: !!currentProject,
   });
@@ -60,15 +68,12 @@ export default function SessionsPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <SearchBar
-          value={query}
-          onChange={(v) => {
-            setQuery(v);
-            pagination.reset();
-          }}
+          value={values.query}
+          onChange={(v) => set({ query: v, page: "1" })}
           placeholder="Search sessions..."
           className="w-64"
         />
-        <Select value={sortBy} onValueChange={setSortBy}>
+        <Select value={values.sortBy} onValueChange={(v) => set({ sortBy: v })}>
           <SelectTrigger className="w-36">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
@@ -80,7 +85,7 @@ export default function SessionsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={sortOrder} onValueChange={setSortOrder}>
+        <Select value={values.sortOrder} onValueChange={(v) => set({ sortOrder: v })}>
           <SelectTrigger className="w-24">
             <SelectValue />
           </SelectTrigger>
@@ -95,7 +100,7 @@ export default function SessionsPage() {
         <LoadingState />
       ) : error ? (
         <ErrorState
-          message={error instanceof Error ? error.message : "Failed to load sessions"}
+          message={extractErrorMessage(error)}
           onRetry={() => refetch()}
         />
       ) : !data || data.items.length === 0 ? (
@@ -107,9 +112,9 @@ export default function SessionsPage() {
         <>
           <SessionTable sessions={data.items} />
           <Pagination
-            page={pagination.page}
-            totalPages={pagination.totalPages(data.total)}
-            onPageChange={pagination.setPage}
+            page={page}
+            totalPages={totalPages(data.total)}
+            onPageChange={setPage}
             total={data.total}
           />
         </>
