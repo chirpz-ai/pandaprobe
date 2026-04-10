@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   getSubscription,
   getUsage,
@@ -9,12 +9,7 @@ import {
   createCheckout,
   createPortalSession,
 } from "@/lib/api/subscriptions";
-import type {
-  SubscriptionResponse,
-  UsageResponse,
-  BillingResponse,
-  PlanInfo,
-} from "@/lib/api/types";
+import { queryKeys } from "@/lib/query/keys";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -27,35 +22,31 @@ import type { SubscriptionPlan } from "@/lib/api/enums";
 
 export default function BillingPage() {
   const { toast } = useToast();
-  const [subscription, setSubscription] = useState<SubscriptionResponse | null>(null);
-  const [usage, setUsage] = useState<UsageResponse | null>(null);
-  const [billing, setBilling] = useState<BillingResponse | null>(null);
-  const [plans, setPlans] = useState<PlanInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetch() {
-      setLoading(true);
-      try {
-        const [sub, u, b, p] = await Promise.all([
-          getSubscription(),
-          getUsage(),
-          getBilling(),
-          getPlans(),
-        ]);
-        setSubscription(sub);
-        setUsage(u);
-        setBilling(b);
-        setPlans(p);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load billing");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetch();
-  }, []);
+  const subQuery = useQuery({
+    queryKey: queryKeys.subscriptions.current,
+    queryFn: getSubscription,
+  });
+  const usageQuery = useQuery({
+    queryKey: queryKeys.subscriptions.usage,
+    queryFn: getUsage,
+  });
+  const billingQuery = useQuery({
+    queryKey: queryKeys.subscriptions.billing,
+    queryFn: getBilling,
+  });
+  const plansQuery = useQuery({
+    queryKey: queryKeys.subscriptions.plans,
+    queryFn: getPlans,
+  });
+
+  const loading =
+    subQuery.isPending ||
+    usageQuery.isPending ||
+    billingQuery.isPending ||
+    plansQuery.isPending;
+  const error =
+    subQuery.error || usageQuery.error || billingQuery.error || plansQuery.error;
 
   async function handleCheckout(plan: string) {
     try {
@@ -64,7 +55,7 @@ export default function BillingPage() {
         success_url: window.location.href,
         cancel_url: window.location.href,
       });
-      window.location.href = checkout_url;
+      window.location.assign(checkout_url);
     } catch {
       toast({ title: "Failed to create checkout", variant: "error" });
     }
@@ -75,14 +66,22 @@ export default function BillingPage() {
       const { portal_url } = await createPortalSession({
         return_url: window.location.href,
       });
-      window.location.href = portal_url;
+      window.location.assign(portal_url);
     } catch {
       toast({ title: "Failed to open billing portal", variant: "error" });
     }
   }
 
   if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} />;
+  if (error)
+    return (
+      <ErrorState message={error instanceof Error ? error.message : "Failed to load billing"} />
+    );
+
+  const subscription = subQuery.data;
+  const usage = usageQuery.data;
+  const billing = billingQuery.data;
+  const plans = plansQuery.data ?? [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -104,11 +103,15 @@ export default function BillingPage() {
             </div>
             <div>
               <span className="text-text-muted block">Period Start</span>
-              <span className="text-text">{formatDate(subscription.current_period_start)}</span>
+              <span className="text-text">
+                {formatDate(subscription.current_period_start)}
+              </span>
             </div>
             <div>
               <span className="text-text-muted block">Period End</span>
-              <span className="text-text">{formatDate(subscription.current_period_end)}</span>
+              <span className="text-text">
+                {formatDate(subscription.current_period_end)}
+              </span>
             </div>
           </div>
           <div className="mt-4">
@@ -127,15 +130,21 @@ export default function BillingPage() {
           <div className="grid grid-cols-3 gap-6 text-xs font-mono">
             <div>
               <span className="text-text-muted block">Traces</span>
-              <span className="text-text text-lg">{formatNumber(usage.traces)}</span>
+              <span className="text-text text-lg">
+                {formatNumber(usage.traces)}
+              </span>
             </div>
             <div>
               <span className="text-text-muted block">Trace Evals</span>
-              <span className="text-text text-lg">{formatNumber(usage.trace_evals)}</span>
+              <span className="text-text text-lg">
+                {formatNumber(usage.trace_evals)}
+              </span>
             </div>
             <div>
               <span className="text-text-muted block">Session Evals</span>
-              <span className="text-text text-lg">{formatNumber(usage.session_evals)}</span>
+              <span className="text-text text-lg">
+                {formatNumber(usage.session_evals)}
+              </span>
             </div>
           </div>
         </div>
@@ -147,25 +156,33 @@ export default function BillingPage() {
             Billing Breakdown
           </h2>
           <div className="grid grid-cols-3 gap-4 text-xs font-mono mb-4">
-            {(["traces", "trace_evals", "session_evals"] as const).map((cat) => (
-              <div key={cat} className="border border-border p-3">
-                <span className="text-text-muted block mb-1">{cat.replace("_", " ")}</span>
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-text-dim">Used</span>
-                    <span className="text-text">{billing[cat].used}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-dim">Included</span>
-                    <span className="text-text">{billing[cat].included ?? "Unlimited"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-dim">Overage</span>
-                    <span className="text-warning">{billing[cat].overage_cost}</span>
+            {(["traces", "trace_evals", "session_evals"] as const).map(
+              (cat) => (
+                <div key={cat} className="border border-border p-3">
+                  <span className="text-text-muted block mb-1">
+                    {cat.replace("_", " ")}
+                  </span>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-text-dim">Used</span>
+                      <span className="text-text">{billing[cat].used}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-dim">Included</span>
+                      <span className="text-text">
+                        {billing[cat].included ?? "Unlimited"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-dim">Overage</span>
+                      <span className="text-warning">
+                        {billing[cat].overage_cost}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
           <div className="flex justify-between border-t border-border pt-3">
             <span className="text-text-dim">Estimated Total</span>
@@ -185,16 +202,24 @@ export default function BillingPage() {
             {plans.map((plan) => (
               <div key={plan.name} className="border border-border p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-mono text-text">{plan.name}</span>
+                  <span className="text-sm font-mono text-text">
+                    {plan.name}
+                  </span>
                   <span className="text-xs text-text-dim">
                     ${(plan.monthly_price_cents / 100).toFixed(0)}/mo
                   </span>
                 </div>
                 <div className="text-xs text-text-dim space-y-1">
                   <div>Traces: {plan.base_traces ?? "Unlimited"}</div>
-                  <div>Trace Evals: {plan.base_trace_evals ?? "Unlimited"}</div>
-                  <div>Session Evals: {plan.base_session_evals ?? "Unlimited"}</div>
-                  {plan.monitoring_allowed && <Badge variant="info">Monitoring</Badge>}
+                  <div>
+                    Trace Evals: {plan.base_trace_evals ?? "Unlimited"}
+                  </div>
+                  <div>
+                    Session Evals: {plan.base_session_evals ?? "Unlimited"}
+                  </div>
+                  {plan.monitoring_allowed && (
+                    <Badge variant="info">Monitoring</Badge>
+                  )}
                 </div>
                 {subscription?.plan !== plan.name && (
                   <Button
