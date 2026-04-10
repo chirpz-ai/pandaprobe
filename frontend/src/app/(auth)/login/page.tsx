@@ -2,6 +2,8 @@
 
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { extractErrorMessage } from "@/lib/api/client";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -37,7 +39,7 @@ function LoginForm() {
       }
       router.push(callbackUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+      setError(extractErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -50,7 +52,7 @@ function LoginForm() {
       await signInWithGoogle();
       router.push(callbackUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Google sign-in failed");
+      setError(extractErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -165,6 +167,7 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+  useDocumentTitle("Login");
   return (
     <Suspense
       fallback={
