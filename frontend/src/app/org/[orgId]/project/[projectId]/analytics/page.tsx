@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { getTraceAnalytics, type TraceAnalyticsParams } from "@/lib/api/traces";
 import { getTraceScoreSummary } from "@/lib/api/evaluations";
 import type { AnalyticsBucket, TokenCostBucket, TopModel } from "@/lib/api/types";
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { extractErrorMessage } from "@/lib/api/client";
 
 function BarChart({
   data,
@@ -61,6 +63,8 @@ function BarChart({
 export default function AnalyticsPage() {
   const { currentProject } = useProject();
   const projectId = currentProject?.id ?? "";
+
+  useDocumentTitle("Analytics");
 
   const [metric, setMetric] = useState<string>(AnalyticsMetric.volume);
   const [granularity, setGranularity] = useState<string>(
@@ -155,11 +159,7 @@ export default function AnalyticsPage() {
         <LoadingState />
       ) : analyticsQuery.error ? (
         <ErrorState
-          message={
-            analyticsQuery.error instanceof Error
-              ? analyticsQuery.error.message
-              : "Failed to load analytics"
-          }
+          message={extractErrorMessage(analyticsQuery.error)}
           onRetry={() => analyticsQuery.refetch()}
         />
       ) : !analyticsData || (analyticsData as unknown[]).length === 0 ? (
