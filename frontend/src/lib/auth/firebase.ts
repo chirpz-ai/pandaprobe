@@ -1,16 +1,8 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
+import { AUTH_ENABLED } from "./config";
 
-const envFlag = process.env.NEXT_PUBLIC_AUTH_ENABLED !== "false";
-
-export const AUTH_ENABLED =
-  process.env.NODE_ENV !== "development" ? true : envFlag;
-
-if (!envFlag && AUTH_ENABLED) {
-  console.warn(
-    "[auth] NEXT_PUBLIC_AUTH_ENABLED=false is ignored outside development. Forcing auth ON."
-  );
-}
+export { AUTH_ENABLED };
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
