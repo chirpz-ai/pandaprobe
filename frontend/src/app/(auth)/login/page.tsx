@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/Spinner";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, authEnabled } =
     useAuth();
 
@@ -21,7 +21,7 @@ function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
 
   if (!authEnabled) {
-    router.replace("/dashboard");
+    router.replace("/");
     return null;
   }
 
