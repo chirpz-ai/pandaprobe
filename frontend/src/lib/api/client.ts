@@ -5,17 +5,20 @@ import axios, {
 import { API_URL } from "@/lib/utils/constants";
 
 let getToken: (() => Promise<string | null>) | null = null;
+let forceRefreshToken: (() => Promise<string | null>) | null = null;
 let getOrgId: (() => string | null) | null = null;
 let getProjectId: (() => string | null) | null = null;
 let onUnauthorized: (() => void) | null = null;
 
 export function configureAuth(opts: {
   getToken: () => Promise<string | null>;
+  forceRefreshToken: () => Promise<string | null>;
   getOrgId: () => string | null;
   getProjectId: () => string | null;
   onUnauthorized: () => void;
 }) {
   getToken = opts.getToken;
+  forceRefreshToken = opts.forceRefreshToken;
   getOrgId = opts.getOrgId;
   getProjectId = opts.getProjectId;
   onUnauthorized = opts.onUnauthorized;
@@ -51,7 +54,7 @@ client.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
 
 client.interceptors.response.use(
   (response) => response,
@@ -60,23 +63,25 @@ client.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !original._retry &&
-      getToken
+      forceRefreshToken
     ) {
-      if (isRefreshing) {
-        return Promise.reject(error);
-      }
       original._retry = true;
-      isRefreshing = true;
+
+      if (!refreshPromise) {
+        refreshPromise = forceRefreshToken().finally(() => {
+          refreshPromise = null;
+        });
+      }
+
       try {
-        const token = await getToken();
+        const token = await refreshPromise;
         if (token) {
           original.headers.Authorization = `Bearer ${token}`;
           return client(original);
         }
       } catch {
         onUnauthorized?.();
-      } finally {
-        isRefreshing = false;
+        return Promise.reject(error);
       }
     }
 
