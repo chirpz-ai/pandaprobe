@@ -1,0 +1,160 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useOrganization } from "@/components/providers/OrganizationProvider";
+import { useProject } from "@/components/providers/ProjectProvider";
+import {
+  listProjects,
+  createProject,
+  deleteProject,
+} from "@/lib/api/projects";
+import type { ProjectResponse } from "@/lib/api/types";
+import { Button } from "@/components/atoms/Button";
+import { Input } from "@/components/atoms/Input";
+import { LoadingState } from "@/components/molecules/LoadingState";
+import { ErrorState } from "@/components/molecules/ErrorState";
+import { EmptyState } from "@/components/molecules/EmptyState";
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { useToast } from "@/components/providers/ToastProvider";
+import { Plus, Trash2 } from "lucide-react";
+import { formatDateTime } from "@/lib/utils/format";
+
+export default function ProjectsPage() {
+  const { currentOrg } = useOrganization();
+  const { refetch: refetchProjects } = useProject();
+  const { toast } = useToast();
+
+  const [projects, setProjects] = useState<ProjectResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<ProjectResponse | null>(null);
+
+  const fetchData = useCallback(async () => {
+    if (!currentOrg) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await listProjects(currentOrg.id);
+      setProjects(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load projects");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentOrg]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  async function handleCreate() {
+    if (!currentOrg || !newName.trim()) return;
+    try {
+      await createProject(currentOrg.id, {
+        name: newName.trim(),
+        description: newDesc.trim() || undefined,
+      });
+      toast({ title: "Project created", variant: "success" });
+      setNewName("");
+      setNewDesc("");
+      fetchData();
+      refetchProjects();
+    } catch {
+      toast({ title: "Failed to create project", variant: "error" });
+    }
+  }
+
+  async function handleDelete() {
+    if (!currentOrg || !deleteTarget) return;
+    try {
+      await deleteProject(currentOrg.id, deleteTarget.id);
+      toast({ title: "Project deleted", variant: "success" });
+      setDeleteTarget(null);
+      fetchData();
+      refetchProjects();
+    } catch {
+      toast({ title: "Failed to delete project", variant: "error" });
+    }
+  }
+
+  if (!currentOrg) return <EmptyState title="No organization selected" />;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <h1 className="text-lg font-mono text-primary">Projects</h1>
+
+      <div className="border-engraved bg-surface p-4">
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <label className="text-xs font-mono text-text-muted block mb-1">Name</label>
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Project name"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="text-xs font-mono text-text-muted block mb-1">Description</label>
+            <Input
+              value={newDesc}
+              onChange={(e) => setNewDesc(e.target.value)}
+              placeholder="Optional"
+            />
+          </div>
+          <Button size="sm" onClick={handleCreate} disabled={!newName.trim()}>
+            <Plus className="h-3 w-3" /> Create
+          </Button>
+        </div>
+      </div>
+
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message={error} onRetry={fetchData} />
+      ) : projects.length === 0 ? (
+        <EmptyState title="No projects" description="Create a project to get started." />
+      ) : (
+        <div className="border border-border overflow-x-auto">
+          <table className="w-full text-xs font-mono">
+            <thead>
+              <tr className="border-b border-border bg-surface-hi">
+                <th className="text-left px-3 py-2 text-text-muted font-normal">Name</th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">Description</th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">Created</th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.map((p) => (
+                <tr key={p.id} className="border-b border-border hover:bg-surface-hi">
+                  <td className="px-3 py-2 text-text">{p.name}</td>
+                  <td className="px-3 py-2 text-text-dim max-w-[300px] truncate">
+                    {p.description || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-text-dim">{formatDateTime(p.created_at)}</td>
+                  <td className="px-3 py-2">
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(p)}>
+                      <Trash2 className="h-3 w-3 text-error" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete project"
+        description={`Delete "${deleteTarget?.name}"? All associated data will be lost.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        destructive
+      />
+    </div>
+  );
+}
