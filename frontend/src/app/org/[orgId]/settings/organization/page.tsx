@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { updateOrganization } from "@/lib/api/organizations";
+import { extractErrorMessage } from "@/lib/api/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -14,6 +16,8 @@ export default function OrganizationSettingsPage() {
   const [name, setName] = useState(currentOrg?.name ?? "");
   const [saving, setSaving] = useState(false);
 
+  useDocumentTitle("Organization Settings");
+
   if (loading) return <LoadingState />;
   if (!currentOrg) return <div className="text-text-dim text-sm">No organization selected</div>;
 
@@ -24,8 +28,8 @@ export default function OrganizationSettingsPage() {
       await updateOrganization(currentOrg.id, { name: name.trim() });
       toast({ title: "Organization updated", variant: "success" });
       await refetch();
-    } catch {
-      toast({ title: "Failed to update organization", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     } finally {
       setSaving(false);
     }
