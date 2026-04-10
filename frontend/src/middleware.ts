@@ -1,10 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-
-const AUTH_ENABLED =
-  process.env.NEXT_PUBLIC_AUTH_ENABLED !== "false" ||
-  process.env.NODE_ENV !== "development";
-
-const SESSION_COOKIE = "__pp_session";
+import { AUTH_ENABLED, SESSION_COOKIE_NAME } from "@/lib/auth/config";
 
 const PUBLIC_PATHS = ["/login", "/_next", "/favicon.ico"];
 
@@ -19,7 +14,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const hasSession = request.cookies.has(SESSION_COOKIE);
+  const hasSession = request.cookies.has(SESSION_COOKIE_NAME);
 
   if (!hasSession && pathname.startsWith("/org")) {
     const loginUrl = new URL("/login", request.url);
