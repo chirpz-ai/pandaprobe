@@ -132,14 +132,17 @@ services:
   frontend:
     build:
       context: ./frontend
+      target: dev
     ports:
       - "3000:3000"
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
+    env_file:
+      - path: ./frontend/.env.development
+        required: false
     environment:
       - NEXT_PUBLIC_API_URL=http://app:8000
-      - NEXT_PUBLIC_AUTH_ENABLED=${AUTH_ENABLED:-true}
     restart: on-failure
     depends_on:
       app:
