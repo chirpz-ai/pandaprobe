@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
   listProjects,
   createProject,
   deleteProject,
 } from "@/lib/api/projects";
+import { extractErrorMessage } from "@/lib/api/client";
 import type { ProjectResponse } from "@/lib/api/types";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -30,6 +32,8 @@ export default function ProjectsPage() {
   const [newDesc, setNewDesc] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ProjectResponse | null>(null);
 
+  useDocumentTitle("Projects");
+
   const { data: projects = [], isPending, error, refetch } = useQuery({
     queryKey: queryKeys.projects.list(orgId),
     queryFn: () => listProjects(orgId),
@@ -50,8 +54,8 @@ export default function ProjectsPage() {
       setNewName("");
       setNewDesc("");
       invalidate();
-    } catch {
-      toast({ title: "Failed to create project", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -62,8 +66,8 @@ export default function ProjectsPage() {
       toast({ title: "Project deleted", variant: "success" });
       setDeleteTarget(null);
       invalidate();
-    } catch {
-      toast({ title: "Failed to delete project", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -100,7 +104,7 @@ export default function ProjectsPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error.message} onRetry={() => refetch()} />
+        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
       ) : projects.length === 0 ? (
         <EmptyState title="No projects" description="Create a project to get started." />
       ) : (
