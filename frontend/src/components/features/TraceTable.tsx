@@ -5,12 +5,14 @@ import type { TraceListItem } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { formatRelativeTime, formatDuration, formatCost } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/Badge";
+import { useProjectPath } from "@/hooks/useNavigation";
 
 interface TraceTableProps {
   traces: TraceListItem[];
 }
 
 export function TraceTable({ traces }: TraceTableProps) {
+  const basePath = useProjectPath("/traces");
   return (
     <div className="border border-border overflow-x-auto">
       <table className="w-full text-xs font-mono">
@@ -34,7 +36,7 @@ export function TraceTable({ traces }: TraceTableProps) {
             >
               <td className="px-3 py-2 max-w-[200px] truncate">
                 <Link
-                  href={`/dashboard/traces/${trace.trace_id}`}
+                  href={`${basePath}/${trace.trace_id}`}
                   className="text-text hover:text-primary transition-colors"
                 >
                   {trace.name}
