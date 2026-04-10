@@ -1,10 +1,11 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { getSession, deleteSession } from "@/lib/api/sessions";
-import type { SessionDetail } from "@/lib/api/types";
+import { queryKeys } from "@/lib/query/keys";
 import { TraceTable } from "@/components/features/TraceTable";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -13,7 +14,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import { formatDateTime, formatDuration, formatCost } from "@/lib/utils/format";
-import { useProjectPath } from "@/hooks/useNavigation";
+import { useProjectPath, useProjectId } from "@/hooks/useNavigation";
 
 export default function SessionDetailPage({
   params,
@@ -22,32 +23,24 @@ export default function SessionDetailPage({
 }) {
   const { sessionId } = use(params);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const projectPath = useProjectPath();
+  const projectId = useProjectId() ?? "";
 
-  const [session, setSession] = useState<SessionDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  useEffect(() => {
-    async function fetch() {
-      setLoading(true);
-      try {
-        const s = await getSession(sessionId);
-        setSession(s);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load session");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetch();
-  }, [sessionId]);
+  const { data: session, isPending, error } = useQuery({
+    queryKey: queryKeys.sessions.detail(sessionId),
+    queryFn: () => getSession(sessionId),
+  });
 
   async function handleDelete() {
     try {
       await deleteSession(sessionId);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.sessions.all(projectId),
+      });
       toast({ title: "Session deleted", variant: "success" });
       router.push(projectPath + "/sessions");
     } catch {
@@ -55,8 +48,15 @@ export default function SessionDetailPage({
     }
   }
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} />;
+  if (isPending) return <LoadingState />;
+  if (error)
+    return (
+      <ErrorState
+        message={
+          error instanceof Error ? error.message : "Failed to load session"
+        }
+      />
+    );
   if (!session) return <ErrorState message="Session not found" />;
 
   const traceListItems = session.traces.map((t) => ({
@@ -93,7 +93,11 @@ export default function SessionDetailPage({
             </span>
           </div>
         </div>
-        <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => setConfirmDelete(true)}
+        >
           <Trash2 className="h-3 w-3" /> Delete
         </Button>
       </div>
@@ -112,7 +116,9 @@ export default function SessionDetailPage({
           </div>
           <div>
             <span className="text-text-muted block">Total Latency</span>
-            <span className="text-text">{formatDuration(session.total_latency_ms)}</span>
+            <span className="text-text">
+              {formatDuration(session.total_latency_ms)}
+            </span>
           </div>
           <div>
             <span className="text-text-muted block">Cost</span>
@@ -120,11 +126,15 @@ export default function SessionDetailPage({
           </div>
           <div>
             <span className="text-text-muted block">First Trace</span>
-            <span className="text-text">{formatDateTime(session.first_trace_at)}</span>
+            <span className="text-text">
+              {formatDateTime(session.first_trace_at)}
+            </span>
           </div>
           <div>
             <span className="text-text-muted block">Last Trace</span>
-            <span className="text-text">{formatDateTime(session.last_trace_at)}</span>
+            <span className="text-text">
+              {formatDateTime(session.last_trace_at)}
+            </span>
           </div>
           {session.user_id && (
             <div>
