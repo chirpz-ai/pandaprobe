@@ -2,6 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
   listMonitors,
   pauseMonitor,
@@ -17,6 +18,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/components/providers/ToastProvider";
 import { queryKeys } from "@/lib/query/keys";
+import { extractErrorMessage } from "@/lib/api/client";
 
 export default function MonitorsPage() {
   const { currentProject } = useProject();
@@ -25,8 +27,10 @@ export default function MonitorsPage() {
   const queryClient = useQueryClient();
   const projectId = currentProject?.id ?? "";
 
+  useDocumentTitle("Monitors");
+
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.evaluations.monitors(projectId),
+    queryKey: queryKeys.evaluations.monitors.list(projectId, { limit: pagination.limit, offset: pagination.offset }),
     queryFn: () => listMonitors({ limit: pagination.limit, offset: pagination.offset }),
     enabled: !!currentProject,
   });
@@ -35,9 +39,9 @@ export default function MonitorsPage() {
     try {
       await pauseMonitor(id);
       toast({ title: "Monitor paused", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors(projectId) });
-    } catch {
-      toast({ title: "Failed to pause monitor", variant: "error" });
+      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors.all(projectId) });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -45,9 +49,9 @@ export default function MonitorsPage() {
     try {
       await resumeMonitor(id);
       toast({ title: "Monitor resumed", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors(projectId) });
-    } catch {
-      toast({ title: "Failed to resume monitor", variant: "error" });
+      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors.all(projectId) });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -55,9 +59,9 @@ export default function MonitorsPage() {
     try {
       await triggerMonitor(id);
       toast({ title: "Monitor triggered", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors(projectId) });
-    } catch {
-      toast({ title: "Failed to trigger monitor", variant: "error" });
+      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors.all(projectId) });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -65,9 +69,9 @@ export default function MonitorsPage() {
     try {
       await deleteMonitor(id);
       toast({ title: "Monitor deleted", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors(projectId) });
-    } catch {
-      toast({ title: "Failed to delete monitor", variant: "error" });
+      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors.all(projectId) });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -82,7 +86,7 @@ export default function MonitorsPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error instanceof Error ? error.message : "Failed to load monitors"} onRetry={() => refetch()} />
+        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState title="No monitors" description="Create a monitor to automate evaluations." />
       ) : (
