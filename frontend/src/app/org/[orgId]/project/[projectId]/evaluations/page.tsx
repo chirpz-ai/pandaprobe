@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { ListTree, Layers, Radio } from "lucide-react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useProjectPath } from "@/hooks/useNavigation";
 
 export default function EvaluationsPage() {
   const basePath = useProjectPath();
+
+  useDocumentTitle("Evaluations");
 
   const sections = [
     {
