@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import {
   listAPIKeys,
@@ -31,33 +33,23 @@ import { formatDateTime } from "@/lib/utils/format";
 export default function APIKeysPage() {
   const { currentOrg } = useOrganization();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const orgId = currentOrg?.id ?? "";
 
-  const [keys, setKeys] = useState<APIKeyResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [expiration, setExpiration] = useState<string>(KeyExpiration.never);
   const [newRawKey, setNewRawKey] = useState<string | null>(null);
   const [showRawKey, setShowRawKey] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<APIKeyResponse | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!currentOrg) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await listAPIKeys(currentOrg.id);
-      setKeys(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load API keys");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentOrg]);
+  const { data: keys = [], isPending, error, refetch } = useQuery({
+    queryKey: queryKeys.apiKeys.list(orgId),
+    queryFn: () => listAPIKeys(orgId),
+    enabled: !!currentOrg,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys.list(orgId) });
 
   async function handleCreate() {
     if (!currentOrg || !newName.trim()) return;
@@ -74,7 +66,7 @@ export default function APIKeysPage() {
       setShowRawKey(true);
       toast({ title: "API key created", variant: "success" });
       setNewName("");
-      fetchData();
+      invalidate();
     } catch {
       toast({ title: "Failed to create API key", variant: "error" });
     }
@@ -87,7 +79,7 @@ export default function APIKeysPage() {
       setNewRawKey(result.raw_key);
       setShowRawKey(true);
       toast({ title: "API key rotated", variant: "success" });
-      fetchData();
+      invalidate();
     } catch {
       toast({ title: "Failed to rotate API key", variant: "error" });
     }
@@ -99,7 +91,7 @@ export default function APIKeysPage() {
       await deleteAPIKey(currentOrg.id, deleteTarget.id, false);
       toast({ title: "API key deleted", variant: "success" });
       setDeleteTarget(null);
-      fetchData();
+      invalidate();
     } catch {
       toast({ title: "Failed to delete API key", variant: "error" });
     }
@@ -161,10 +153,10 @@ export default function APIKeysPage() {
         )}
       </div>
 
-      {loading ? (
+      {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={fetchData} />
+        <ErrorState message={error.message} onRetry={() => refetch()} />
       ) : keys.length === 0 ? (
         <EmptyState title="No API keys" description="Create an API key to authenticate programmatic access." />
       ) : (
