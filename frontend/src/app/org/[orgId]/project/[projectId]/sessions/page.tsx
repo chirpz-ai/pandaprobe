@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { listSessions, type ListSessionsParams } from "@/lib/api/sessions";
-import type { SessionSummary, PaginatedResponse } from "@/lib/api/types";
+import { queryKeys } from "@/lib/query/keys";
 import { SessionTable } from "@/components/features/SessionTable";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
@@ -24,40 +25,33 @@ export default function SessionsPage() {
   const { currentProject } = useProject();
   const pagination = usePagination();
 
-  const [data, setData] = useState<PaginatedResponse<SessionSummary> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState<string>(SessionSortBy.recent);
   const [sortOrder, setSortOrder] = useState<string>(SortOrder.desc);
 
-  const fetchData = useCallback(async () => {
-    if (!currentProject) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const params: ListSessionsParams = {
-        limit: pagination.limit,
-        offset: pagination.offset,
-        sort_by: sortBy as ListSessionsParams["sort_by"],
-        sort_order: sortOrder as ListSessionsParams["sort_order"],
-      };
-      if (query) params.query = query;
-      const result = await listSessions(params);
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load sessions");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentProject, pagination.limit, pagination.offset, query, sortBy, sortOrder]);
+  const projectId = currentProject?.id ?? "";
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const params: ListSessionsParams = {
+    limit: pagination.limit,
+    offset: pagination.offset,
+    sort_by: sortBy as ListSessionsParams["sort_by"],
+    sort_order: sortOrder as ListSessionsParams["sort_order"],
+    ...(query ? { query } : {}),
+  };
+
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: queryKeys.sessions.list(projectId, params as Record<string, unknown>),
+    queryFn: () => listSessions(params),
+    enabled: !!currentProject,
+  });
 
   if (!currentProject) {
-    return <EmptyState title="Select a project" description="Choose a project from the sidebar to view sessions." />;
+    return (
+      <EmptyState
+        title="Select a project"
+        description="Choose a project from the sidebar to view sessions."
+      />
+    );
   }
 
   return (
@@ -67,7 +61,10 @@ export default function SessionsPage() {
       <div className="flex flex-wrap items-center gap-3">
         <SearchBar
           value={query}
-          onChange={(v) => { setQuery(v); pagination.reset(); }}
+          onChange={(v) => {
+            setQuery(v);
+            pagination.reset();
+          }}
           placeholder="Search sessions..."
           className="w-64"
         />
@@ -77,7 +74,9 @@ export default function SessionsPage() {
           </SelectTrigger>
           <SelectContent>
             {Object.values(SessionSortBy).map((s) => (
-              <SelectItem key={s} value={s}>{s.replace("_", " ")}</SelectItem>
+              <SelectItem key={s} value={s}>
+                {s.replace("_", " ")}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -92,12 +91,18 @@ export default function SessionsPage() {
         </Select>
       </div>
 
-      {loading ? (
+      {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={fetchData} />
+        <ErrorState
+          message={error instanceof Error ? error.message : "Failed to load sessions"}
+          onRetry={() => refetch()}
+        />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState title="No sessions found" description="Sessions are automatically created when traces include a session_id." />
+        <EmptyState
+          title="No sessions found"
+          description="Sessions are automatically created when traces include a session_id."
+        />
       ) : (
         <>
           <SessionTable sessions={data.items} />
