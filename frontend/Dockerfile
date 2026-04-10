@@ -1,11 +1,13 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
+# ── Install production + dev dependencies (no Playwright browsers) ───────────
 FROM base AS deps
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
-# ── Dev target (used by docker-compose.dev.yml) ──────────────────────────────
+# ── Dev target (docker-compose.dev.yml) ────────────
 FROM deps AS dev
 COPY . .
 EXPOSE 3000
@@ -13,11 +15,12 @@ CMD ["yarn", "dev"]
 
 # ── Production build ─────────────────────────────────────────────────────────
 FROM base AS builder
+ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN yarn build
 
+# ── Production runner (standalone output only — minimal image) ───────────────
 FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
