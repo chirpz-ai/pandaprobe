@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
   getSubscription,
   getUsage,
@@ -17,11 +18,14 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useToast } from "@/components/providers/ToastProvider";
 import { formatNumber, formatDate } from "@/lib/utils/format";
+import { extractErrorMessage } from "@/lib/api/client";
 import { ExternalLink } from "lucide-react";
 import type { SubscriptionPlan } from "@/lib/api/enums";
 
 export default function BillingPage() {
   const { toast } = useToast();
+
+  useDocumentTitle("Billing");
 
   const subQuery = useQuery({
     queryKey: queryKeys.subscriptions.current,
@@ -56,8 +60,8 @@ export default function BillingPage() {
         cancel_url: window.location.href,
       });
       window.location.assign(checkout_url);
-    } catch {
-      toast({ title: "Failed to create checkout", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -67,15 +71,15 @@ export default function BillingPage() {
         return_url: window.location.href,
       });
       window.location.assign(portal_url);
-    } catch {
-      toast({ title: "Failed to open billing portal", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
   if (loading) return <LoadingState />;
   if (error)
     return (
-      <ErrorState message={error instanceof Error ? error.message : "Failed to load billing"} />
+      <ErrorState message={extractErrorMessage(error)} />
     );
 
   const subscription = subQuery.data;
