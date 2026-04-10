@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { listTraceRuns, deleteTraceRun, retryTraceRun } from "@/lib/api/evaluations";
 import type { EvalRunResponse } from "@/lib/api/types";
 import { EvalRunTable } from "@/components/features/EvalRunTable";
@@ -19,6 +20,7 @@ import { formatDateTime } from "@/lib/utils/format";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, RotateCw, Trash2 } from "lucide-react";
 import { queryKeys } from "@/lib/query/keys";
+import { extractErrorMessage } from "@/lib/api/client";
 
 export default function TraceRunsPage() {
   const { currentProject } = useProject();
@@ -27,10 +29,12 @@ export default function TraceRunsPage() {
   const queryClient = useQueryClient();
   const projectId = currentProject?.id ?? "";
 
+  useDocumentTitle("Trace Runs");
+
   const [selected, setSelected] = useState<EvalRunResponse | null>(null);
 
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.evaluations.traceRuns(projectId),
+    queryKey: queryKeys.evaluations.traceRuns.list(projectId, { limit: pagination.limit, offset: pagination.offset }),
     queryFn: () => listTraceRuns({ limit: pagination.limit, offset: pagination.offset }),
     enabled: !!currentProject,
   });
@@ -39,9 +43,9 @@ export default function TraceRunsPage() {
     try {
       await retryTraceRun(runId);
       toast({ title: "Run retried", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.traceRuns(projectId) });
-    } catch {
-      toast({ title: "Failed to retry run", variant: "error" });
+      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.traceRuns.all(projectId) });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -50,9 +54,9 @@ export default function TraceRunsPage() {
       await deleteTraceRun(runId, false);
       toast({ title: "Run deleted", variant: "success" });
       setSelected(null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.traceRuns(projectId) });
-    } catch {
-      toast({ title: "Failed to delete run", variant: "error" });
+      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.traceRuns.all(projectId) });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -67,7 +71,7 @@ export default function TraceRunsPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error instanceof Error ? error.message : "Failed to load runs"} onRetry={() => refetch()} />
+        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState title="No evaluation runs" description="Create an evaluation run to get started." />
       ) : (
