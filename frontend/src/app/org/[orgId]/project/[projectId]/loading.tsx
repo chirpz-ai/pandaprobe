@@ -1,5 +1,5 @@
-import { LoadingState } from "@/components/common/LoadingState";
+import { SkeletonPage } from "@/components/ui/Skeleton";
 
 export default function ProjectLoading() {
-  return <LoadingState />;
+  return <SkeletonPage />;
 }
