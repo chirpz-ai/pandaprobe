@@ -10,6 +10,7 @@ import {
   type Unsubscribe,
 } from "firebase/auth";
 import { auth, AUTH_ENABLED } from "./firebase";
+import { SESSION_COOKIE_NAME } from "./config";
 
 export async function signInWithGoogle(): Promise<User> {
   if (!auth) throw new Error("Auth is not enabled");
@@ -41,8 +42,6 @@ export async function signOut(): Promise<void> {
   await firebaseSignOut(auth);
   clearSessionCookie();
 }
-
-export const SESSION_COOKIE_NAME = "__pp_session";
 
 export function setSessionCookie(): void {
   if (typeof document === "undefined") return;
