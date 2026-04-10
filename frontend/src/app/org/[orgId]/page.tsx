@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ListTree, Layers, CheckCircle, BarChart3 } from "lucide-react";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useResolvedProjectId } from "@/hooks/useNavigation";
 import { listTraces } from "@/lib/api/traces";
 import { listSessions } from "@/lib/api/sessions";
@@ -18,6 +19,8 @@ export default function HomePage() {
   const { orgId } = useParams();
   const { projects } = useOrganization();
   const projectId = useResolvedProjectId(projects);
+
+  useDocumentTitle("Home");
 
   const tracesQuery = useQuery({
     queryKey: [...queryKeys.dashboardStats.home(projectId), "traces"],
