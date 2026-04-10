@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import {
   listProjects,
@@ -19,33 +21,23 @@ import { Plus, Trash2 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";
 
 export default function ProjectsPage() {
-  const { currentOrg, refetchProjects } = useOrganization();
+  const { currentOrg } = useOrganization();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const orgId = currentOrg?.id ?? "";
 
-  const [projects, setProjects] = useState<ProjectResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ProjectResponse | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!currentOrg) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await listProjects(currentOrg.id);
-      setProjects(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load projects");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentOrg]);
+  const { data: projects = [], isPending, error, refetch } = useQuery({
+    queryKey: queryKeys.projects.list(orgId),
+    queryFn: () => listProjects(orgId),
+    enabled: !!currentOrg,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.projects.all(orgId) });
 
   async function handleCreate() {
     if (!currentOrg || !newName.trim()) return;
@@ -57,8 +49,7 @@ export default function ProjectsPage() {
       toast({ title: "Project created", variant: "success" });
       setNewName("");
       setNewDesc("");
-      fetchData();
-      refetchProjects();
+      invalidate();
     } catch {
       toast({ title: "Failed to create project", variant: "error" });
     }
@@ -70,8 +61,7 @@ export default function ProjectsPage() {
       await deleteProject(currentOrg.id, deleteTarget.id);
       toast({ title: "Project deleted", variant: "success" });
       setDeleteTarget(null);
-      fetchData();
-      refetchProjects();
+      invalidate();
     } catch {
       toast({ title: "Failed to delete project", variant: "error" });
     }
@@ -107,10 +97,10 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={fetchData} />
+        <ErrorState message={error.message} onRetry={() => refetch()} />
       ) : projects.length === 0 ? (
         <EmptyState title="No projects" description="Create a project to get started." />
       ) : (
