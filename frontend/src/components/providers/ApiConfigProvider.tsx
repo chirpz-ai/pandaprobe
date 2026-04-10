@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { useParams } from "next/navigation";
 import { useAuth } from "./AuthProvider";
-import { useOrganization } from "./OrganizationProvider";
-import { useProject } from "./ProjectProvider";
 import { configureAuth } from "@/lib/api/client";
 import { getCurrentToken } from "@/lib/auth/auth-service";
 
 export function ApiConfigProvider({ children }: { children: ReactNode }) {
   const { authEnabled } = useAuth();
-  const { currentOrg } = useOrganization();
-  const { currentProject } = useProject();
+  const params = useParams();
+  const orgId = params.orgId as string | undefined;
+  const projectId = params.projectId as string | undefined;
 
   useEffect(() => {
     configureAuth({
@@ -18,15 +18,15 @@ export function ApiConfigProvider({ children }: { children: ReactNode }) {
         if (!authEnabled) return null;
         return getCurrentToken();
       },
-      getOrgId: () => currentOrg?.id ?? null,
-      getProjectId: () => currentProject?.id ?? null,
+      getOrgId: () => orgId ?? null,
+      getProjectId: () => projectId ?? null,
       onUnauthorized: () => {
         if (authEnabled && typeof window !== "undefined") {
           window.location.href = "/login";
         }
       },
     });
-  }, [authEnabled, currentOrg, currentProject]);
+  }, [authEnabled, orgId, projectId]);
 
   return <>{children}</>;
 }
