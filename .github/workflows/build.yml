@@ -43,7 +43,7 @@ jobs:
         run: docker build -t pandaprobe-backend:ci-${{ github.sha }} ./backend
 
   frontend:
-    name: Frontend – Lint, typecheck, build
+    name: Frontend – Lint, typecheck, test, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -65,6 +65,10 @@ jobs:
       - name: Lint
         working-directory: frontend
         run: yarn lint
+
+      - name: Unit tests
+        working-directory: frontend
+        run: yarn test
 
       - name: Build
         working-directory: frontend
