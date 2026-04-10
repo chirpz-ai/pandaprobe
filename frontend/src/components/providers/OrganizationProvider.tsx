@@ -4,14 +4,15 @@ import {
   createContext,
   useContext,
   useEffect,
-  useState,
-  useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./AuthProvider";
 import { listOrganizations } from "@/lib/api/organizations";
 import { listProjects } from "@/lib/api/projects";
+import { queryKeys } from "@/lib/query/keys";
 import type { MyOrganizationResponse, ProjectResponse } from "@/lib/api/types";
 
 interface OrganizationContextValue {
@@ -19,8 +20,8 @@ interface OrganizationContextValue {
   currentOrg: MyOrganizationResponse | null;
   projects: ProjectResponse[];
   loading: boolean;
-  refetchOrgs: () => Promise<void>;
-  refetchProjects: () => Promise<void>;
+  refetchOrgs: () => void;
+  refetchProjects: () => void;
 }
 
 const OrganizationContext = createContext<OrganizationContextValue | null>(null);
@@ -28,55 +29,47 @@ const OrganizationContext = createContext<OrganizationContextValue | null>(null)
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const orgId = params.orgId as string;
   const { user, loading: authLoading, authEnabled } = useAuth();
 
-  const [organizations, setOrganizations] = useState<
-    MyOrganizationResponse[]
-  >([]);
-  const [projects, setProjects] = useState<ProjectResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const authReady = !authLoading && (!authEnabled || !!user);
 
-  const fetchOrgs = useCallback(async () => {
-    try {
-      const orgs = await listOrganizations();
-      setOrganizations(orgs);
+  const orgsQuery = useQuery({
+    queryKey: queryKeys.organizations.list(),
+    queryFn: listOrganizations,
+    enabled: authReady,
+  });
 
-      if (orgId && !orgs.some((o) => o.id === orgId)) {
-        router.replace("/");
-        return;
-      }
-    } catch {
-      setOrganizations([]);
-    }
-  }, [orgId, router]);
+  const projectsQuery = useQuery({
+    queryKey: queryKeys.projects.list(orgId),
+    queryFn: () => listProjects(orgId),
+    enabled: authReady && !!orgId,
+  });
 
-  const fetchProjects = useCallback(async () => {
-    if (!orgId) return;
-    try {
-      const p = await listProjects(orgId);
-      setProjects(p);
-    } catch {
-      setProjects([]);
-    }
-  }, [orgId]);
+  const organizations = useMemo(() => orgsQuery.data ?? [], [orgsQuery.data]);
+  const projects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
+  const loading = orgsQuery.isPending || projectsQuery.isPending;
+  const currentOrg = useMemo(
+    () => organizations.find((o) => o.id === orgId) ?? null,
+    [organizations, orgId]
+  );
 
   useEffect(() => {
-    if (authLoading) return;
-    if (authEnabled && !user) return;
-
-    let cancelled = false;
-    async function load() {
-      await Promise.all([fetchOrgs(), fetchProjects()]);
-      if (!cancelled) setLoading(false);
+    if (orgsQuery.isSuccess && orgId && !organizations.some((o) => o.id === orgId)) {
+      router.replace("/");
     }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, authLoading, authEnabled, fetchOrgs, fetchProjects]);
+  }, [orgsQuery.isSuccess, orgId, organizations, router]);
 
-  const currentOrg = organizations.find((o) => o.id === orgId) ?? null;
+  function refetchOrgs() {
+    queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
+  }
+
+  function refetchProjects() {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.projects.all(orgId),
+    });
+  }
 
   return (
     <OrganizationContext.Provider
@@ -85,8 +78,8 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         currentOrg,
         projects,
         loading,
-        refetchOrgs: fetchOrgs,
-        refetchProjects: fetchProjects,
+        refetchOrgs,
+        refetchProjects,
       }}
     >
       {children}
