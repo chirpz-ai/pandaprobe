@@ -1,15 +1,19 @@
 .PHONY: install dev worker lint format migration migrate \
        backend-install backend-dev backend-worker backend-lint backend-format \
        backend-test-unit backend-test-integration \
-       frontend-install frontend-dev frontend-build frontend-lint \
-       frontend-test-unit frontend-test-e2e frontend-test \
+       frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck \
+       frontend-format frontend-test-unit frontend-test-e2e frontend-e2e-install frontend-test \
        up down logs logs-app logs-worker logs-beat logs-frontend ps restart \
        test-unit test-integration test-all test-db-up test-db-down help
 
 # =============================================================================
 #  PandaProbe Monorepo Makefile
-#  Delegates tasks to backend/Makefile and frontend/Makefile.
+#  Delegates tasks to backend/ and frontend/ Makefiles.
 #  Docker Compose orchestration lives here at the repo root.
+#
+#  Testing strategy:
+#    Backend  — unit tests run on host; integration tests use Docker (Postgres/Redis)
+#    Frontend — all tests run on host (yarn). Docker is dev server only.
 # =============================================================================
 
 # -- Backend targets ----------------------------------------------------------
@@ -40,7 +44,7 @@ backend-test-integration:  ## Run backend integration tests (starts test infra)
 	cd .. && docker compose -f docker-compose.test.yml down -v; \
 	exit $$status
 
-# -- Frontend targets ---------------------------------------------------------
+# -- Frontend targets (all run on host via yarn, not Docker) ------------------
 
 frontend-install:  ## Install frontend dependencies
 	$(MAKE) -C frontend install
@@ -54,13 +58,22 @@ frontend-build:  ## Build frontend for production
 frontend-lint:  ## Run frontend linter
 	$(MAKE) -C frontend lint
 
-frontend-test-unit:  ## Run frontend unit tests
+frontend-typecheck:  ## Run frontend TypeScript type checking
+	$(MAKE) -C frontend typecheck
+
+frontend-format:  ## Auto-format frontend code
+	$(MAKE) -C frontend format
+
+frontend-test-unit:  ## Run frontend unit tests (Jest)
 	$(MAKE) -C frontend test-unit
 
-frontend-test-e2e:  ## Run frontend E2E tests
+frontend-test-e2e:  ## Run frontend E2E tests (Playwright)
 	$(MAKE) -C frontend test-e2e
 
-frontend-test:  ## Run all frontend tests
+frontend-e2e-install:  ## Download Playwright browsers (one-time setup)
+	$(MAKE) -C frontend e2e-install
+
+frontend-test:  ## Run all frontend tests (unit + E2E)
 	$(MAKE) -C frontend test
 
 # -- Combined targets (both backend + frontend) ------------------------------
@@ -79,6 +92,10 @@ lint:  ## Run all linters (backend + frontend)
 
 format:  ## Auto-format all code
 	$(MAKE) backend-format
+	$(MAKE) frontend-format
+
+typecheck:  ## Run all type checks
+	$(MAKE) frontend-typecheck
 
 worker:  ## Run the backend Celery worker locally
 	$(MAKE) backend-worker

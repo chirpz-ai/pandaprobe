@@ -1,4 +1,11 @@
-.PHONY: install dev build lint test-unit test-e2e test help
+.PHONY: install dev build lint lint-fix typecheck format \
+       test test-unit test-e2e e2e-install help
+
+# =============================================================================
+#  PandaProbe Frontend — Host-side targets
+#  All commands run directly via yarn (not inside Docker).
+#  Docker is only used for the dev server (make up) and production builds.
+# =============================================================================
 
 install:  ## Install dependencies
 	yarn install
@@ -12,13 +19,25 @@ build:  ## Production build
 lint:  ## Run ESLint
 	yarn lint
 
-test-unit:  ## Run unit tests
-	yarn jest
+lint-fix:  ## Run ESLint with auto-fix
+	yarn lint:fix
 
-test-e2e:  ## Run Playwright E2E tests
-	yarn playwright test
+typecheck:  ## Run TypeScript type checking
+	yarn typecheck
 
-test:  ## Run all tests
+format:  ## Format code with Prettier
+	yarn format
+
+test-unit:  ## Run Jest unit tests
+	yarn test
+
+test-e2e:  ## Run Playwright E2E tests (requires e2e-install first)
+	yarn test:e2e
+
+e2e-install:  ## Download Playwright browsers (one-time setup)
+	yarn playwright install --with-deps
+
+test:  ## Run all tests (unit + E2E)
 	$(MAKE) test-unit
 	$(MAKE) test-e2e
 
