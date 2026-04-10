@@ -40,7 +40,7 @@ export interface ListTracesParams {
   session_id?: string;
   status?: TraceStatus;
   user_id?: string;
-  tags?: string;
+  tags?: string[];
   name?: string;
   started_after?: string;
   started_before?: string;
