@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
   listMembers,
   addMember,
   updateMemberRole,
   removeMember,
 } from "@/lib/api/organizations";
+import { extractErrorMessage } from "@/lib/api/client";
 import type { MembershipResponse } from "@/lib/api/types";
 import { MembershipRole } from "@/lib/api/enums";
 import { Button } from "@/components/ui/Button";
@@ -45,6 +47,8 @@ export default function MembersPage() {
   const [newRole, setNewRole] = useState<string>(MembershipRole.MEMBER);
   const [deleteTarget, setDeleteTarget] = useState<MembershipResponse | null>(null);
 
+  useDocumentTitle("Members");
+
   const { data: members = [], isPending, error, refetch } = useQuery({
     queryKey: queryKeys.members.list(orgId),
     queryFn: () => listMembers(orgId),
@@ -64,8 +68,8 @@ export default function MembersPage() {
       toast({ title: "Member added", variant: "success" });
       setNewUserId("");
       invalidate();
-    } catch {
-      toast({ title: "Failed to add member", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -77,8 +81,8 @@ export default function MembersPage() {
       });
       toast({ title: "Role updated", variant: "success" });
       invalidate();
-    } catch {
-      toast({ title: "Failed to update role", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -89,8 +93,8 @@ export default function MembersPage() {
       toast({ title: "Member removed", variant: "success" });
       setDeleteTarget(null);
       invalidate();
-    } catch {
-      toast({ title: "Failed to remove member", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -129,7 +133,7 @@ export default function MembersPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error.message} onRetry={() => refetch()} />
+        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
       ) : members.length === 0 ? (
         <EmptyState title="No members" />
       ) : (
