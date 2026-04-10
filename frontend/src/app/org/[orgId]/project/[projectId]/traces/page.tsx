@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { listTraces, batchDeleteTraces, type ListTracesParams } from "@/lib/api/traces";
-import type { TraceListItem, PaginatedResponse } from "@/lib/api/types";
 import { TraceTable } from "@/components/features/TraceTable";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
@@ -22,15 +22,14 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { TraceStatus, TraceSortBy, SortOrder } from "@/lib/api/enums";
+import { queryKeys } from "@/lib/query/keys";
 
 export default function TracesPage() {
   const { currentProject } = useProject();
   const { toast } = useToast();
   const pagination = usePagination();
-
-  const [data, setData] = useState<PaginatedResponse<TraceListItem> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const projectId = currentProject?.id ?? "";
 
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -40,32 +39,27 @@ export default function TracesPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    if (!currentProject) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const params: ListTracesParams = {
-        limit: pagination.limit,
-        offset: pagination.offset,
-        sort_by: sortBy as ListTracesParams["sort_by"],
-        sort_order: sortOrder as ListTracesParams["sort_order"],
-      };
-      if (nameFilter) params.name = nameFilter;
-      if (statusFilter !== "all") params.status = statusFilter as ListTracesParams["status"];
+  const params: ListTracesParams = {
+    limit: pagination.limit,
+    offset: pagination.offset,
+    sort_by: sortBy as ListTracesParams["sort_by"],
+    sort_order: sortOrder as ListTracesParams["sort_order"],
+  };
+  if (nameFilter) params.name = nameFilter;
+  if (statusFilter !== "all") params.status = statusFilter as ListTracesParams["status"];
 
-      const result = await listTraces(params);
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load traces");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentProject, pagination.limit, pagination.offset, nameFilter, statusFilter, sortBy, sortOrder]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: queryKeys.traces.list(projectId, {
+      limit: pagination.limit,
+      offset: pagination.offset,
+      name: nameFilter || undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      sortBy,
+      sortOrder,
+    }),
+    queryFn: () => listTraces(params),
+    enabled: !!currentProject,
+  });
 
   async function handleBatchDelete() {
     if (selected.size === 0) return;
@@ -73,7 +67,7 @@ export default function TracesPage() {
       await batchDeleteTraces({ trace_ids: Array.from(selected) });
       toast({ title: `Deleted ${selected.size} traces`, variant: "success" });
       setSelected(new Set());
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: queryKeys.traces.all(projectId) });
     } catch {
       toast({ title: "Failed to delete traces", variant: "error" });
     }
@@ -133,10 +127,10 @@ export default function TracesPage() {
         </Select>
       </div>
 
-      {loading ? (
+      {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={fetchData} />
+        <ErrorState message={error instanceof Error ? error.message : "Failed to load traces"} onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState title="No traces found" description="Traces will appear here when your application sends them." />
       ) : (
