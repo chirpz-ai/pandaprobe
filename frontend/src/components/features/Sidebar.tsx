@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ListTree,
@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
-import { useProject } from "@/components/providers/ProjectProvider";
+import { useOrgId, useResolvedProjectId } from "@/hooks/useNavigation";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
@@ -32,23 +32,8 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
+  exact?: boolean;
 }
-
-const mainNav: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
-  { label: "Traces", href: "/dashboard/traces", icon: <ListTree className="h-4 w-4" /> },
-  { label: "Sessions", href: "/dashboard/sessions", icon: <Layers className="h-4 w-4" /> },
-  { label: "Evaluations", href: "/dashboard/evaluations", icon: <CheckCircle className="h-4 w-4" /> },
-  { label: "Analytics", href: "/dashboard/analytics", icon: <BarChart3 className="h-4 w-4" /> },
-];
-
-const settingsNav: NavItem[] = [
-  { label: "Organization", href: "/dashboard/settings/organization", icon: <Building2 className="h-4 w-4" /> },
-  { label: "Members", href: "/dashboard/settings/members", icon: <Users className="h-4 w-4" /> },
-  { label: "Projects", href: "/dashboard/settings/projects", icon: <FolderKanban className="h-4 w-4" /> },
-  { label: "API Keys", href: "/dashboard/settings/api-keys", icon: <KeyRound className="h-4 w-4" /> },
-  { label: "Billing", href: "/dashboard/settings/billing", icon: <CreditCard className="h-4 w-4" /> },
-];
 
 function NavLink({
   item,
@@ -96,19 +81,91 @@ function NavLink({
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { signOut, authEnabled, user } = useAuth();
-  const { organizations, currentOrg, setCurrentOrg } = useOrganization();
-  const { projects, currentProject, setCurrentProject } = useProject();
+  const { organizations, currentOrg, projects } = useOrganization();
+  const orgId = useOrgId();
+  const resolvedProjectId = useResolvedProjectId(projects);
+
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem(STORAGE_KEY) === "true";
   });
+
+  const orgBase = `/org/${orgId}`;
+  const projectBase = resolvedProjectId
+    ? `${orgBase}/project/${resolvedProjectId}`
+    : null;
+
+  const mainNav = useMemo<NavItem[]>(
+    () => [
+      {
+        label: "Home",
+        href: orgBase,
+        icon: <LayoutDashboard className="h-4 w-4" />,
+        exact: true,
+      },
+      {
+        label: "Traces",
+        href: projectBase ? `${projectBase}/traces` : orgBase,
+        icon: <ListTree className="h-4 w-4" />,
+      },
+      {
+        label: "Sessions",
+        href: projectBase ? `${projectBase}/sessions` : orgBase,
+        icon: <Layers className="h-4 w-4" />,
+      },
+      {
+        label: "Evaluations",
+        href: projectBase ? `${projectBase}/evaluations` : orgBase,
+        icon: <CheckCircle className="h-4 w-4" />,
+      },
+      {
+        label: "Analytics",
+        href: projectBase ? `${projectBase}/analytics` : orgBase,
+        icon: <BarChart3 className="h-4 w-4" />,
+      },
+    ],
+    [orgBase, projectBase]
+  );
+
+  const settingsNav = useMemo<NavItem[]>(
+    () => [
+      { label: "Organization", href: `${orgBase}/settings/organization`, icon: <Building2 className="h-4 w-4" /> },
+      { label: "Members", href: `${orgBase}/settings/members`, icon: <Users className="h-4 w-4" /> },
+      { label: "Projects", href: `${orgBase}/settings/projects`, icon: <FolderKanban className="h-4 w-4" /> },
+      { label: "API Keys", href: `${orgBase}/settings/api-keys`, icon: <KeyRound className="h-4 w-4" /> },
+      { label: "Billing", href: `${orgBase}/settings/billing`, icon: <CreditCard className="h-4 w-4" /> },
+    ],
+    [orgBase]
+  );
+
+  function isActive(item: NavItem): boolean {
+    if (item.exact) return pathname === item.href;
+    return pathname.startsWith(item.href) && item.href !== orgBase;
+  }
 
   function toggleCollapsed() {
     const next = !collapsed;
     setCollapsed(next);
     localStorage.setItem(STORAGE_KEY, String(next));
   }
+
+  function switchOrg(newOrgId: string) {
+    router.push(`/org/${newOrgId}`);
+  }
+
+  function switchProject(newProjectId: string) {
+    const projectSection = pathname.match(
+      /\/project\/[^/]+\/(.*)/
+    );
+    const section = projectSection?.[1] ?? "traces";
+    router.push(`${orgBase}/project/${newProjectId}/${section}`);
+  }
+
+  const currentProjectName = resolvedProjectId
+    ? projects.find((p) => p.id === resolvedProjectId)?.name
+    : null;
 
   return (
     <Tooltip.Provider delayDuration={0}>
@@ -118,10 +175,12 @@ export function Sidebar() {
           collapsed ? "w-14" : "w-56"
         )}
       >
-        {/* Logo */}
         <div className="flex items-center justify-between px-3 h-14 border-b border-border">
           {!collapsed && (
-            <Link href="/dashboard" className="text-sm font-mono text-primary tracking-tight">
+            <Link
+              href={orgBase}
+              className="text-sm font-mono text-primary tracking-tight"
+            >
               PandaProbe
             </Link>
           )}
@@ -137,15 +196,14 @@ export function Sidebar() {
           </button>
         </div>
 
-        {/* Main nav */}
         <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
           <div className="space-y-0.5">
             {mainNav.map((item) => (
               <NavLink
-                key={item.href}
+                key={item.label}
                 item={item}
                 collapsed={collapsed}
-                active={pathname === item.href}
+                active={isActive(item)}
               />
             ))}
           </div>
@@ -162,22 +220,22 @@ export function Sidebar() {
           <div className="space-y-0.5">
             {settingsNav.map((item) => (
               <NavLink
-                key={item.href}
+                key={item.label}
                 item={item}
                 collapsed={collapsed}
-                active={pathname === item.href}
+                active={isActive(item)}
               />
             ))}
           </div>
         </nav>
 
-        {/* Footer: switchers + user */}
         <div className="border-t border-border p-2 space-y-1">
-          {/* Org Switcher */}
           {!collapsed && organizations.length > 0 && (
             <DropdownMenu.Root>
               <DropdownMenu.Trigger className="flex w-full items-center justify-between px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors">
-                <span className="truncate">{currentOrg?.name ?? "Select org"}</span>
+                <span className="truncate">
+                  {currentOrg?.name ?? "Select org"}
+                </span>
                 <ChevronsUpDown className="h-3 w-3 flex-shrink-0" />
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
@@ -195,7 +253,7 @@ export function Sidebar() {
                           ? "text-primary bg-surface-hi"
                           : "text-text-dim hover:text-text hover:bg-surface-hi"
                       )}
-                      onSelect={() => setCurrentOrg(org)}
+                      onSelect={() => switchOrg(org.id)}
                     >
                       {org.name}
                     </DropdownMenu.Item>
@@ -205,11 +263,12 @@ export function Sidebar() {
             </DropdownMenu.Root>
           )}
 
-          {/* Project Switcher */}
           {!collapsed && projects.length > 0 && (
             <DropdownMenu.Root>
               <DropdownMenu.Trigger className="flex w-full items-center justify-between px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors">
-                <span className="truncate">{currentProject?.name ?? "Select project"}</span>
+                <span className="truncate">
+                  {currentProjectName ?? "Select project"}
+                </span>
                 <ChevronsUpDown className="h-3 w-3 flex-shrink-0" />
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
@@ -223,11 +282,11 @@ export function Sidebar() {
                       key={proj.id}
                       className={cn(
                         "flex items-center px-2 py-1.5 text-xs font-mono cursor-pointer outline-none",
-                        proj.id === currentProject?.id
+                        proj.id === resolvedProjectId
                           ? "text-primary bg-surface-hi"
                           : "text-text-dim hover:text-text hover:bg-surface-hi"
                       )}
-                      onSelect={() => setCurrentProject(proj)}
+                      onSelect={() => switchProject(proj.id)}
                     >
                       {proj.name}
                     </DropdownMenu.Item>
@@ -237,7 +296,6 @@ export function Sidebar() {
             </DropdownMenu.Root>
           )}
 
-          {/* Sign out */}
           {authEnabled && user && (
             <button
               onClick={signOut}
