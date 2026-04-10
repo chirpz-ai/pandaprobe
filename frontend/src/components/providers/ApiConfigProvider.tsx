@@ -18,6 +18,10 @@ export function ApiConfigProvider({ children }: { children: ReactNode }) {
         if (!authEnabled) return null;
         return getCurrentToken();
       },
+      forceRefreshToken: async () => {
+        if (!authEnabled) return null;
+        return getCurrentToken(true);
+      },
       getOrgId: () => orgId ?? null,
       getProjectId: () => projectId ?? null,
       onUnauthorized: () => {
