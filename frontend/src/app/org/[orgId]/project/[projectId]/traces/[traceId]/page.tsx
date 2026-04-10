@@ -1,11 +1,12 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { getTrace, deleteTrace } from "@/lib/api/traces";
 import { getTraceScoresByTraceId } from "@/lib/api/evaluations";
-import type { TraceResponse, TraceScoreResponse } from "@/lib/api/types";
+import { queryKeys } from "@/lib/query/keys";
 import { SpanTreeView } from "@/components/features/SpanTreeView";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
@@ -15,7 +16,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import { formatDateTime, formatDuration } from "@/lib/utils/format";
-import { useProjectPath } from "@/hooks/useNavigation";
+import { useProjectPath, useProjectId } from "@/hooks/useNavigation";
 
 export default function TraceDetailPage({
   params,
@@ -24,37 +25,29 @@ export default function TraceDetailPage({
 }) {
   const { traceId } = use(params);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const projectPath = useProjectPath();
+  const projectId = useProjectId() ?? "";
 
-  const [trace, setTrace] = useState<TraceResponse | null>(null);
-  const [scores, setScores] = useState<TraceScoreResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  useEffect(() => {
-    async function fetch() {
-      setLoading(true);
-      try {
-        const [t, s] = await Promise.all([
-          getTrace(traceId),
-          getTraceScoresByTraceId(traceId).catch(() => []),
-        ]);
-        setTrace(t);
-        setScores(s);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load trace");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetch();
-  }, [traceId]);
+  const traceQuery = useQuery({
+    queryKey: queryKeys.traces.detail(traceId),
+    queryFn: () => getTrace(traceId),
+  });
+
+  const scoresQuery = useQuery({
+    queryKey: [...queryKeys.traces.detail(traceId), "scores"],
+    queryFn: () => getTraceScoresByTraceId(traceId).catch(() => []),
+  });
 
   async function handleDelete() {
     try {
       await deleteTrace(traceId);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.traces.all(projectId),
+      });
       toast({ title: "Trace deleted", variant: "success" });
       router.push(projectPath + "/traces");
     } catch {
@@ -62,13 +55,27 @@ export default function TraceDetailPage({
     }
   }
 
-  if (loading) return <LoadingState />;
-  if (error) return <ErrorState message={error} />;
+  if (traceQuery.isPending) return <LoadingState />;
+  if (traceQuery.error)
+    return (
+      <ErrorState
+        message={
+          traceQuery.error instanceof Error
+            ? traceQuery.error.message
+            : "Failed to load trace"
+        }
+      />
+    );
+
+  const trace = traceQuery.data;
   if (!trace) return <ErrorState message="Trace not found" />;
+
+  const scores = scoresQuery.data ?? [];
 
   const latencyMs =
     trace.started_at && trace.ended_at
-      ? new Date(trace.ended_at).getTime() - new Date(trace.started_at).getTime()
+      ? new Date(trace.ended_at).getTime() -
+        new Date(trace.started_at).getTime()
       : null;
 
   return (
@@ -85,7 +92,11 @@ export default function TraceDetailPage({
             </span>
           </div>
         </div>
-        <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => setConfirmDelete(true)}
+        >
           <Trash2 className="h-3 w-3" /> Delete
         </Button>
       </div>
@@ -102,11 +113,15 @@ export default function TraceDetailPage({
           </div>
           <div>
             <span className="text-text-muted block">Started</span>
-            <span className="text-text">{formatDateTime(trace.started_at)}</span>
+            <span className="text-text">
+              {formatDateTime(trace.started_at)}
+            </span>
           </div>
           <div>
             <span className="text-text-muted block">Ended</span>
-            <span className="text-text">{formatDateTime(trace.ended_at)}</span>
+            <span className="text-text">
+              {formatDateTime(trace.ended_at)}
+            </span>
           </div>
           {trace.session_id && (
             <div>
@@ -131,7 +146,9 @@ export default function TraceDetailPage({
               <span className="text-text-muted block mb-1">Tags</span>
               <div className="flex gap-1 flex-wrap">
                 {trace.tags.map((tag) => (
-                  <Badge key={tag} variant="default">{tag}</Badge>
+                  <Badge key={tag} variant="default">
+                    {tag}
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -141,7 +158,9 @@ export default function TraceDetailPage({
 
       {trace.input != null && (
         <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-2">Input</h2>
+          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-2">
+            Input
+          </h2>
           <pre className="text-xs text-text-dim overflow-auto max-h-48 bg-bg p-3 border border-border">
             {typeof trace.input === "string"
               ? trace.input
@@ -152,7 +171,9 @@ export default function TraceDetailPage({
 
       {trace.output != null && (
         <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-2">Output</h2>
+          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-2">
+            Output
+          </h2>
           <pre className="text-xs text-text-dim overflow-auto max-h-48 bg-bg p-3 border border-border">
             {typeof trace.output === "string"
               ? trace.output
@@ -163,12 +184,18 @@ export default function TraceDetailPage({
 
       {scores.length > 0 && (
         <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">Scores</h2>
+          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
+            Scores
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {scores.map((score) => (
               <div key={score.id} className="border border-border p-2">
-                <span className="text-xs text-text-muted block">{score.name}</span>
-                <span className="text-sm font-mono text-text">{score.value ?? "—"}</span>
+                <span className="text-xs text-text-muted block">
+                  {score.name}
+                </span>
+                <span className="text-sm font-mono text-text">
+                  {score.value ?? "—"}
+                </span>
                 <StatusBadge status={score.status} />
               </div>
             ))}
