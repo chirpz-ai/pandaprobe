@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { listTraces, batchDeleteTraces, type ListTracesParams } from "@/lib/api/traces";
@@ -10,7 +10,6 @@ import { SearchBar } from "@/components/common/SearchBar";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
-import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/components/providers/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -23,40 +22,46 @@ import {
 } from "@/components/ui/Select";
 import { TraceStatus, TraceSortBy, SortOrder } from "@/lib/api/enums";
 import { queryKeys } from "@/lib/query/keys";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useUrlState } from "@/hooks/useUrlState";
+import { extractErrorMessage } from "@/lib/api/client";
+
+const URL_CONFIG = {
+  page: { default: "1" },
+  name: { default: "" },
+  status: { default: "all" },
+  sortBy: { default: TraceSortBy.started_at },
+  sortOrder: { default: SortOrder.desc },
+} as const;
 
 export default function TracesPage() {
   const { currentProject } = useProject();
   const { toast } = useToast();
-  const pagination = usePagination();
   const queryClient = useQueryClient();
   const projectId = currentProject?.id ?? "";
 
-  const [nameFilter, setNameFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>(TraceSortBy.started_at);
-  const [sortOrder, setSortOrder] = useState<string>(SortOrder.desc);
+  const { values, set, page, limit, offset, setPage, resetPage, totalPages } =
+    useUrlState(URL_CONFIG);
+
+  useDocumentTitle("Traces");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const params: ListTracesParams = {
-    limit: pagination.limit,
-    offset: pagination.offset,
-    sort_by: sortBy as ListTracesParams["sort_by"],
-    sort_order: sortOrder as ListTracesParams["sort_order"],
-  };
-  if (nameFilter) params.name = nameFilter;
-  if (statusFilter !== "all") params.status = statusFilter as ListTracesParams["status"];
+  const params = useMemo<ListTracesParams>(() => {
+    const p: ListTracesParams = {
+      limit,
+      offset,
+      sort_by: values.sortBy as ListTracesParams["sort_by"],
+      sort_order: values.sortOrder as ListTracesParams["sort_order"],
+    };
+    if (values.name) p.name = values.name;
+    if (values.status !== "all") p.status = values.status as ListTracesParams["status"];
+    return p;
+  }, [limit, offset, values.sortBy, values.sortOrder, values.name, values.status]);
 
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.traces.list(projectId, {
-      limit: pagination.limit,
-      offset: pagination.offset,
-      name: nameFilter || undefined,
-      status: statusFilter !== "all" ? statusFilter : undefined,
-      sortBy,
-      sortOrder,
-    }),
+    queryKey: queryKeys.traces.list(projectId, params as unknown as Record<string, unknown>),
     queryFn: () => listTraces(params),
     enabled: !!currentProject,
   });
@@ -68,8 +73,8 @@ export default function TracesPage() {
       toast({ title: `Deleted ${selected.size} traces`, variant: "success" });
       setSelected(new Set());
       queryClient.invalidateQueries({ queryKey: queryKeys.traces.all(projectId) });
-    } catch {
-      toast({ title: "Failed to delete traces", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -90,12 +95,12 @@ export default function TracesPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <SearchBar
-          value={nameFilter}
-          onChange={(v) => { setNameFilter(v); pagination.reset(); }}
+          value={values.name}
+          onChange={(v) => { set({ name: v, page: "1" }); }}
           placeholder="Filter by name..."
           className="w-64"
         />
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); pagination.reset(); }}>
+        <Select value={values.status} onValueChange={(v) => { set({ status: v, page: "1" }); }}>
           <SelectTrigger className="w-36">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -106,7 +111,7 @@ export default function TracesPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={sortBy} onValueChange={setSortBy}>
+        <Select value={values.sortBy} onValueChange={(v) => set({ sortBy: v })}>
           <SelectTrigger className="w-36">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
@@ -116,7 +121,7 @@ export default function TracesPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={sortOrder} onValueChange={setSortOrder}>
+        <Select value={values.sortOrder} onValueChange={(v) => set({ sortOrder: v })}>
           <SelectTrigger className="w-24">
             <SelectValue />
           </SelectTrigger>
@@ -130,16 +135,16 @@ export default function TracesPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error instanceof Error ? error.message : "Failed to load traces"} onRetry={() => refetch()} />
+        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState title="No traces found" description="Traces will appear here when your application sends them." />
       ) : (
         <>
           <TraceTable traces={data.items} />
           <Pagination
-            page={pagination.page}
-            totalPages={pagination.totalPages(data.total)}
-            onPageChange={pagination.setPage}
+            page={page}
+            totalPages={totalPages(data.total)}
+            onPageChange={setPage}
             total={data.total}
           />
         </>
