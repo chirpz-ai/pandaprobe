@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { listTraceRuns, deleteTraceRun, retryTraceRun } from "@/lib/api/evaluations";
-import type { EvalRunResponse, PaginatedResponse } from "@/lib/api/types";
+import type { EvalRunResponse } from "@/lib/api/types";
 import { EvalRunTable } from "@/components/features/EvalRunTable";
 import { Pagination } from "@/components/common/Pagination";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -17,43 +18,28 @@ import { Badge } from "@/components/ui/Badge";
 import { formatDateTime } from "@/lib/utils/format";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, RotateCw, Trash2 } from "lucide-react";
+import { queryKeys } from "@/lib/query/keys";
 
 export default function TraceRunsPage() {
   const { currentProject } = useProject();
   const { toast } = useToast();
   const pagination = usePagination();
+  const queryClient = useQueryClient();
+  const projectId = currentProject?.id ?? "";
 
-  const [data, setData] = useState<PaginatedResponse<EvalRunResponse> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<EvalRunResponse | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!currentProject) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await listTraceRuns({
-        limit: pagination.limit,
-        offset: pagination.offset,
-      });
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load runs");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentProject, pagination.limit, pagination.offset]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: queryKeys.evaluations.traceRuns(projectId),
+    queryFn: () => listTraceRuns({ limit: pagination.limit, offset: pagination.offset }),
+    enabled: !!currentProject,
+  });
 
   async function handleRetry(runId: string) {
     try {
       await retryTraceRun(runId);
       toast({ title: "Run retried", variant: "success" });
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.traceRuns(projectId) });
     } catch {
       toast({ title: "Failed to retry run", variant: "error" });
     }
@@ -64,7 +50,7 @@ export default function TraceRunsPage() {
       await deleteTraceRun(runId, false);
       toast({ title: "Run deleted", variant: "success" });
       setSelected(null);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.traceRuns(projectId) });
     } catch {
       toast({ title: "Failed to delete run", variant: "error" });
     }
@@ -78,10 +64,10 @@ export default function TraceRunsPage() {
     <div className="space-y-4 animate-fade-in">
       <h1 className="text-lg font-mono text-primary">Trace Evaluation Runs</h1>
 
-      {loading ? (
+      {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={fetchData} />
+        <ErrorState message={error instanceof Error ? error.message : "Failed to load runs"} onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState title="No evaluation runs" description="Create an evaluation run to get started." />
       ) : (
