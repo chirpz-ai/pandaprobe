@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { ListTree, Layers, CheckCircle, BarChart3 } from "lucide-react";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useResolvedProjectId } from "@/hooks/useNavigation";
@@ -10,86 +10,72 @@ import { listTraces } from "@/lib/api/traces";
 import { listSessions } from "@/lib/api/sessions";
 import { listMonitors } from "@/lib/api/evaluations";
 import { getUsage } from "@/lib/api/subscriptions";
+import { queryKeys } from "@/lib/query/keys";
 import { formatNumber, formatCost } from "@/lib/utils/format";
 import { LoadingState } from "@/components/common/LoadingState";
-import type { UsageResponse } from "@/lib/api/types";
 
-interface DashboardStats {
-  traceCount: number;
-  sessionCount: number;
-  monitorCount: number;
-  usage: UsageResponse | null;
-}
-
-export default function DashboardPage() {
+export default function HomePage() {
   const { orgId } = useParams();
   const { projects } = useOrganization();
   const projectId = useResolvedProjectId(projects);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchStats() {
-      setLoading(true);
-      try {
-        const [traces, sessions, monitors, usage] = await Promise.allSettled([
-          projectId ? listTraces({ limit: 1 }) : Promise.resolve(null),
-          projectId ? listSessions({ limit: 1 }) : Promise.resolve(null),
-          projectId ? listMonitors({ limit: 1 }) : Promise.resolve(null),
-          getUsage(),
-        ]);
+  const tracesQuery = useQuery({
+    queryKey: [...queryKeys.dashboardStats.home(projectId), "traces"],
+    queryFn: () => listTraces({ limit: 1 }),
+    enabled: !!projectId,
+  });
 
-        setStats({
-          traceCount:
-            traces.status === "fulfilled" && traces.value
-              ? traces.value.total
-              : 0,
-          sessionCount:
-            sessions.status === "fulfilled" && sessions.value
-              ? sessions.value.total
-              : 0,
-          monitorCount:
-            monitors.status === "fulfilled" && monitors.value
-              ? monitors.value.total
-              : 0,
-          usage:
-            usage.status === "fulfilled" ? usage.value : null,
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchStats();
-  }, [projectId]);
+  const sessionsQuery = useQuery({
+    queryKey: [...queryKeys.dashboardStats.home(projectId), "sessions"],
+    queryFn: () => listSessions({ limit: 1 }),
+    enabled: !!projectId,
+  });
 
-  if (loading) return <LoadingState />;
+  const monitorsQuery = useQuery({
+    queryKey: [...queryKeys.dashboardStats.home(projectId), "monitors"],
+    queryFn: () => listMonitors({ limit: 1 }),
+    enabled: !!projectId,
+  });
+
+  const usageQuery = useQuery({
+    queryKey: queryKeys.subscriptions.usage,
+    queryFn: getUsage,
+  });
+
+  const loading =
+    tracesQuery.isPending || sessionsQuery.isPending || monitorsQuery.isPending;
+
+  if (loading && !tracesQuery.data) return <LoadingState />;
 
   const projectBase = projectId ? `/org/${orgId}/project/${projectId}` : null;
 
   const cards = [
     {
       label: "Traces",
-      value: formatNumber(stats?.traceCount ?? 0),
+      value: formatNumber(tracesQuery.data?.total ?? 0),
       icon: <ListTree className="h-4 w-4" />,
       href: projectBase ? `${projectBase}/traces` : "#",
     },
     {
       label: "Sessions",
-      value: formatNumber(stats?.sessionCount ?? 0),
+      value: formatNumber(sessionsQuery.data?.total ?? 0),
       icon: <Layers className="h-4 w-4" />,
       href: projectBase ? `${projectBase}/sessions` : "#",
     },
     {
       label: "Monitors",
-      value: formatNumber(stats?.monitorCount ?? 0),
+      value: formatNumber(monitorsQuery.data?.total ?? 0),
       icon: <CheckCircle className="h-4 w-4" />,
       href: projectBase ? `${projectBase}/evaluations/monitors` : "#",
     },
     {
       label: "Period Cost",
-      value: stats?.usage
+      value: usageQuery.data
         ? formatCost(
-            (stats.usage.traces + stats.usage.trace_evals + stats.usage.session_evals) * 0
+            (usageQuery.data.traces +
+              usageQuery.data.trace_evals +
+              usageQuery.data.session_evals) *
+              0
           )
         : "—",
       icon: <BarChart3 className="h-4 w-4" />,
@@ -114,12 +100,14 @@ export default function DashboardPage() {
               </span>
               <span className="text-text-muted">{card.icon}</span>
             </div>
-            <span className="text-2xl font-mono text-primary">{card.value}</span>
+            <span className="text-2xl font-mono text-primary">
+              {card.value}
+            </span>
           </Link>
         ))}
       </div>
 
-      {stats?.usage && (
+      {usageQuery.data && (
         <div className="border-engraved bg-surface p-4">
           <h2 className="text-xs font-mono text-text-dim uppercase tracking-wider mb-4">
             Current Period Usage
@@ -128,19 +116,21 @@ export default function DashboardPage() {
             <div>
               <span className="text-xs text-text-muted block">Traces</span>
               <span className="text-sm font-mono text-text">
-                {formatNumber(stats.usage.traces)}
+                {formatNumber(usageQuery.data.traces)}
               </span>
             </div>
             <div>
               <span className="text-xs text-text-muted block">Trace Evals</span>
               <span className="text-sm font-mono text-text">
-                {formatNumber(stats.usage.trace_evals)}
+                {formatNumber(usageQuery.data.trace_evals)}
               </span>
             </div>
             <div>
-              <span className="text-xs text-text-muted block">Session Evals</span>
+              <span className="text-xs text-text-muted block">
+                Session Evals
+              </span>
               <span className="text-sm font-mono text-text">
-                {formatNumber(stats.usage.session_evals)}
+                {formatNumber(usageQuery.data.session_evals)}
               </span>
             </div>
           </div>
