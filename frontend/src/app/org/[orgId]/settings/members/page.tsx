@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import {
   listMembers,
@@ -36,31 +38,21 @@ const roleVariant: Record<string, "primary" | "info" | "default"> = {
 export default function MembersPage() {
   const { currentOrg } = useOrganization();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const orgId = currentOrg?.id ?? "";
 
-  const [members, setMembers] = useState<MembershipResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [newUserId, setNewUserId] = useState("");
   const [newRole, setNewRole] = useState<string>(MembershipRole.MEMBER);
   const [deleteTarget, setDeleteTarget] = useState<MembershipResponse | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!currentOrg) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await listMembers(currentOrg.id);
-      setMembers(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load members");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentOrg]);
+  const { data: members = [], isPending, error, refetch } = useQuery({
+    queryKey: queryKeys.members.list(orgId),
+    queryFn: () => listMembers(orgId),
+    enabled: !!currentOrg,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.members.list(orgId) });
 
   async function handleAdd() {
     if (!currentOrg || !newUserId.trim()) return;
@@ -71,7 +63,7 @@ export default function MembersPage() {
       });
       toast({ title: "Member added", variant: "success" });
       setNewUserId("");
-      fetchData();
+      invalidate();
     } catch {
       toast({ title: "Failed to add member", variant: "error" });
     }
@@ -84,7 +76,7 @@ export default function MembersPage() {
         role: role as MembershipResponse["role"],
       });
       toast({ title: "Role updated", variant: "success" });
-      fetchData();
+      invalidate();
     } catch {
       toast({ title: "Failed to update role", variant: "error" });
     }
@@ -96,7 +88,7 @@ export default function MembersPage() {
       await removeMember(currentOrg.id, deleteTarget.user_id);
       toast({ title: "Member removed", variant: "success" });
       setDeleteTarget(null);
-      fetchData();
+      invalidate();
     } catch {
       toast({ title: "Failed to remove member", variant: "error" });
     }
@@ -134,10 +126,10 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {loading ? (
+      {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={fetchData} />
+        <ErrorState message={error.message} onRetry={() => refetch()} />
       ) : members.length === 0 ? (
         <EmptyState title="No members" />
       ) : (
