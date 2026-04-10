@@ -9,7 +9,7 @@ import { listSessions } from "@/lib/api/sessions";
 import { listMonitors } from "@/lib/api/evaluations";
 import { getUsage } from "@/lib/api/subscriptions";
 import { formatNumber, formatCost } from "@/lib/utils/format";
-import { LoadingState } from "@/components/molecules/LoadingState";
+import { LoadingState } from "@/components/common/LoadingState";
 import type { UsageResponse } from "@/lib/api/types";
 
 interface DashboardStats {

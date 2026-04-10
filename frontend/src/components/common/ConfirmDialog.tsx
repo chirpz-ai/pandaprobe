@@ -2,7 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
+import { Button } from "@/components/ui/Button";
 
 interface ConfirmDialogProps {
   open: boolean;

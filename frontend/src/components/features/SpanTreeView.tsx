@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import type { SpanResponse } from "@/lib/api/types";
-import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Badge } from "@/components/atoms/Badge";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { Badge } from "@/components/ui/Badge";
 import { formatDuration } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 

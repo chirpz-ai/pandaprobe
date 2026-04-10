@@ -4,23 +4,23 @@ import { useEffect, useState, useCallback } from "react";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { listTraces, batchDeleteTraces, type ListTracesParams } from "@/lib/api/traces";
 import type { TraceListItem, PaginatedResponse } from "@/lib/api/types";
-import { TraceTable } from "@/components/organisms/TraceTable";
-import { Pagination } from "@/components/molecules/Pagination";
-import { SearchBar } from "@/components/molecules/SearchBar";
-import { LoadingState } from "@/components/molecules/LoadingState";
-import { ErrorState } from "@/components/molecules/ErrorState";
-import { EmptyState } from "@/components/molecules/EmptyState";
+import { TraceTable } from "@/components/features/TraceTable";
+import { Pagination } from "@/components/common/Pagination";
+import { SearchBar } from "@/components/common/SearchBar";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { EmptyState } from "@/components/common/EmptyState";
 import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/components/providers/ToastProvider";
-import { Button } from "@/components/atoms/Button";
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
   SelectValue,
-} from "@/components/atoms/Select";
+} from "@/components/ui/Select";
 import { TraceStatus, TraceSortBy, SortOrder } from "@/lib/api/enums";
 
 export default function TracesPage() {

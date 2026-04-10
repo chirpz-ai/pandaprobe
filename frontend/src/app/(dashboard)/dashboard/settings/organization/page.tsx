@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { updateOrganization } from "@/lib/api/organizations";
-import { Button } from "@/components/atoms/Button";
-import { Input } from "@/components/atoms/Input";
-import { LoadingState } from "@/components/molecules/LoadingState";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { LoadingState } from "@/components/common/LoadingState";
 import { useToast } from "@/components/providers/ToastProvider";
 
 export default function OrganizationSettingsPage() {

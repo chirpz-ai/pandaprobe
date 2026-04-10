@@ -1,6 +1,6 @@
 "use client";
 
-import { Spinner } from "@/components/atoms/Spinner";
+import { Spinner } from "@/components/ui/Spinner";
 
 export function LoadingState() {
   return (

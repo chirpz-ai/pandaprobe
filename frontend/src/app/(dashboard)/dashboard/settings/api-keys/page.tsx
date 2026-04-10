@@ -10,13 +10,13 @@ import {
 } from "@/lib/api/api-keys";
 import type { APIKeyResponse } from "@/lib/api/types";
 import { KeyExpiration } from "@/lib/api/enums";
-import { Button } from "@/components/atoms/Button";
-import { Input } from "@/components/atoms/Input";
-import { Badge } from "@/components/atoms/Badge";
-import { LoadingState } from "@/components/molecules/LoadingState";
-import { ErrorState } from "@/components/molecules/ErrorState";
-import { EmptyState } from "@/components/molecules/EmptyState";
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { EmptyState } from "@/components/common/EmptyState";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import {
   Select,
@@ -24,7 +24,7 @@ import {
   SelectContent,
   SelectItem,
   SelectValue,
-} from "@/components/atoms/Select";
+} from "@/components/ui/Select";
 import { Plus, RotateCw, Trash2, Copy, Eye, EyeOff } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";
 

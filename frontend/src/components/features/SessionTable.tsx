@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { SessionSummary } from "@/lib/api/types";
-import { Badge } from "@/components/atoms/Badge";
+import { Badge } from "@/components/ui/Badge";
 import { formatRelativeTime, formatDuration, formatCost } from "@/lib/utils/format";
 
 interface SessionTableProps {

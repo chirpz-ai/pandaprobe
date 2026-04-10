@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { getSession, deleteSession } from "@/lib/api/sessions";
 import type { SessionDetail } from "@/lib/api/types";
-import { TraceTable } from "@/components/organisms/TraceTable";
-import { Badge } from "@/components/atoms/Badge";
-import { Button } from "@/components/atoms/Button";
-import { LoadingState } from "@/components/molecules/LoadingState";
-import { ErrorState } from "@/components/molecules/ErrorState";
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { TraceTable } from "@/components/features/TraceTable";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import { formatDateTime, formatDuration, formatCost } from "@/lib/utils/format";
 

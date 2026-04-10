@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import type { TraceListItem } from "@/lib/api/types";
-import { StatusBadge } from "@/components/molecules/StatusBadge";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { formatRelativeTime, formatDuration, formatCost } from "@/lib/utils/format";
-import { Badge } from "@/components/atoms/Badge";
+import { Badge } from "@/components/ui/Badge";
 
 interface TraceTableProps {
   traces: TraceListItem[];

@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { Input } from "@/components/atoms/Input";
+import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils/cn";
 
 interface SearchBarProps {

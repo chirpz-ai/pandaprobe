@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, type BadgeProps } from "@/components/atoms/Badge";
+import { Badge, type BadgeProps } from "@/components/ui/Badge";
 import type { TraceStatus, EvaluationStatus, ScoreStatus, MonitorStatus } from "@/lib/api/enums";
 
 type StatusType = TraceStatus | EvaluationStatus | ScoreStatus | MonitorStatus | string;

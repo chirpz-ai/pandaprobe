@@ -10,11 +10,11 @@ import {
   deleteMonitor,
 } from "@/lib/api/evaluations";
 import type { MonitorResponse, PaginatedResponse } from "@/lib/api/types";
-import { MonitorCard } from "@/components/organisms/MonitorCard";
-import { Pagination } from "@/components/molecules/Pagination";
-import { LoadingState } from "@/components/molecules/LoadingState";
-import { ErrorState } from "@/components/molecules/ErrorState";
-import { EmptyState } from "@/components/molecules/EmptyState";
+import { MonitorCard } from "@/components/features/MonitorCard";
+import { Pagination } from "@/components/common/Pagination";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { EmptyState } from "@/components/common/EmptyState";
 import { usePagination } from "@/hooks/usePagination";
 import { useToast } from "@/components/providers/ToastProvider";
 

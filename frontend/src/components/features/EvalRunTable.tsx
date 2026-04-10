@@ -1,8 +1,8 @@
 "use client";
 
 import type { EvalRunResponse } from "@/lib/api/types";
-import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Badge } from "@/components/atoms/Badge";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { Badge } from "@/components/ui/Badge";
 import { formatRelativeTime } from "@/lib/utils/format";
 
 interface EvalRunTableProps {

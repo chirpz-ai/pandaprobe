@@ -12,8 +12,7 @@ import {
 } from "@/lib/api/organizations";
 
 jest.mock("axios", () => {
-  const mockAxios = {
-    create: jest.fn(() => mockAxios),
+  const mockAxios: Record<string, unknown> = {
     get: jest.fn(),
     post: jest.fn(),
     patch: jest.fn(),
@@ -23,6 +22,7 @@ jest.mock("axios", () => {
       response: { use: jest.fn() },
     },
   };
+  mockAxios.create = jest.fn(() => mockAxios);
   return { ...mockAxios, default: mockAxios };
 });
 

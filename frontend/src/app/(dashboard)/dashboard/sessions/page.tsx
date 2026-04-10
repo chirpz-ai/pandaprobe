@@ -4,12 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { listSessions, type ListSessionsParams } from "@/lib/api/sessions";
 import type { SessionSummary, PaginatedResponse } from "@/lib/api/types";
-import { SessionTable } from "@/components/organisms/SessionTable";
-import { Pagination } from "@/components/molecules/Pagination";
-import { SearchBar } from "@/components/molecules/SearchBar";
-import { LoadingState } from "@/components/molecules/LoadingState";
-import { ErrorState } from "@/components/molecules/ErrorState";
-import { EmptyState } from "@/components/molecules/EmptyState";
+import { SessionTable } from "@/components/features/SessionTable";
+import { Pagination } from "@/components/common/Pagination";
+import { SearchBar } from "@/components/common/SearchBar";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { EmptyState } from "@/components/common/EmptyState";
 import { usePagination } from "@/hooks/usePagination";
 import {
   Select,
@@ -17,7 +17,7 @@ import {
   SelectContent,
   SelectItem,
   SelectValue,
-} from "@/components/atoms/Select";
+} from "@/components/ui/Select";
 import { SessionSortBy, SortOrder } from "@/lib/api/enums";
 
 export default function SessionsPage() {

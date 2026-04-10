@@ -1,6 +1,6 @@
 "use client";
 
-import { Input } from "@/components/atoms/Input";
+import { Input } from "@/components/ui/Input";
 
 interface DateRangePickerProps {
   startDate: string;

@@ -6,9 +6,9 @@ import { getTraceAnalytics, type TraceAnalyticsParams } from "@/lib/api/traces";
 import { getTraceScoreSummary } from "@/lib/api/evaluations";
 import type { AnalyticsBucket, TokenCostBucket, TopModel, ScoreSummaryItem } from "@/lib/api/types";
 import { AnalyticsMetric, AnalyticsGranularity } from "@/lib/api/enums";
-import { LoadingState } from "@/components/molecules/LoadingState";
-import { ErrorState } from "@/components/molecules/ErrorState";
-import { EmptyState } from "@/components/molecules/EmptyState";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { EmptyState } from "@/components/common/EmptyState";
 import { formatNumber, formatCost } from "@/lib/utils/format";
 import {
   Select,
@@ -16,8 +16,8 @@ import {
   SelectContent,
   SelectItem,
   SelectValue,
-} from "@/components/atoms/Select";
-import { DateRangePicker } from "@/components/molecules/DateRangePicker";
+} from "@/components/ui/Select";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 
 function BarChart({ data, labelKey, valueKey, maxValue }: {
   data: Record<string, unknown>[];

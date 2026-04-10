@@ -1,8 +1,8 @@
 "use client";
 
-import { AuthGuard } from "@/components/organisms/AuthGuard";
-import { Sidebar } from "@/components/organisms/Sidebar";
-import { TopBar } from "@/components/organisms/TopBar";
+import { AuthGuard } from "@/components/features/AuthGuard";
+import { Sidebar } from "@/components/features/Sidebar";
+import { TopBar } from "@/components/features/TopBar";
 
 export default function DashboardLayout({
   children,

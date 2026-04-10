@@ -15,11 +15,11 @@ import type {
   BillingResponse,
   PlanInfo,
 } from "@/lib/api/types";
-import { Button } from "@/components/atoms/Button";
-import { Badge } from "@/components/atoms/Badge";
-import { LoadingState } from "@/components/molecules/LoadingState";
-import { ErrorState } from "@/components/molecules/ErrorState";
-import { StatusBadge } from "@/components/molecules/StatusBadge";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { useToast } from "@/components/providers/ToastProvider";
 import { formatNumber, formatDate } from "@/lib/utils/format";
 import { ExternalLink } from "lucide-react";

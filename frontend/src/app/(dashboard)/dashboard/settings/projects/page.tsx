@@ -9,12 +9,12 @@ import {
   deleteProject,
 } from "@/lib/api/projects";
 import type { ProjectResponse } from "@/lib/api/types";
-import { Button } from "@/components/atoms/Button";
-import { Input } from "@/components/atoms/Input";
-import { LoadingState } from "@/components/molecules/LoadingState";
-import { ErrorState } from "@/components/molecules/ErrorState";
-import { EmptyState } from "@/components/molecules/EmptyState";
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { EmptyState } from "@/components/common/EmptyState";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import { Plus, Trash2 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";

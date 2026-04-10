@@ -1,9 +1,9 @@
 "use client";
 
 import type { MonitorResponse } from "@/lib/api/types";
-import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { Badge } from "@/components/atoms/Badge";
-import { Button } from "@/components/atoms/Button";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { formatRelativeTime } from "@/lib/utils/format";
 import { Pause, Play, Zap, Trash2 } from "lucide-react";
 
