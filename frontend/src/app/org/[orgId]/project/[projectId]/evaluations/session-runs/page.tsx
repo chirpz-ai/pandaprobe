@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { listSessionRuns } from "@/lib/api/evaluations";
 import { EvalRunTable } from "@/components/features/EvalRunTable";
 import { Pagination } from "@/components/common/Pagination";
@@ -10,14 +11,17 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { usePagination } from "@/hooks/usePagination";
 import { queryKeys } from "@/lib/query/keys";
+import { extractErrorMessage } from "@/lib/api/client";
 
 export default function SessionRunsPage() {
   const { currentProject } = useProject();
   const pagination = usePagination();
   const projectId = currentProject?.id ?? "";
 
+  useDocumentTitle("Session Runs");
+
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.evaluations.sessionRuns(projectId),
+    queryKey: queryKeys.evaluations.sessionRuns.list(projectId, { limit: pagination.limit, offset: pagination.offset }),
     queryFn: () => listSessionRuns({ limit: pagination.limit, offset: pagination.offset }),
     enabled: !!currentProject,
   });
@@ -33,7 +37,7 @@ export default function SessionRunsPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error instanceof Error ? error.message : "Failed to load runs"} onRetry={() => refetch()} />
+        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
       ) : !data || data.items.length === 0 ? (
         <EmptyState title="No session evaluation runs" description="Create a session evaluation run to get started." />
       ) : (
