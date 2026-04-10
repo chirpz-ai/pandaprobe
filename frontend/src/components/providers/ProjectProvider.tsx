@@ -4,81 +4,44 @@ import {
   createContext,
   useContext,
   useEffect,
-  useState,
-  useCallback,
   type ReactNode,
 } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useOrganization } from "./OrganizationProvider";
-import { listProjects } from "@/lib/api/projects";
 import type { ProjectResponse } from "@/lib/api/types";
 
 interface ProjectContextValue {
-  projects: ProjectResponse[];
   currentProject: ProjectResponse | null;
-  setCurrentProject: (project: ProjectResponse) => void;
-  loading: boolean;
-  refetch: () => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 
-const STORAGE_KEY = "pandaprobe_current_project_id";
+const STORAGE_KEY = "pp_project_id";
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const { currentOrg, loading: orgLoading } = useOrganization();
-  const [projects, setProjects] = useState<ProjectResponse[]>([]);
-  const [currentProject, setCurrentProjectState] =
-    useState<ProjectResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const params = useParams();
+  const router = useRouter();
+  const orgId = params.orgId as string;
+  const projectId = params.projectId as string;
+  const { projects, loading: orgLoading } = useOrganization();
 
-  const fetchProjects = useCallback(async () => {
-    if (!currentOrg) {
-      setProjects([]);
-      setCurrentProjectState(null);
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      const p = await listProjects(currentOrg.id);
-      setProjects(p);
-
-      const savedId =
-        typeof window !== "undefined"
-          ? localStorage.getItem(STORAGE_KEY)
-          : null;
-      const saved = p.find((proj) => proj.id === savedId);
-      setCurrentProjectState(saved ?? p[0] ?? null);
-    } catch {
-      setProjects([]);
-      setCurrentProjectState(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentOrg]);
+  const currentProject = projects.find((p) => p.id === projectId) ?? null;
 
   useEffect(() => {
-    if (orgLoading) return;
-    fetchProjects();
-  }, [currentOrg, orgLoading, fetchProjects]);
+    if (orgLoading || projects.length === 0) return;
 
-  const setCurrentProject = useCallback((project: ProjectResponse) => {
-    setCurrentProjectState(project);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, project.id);
+    if (projectId && !projects.some((p) => p.id === projectId)) {
+      router.replace(`/org/${orgId}`);
+      return;
     }
-  }, []);
+
+    if (projectId) {
+      localStorage.setItem(STORAGE_KEY, projectId);
+    }
+  }, [projectId, projects, orgLoading, orgId, router]);
 
   return (
-    <ProjectContext.Provider
-      value={{
-        projects,
-        currentProject,
-        setCurrentProject,
-        loading,
-        refetch: fetchProjects,
-      }}
-    >
+    <ProjectContext.Provider value={{ currentProject }}>
       {children}
     </ProjectContext.Provider>
   );
