@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -87,10 +87,12 @@ export function Sidebar() {
   const orgId = useOrgId();
   const resolvedProjectId = useResolvedProjectId(projects);
 
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(STORAGE_KEY) === "true";
-  });
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "true") setCollapsed(true);
+  }, []);
 
   const orgBase = `/org/${orgId}`;
   const projectBase = resolvedProjectId
