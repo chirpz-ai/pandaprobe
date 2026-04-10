@@ -16,8 +16,12 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
+  Settings,
   LogOut,
+  Mail,
   ChevronsUpDown,
+  CircleUser,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -89,6 +93,13 @@ export function Sidebar() {
 
   const [collapsed, setCollapsed] = useState(false);
 
+  const inSettingsRoute = pathname.includes("/settings");
+  const [settingsView, setSettingsView] = useState(inSettingsRoute);
+
+  useEffect(() => {
+    setSettingsView(inSettingsRoute);
+  }, [inSettingsRoute]);
+
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "true") setCollapsed(true);
@@ -153,6 +164,16 @@ export function Sidebar() {
     localStorage.setItem(STORAGE_KEY, String(next));
   }
 
+  function openSettings() {
+    setSettingsView(true);
+    router.push(`${orgBase}/settings/organization`);
+  }
+
+  function exitSettings() {
+    setSettingsView(false);
+    router.push(orgBase);
+  }
+
   function switchOrg(newOrgId: string) {
     router.push(`/org/${newOrgId}`);
   }
@@ -169,6 +190,9 @@ export function Sidebar() {
     ? projects.find((p) => p.id === resolvedProjectId)?.name
     : null;
 
+  const displayName = user?.displayName || user?.email?.split("@")[0] || "User";
+  const displayEmail = user?.email || "";
+
   return (
     <Tooltip.Provider delayDuration={0}>
       <aside
@@ -177,15 +201,24 @@ export function Sidebar() {
           collapsed ? "w-14" : "w-56"
         )}
       >
+        {/* ── Header ─────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-3 h-14 border-b border-border">
-          {!collapsed && (
+          {!collapsed && settingsView ? (
+            <button
+              onClick={exitSettings}
+              className="flex items-center gap-2 text-sm font-mono text-text-dim hover:text-text transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>PandaProbe</span>
+            </button>
+          ) : !collapsed ? (
             <Link
               href={orgBase}
               className="text-sm font-mono text-primary tracking-tight"
             >
               PandaProbe
             </Link>
-          )}
+          ) : null}
           <button
             onClick={toggleCollapsed}
             className="p-1 text-text-muted hover:text-text transition-colors"
@@ -198,40 +231,76 @@ export function Sidebar() {
           </button>
         </div>
 
+        {/* ── Navigation ─────────────────────────────────────────── */}
         <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
-          <div className="space-y-0.5">
-            {mainNav.map((item) => (
-              <NavLink
-                key={item.label}
-                item={item}
-                collapsed={collapsed}
-                active={isActive(item)}
-              />
-            ))}
-          </div>
-
-          <div className="my-3 mx-3 border-t border-border" />
-
-          {!collapsed && (
-            <div className="px-3 pb-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-                Settings
-              </span>
+          {settingsView ? (
+            <div className="space-y-0.5">
+              {!collapsed && (
+                <div className="px-3 pb-1 pt-1">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                    Settings
+                  </span>
+                </div>
+              )}
+              {settingsNav.map((item) => (
+                <NavLink
+                  key={item.label}
+                  item={item}
+                  collapsed={collapsed}
+                  active={isActive(item)}
+                />
+              ))}
             </div>
+          ) : (
+            <>
+              <div className="space-y-0.5">
+                {mainNav.map((item) => (
+                  <NavLink
+                    key={item.label}
+                    item={item}
+                    collapsed={collapsed}
+                    active={isActive(item)}
+                  />
+                ))}
+              </div>
+            </>
           )}
-          <div className="space-y-0.5">
-            {settingsNav.map((item) => (
-              <NavLink
-                key={item.label}
-                item={item}
-                collapsed={collapsed}
-                active={isActive(item)}
-              />
-            ))}
-          </div>
         </nav>
 
+        {/* ── Footer ─────────────────────────────────────────────── */}
         <div className="border-t border-border p-2 space-y-1">
+          {/* Settings button (main view only) */}
+          {!settingsView && (
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <button
+                  onClick={openSettings}
+                  className={cn(
+                    "flex items-center gap-3 w-full px-3 py-2 text-sm font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                    collapsed && "justify-center px-2"
+                  )}
+                >
+                  <Settings className="h-4 w-4" />
+                  {!collapsed && <span>Settings</span>}
+                </button>
+              </Tooltip.Trigger>
+              {collapsed && (
+                <Tooltip.Portal>
+                  <Tooltip.Content
+                    side="right"
+                    sideOffset={8}
+                    className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
+                  >
+                    Settings
+                  </Tooltip.Content>
+                </Tooltip.Portal>
+              )}
+            </Tooltip.Root>
+          )}
+
+          <div className="mx-1 border-t border-border" />
+
+          {/* Org switcher */}
           {!collapsed && organizations.length > 0 && (
             <DropdownMenu.Root>
               <DropdownMenu.Trigger className="flex w-full items-center justify-between px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors">
@@ -265,6 +334,7 @@ export function Sidebar() {
             </DropdownMenu.Root>
           )}
 
+          {/* Project switcher */}
           {!collapsed && projects.length > 0 && (
             <DropdownMenu.Root>
               <DropdownMenu.Trigger className="flex w-full items-center justify-between px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors">
@@ -298,18 +368,66 @@ export function Sidebar() {
             </DropdownMenu.Root>
           )}
 
-          {authEnabled && user && (
-            <button
-              onClick={signOut}
+          {/* User menu */}
+          {authEnabled && user ? (
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger
+                className={cn(
+                  "flex items-center gap-2 w-full px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                  collapsed && "justify-center"
+                )}
+              >
+                <CircleUser className="h-4 w-4 flex-shrink-0" />
+                {!collapsed && (
+                  <span className="truncate">{displayName}</span>
+                )}
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  side="top"
+                  align="start"
+                  sideOffset={4}
+                  className="z-50 min-w-[200px] bg-surface border border-border p-1 shadow-lg"
+                >
+                  <div className="px-2 py-2 border-b border-border mb-1">
+                    <p className="text-xs font-mono text-text truncate">
+                      {displayName}
+                    </p>
+                    <p className="text-[10px] font-mono text-text-muted truncate">
+                      {displayEmail}
+                    </p>
+                  </div>
+                  <DropdownMenu.Item
+                    className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
+                    onSelect={() =>
+                      window.open("mailto:support@pandaprobe.com", "_blank")
+                    }
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    Contact
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Separator className="my-1 mx-1 border-t border-border" />
+                  <DropdownMenu.Item
+                    className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
+                    onSelect={() => signOut()}
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Sign out
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
+          ) : !authEnabled ? (
+            <div
               className={cn(
-                "flex items-center gap-2 w-full px-2 py-1.5 text-xs font-mono text-text-muted hover:text-text hover:bg-surface-hi transition-colors",
+                "flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-muted",
                 collapsed && "justify-center"
               )}
             >
-              <LogOut className="h-3.5 w-3.5" />
-              {!collapsed && <span>Sign out</span>}
-            </button>
-          )}
+              <CircleUser className="h-4 w-4 flex-shrink-0" />
+              {!collapsed && <span>Dev User</span>}
+            </div>
+          ) : null}
         </div>
       </aside>
     </Tooltip.Provider>
