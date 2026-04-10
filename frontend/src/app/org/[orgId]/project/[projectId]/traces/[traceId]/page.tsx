@@ -16,7 +16,9 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import { formatDateTime, formatDuration } from "@/lib/utils/format";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useProjectPath, useProjectId } from "@/hooks/useNavigation";
+import { extractErrorMessage } from "@/lib/api/client";
 
 export default function TraceDetailPage({
   params,
@@ -29,6 +31,8 @@ export default function TraceDetailPage({
   const { toast } = useToast();
   const projectPath = useProjectPath();
   const projectId = useProjectId() ?? "";
+
+  useDocumentTitle("Trace Detail");
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -50,21 +54,15 @@ export default function TraceDetailPage({
       });
       toast({ title: "Trace deleted", variant: "success" });
       router.push(projectPath + "/traces");
-    } catch {
-      toast({ title: "Failed to delete trace", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
   if (traceQuery.isPending) return <LoadingState />;
   if (traceQuery.error)
     return (
-      <ErrorState
-        message={
-          traceQuery.error instanceof Error
-            ? traceQuery.error.message
-            : "Failed to load trace"
-        }
-      />
+      <ErrorState message={extractErrorMessage(traceQuery.error)} />
     );
 
   const trace = traceQuery.data;
