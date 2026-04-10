@@ -15,7 +15,7 @@ export interface ListSessionsParams {
   has_error?: boolean;
   started_after?: string;
   started_before?: string;
-  tags?: string;
+  tags?: string[];
   query?: string;
   sort_by?: SessionSortBy;
   sort_order?: SortOrder;
