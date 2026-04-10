@@ -8,29 +8,33 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { listOrganizations } from "@/lib/api/organizations";
-import type { MyOrganizationResponse } from "@/lib/api/types";
+import { listProjects } from "@/lib/api/projects";
+import type { MyOrganizationResponse, ProjectResponse } from "@/lib/api/types";
 
 interface OrganizationContextValue {
   organizations: MyOrganizationResponse[];
   currentOrg: MyOrganizationResponse | null;
-  setCurrentOrg: (org: MyOrganizationResponse) => void;
+  projects: ProjectResponse[];
   loading: boolean;
-  refetch: () => Promise<void>;
+  refetchOrgs: () => Promise<void>;
+  refetchProjects: () => Promise<void>;
 }
 
 const OrganizationContext = createContext<OrganizationContextValue | null>(null);
 
-const STORAGE_KEY = "pandaprobe_current_org_id";
-
 export function OrganizationProvider({ children }: { children: ReactNode }) {
+  const params = useParams();
+  const router = useRouter();
+  const orgId = params.orgId as string;
   const { user, loading: authLoading, authEnabled } = useAuth();
-  const [organizations, setOrganizations] = useState<MyOrganizationResponse[]>(
-    []
-  );
-  const [currentOrg, setCurrentOrgState] =
-    useState<MyOrganizationResponse | null>(null);
+
+  const [organizations, setOrganizations] = useState<
+    MyOrganizationResponse[]
+  >([]);
+  const [projects, setProjects] = useState<ProjectResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchOrgs = useCallback(async () => {
@@ -38,39 +42,52 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       const orgs = await listOrganizations();
       setOrganizations(orgs);
 
-      const savedId =
-        typeof window !== "undefined"
-          ? localStorage.getItem(STORAGE_KEY)
-          : null;
-      const saved = orgs.find((o) => o.id === savedId);
-      setCurrentOrgState(saved ?? orgs[0] ?? null);
+      if (orgId && !orgs.some((o) => o.id === orgId)) {
+        router.replace("/");
+        return;
+      }
     } catch {
       setOrganizations([]);
-      setCurrentOrgState(null);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [orgId, router]);
+
+  const fetchProjects = useCallback(async () => {
+    if (!orgId) return;
+    try {
+      const p = await listProjects(orgId);
+      setProjects(p);
+    } catch {
+      setProjects([]);
+    }
+  }, [orgId]);
 
   useEffect(() => {
     if (authLoading) return;
-    if (authEnabled && !user) {
-      setLoading(false);
-      return;
-    }
-    fetchOrgs();
-  }, [user, authLoading, authEnabled, fetchOrgs]);
+    if (authEnabled && !user) return;
 
-  const setCurrentOrg = useCallback((org: MyOrganizationResponse) => {
-    setCurrentOrgState(org);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, org.id);
+    let cancelled = false;
+    async function load() {
+      await Promise.all([fetchOrgs(), fetchProjects()]);
+      if (!cancelled) setLoading(false);
     }
-  }, []);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading, authEnabled, fetchOrgs, fetchProjects]);
+
+  const currentOrg = organizations.find((o) => o.id === orgId) ?? null;
 
   return (
     <OrganizationContext.Provider
-      value={{ organizations, currentOrg, setCurrentOrg, loading, refetch: fetchOrgs }}
+      value={{
+        organizations,
+        currentOrg,
+        projects,
+        loading,
+        refetchOrgs: fetchOrgs,
+        refetchProjects: fetchProjects,
+      }}
     >
       {children}
     </OrganizationContext.Provider>
