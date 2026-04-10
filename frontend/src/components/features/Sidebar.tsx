@@ -83,6 +83,86 @@ function NavLink({
   return link;
 }
 
+function SwitcherDropdown({
+  label,
+  icon,
+  items,
+  activeId,
+  onSelect,
+  collapsed,
+  side = "right",
+}: {
+  label: string;
+  icon: React.ReactNode;
+  items: { id: string; name: string }[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  collapsed: boolean;
+  side?: "right" | "bottom";
+}) {
+  const trigger = (
+    <DropdownMenu.Trigger
+      className={cn(
+        "flex w-full items-center gap-3 px-3 py-2 text-sm font-mono transition-colors duration-150",
+        "text-text hover:bg-surface-hi",
+        collapsed && "justify-center px-2"
+      )}
+    >
+      {icon}
+      {!collapsed && (
+        <>
+          <span className="flex-1 truncate text-left">{label}</span>
+          <ChevronsUpDown className="h-3 w-3 flex-shrink-0 text-text-muted" />
+        </>
+      )}
+    </DropdownMenu.Trigger>
+  );
+
+  return (
+    <DropdownMenu.Root>
+      {collapsed ? (
+        <Tooltip.Root>
+          <Tooltip.Trigger asChild>{trigger}</Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content
+              side="right"
+              sideOffset={8}
+              className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
+            >
+              {label}
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
+      ) : (
+        trigger
+      )}
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          side={side}
+          align="start"
+          sideOffset={side === "right" ? 8 : 4}
+          className="z-50 min-w-[200px] max-h-[300px] overflow-y-auto bg-surface border border-border p-1 shadow-lg"
+        >
+          {items.map((item) => (
+            <DropdownMenu.Item
+              key={item.id}
+              className={cn(
+                "flex items-center px-2 py-1.5 text-xs font-mono cursor-pointer outline-none",
+                item.id === activeId
+                  ? "text-primary bg-surface-hi"
+                  : "text-text-dim hover:text-text hover:bg-surface-hi"
+              )}
+              onSelect={() => onSelect(item.id)}
+            >
+              {item.name}
+            </DropdownMenu.Item>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -110,14 +190,18 @@ export function Sidebar() {
     ? `${orgBase}/project/${resolvedProjectId}`
     : null;
 
-  const mainNav = useMemo<NavItem[]>(
+  const homeItem = useMemo<NavItem>(
+    () => ({
+      label: "Home",
+      href: orgBase,
+      icon: <LayoutDashboard className="h-4 w-4" />,
+      exact: true,
+    }),
+    [orgBase]
+  );
+
+  const projectNav = useMemo<NavItem[]>(
     () => [
-      {
-        label: "Home",
-        href: orgBase,
-        icon: <LayoutDashboard className="h-4 w-4" />,
-        exact: true,
-      },
       {
         label: "Traces",
         href: projectBase ? `${projectBase}/traces` : orgBase,
@@ -179,9 +263,7 @@ export function Sidebar() {
   }
 
   function switchProject(newProjectId: string) {
-    const projectSection = pathname.match(
-      /\/project\/[^/]+\/(.*)/
-    );
+    const projectSection = pathname.match(/\/project\/[^/]+\/(.*)/);
     const section = projectSection?.[1] ?? "traces";
     router.push(`${orgBase}/project/${newProjectId}/${section}`);
   }
@@ -232,7 +314,7 @@ export function Sidebar() {
         </div>
 
         {/* ── Navigation ─────────────────────────────────────────── */}
-        <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 py-2 overflow-y-auto">
           {settingsView ? (
             <div className="space-y-0.5">
               {!collapsed && (
@@ -253,15 +335,57 @@ export function Sidebar() {
             </div>
           ) : (
             <>
-              <div className="space-y-0.5">
-                {mainNav.map((item) => (
-                  <NavLink
-                    key={item.label}
-                    item={item}
+              {/* ── Org scope ── */}
+              {organizations.length > 1 ? (
+                <SwitcherDropdown
+                  label={currentOrg?.name ?? "Select org"}
+                  icon={<Building2 className="h-4 w-4" />}
+                  items={organizations.map((o) => ({ id: o.id, name: o.name }))}
+                  activeId={currentOrg?.id ?? null}
+                  onSelect={switchOrg}
+                  collapsed={collapsed}
+                />
+              ) : !collapsed ? (
+                <div className="px-3 py-2 text-sm font-mono text-text truncate">
+                  {currentOrg?.name ?? "Organization"}
+                </div>
+              ) : null}
+
+              <div className="space-y-0.5 mt-1">
+                <NavLink
+                  item={homeItem}
+                  collapsed={collapsed}
+                  active={isActive(homeItem)}
+                />
+              </div>
+
+              {/* ── Project scope ── */}
+              <div className="mt-4">
+                {projects.length > 0 ? (
+                  <SwitcherDropdown
+                    label={currentProjectName ?? "Select project"}
+                    icon={<FolderKanban className="h-4 w-4" />}
+                    items={projects.map((p) => ({ id: p.id, name: p.name }))}
+                    activeId={resolvedProjectId}
+                    onSelect={switchProject}
                     collapsed={collapsed}
-                    active={isActive(item)}
                   />
-                ))}
+                ) : !collapsed ? (
+                  <div className="px-3 py-2 text-xs font-mono text-text-muted">
+                    No projects yet
+                  </div>
+                ) : null}
+
+                <div className="space-y-0.5 mt-1">
+                  {projectNav.map((item) => (
+                    <NavLink
+                      key={item.label}
+                      item={item}
+                      collapsed={collapsed}
+                      active={isActive(item)}
+                    />
+                  ))}
+                </div>
               </div>
             </>
           )}
@@ -269,7 +393,6 @@ export function Sidebar() {
 
         {/* ── Footer ─────────────────────────────────────────────── */}
         <div className="border-t border-border p-2 space-y-1">
-          {/* Settings button (main view only) */}
           {!settingsView && (
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
@@ -296,76 +419,6 @@ export function Sidebar() {
                 </Tooltip.Portal>
               )}
             </Tooltip.Root>
-          )}
-
-          <div className="mx-1 border-t border-border" />
-
-          {/* Org switcher */}
-          {!collapsed && organizations.length > 0 && (
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger className="flex w-full items-center justify-between px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors">
-                <span className="truncate">
-                  {currentOrg?.name ?? "Select org"}
-                </span>
-                <ChevronsUpDown className="h-3 w-3 flex-shrink-0" />
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  side="top"
-                  align="start"
-                  className="z-50 min-w-[180px] bg-surface border border-border p-1 shadow-lg"
-                >
-                  {organizations.map((org) => (
-                    <DropdownMenu.Item
-                      key={org.id}
-                      className={cn(
-                        "flex items-center px-2 py-1.5 text-xs font-mono cursor-pointer outline-none",
-                        org.id === currentOrg?.id
-                          ? "text-primary bg-surface-hi"
-                          : "text-text-dim hover:text-text hover:bg-surface-hi"
-                      )}
-                      onSelect={() => switchOrg(org.id)}
-                    >
-                      {org.name}
-                    </DropdownMenu.Item>
-                  ))}
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
-          )}
-
-          {/* Project switcher */}
-          {!collapsed && projects.length > 0 && (
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger className="flex w-full items-center justify-between px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors">
-                <span className="truncate">
-                  {currentProjectName ?? "Select project"}
-                </span>
-                <ChevronsUpDown className="h-3 w-3 flex-shrink-0" />
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  side="top"
-                  align="start"
-                  className="z-50 min-w-[180px] bg-surface border border-border p-1 shadow-lg"
-                >
-                  {projects.map((proj) => (
-                    <DropdownMenu.Item
-                      key={proj.id}
-                      className={cn(
-                        "flex items-center px-2 py-1.5 text-xs font-mono cursor-pointer outline-none",
-                        proj.id === resolvedProjectId
-                          ? "text-primary bg-surface-hi"
-                          : "text-text-dim hover:text-text hover:bg-surface-hi"
-                      )}
-                      onSelect={() => switchProject(proj.id)}
-                    >
-                      {proj.name}
-                    </DropdownMenu.Item>
-                  ))}
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
           )}
 
           {/* User menu */}
