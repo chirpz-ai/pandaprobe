@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
   listAPIKeys,
   createAPIKey,
   rotateAPIKey,
   deleteAPIKey,
 } from "@/lib/api/api-keys";
+import { extractErrorMessage } from "@/lib/api/client";
 import type { APIKeyResponse } from "@/lib/api/types";
 import { KeyExpiration } from "@/lib/api/enums";
 import { Button } from "@/components/ui/Button";
@@ -42,6 +44,8 @@ export default function APIKeysPage() {
   const [showRawKey, setShowRawKey] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<APIKeyResponse | null>(null);
 
+  useDocumentTitle("API Keys");
+
   const { data: keys = [], isPending, error, refetch } = useQuery({
     queryKey: queryKeys.apiKeys.list(orgId),
     queryFn: () => listAPIKeys(orgId),
@@ -67,8 +71,8 @@ export default function APIKeysPage() {
       toast({ title: "API key created", variant: "success" });
       setNewName("");
       invalidate();
-    } catch {
-      toast({ title: "Failed to create API key", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -80,8 +84,8 @@ export default function APIKeysPage() {
       setShowRawKey(true);
       toast({ title: "API key rotated", variant: "success" });
       invalidate();
-    } catch {
-      toast({ title: "Failed to rotate API key", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -92,8 +96,8 @@ export default function APIKeysPage() {
       toast({ title: "API key deleted", variant: "success" });
       setDeleteTarget(null);
       invalidate();
-    } catch {
-      toast({ title: "Failed to delete API key", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
@@ -156,7 +160,7 @@ export default function APIKeysPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error.message} onRetry={() => refetch()} />
+        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
       ) : keys.length === 0 ? (
         <EmptyState title="No API keys" description="Create an API key to authenticate programmatic access." />
       ) : (
