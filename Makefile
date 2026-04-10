@@ -1,11 +1,10 @@
 .PHONY: install dev worker lint format migration migrate \
        backend-install backend-dev backend-worker backend-lint backend-format \
+       backend-test-unit backend-test-integration \
        frontend-install frontend-dev frontend-build frontend-lint \
        frontend-test-unit frontend-test-e2e frontend-test \
        up down logs logs-app logs-worker logs-beat logs-frontend ps restart \
-       test-unit-backend test-unit \
-       test-integration-backend test-integration \
-       test-all test-db-up test-db-down help
+       test-unit test-integration test-all test-db-up test-db-down help
 
 # =============================================================================
 #  PandaProbe Monorepo Makefile
@@ -29,6 +28,17 @@ backend-lint:  ## Run backend linter
 
 backend-format:  ## Auto-format backend code
 	$(MAKE) -C backend format
+
+backend-test-unit:  ## Run backend unit tests
+	$(MAKE) -C backend test-unit
+
+backend-test-integration:  ## Run backend integration tests (starts test infra)
+	docker compose -f docker-compose.test.yml up -d --wait
+	cd backend && POSTGRES_PORT=5433 POSTGRES_DB=pandaprobe_test_db REDIS_PORT=6380 \
+		uv run --group test pytest tests/integration/ -v; \
+	status=$$?; \
+	cd .. && docker compose -f docker-compose.test.yml down -v; \
+	exit $$status
 
 # -- Frontend targets ---------------------------------------------------------
 
@@ -110,23 +120,12 @@ restart:  ## Restart all dev services
 
 # -- Testing ------------------------------------------------------------------
 
-test-unit-backend:  ## Run backend unit tests
-	$(MAKE) -C backend test-unit
-
-test-integration-backend:  ## Run backend integration tests (starts test infra)
-	docker compose -f docker-compose.test.yml up -d --wait
-	cd backend && POSTGRES_PORT=5433 POSTGRES_DB=pandaprobe_test_db REDIS_PORT=6380 \
-		uv run --group test pytest tests/integration/ -v; \
-	status=$$?; \
-	cd .. && docker compose -f docker-compose.test.yml down -v; \
-	exit $$status
-
 test-unit:  ## Run all unit tests (backend + frontend)
-	$(MAKE) test-unit-backend
+	$(MAKE) backend-test-unit
 	$(MAKE) frontend-test-unit
 
 test-integration:  ## Run all integration tests
-	$(MAKE) test-integration-backend
+	$(MAKE) backend-test-integration
 
 test-all:  ## Run all unit + integration + E2E tests
 	$(MAKE) test-unit
