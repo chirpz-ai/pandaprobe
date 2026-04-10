@@ -14,7 +14,9 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import { formatDateTime, formatDuration, formatCost } from "@/lib/utils/format";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useProjectPath, useProjectId } from "@/hooks/useNavigation";
+import { extractErrorMessage } from "@/lib/api/client";
 
 export default function SessionDetailPage({
   params,
@@ -27,6 +29,8 @@ export default function SessionDetailPage({
   const { toast } = useToast();
   const projectPath = useProjectPath();
   const projectId = useProjectId() ?? "";
+
+  useDocumentTitle("Session Detail");
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -43,19 +47,15 @@ export default function SessionDetailPage({
       });
       toast({ title: "Session deleted", variant: "success" });
       router.push(projectPath + "/sessions");
-    } catch {
-      toast({ title: "Failed to delete session", variant: "error" });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
   if (isPending) return <LoadingState />;
   if (error)
     return (
-      <ErrorState
-        message={
-          error instanceof Error ? error.message : "Failed to load session"
-        }
-      />
+      <ErrorState message={extractErrorMessage(error)} />
     );
   if (!session) return <ErrorState message="Session not found" />;
 
