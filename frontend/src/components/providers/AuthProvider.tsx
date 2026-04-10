@@ -17,6 +17,8 @@ import {
   signOut as _signOut,
   getCurrentToken,
   onIdTokenChanged,
+  setSessionCookie,
+  clearSessionCookie,
 } from "@/lib/auth/auth-service";
 
 interface AuthContextValue {
@@ -44,6 +46,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onIdTokenChanged((firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
+      if (firebaseUser) {
+        setSessionCookie();
+      } else {
+        clearSessionCookie();
+      }
     });
 
     return unsubscribe;

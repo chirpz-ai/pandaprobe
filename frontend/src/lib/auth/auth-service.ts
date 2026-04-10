@@ -39,6 +39,19 @@ export async function signUpWithEmail(
 export async function signOut(): Promise<void> {
   if (!auth) return;
   await firebaseSignOut(auth);
+  clearSessionCookie();
+}
+
+export const SESSION_COOKIE_NAME = "__pp_session";
+
+export function setSessionCookie(): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${SESSION_COOKIE_NAME}=1; path=/; max-age=86400; SameSite=Lax`;
+}
+
+export function clearSessionCookie(): void {
+  if (typeof document === "undefined") return;
+  document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
 }
 
 export async function getCurrentToken(

@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const AUTH_ENABLED = process.env.NEXT_PUBLIC_AUTH_ENABLED !== "false" ||
+const AUTH_ENABLED =
+  process.env.NEXT_PUBLIC_AUTH_ENABLED !== "false" ||
   process.env.NODE_ENV !== "development";
 
-const PUBLIC_PATHS = ["/login", "/health", "/_next", "/favicon.ico"];
+const SESSION_COOKIE = "__pp_session";
+
+const PUBLIC_PATHS = ["/login", "/_next", "/favicon.ico"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -16,10 +19,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // In a full implementation, middleware would verify a session cookie.
-  // Since Firebase tokens are in-memory only (per security spec), the
-  // client-side AuthProvider handles redirect logic. The middleware
-  // layer here is kept lightweight to avoid needing cookie-based sessions.
+  const hasSession = request.cookies.has(SESSION_COOKIE);
+
+  if (!hasSession && pathname.startsWith("/dashboard")) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (hasSession && pathname === "/login") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
   return NextResponse.next();
 }
 
