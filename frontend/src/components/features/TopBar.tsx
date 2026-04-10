@@ -4,15 +4,22 @@ import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { AUTH_ENABLED } from "@/lib/auth/firebase";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function getBreadcrumbs(pathname: string): string[] {
-  const segments = pathname
-    .replace("/dashboard", "")
-    .split("/")
-    .filter(Boolean);
-  if (segments.length === 0) return ["Dashboard"];
-  return ["Dashboard", ...segments.map((s) =>
-    s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-  )];
+  const segments = pathname.split("/").filter(Boolean);
+
+  const meaningful: string[] = [];
+  for (const seg of segments) {
+    if (seg === "org" || seg === "project") continue;
+    if (UUID_RE.test(seg)) continue;
+    meaningful.push(
+      seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    );
+  }
+
+  if (meaningful.length === 0) return ["Home"];
+  return meaningful;
 }
 
 export function TopBar() {
