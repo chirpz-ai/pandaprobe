@@ -4,12 +4,14 @@ import Link from "next/link";
 import type { SessionSummary } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { formatRelativeTime, formatDuration, formatCost } from "@/lib/utils/format";
+import { useProjectPath } from "@/hooks/useNavigation";
 
 interface SessionTableProps {
   sessions: SessionSummary[];
 }
 
 export function SessionTable({ sessions }: SessionTableProps) {
+  const basePath = useProjectPath("/sessions");
   return (
     <div className="border border-border overflow-x-auto">
       <table className="w-full text-xs font-mono">
@@ -33,7 +35,7 @@ export function SessionTable({ sessions }: SessionTableProps) {
             >
               <td className="px-3 py-2 max-w-[200px] truncate">
                 <Link
-                  href={`/dashboard/sessions/${session.session_id}`}
+                  href={`${basePath}/${session.session_id}`}
                   className="text-text hover:text-primary transition-colors"
                 >
                   {session.session_id}
