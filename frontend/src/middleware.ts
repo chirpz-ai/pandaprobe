@@ -21,14 +21,14 @@ export function middleware(request: NextRequest) {
 
   const hasSession = request.cookies.has(SESSION_COOKIE);
 
-  if (!hasSession && pathname.startsWith("/dashboard")) {
+  if (!hasSession && pathname.startsWith("/org")) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   if (hasSession && pathname === "/login") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
