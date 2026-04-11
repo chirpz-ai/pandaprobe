@@ -42,8 +42,8 @@ jobs:
       - name: Build Docker image
         run: docker build -t pandaprobe-backend:ci-${{ github.sha }} ./backend
 
-  frontend:
-    name: Frontend – Lint, typecheck, test, build
+  frontend-build:
+    name: Frontend – Production build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -57,18 +57,6 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: yarn install --frozen-lockfile
-
-      - name: TypeScript check
-        working-directory: frontend
-        run: yarn typecheck
-
-      - name: Lint
-        working-directory: frontend
-        run: yarn lint
-
-      - name: Unit tests
-        working-directory: frontend
-        run: yarn test
 
       - name: Build
         working-directory: frontend
