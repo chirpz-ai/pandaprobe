@@ -2,7 +2,7 @@ export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 200;
 
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://api.pandaprobe.com";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export const STORAGE_KEYS = {
   orgId: "pandaprobe_current_org_id",
