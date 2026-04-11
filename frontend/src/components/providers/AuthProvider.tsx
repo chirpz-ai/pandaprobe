@@ -20,6 +20,7 @@ import {
   setSessionCookie,
   clearSessionCookie,
 } from "@/lib/auth/auth-service";
+import { clearUserStorage } from "@/lib/utils/constants";
 
 interface AuthContextValue {
   user: User | null;
@@ -75,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    clearUserStorage();
     await _signOut();
   }, []);
 
