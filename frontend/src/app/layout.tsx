@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PandaProbe",
   description:
-    "Open-source agent engineering platform — tracing, evaluation, and monitoring for LLM-powered applications",
+    "Open-source agent engineering platform — tracing, evaluation, and monitoring for agents.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
