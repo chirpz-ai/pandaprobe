@@ -192,11 +192,13 @@ export function Sidebar() {
     ? `${orgBase}/project/${resolvedProjectId}`
     : null;
 
+  const projectHome = projectBase ?? orgBase;
+
   const projectNav = useMemo<NavItem[]>(
     () => [
       {
         label: "Home",
-        href: orgBase,
+        href: projectHome,
         icon: <LayoutDashboard className="h-4 w-4" />,
         exact: true,
       },
@@ -221,7 +223,7 @@ export function Sidebar() {
         icon: <BarChart3 className="h-4 w-4" />,
       },
     ],
-    [orgBase, projectBase]
+    [orgBase, projectBase, projectHome]
   );
 
   const settingsNav = useMemo<NavItem[]>(
@@ -237,7 +239,7 @@ export function Sidebar() {
 
   function isActive(item: NavItem): boolean {
     if (item.exact) return pathname === item.href;
-    return pathname.startsWith(item.href) && item.href !== orgBase;
+    return pathname.startsWith(item.href) && item.href !== orgBase && item.href !== projectHome;
   }
 
   function toggleCollapsed() {
@@ -253,7 +255,7 @@ export function Sidebar() {
 
   function exitSettings() {
     setSettingsView(false);
-    router.push(orgBase);
+    router.push(projectHome);
   }
 
   function switchOrg(newOrgId: string) {
@@ -262,8 +264,11 @@ export function Sidebar() {
 
   function switchProject(newProjectId: string) {
     const projectSection = pathname.match(/\/project\/[^/]+\/(.*)/);
-    const section = projectSection?.[1] ?? "traces";
-    router.push(`${orgBase}/project/${newProjectId}/${section}`);
+    const section = projectSection?.[1];
+    const target = section
+      ? `${orgBase}/project/${newProjectId}/${section}`
+      : `${orgBase}/project/${newProjectId}`;
+    router.push(target);
   }
 
   const currentProjectName = resolvedProjectId
@@ -293,7 +298,7 @@ export function Sidebar() {
             </button>
           ) : !collapsed ? (
             <Link
-              href={orgBase}
+              href={projectHome}
               className="text-sm font-mono text-primary tracking-tight"
             >
               PandaProbe
