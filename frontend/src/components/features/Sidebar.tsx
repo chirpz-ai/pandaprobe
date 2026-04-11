@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -294,16 +295,22 @@ export function Sidebar() {
               className="flex items-center gap-2 text-sm font-mono text-text-dim hover:text-text transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
+              <Image src="/favicon-32x32.png" alt="" width={18} height={18} className="flex-shrink-0" />
               <span>PandaProbe</span>
             </button>
           ) : !collapsed ? (
             <Link
               href={projectHome}
-              className="text-sm font-mono text-primary tracking-tight"
+              className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight"
             >
+              <Image src="/favicon-32x32.png" alt="" width={18} height={18} className="flex-shrink-0" />
               PandaProbe
             </Link>
-          ) : null}
+          ) : (
+            <Link href={projectHome} className="flex items-center">
+              <Image src="/favicon-32x32.png" alt="PandaProbe" width={18} height={18} />
+            </Link>
+          )}
           <button
             onClick={toggleCollapsed}
             className="p-1 text-text-muted hover:text-text transition-colors"
