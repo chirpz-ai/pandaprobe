@@ -21,7 +21,7 @@ export function useProjectPath(path = ""): string {
   return `/org/${params.orgId}/project/${params.projectId}${path}`;
 }
 
-const PROJECT_STORAGE_KEY = "pp_project_id";
+import { STORAGE_KEYS } from "@/lib/utils/constants";
 
 export function useResolvedProjectId(
   projects: { id: string }[]
@@ -29,7 +29,7 @@ export function useResolvedProjectId(
   const projectIdFromUrl = useProjectId();
   if (projectIdFromUrl) return projectIdFromUrl;
   if (typeof window !== "undefined") {
-    const saved = localStorage.getItem(PROJECT_STORAGE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEYS.projectId);
     if (saved && projects.some((p) => p.id === saved)) return saved;
   }
   return projects[0]?.id ?? null;

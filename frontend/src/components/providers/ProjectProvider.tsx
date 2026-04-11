@@ -9,14 +9,13 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useOrganization } from "./OrganizationProvider";
 import type { ProjectResponse } from "@/lib/api/types";
+import { STORAGE_KEYS } from "@/lib/utils/constants";
 
 interface ProjectContextValue {
   currentProject: ProjectResponse | null;
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
-
-const STORAGE_KEY = "pp_project_id";
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const params = useParams();
@@ -36,7 +35,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     if (projectId) {
-      localStorage.setItem(STORAGE_KEY, projectId);
+      localStorage.setItem(STORAGE_KEYS.projectId, projectId);
     }
   }, [projectId, projects, orgLoading, orgId, router]);
 
