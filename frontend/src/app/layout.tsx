@@ -35,6 +35,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} dark h-full`}
     >
       <body className="min-h-full bg-bg text-text font-mono antialiased">
