@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { getProfile } from "@/lib/api/user";
 import { listOrganizations } from "@/lib/api/organizations";
+import { STORAGE_KEYS } from "@/lib/utils/constants";
 import { Spinner } from "@/components/ui/Spinner";
-
-const ORG_STORAGE_KEY = "pandaprobe_current_org_id";
 
 export default function RootPage() {
   const router = useRouter();
@@ -21,28 +21,30 @@ export default function RootPage() {
       return;
     }
 
-    const savedOrgId =
-      typeof window !== "undefined"
-        ? localStorage.getItem(ORG_STORAGE_KEY)
-        : null;
+    async function resolveOrg() {
+      try {
+        if (!authEnabled) {
+          await getProfile();
+        }
 
-    if (savedOrgId) {
-      router.replace(`/org/${savedOrgId}`);
-      return;
+        const orgs = await listOrganizations();
+        if (orgs.length === 0) {
+          setError("No organizations found. Please contact support.");
+          return;
+        }
+
+        const savedOrgId = localStorage.getItem(STORAGE_KEYS.orgId);
+        const match = savedOrgId && orgs.some((o) => o.id === savedOrgId);
+
+        const targetOrg = match ? savedOrgId : orgs[0].id;
+        localStorage.setItem(STORAGE_KEYS.orgId, targetOrg);
+        router.replace(`/org/${targetOrg}`);
+      } catch {
+        setError("Failed to load organizations.");
+      }
     }
 
-    listOrganizations()
-      .then((orgs) => {
-        if (orgs.length > 0) {
-          localStorage.setItem(ORG_STORAGE_KEY, orgs[0].id);
-          router.replace(`/org/${orgs[0].id}`);
-        } else {
-          setError("No organizations found. Please contact support.");
-        }
-      })
-      .catch(() => {
-        setError("Failed to load organizations.");
-      });
+    resolveOrg();
   }, [user, authLoading, authEnabled, router]);
 
   return (

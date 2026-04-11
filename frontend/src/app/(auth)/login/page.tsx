@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { extractErrorMessage } from "@/lib/api/client";
@@ -22,9 +22,18 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!authEnabled) {
+      router.replace("/");
+    }
+  }, [authEnabled, router]);
+
   if (!authEnabled) {
-    router.replace("/");
-    return null;
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   async function handleEmailSubmit(e: FormEvent) {
