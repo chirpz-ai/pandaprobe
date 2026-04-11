@@ -37,7 +37,7 @@ jobs:
         run: uv run --group dev ruff format --check app/ tests/
 
   frontend:
-    name: Frontend – ESLint & TypeScript
+    name: Frontend – ESLint, TypeScript & Prettier
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -49,13 +49,13 @@ jobs:
           cache-dependency-path: frontend/yarn.lock
 
       - name: Install dependencies
-        working-directory: frontend
-        run: yarn install --frozen-lockfile
+        run: make frontend-install
 
       - name: TypeScript check
-        working-directory: frontend
-        run: yarn typecheck
+        run: make frontend-typecheck
 
       - name: Lint
-        working-directory: frontend
-        run: yarn lint
+        run: make frontend-lint
+
+      - name: Check formatting
+        run: make frontend-format-check
