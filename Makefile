@@ -2,7 +2,8 @@
        backend-install backend-dev backend-worker backend-lint backend-format \
        backend-test-unit backend-test-integration \
        frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck \
-       frontend-format frontend-test-unit frontend-test-e2e frontend-e2e-install frontend-test \
+       frontend-format frontend-format-check frontend-test-unit frontend-test-e2e \
+       frontend-e2e-install frontend-test \
        up down logs logs-app logs-worker logs-beat logs-frontend ps restart \
        test-unit test-integration test-all test-db-up test-db-down help
 
@@ -63,6 +64,9 @@ frontend-typecheck:  ## Run frontend TypeScript type checking
 
 frontend-format:  ## Auto-format frontend code
 	$(MAKE) -C frontend format
+
+frontend-format-check:  ## Check frontend code formatting (CI)
+	$(MAKE) -C frontend format-check
 
 frontend-test-unit:  ## Run frontend unit tests (Jest)
 	$(MAKE) -C frontend test-unit

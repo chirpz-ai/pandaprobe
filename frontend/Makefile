@@ -1,4 +1,4 @@
-.PHONY: install dev build lint lint-fix typecheck format \
+.PHONY: install dev build lint lint-fix typecheck format format-check \
        test test-unit test-e2e e2e-install help
 
 # =============================================================================
@@ -7,8 +7,8 @@
 #  Docker is only used for the dev server (make up) and production builds.
 # =============================================================================
 
-install:  ## Install dependencies
-	yarn install
+install:  ## Install dependencies (locked — mirrors backend's `uv sync --locked`)
+	yarn install --frozen-lockfile
 
 dev:  ## Start Next.js dev server
 	yarn dev
@@ -27,6 +27,9 @@ typecheck:  ## Run TypeScript type checking
 
 format:  ## Format code with Prettier
 	yarn format
+
+format-check:  ## Check formatting (CI — fails if unformatted)
+	yarn format:check
 
 test-unit:  ## Run Jest unit tests
 	yarn test
