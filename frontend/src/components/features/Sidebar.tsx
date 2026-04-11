@@ -20,7 +20,8 @@ import {
   Settings,
   SlidersHorizontal,
   LogOut,
-  Mail,
+  Book,
+  Bug,
   ChevronsUpDown,
   CircleUser,
 } from "lucide-react";
@@ -432,11 +433,20 @@ export function Sidebar() {
                   <DropdownMenu.Item
                     className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
                     onSelect={() =>
+                      window.open("https://docs.pandaprobe.com", "_blank")
+                    }
+                  >
+                    <Book className="h-3.5 w-3.5" />
+                    Documentation
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
+                    onSelect={() =>
                       window.open("mailto:support@chirpz.ai", "_blank")
                     }
                   >
-                    <Mail className="h-3.5 w-3.5" />
-                    Contact
+                    <Bug className="h-3.5 w-3.5" />
+                    Report a bug
                   </DropdownMenu.Item>
                   <DropdownMenu.Separator className="my-1 mx-1 border-t border-border" />
                   <DropdownMenu.Item
