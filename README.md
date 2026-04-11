@@ -41,12 +41,15 @@ Visit our client [docs](https://docs.pandaprobe.com/get-started/welcome) or jump
 ```bash
 # 1. Configure environment
 cp backend/.env.example backend/.env.development
-# Edit backend/.env.development — add your Supabase credentials and LLM provider keys
+cp frontend/.env.example frontend/.env.development
+# Edit both .env.development files — add your credentials and config
 
-# 2. Start all services
+# 2. Start all services (backend + frontend + Postgres + Redis)
 make up
 
-# 3. Open http://localhost:8000/scalar for API references
+# 3. Open the dashboard and API docs
+#    Dashboard:      http://localhost:3000
+#    API reference:  http://localhost:8000/scalar
 ```
 
 ## Architecture
@@ -101,40 +104,50 @@ sequenceDiagram
     Worker->>DB: Persist evaluation result
 ```
 
-## Auth
-
-| Route group | Auth method | Header |
-|---|---|---|
-| Management (`/user`, `/organizations`, `/projects`) | IdP token | `Authorization: Bearer <token>` |
-| Data plane (`/traces`, `/evaluations`, `/sessions`) | API key | `X-API-Key` + `X-Project-Name` |
-
 ## Services
 
 | Service | Description | Port |
 |---|---|---|
+| **frontend** | Next.js dashboard | 3000 |
 | **app** | FastAPI application server | 8000 |
 | **worker** | Celery background worker | — |
+| **beat** | Celery Beat scheduler | — |
 | **postgres** | PostgreSQL 16 | 5432 |
 | **redis** | Redis 7 (broker + cache) | 6379 |
 
 ## Development
 
 ```bash
-make install          # Install backend deps via uv
-make up               # Start all services (Docker)
-make down             # Stop all services
-make dev              # Run API locally with hot-reload
-make worker           # Run Celery worker locally
+# ── Setup ────────────────────────────────────────────────
+make install              # Install all deps (backend + frontend)
+make up                   # Start all services via Docker Compose
+make down                 # Stop all services
+make restart              # Restart all services
 
-make lint             # Ruff linter
-make format           # Auto-format code
-make migration msg="" # Generate Alembic migration
-make migrate          # Apply migrations
+# ── Run locally (outside Docker) ─────────────────────────
+make dev                  # Run backend API + frontend dev server
+make worker               # Run Celery worker
 
-make test-unit        # Run unit tests
-make test-integration # Run integration tests (spins up test DB)
-make test-all         # Run everything
-make help             # Show all available commands
+# ── Code quality ─────────────────────────────────────────
+make lint                 # Run all linters (backend + frontend)
+make format               # Auto-format all code
+make typecheck            # Run TypeScript type checking
+
+# ── Testing ──────────────────────────────────────────────
+make test-unit            # Run all unit tests (backend + frontend)
+make test-integration     # Run backend integration tests (spins up test DB)
+make test-all             # Run everything (unit + integration + E2E)
+
+# ── Database ─────────────────────────────────────────────
+make migration msg=""     # Generate Alembic migration
+make migrate              # Apply migrations
+
+# ── Logs ─────────────────────────────────────────────────
+make logs                 # Tail all service logs
+make logs-app             # Tail backend logs
+make logs-frontend        # Tail frontend logs
+
+make help                 # Show all available commands
 ```
 
 > [!NOTE]
