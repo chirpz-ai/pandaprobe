@@ -13,7 +13,8 @@
     "test:watch": "jest --config jest.config.ts --watch",
     "test:coverage": "jest --config jest.config.ts --coverage",
     "test:e2e": "playwright test",
-    "format": "prettier --write 'src/**/*.{ts,tsx}'"
+    "format": "prettier --write 'src/**/*.{ts,tsx}'",
+    "format:check": "prettier --check 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
@@ -55,6 +56,7 @@
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "msw": "^2.13.2",
+    "prettier": "^3.8.2",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.9",
     "typescript": "^5"
