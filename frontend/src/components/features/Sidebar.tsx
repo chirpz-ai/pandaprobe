@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ArrowLeft,
   Settings,
+  SlidersHorizontal,
   LogOut,
   Mail,
   ChevronsUpDown,
@@ -190,18 +191,14 @@ export function Sidebar() {
     ? `${orgBase}/project/${resolvedProjectId}`
     : null;
 
-  const homeItem = useMemo<NavItem>(
-    () => ({
-      label: "Home",
-      href: orgBase,
-      icon: <LayoutDashboard className="h-4 w-4" />,
-      exact: true,
-    }),
-    [orgBase]
-  );
-
   const projectNav = useMemo<NavItem[]>(
     () => [
+      {
+        label: "Home",
+        href: orgBase,
+        icon: <LayoutDashboard className="h-4 w-4" />,
+        exact: true,
+      },
       {
         label: "Traces",
         href: projectBase ? `${projectBase}/traces` : orgBase,
@@ -228,7 +225,7 @@ export function Sidebar() {
 
   const settingsNav = useMemo<NavItem[]>(
     () => [
-      { label: "Organization", href: `${orgBase}/settings/organization`, icon: <Building2 className="h-4 w-4" /> },
+      { label: "Organization", href: `${orgBase}/settings/organization`, icon: <SlidersHorizontal className="h-4 w-4" /> },
       { label: "Members", href: `${orgBase}/settings/members`, icon: <Users className="h-4 w-4" /> },
       { label: "Projects", href: `${orgBase}/settings/projects`, icon: <FolderKanban className="h-4 w-4" /> },
       { label: "API Keys", href: `${orgBase}/settings/api-keys`, icon: <KeyRound className="h-4 w-4" /> },
@@ -259,7 +256,7 @@ export function Sidebar() {
   }
 
   function switchOrg(newOrgId: string) {
-    router.push(`/org/${newOrgId}`);
+    router.push(`/org/${newOrgId}/settings/organization`);
   }
 
   function switchProject(newProjectId: string) {
@@ -283,8 +280,8 @@ export function Sidebar() {
           collapsed ? "w-14" : "w-56"
         )}
       >
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-3 h-14 border-b border-border">
+        {/* ── Header (h-12 to match TopBar) ──────────────────────── */}
+        <div className="flex items-center justify-between px-3 h-12 border-b border-border">
           {!collapsed && settingsView ? (
             <button
               onClick={exitSettings}
@@ -316,84 +313,63 @@ export function Sidebar() {
         {/* ── Navigation ─────────────────────────────────────────── */}
         <nav className="flex-1 py-2 overflow-y-auto">
           {settingsView ? (
-            <div className="space-y-0.5">
-              {!collapsed && (
-                <div className="px-3 pb-1 pt-1">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-                    Settings
-                  </span>
-                </div>
-              )}
-              {settingsNav.map((item) => (
-                <NavLink
-                  key={item.label}
-                  item={item}
-                  collapsed={collapsed}
-                  active={isActive(item)}
-                />
-              ))}
-            </div>
+            <>
+              {/* Org switcher at top of settings view */}
+              <SwitcherDropdown
+                label={currentOrg?.name ?? "Select org"}
+                icon={<Building2 className="h-4 w-4" />}
+                items={organizations.map((o) => ({ id: o.id, name: o.name }))}
+                activeId={currentOrg?.id ?? null}
+                onSelect={switchOrg}
+                collapsed={collapsed}
+              />
+
+              <div className="space-y-0.5 mt-1">
+                {settingsNav.map((item) => (
+                  <NavLink
+                    key={item.label}
+                    item={item}
+                    collapsed={collapsed}
+                    active={isActive(item)}
+                  />
+                ))}
+              </div>
+            </>
           ) : (
             <>
-              {/* ── Org scope ── */}
-              {organizations.length > 1 ? (
+              {/* Project switcher at top of main view */}
+              {projects.length > 0 ? (
                 <SwitcherDropdown
-                  label={currentOrg?.name ?? "Select org"}
-                  icon={<Building2 className="h-4 w-4" />}
-                  items={organizations.map((o) => ({ id: o.id, name: o.name }))}
-                  activeId={currentOrg?.id ?? null}
-                  onSelect={switchOrg}
+                  label={currentProjectName ?? "Select project"}
+                  icon={<FolderKanban className="h-4 w-4" />}
+                  items={projects.map((p) => ({ id: p.id, name: p.name }))}
+                  activeId={resolvedProjectId}
+                  onSelect={switchProject}
                   collapsed={collapsed}
                 />
               ) : !collapsed ? (
-                <div className="px-3 py-2 text-sm font-mono text-text truncate">
-                  {currentOrg?.name ?? "Organization"}
+                <div className="px-3 py-2 text-xs font-mono text-text-muted">
+                  No projects yet
                 </div>
               ) : null}
 
               <div className="space-y-0.5 mt-1">
-                <NavLink
-                  item={homeItem}
-                  collapsed={collapsed}
-                  active={isActive(homeItem)}
-                />
-              </div>
-
-              {/* ── Project scope ── */}
-              <div className="mt-4">
-                {projects.length > 0 ? (
-                  <SwitcherDropdown
-                    label={currentProjectName ?? "Select project"}
-                    icon={<FolderKanban className="h-4 w-4" />}
-                    items={projects.map((p) => ({ id: p.id, name: p.name }))}
-                    activeId={resolvedProjectId}
-                    onSelect={switchProject}
+                {projectNav.map((item) => (
+                  <NavLink
+                    key={item.label}
+                    item={item}
                     collapsed={collapsed}
+                    active={isActive(item)}
                   />
-                ) : !collapsed ? (
-                  <div className="px-3 py-2 text-xs font-mono text-text-muted">
-                    No projects yet
-                  </div>
-                ) : null}
-
-                <div className="space-y-0.5 mt-1">
-                  {projectNav.map((item) => (
-                    <NavLink
-                      key={item.label}
-                      item={item}
-                      collapsed={collapsed}
-                      active={isActive(item)}
-                    />
-                  ))}
-                </div>
+                ))}
               </div>
             </>
           )}
         </nav>
 
-        {/* ── Footer ─────────────────────────────────────────────── */}
-        <div className="border-t border-border p-2 space-y-1">
-          {!settingsView && (
+        {/* ── Settings button (above divider) ────────────────────── */}
+        {!settingsView && (
+          <div className="px-2 pb-2">
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
                 <button
@@ -419,8 +395,11 @@ export function Sidebar() {
                 </Tooltip.Portal>
               )}
             </Tooltip.Root>
-          )}
+          </div>
+        )}
 
+        {/* ── Footer ─────────────────────────────────────────────── */}
+        <div className="border-t border-border p-2">
           {/* User menu */}
           {authEnabled && user ? (
             <DropdownMenu.Root>
@@ -453,7 +432,7 @@ export function Sidebar() {
                   <DropdownMenu.Item
                     className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
                     onSelect={() =>
-                      window.open("mailto:support@pandaprobe.com", "_blank")
+                      window.open("mailto:support@chirpz.ai", "_blank")
                     }
                   >
                     <Mail className="h-3.5 w-3.5" />
