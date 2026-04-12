@@ -38,18 +38,25 @@ Visit our client [docs](https://docs.pandaprobe.com/get-started/welcome) or jump
 
 ## Quick Start
 
+> **Prerequisites:** [Docker](https://docs.docker.com/get-docker/) must be installed and running.
+
 ```bash
-# 1. Configure environment
-cp backend/.env.example backend/.env.development
-cp frontend/.env.example frontend/.env.development
-# Edit both .env.development files — add your credentials and config
+./start.sh
+```
 
-# 2. Start all services (backend + frontend + Postgres + Redis)
-make up
+Once running, open:
+- **Dashboard** — http://localhost:3000
+- **API reference** — http://localhost:8000/scalar
 
-# 3. Open the dashboard and API docs
-#    Dashboard:      http://localhost:3000
-#    API reference:  http://localhost:8000/scalar
+### Managing services
+
+```bash
+./start.sh status     # Show service health
+./start.sh logs       # Tail all logs (or: ./start.sh logs app)
+./start.sh restart    # Restart all services
+./start.sh stop       # Stop all services
+./start.sh upgrade    # Pull latest images and restart
+./start.sh help       # Show all available commands
 ```
 
 ## Architecture
@@ -115,12 +122,18 @@ sequenceDiagram
 | **postgres** | PostgreSQL 16 | 5432 |
 | **redis** | Redis 7 (broker + cache) | 6379 |
 
-## Development
+## Development (Contributing)
+
+For contributors who want to build from source with hot reload:
 
 ```bash
 # ── Setup ────────────────────────────────────────────────
 make install              # Install all deps (backend + frontend)
-make up                   # Start all services via Docker Compose
+cp backend/.env.example backend/.env.development
+cp frontend/.env.example frontend/.env.development
+
+# ── Build from source (hot reload) ───────────────────────
+make up                   # Build & start all services via Docker Compose
 make down                 # Stop all services
 make restart              # Restart all services
 
