@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import Link from "next/link";
 import type { TraceListItem } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -13,15 +14,64 @@ import { useProjectPath } from "@/hooks/useNavigation";
 
 interface TraceTableProps {
   traces: TraceListItem[];
+  selected?: Set<string>;
+  onSelectionChange?: (selected: Set<string>) => void;
 }
 
-export function TraceTable({ traces }: TraceTableProps) {
+export function TraceTable({
+  traces,
+  selected,
+  onSelectionChange,
+}: TraceTableProps) {
   const basePath = useProjectPath("/traces");
+  const selectable = !!selected && !!onSelectionChange;
+
+  const allSelected =
+    selectable && traces.length > 0 && traces.every((t) => selected.has(t.trace_id));
+  const someSelected =
+    selectable && !allSelected && traces.some((t) => selected.has(t.trace_id));
+
+  const toggleAll = useCallback(() => {
+    if (!onSelectionChange) return;
+    if (allSelected) {
+      const next = new Set(selected);
+      traces.forEach((t) => next.delete(t.trace_id));
+      onSelectionChange(next);
+    } else {
+      const next = new Set(selected);
+      traces.forEach((t) => next.add(t.trace_id));
+      onSelectionChange(next);
+    }
+  }, [allSelected, onSelectionChange, selected, traces]);
+
+  const toggleOne = useCallback(
+    (id: string) => {
+      if (!onSelectionChange || !selected) return;
+      const next = new Set(selected);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      onSelectionChange(next);
+    },
+    [onSelectionChange, selected],
+  );
+
   return (
     <div className="border border-border overflow-x-auto">
       <table className="w-full text-xs font-mono">
         <thead>
           <tr className="border-b border-border bg-surface-hi">
+            {selectable && (
+              <th className="w-8 px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !!someSelected;
+                  }}
+                  onChange={toggleAll}
+                />
+              </th>
+            )}
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Name
             </th>
@@ -54,6 +104,15 @@ export function TraceTable({ traces }: TraceTableProps) {
               key={trace.trace_id}
               className="border-b border-border hover:bg-surface-hi transition-colors"
             >
+              {selectable && (
+                <td className="w-8 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(trace.trace_id)}
+                    onChange={() => toggleOne(trace.trace_id)}
+                  />
+                </td>
+              )}
               <td className="px-3 py-2 max-w-[200px] truncate">
                 <Link
                   href={`${basePath}/${trace.trace_id}`}
