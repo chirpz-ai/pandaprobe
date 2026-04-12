@@ -108,7 +108,10 @@ export default function TracesPage() {
       .filter(Boolean);
     if (selected.size === 0 || tags.length === 0) return;
     try {
-      await batchUpdateTags({ trace_ids: Array.from(selected), add_tags: tags });
+      await batchUpdateTags({
+        trace_ids: Array.from(selected),
+        add_tags: tags,
+      });
       toast({
         title: `Added ${tags.length} tag(s) to ${selected.size} trace(s)`,
         variant: "success",

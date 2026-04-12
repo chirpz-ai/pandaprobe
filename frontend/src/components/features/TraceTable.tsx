@@ -27,7 +27,9 @@ export function TraceTable({
   const selectable = !!selected && !!onSelectionChange;
 
   const allSelected =
-    selectable && traces.length > 0 && traces.every((t) => selected.has(t.trace_id));
+    selectable &&
+    traces.length > 0 &&
+    traces.every((t) => selected.has(t.trace_id));
   const someSelected =
     selectable && !allSelected && traces.some((t) => selected.has(t.trace_id));
 

@@ -5,7 +5,6 @@
  * docker-entrypoint.sh for production images). Defaults to true when unset.
  */
 
-export const AUTH_ENABLED =
-  process.env.NEXT_PUBLIC_AUTH_ENABLED !== "false";
+export const AUTH_ENABLED = process.env.NEXT_PUBLIC_AUTH_ENABLED !== "false";
 
 export const SESSION_COOKIE_NAME = "__pp_session";
