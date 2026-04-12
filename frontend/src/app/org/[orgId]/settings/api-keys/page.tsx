@@ -65,11 +65,7 @@ export default function APIKeysPage() {
     try {
       const result = await createAPIKey(currentOrg.id, {
         name: newName.trim(),
-        expiration: expiration as APIKeyResponse["is_active"] extends boolean
-          ? typeof expiration extends string
-            ? never
-            : never
-          : never,
+        expiration: expiration as KeyExpiration,
       });
       setNewRawKey(result.raw_key);
       setShowRawKey(true);
