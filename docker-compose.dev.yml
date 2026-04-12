@@ -1,3 +1,13 @@
+# =============================================================================
+# PandaProbe — Build-from-source Docker Compose (for contributors)
+#
+# Builds images locally with source-code bind mounts for hot reload.
+#
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# For running with pre-built public images, use docker-compose.yml instead.
+# =============================================================================
+
 services:
   # ---------- FastAPI application ----------
   app:
