@@ -1,0 +1,163 @@
+# =============================================================================
+# PandaProbe — Pull-mode Docker Compose (for open-source users)
+#
+# Pulls pre-built public images from GHCR.  No local build required.
+#
+#   1. cp backend/.env.example  backend/.env.development
+#   2. cp frontend/.env.example frontend/.env.development
+#   3. docker compose up
+#
+# For development with source-code hot reload, use docker-compose.dev.yml.
+# =============================================================================
+
+services:
+  # ---------- FastAPI application ----------
+  app:
+    container_name: pandaprobe-app
+    image: ghcr.io/chirpz/pandaprobe-backend:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.config/gcloud:/home/appuser/.config/gcloud:ro
+    env_file:
+      - ./backend/.env.development
+    environment:
+      - APP_ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/home/appuser/.config/gcloud/application_default_credentials.json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pandaprobe
+
+  # ---------- Celery background worker ----------
+  worker:
+    container_name: pandaprobe-worker
+    image: ghcr.io/chirpz/pandaprobe-backend:latest
+    command:
+      [
+        "celery",
+        "-A", "app.infrastructure.queue.celery_app",
+        "worker",
+        "--loglevel=info",
+        "--autoscale=10,2",
+      ]
+    volumes:
+      - ~/.config/gcloud:/home/appuser/.config/gcloud:ro
+    env_file:
+      - ./backend/.env.development
+    environment:
+      - APP_ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/home/appuser/.config/gcloud/application_default_credentials.json
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pandaprobe
+
+  # ---------- Celery Beat scheduler ----------
+  beat:
+    container_name: pandaprobe-beat
+    image: ghcr.io/chirpz/pandaprobe-backend:latest
+    command:
+      [
+        "celery",
+        "-A", "app.infrastructure.queue.celery_app",
+        "beat",
+        "--loglevel=info",
+      ]
+    env_file:
+      - ./backend/.env.development
+    environment:
+      - APP_ENV=development
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pandaprobe
+
+  # ---------- PostgreSQL ----------
+  postgres:
+    container_name: pandaprobe-postgres
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-pandaprobe_db}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - pandaprobe
+
+  # ---------- Redis ----------
+  redis:
+    container_name: pandaprobe-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - pandaprobe
+
+  # ---------- Next.js frontend ----------
+  frontend:
+    container_name: pandaprobe-frontend
+    image: ghcr.io/chirpz/pandaprobe-frontend:latest
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: ./frontend/.env.development
+        required: false
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_AUTH_ENABLED=false
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: on-failure
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - pandaprobe
+
+networks:
+  pandaprobe:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
