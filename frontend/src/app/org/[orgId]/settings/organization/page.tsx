@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { updateOrganization } from "@/lib/api/organizations";
@@ -15,6 +15,12 @@ export default function OrganizationSettingsPage() {
   const { toast } = useToast();
   const [name, setName] = useState(currentOrg?.name ?? "");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (currentOrg?.name != null) {
+      setName(currentOrg.name);
+    }
+  }, [currentOrg?.name]);
 
   useDocumentTitle("Organization Settings");
 
