@@ -24,12 +24,18 @@ export default function ProjectHomePage() {
   });
 
   const sessionsQuery = useQuery({
-    queryKey: [...queryKeys.dashboardStats.home(projectId as string), "sessions"],
+    queryKey: [
+      ...queryKeys.dashboardStats.home(projectId as string),
+      "sessions",
+    ],
     queryFn: () => listSessions({ limit: 1 }),
   });
 
   const monitorsQuery = useQuery({
-    queryKey: [...queryKeys.dashboardStats.home(projectId as string), "monitors"],
+    queryKey: [
+      ...queryKeys.dashboardStats.home(projectId as string),
+      "monitors",
+    ],
     queryFn: () => listMonitors({ limit: 1 }),
   });
 
@@ -71,7 +77,7 @@ export default function ProjectHomePage() {
         ? formatNumber(
             usageQuery.data.traces +
               usageQuery.data.trace_evals +
-              usageQuery.data.session_evals
+              usageQuery.data.session_evals,
           )
         : "—",
       icon: <BarChart3 className="h-4 w-4" />,
