@@ -1,0 +1,229 @@
+name: Release – Publish Docker Images
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ── Build each component on native runners per platform ───────────────────
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        component:
+          - name: backend
+            context: ./backend
+            file: ./backend/Dockerfile
+            target: ""
+          - name: frontend
+            context: ./frontend
+            file: ./frontend/Dockerfile
+            target: runner
+        platform:
+          - runner: ubuntu-latest
+            arch: linux/amd64
+            suffix: amd64
+          - runner: ubuntu-24.04-arm
+            arch: linux/arm64
+            suffix: arm64
+
+    runs-on: ${{ matrix.platform.runner }}
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component.name }}
+
+      - name: Build and push (${{ matrix.component.name }}/${{ matrix.platform.suffix }})
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.component.context }}
+          file: ${{ matrix.component.file }}
+          target: ${{ matrix.component.target || '' }}
+          push: true
+          platforms: ${{ matrix.platform.arch }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component.name }}:${{ steps.meta.outputs.version }}-${{ matrix.platform.suffix }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          cache-from: type=gha,scope=${{ matrix.component.name }}-${{ matrix.platform.suffix }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component.name }}-${{ matrix.platform.suffix }}
+
+  # ── Merge platform images into multi-arch manifests ───────────────────────
+  merge:
+    needs: build
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        component: [backend, frontend]
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}
+
+      - name: Create multi-arch manifest
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}"
+
+          echo "Creating manifest for ${IMAGE}:${VERSION}"
+
+          docker buildx imagetools create \
+            -t "${IMAGE}:${VERSION}" \
+            "${IMAGE}:${VERSION}-amd64" \
+            "${IMAGE}:${VERSION}-arm64"
+
+          # Also tag as latest
+          docker buildx imagetools create \
+            -t "${IMAGE}:latest" \
+            "${IMAGE}:${VERSION}-amd64" \
+            "${IMAGE}:${VERSION}-arm64"
+
+  # ── Scan images and generate supply-chain attestations ────────────────────
+  scan-and-attest:
+    needs: merge
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}
+
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}:${{ steps.meta.outputs.version }}
+          format: sarif
+          output: trivy-${{ matrix.component }}.sarif
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Upload Trivy results to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.component }}.sarif
+          category: trivy-${{ matrix.component }}
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}:${{ steps.meta.outputs.version }}
+          format: cyclonedx-json
+          output-file: sbom-${{ matrix.component }}.json
+
+      - name: Get image digest
+        id: digest
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}"
+          VERSION="${{ steps.meta.outputs.version }}"
+          DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{printf "%s" .Manifest.Digest}}')"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest SBOM
+        uses: actions/attest-sbom@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          sbom-path: sbom-${{ matrix.component }}.json
+          push-to-registry: true
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          push-to-registry: true
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.component }}
+          path: sbom-${{ matrix.component }}.json
+          retention-days: 90
+
+  # ── Create GitHub Release ─────────────────────────────────────────────────
+  release:
+    needs: scan-and-attest
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download SBOM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: sboms
+          pattern: sbom-*
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: sboms/*.json
