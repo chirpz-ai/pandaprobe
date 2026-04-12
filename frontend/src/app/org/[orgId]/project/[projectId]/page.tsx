@@ -10,7 +10,7 @@ import { listSessions } from "@/lib/api/sessions";
 import { listMonitors } from "@/lib/api/evaluations";
 import { getUsage } from "@/lib/api/subscriptions";
 import { queryKeys } from "@/lib/query/keys";
-import { formatNumber, formatCost } from "@/lib/utils/format";
+import { formatNumber } from "@/lib/utils/format";
 import { LoadingState } from "@/components/common/LoadingState";
 
 export default function ProjectHomePage() {
@@ -66,13 +66,12 @@ export default function ProjectHomePage() {
       href: `${projectBase}/evaluations/monitors`,
     },
     {
-      label: "Period Cost",
+      label: "Period Usage",
       value: usageQuery.data
-        ? formatCost(
-            (usageQuery.data.traces +
+        ? formatNumber(
+            usageQuery.data.traces +
               usageQuery.data.trace_evals +
-              usageQuery.data.session_evals) *
-              0
+              usageQuery.data.session_evals
           )
         : "—",
       icon: <BarChart3 className="h-4 w-4" />,
