@@ -115,7 +115,7 @@ function SwitcherDropdown({
       {!collapsed && (
         <>
           <span className="flex-1 truncate text-left">{label}</span>
-          <ChevronsUpDown className="h-3 w-3 flex-shrink-0 text-text-muted" />
+          <ChevronsUpDown className="h-4 w-4 flex-shrink-0 text-text-muted" />
         </>
       )}
     </DropdownMenu.Trigger>
@@ -292,9 +292,8 @@ export function Sidebar() {
           {!collapsed && settingsView ? (
             <button
               onClick={exitSettings}
-              className="flex items-center gap-2 text-sm font-mono text-text-dim hover:text-text transition-colors"
+              className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight hover:text-text transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
               <Image src="/favicon-32x32.png" alt="" width={18} height={18} className="flex-shrink-0" />
               <span>PandaProbe</span>
             </button>
@@ -306,14 +305,10 @@ export function Sidebar() {
               <Image src="/favicon-32x32.png" alt="" width={18} height={18} className="flex-shrink-0" />
               PandaProbe
             </Link>
-          ) : (
-            <Link href={projectHome} className="flex items-center">
-              <Image src="/favicon-32x32.png" alt="PandaProbe" width={18} height={18} />
-            </Link>
-          )}
+          ) : null}
           <button
             onClick={toggleCollapsed}
-            className="p-1 text-text-muted hover:text-text transition-colors"
+            className={`${collapsed ? "p-2" : "p-0"} text-text-muted hover:text-text transition-colors`}
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -321,6 +316,7 @@ export function Sidebar() {
               <ChevronLeft className="h-4 w-4" />
             )}
           </button>
+     
         </div>
 
         {/* ── Navigation ─────────────────────────────────────────── */}
@@ -380,11 +376,22 @@ export function Sidebar() {
           )}
         </nav>
 
-        {/* ── Settings button (above divider) ────────────────────── */}
-        {!settingsView && (
-          <div className="px-2 pb-2">
-            <Tooltip.Root>
-              <Tooltip.Trigger asChild>
+        {/* ── Settings / Back button (above divider) ──────────────── */}
+        <div className="px-2 pb-2">
+          <Tooltip.Root>
+            <Tooltip.Trigger asChild>
+              {settingsView ? (
+                <button
+                  onClick={exitSettings}
+                  className={cn(
+                    "flex items-center gap-3 w-full px-3 py-2 text-sm font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                    collapsed && "justify-center px-2"
+                  )}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  {!collapsed && <span>Back to Projects</span>}
+                </button>
+              ) : (
                 <button
                   onClick={openSettings}
                   className={cn(
@@ -395,21 +402,21 @@ export function Sidebar() {
                   <Settings className="h-4 w-4" />
                   {!collapsed && <span>Settings</span>}
                 </button>
-              </Tooltip.Trigger>
-              {collapsed && (
-                <Tooltip.Portal>
-                  <Tooltip.Content
-                    side="right"
-                    sideOffset={8}
-                    className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
-                  >
-                    Settings
-                  </Tooltip.Content>
-                </Tooltip.Portal>
               )}
-            </Tooltip.Root>
-          </div>
-        )}
+            </Tooltip.Trigger>
+            {collapsed && (
+              <Tooltip.Portal>
+                <Tooltip.Content
+                  side="right"
+                  sideOffset={8}
+                  className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
+                >
+                  {settingsView ? "Back to Projects" : "Settings"}
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            )}
+          </Tooltip.Root>
+        </div>
 
         {/* ── Footer ─────────────────────────────────────────────── */}
         <div className="border-t border-border p-2">
