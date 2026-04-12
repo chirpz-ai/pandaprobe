@@ -6,6 +6,7 @@ import { useProject } from "@/components/providers/ProjectProvider";
 import {
   listTraces,
   batchDeleteTraces,
+  batchUpdateTags,
   type ListTracesParams,
 } from "@/lib/api/traces";
 import { TraceTable } from "@/components/features/TraceTable";
@@ -16,6 +17,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { useToast } from "@/components/providers/ToastProvider";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import {
   Select,
@@ -24,6 +26,8 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Trash2, Tag, X } from "lucide-react";
 import { TraceStatus, TraceSortBy, SortOrder } from "@/lib/api/enums";
 import { queryKeys } from "@/lib/query/keys";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -51,6 +55,8 @@ export default function TracesPage() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showTagDialog, setShowTagDialog] = useState(false);
+  const [tagInput, setTagInput] = useState("");
 
   const params = useMemo<ListTracesParams>(() => {
     const p: ListTracesParams = {
@@ -95,6 +101,29 @@ export default function TracesPage() {
     }
   }
 
+  async function handleBatchTag() {
+    const tags = tagInput
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (selected.size === 0 || tags.length === 0) return;
+    try {
+      await batchUpdateTags({ trace_ids: Array.from(selected), add_tags: tags });
+      toast({
+        title: `Added ${tags.length} tag(s) to ${selected.size} trace(s)`,
+        variant: "success",
+      });
+      setSelected(new Set());
+      setTagInput("");
+      setShowTagDialog(false);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.traces.all(projectId),
+      });
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
+    }
+  }
+
   if (!currentProject) {
     return (
       <EmptyState
@@ -109,13 +138,27 @@ export default function TracesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-mono text-primary">Traces</h1>
         {selected.size > 0 && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setConfirmDelete(true)}
-          >
-            Delete {selected.size} selected
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-text-dim">
+              {selected.size} selected
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowTagDialog(true)}
+            >
+              <Tag className="h-3.5 w-3.5 mr-1.5" />
+              Tag
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete
+            </Button>
+          </div>
         )}
       </div>
 
@@ -186,7 +229,11 @@ export default function TracesPage() {
         />
       ) : (
         <>
-          <TraceTable traces={data.items} />
+          <TraceTable
+            traces={data.items}
+            selected={selected}
+            onSelectionChange={setSelected}
+          />
           <Pagination
             page={page}
             totalPages={totalPages(data.total)}
@@ -205,6 +252,59 @@ export default function TracesPage() {
         onConfirm={handleBatchDelete}
         destructive
       />
+
+      <Dialog.Root
+        open={showTagDialog}
+        onOpenChange={(open) => {
+          setShowTagDialog(open);
+          if (!open) setTagInput("");
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 border border-border bg-surface p-6 animate-fade-in">
+            <div className="flex items-start justify-between mb-4">
+              <Dialog.Title className="text-sm font-mono text-primary">
+                Add tags to {selected.size} trace(s)
+              </Dialog.Title>
+              <Dialog.Close className="text-text-muted hover:text-text transition-colors">
+                <X className="h-4 w-4" />
+              </Dialog.Close>
+            </div>
+            <Dialog.Description className="text-xs text-text-dim mb-4">
+              Enter one or more tags separated by commas.
+            </Dialog.Description>
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              placeholder="e.g. production, v2, reviewed"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleBatchTag();
+              }}
+            />
+            <div className="flex justify-end gap-2 mt-6">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setShowTagDialog(false);
+                  setTagInput("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleBatchTag}
+                disabled={tagInput.trim().length === 0}
+              >
+                Add Tags
+              </Button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }
