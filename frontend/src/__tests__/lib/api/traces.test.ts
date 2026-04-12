@@ -42,7 +42,9 @@ describe("traces API", () => {
 
   it("createTrace posts to /traces", async () => {
     const payload = { name: "test", started_at: "2024-01-01T00:00:00Z" };
-    mockClient.post.mockResolvedValue({ data: { trace_id: "abc", task_id: "t1" } });
+    mockClient.post.mockResolvedValue({
+      data: { trace_id: "abc", task_id: "t1" },
+    });
     const result = await createTrace(payload);
     expect(mockClient.post).toHaveBeenCalledWith("/traces", payload);
     expect(result).toEqual({ trace_id: "abc", task_id: "t1" });
@@ -67,7 +69,9 @@ describe("traces API", () => {
   it("updateTrace patches /traces/:id", async () => {
     mockClient.patch.mockResolvedValue({ data: { trace_id: "abc" } });
     await updateTrace("abc", { name: "updated" });
-    expect(mockClient.patch).toHaveBeenCalledWith("/traces/abc", { name: "updated" });
+    expect(mockClient.patch).toHaveBeenCalledWith("/traces/abc", {
+      name: "updated",
+    });
   });
 
   it("deleteTrace deletes /traces/:id", async () => {
@@ -102,7 +106,11 @@ describe("traces API", () => {
       started_before: "2024-01-31",
     });
     expect(mockClient.get).toHaveBeenCalledWith("/traces/analytics", {
-      params: { metric: "volume", started_after: "2024-01-01", started_before: "2024-01-31" },
+      params: {
+        metric: "volume",
+        started_after: "2024-01-01",
+        started_before: "2024-01-31",
+      },
     });
   });
 
@@ -118,11 +126,12 @@ describe("traces API", () => {
 
   it("createSpans posts to /traces/:id/spans", async () => {
     mockClient.post.mockResolvedValue({ data: { span_ids: ["s1"] } });
-    await createSpans("abc", [{ name: "span1", started_at: "2024-01-01T00:00:00Z" }]);
-    expect(mockClient.post).toHaveBeenCalledWith(
-      "/traces/abc/spans",
-      [{ name: "span1", started_at: "2024-01-01T00:00:00Z" }]
-    );
+    await createSpans("abc", [
+      { name: "span1", started_at: "2024-01-01T00:00:00Z" },
+    ]);
+    expect(mockClient.post).toHaveBeenCalledWith("/traces/abc/spans", [
+      { name: "span1", started_at: "2024-01-01T00:00:00Z" },
+    ]);
   });
 
   it("updateSpan patches /traces/:id/spans/:spanId", async () => {

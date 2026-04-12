@@ -6,7 +6,11 @@ import { useProject } from "@/components/providers/ProjectProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { getTraceAnalytics, type TraceAnalyticsParams } from "@/lib/api/traces";
 import { getTraceScoreSummary } from "@/lib/api/evaluations";
-import type { AnalyticsBucket, TokenCostBucket, TopModel } from "@/lib/api/types";
+import type {
+  AnalyticsBucket,
+  TokenCostBucket,
+  TopModel,
+} from "@/lib/api/types";
 import { AnalyticsMetric, AnalyticsGranularity } from "@/lib/api/enums";
 import { queryKeys } from "@/lib/query/keys";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -68,13 +72,13 @@ export default function AnalyticsPage() {
 
   const [metric, setMetric] = useState<string>(AnalyticsMetric.volume);
   const [granularity, setGranularity] = useState<string>(
-    AnalyticsGranularity.day
+    AnalyticsGranularity.day,
   );
   const [startDate, setStartDate] = useState(() =>
-    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
   );
   const [endDate, setEndDate] = useState(() =>
-    new Date(Date.now()).toISOString().slice(0, 16)
+    new Date(Date.now()).toISOString().slice(0, 16),
   );
 
   const analyticsParams: TraceAnalyticsParams = {
@@ -87,7 +91,7 @@ export default function AnalyticsPage() {
   const analyticsQuery = useQuery({
     queryKey: queryKeys.analytics.traces(
       projectId,
-      analyticsParams as unknown as Record<string, unknown>
+      analyticsParams as unknown as Record<string, unknown>,
     ),
     queryFn: () => getTraceAnalytics(analyticsParams),
     enabled: !!currentProject,
@@ -222,8 +226,8 @@ export default function AnalyticsPage() {
                 valueKey={metric === "tokens" ? "total_tokens" : "total_cost"}
                 maxValue={Math.max(
                   ...(analyticsData as TokenCostBucket[]).map((b) =>
-                    metric === "tokens" ? b.total_tokens : b.total_cost
-                  )
+                    metric === "tokens" ? b.total_tokens : b.total_cost,
+                  ),
                 )}
               />
             </div>
@@ -240,8 +244,10 @@ export default function AnalyticsPage() {
                 }
                 maxValue={Math.max(
                   ...(analyticsData as AnalyticsBucket[]).map((b) =>
-                    metric === "latency" ? (b.avg_latency_ms ?? 0) : b.trace_count
-                  )
+                    metric === "latency"
+                      ? (b.avg_latency_ms ?? 0)
+                      : b.trace_count,
+                  ),
                 )}
               />
             </div>
@@ -278,10 +284,11 @@ export default function AnalyticsPage() {
                   </thead>
                   <tbody>
                     {scoreSummary.map((s) => (
-                      <tr key={s.metric_name} className="border-b border-border">
-                        <td className="px-3 py-2 text-text">
-                          {s.metric_name}
-                        </td>
+                      <tr
+                        key={s.metric_name}
+                        className="border-b border-border"
+                      >
+                        <td className="px-3 py-2 text-text">{s.metric_name}</td>
                         <td className="px-3 py-2 text-text-dim">
                           {s.avg_score?.toFixed(2) ?? "—"}
                         </td>

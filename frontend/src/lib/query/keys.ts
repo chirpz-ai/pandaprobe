@@ -58,7 +58,6 @@ export const queryKeys = {
     plans: ["subscription", "plans"] as const,
   },
   dashboardStats: {
-    home: (projectId: string | null) =>
-      ["dashboardStats", projectId] as const,
+    home: (projectId: string | null) => ["dashboardStats", projectId] as const,
   },
 };

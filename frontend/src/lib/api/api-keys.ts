@@ -3,40 +3,38 @@ import type { CreateAPIKeyRequest, APIKeyResponse } from "./types";
 
 export async function createAPIKey(
   orgId: string,
-  data: CreateAPIKeyRequest
+  data: CreateAPIKeyRequest,
 ): Promise<APIKeyResponse> {
   const res = await client.post<APIKeyResponse>(
     `/organizations/${orgId}/api-keys`,
-    data
+    data,
   );
   return res.data;
 }
 
-export async function listAPIKeys(
-  orgId: string
-): Promise<APIKeyResponse[]> {
+export async function listAPIKeys(orgId: string): Promise<APIKeyResponse[]> {
   const res = await client.get<APIKeyResponse[]>(
-    `/organizations/${orgId}/api-keys`
+    `/organizations/${orgId}/api-keys`,
   );
   return res.data;
 }
 
 export async function getAPIKey(
   orgId: string,
-  keyId: string
+  keyId: string,
 ): Promise<APIKeyResponse> {
   const res = await client.get<APIKeyResponse>(
-    `/organizations/${orgId}/api-keys/${keyId}`
+    `/organizations/${orgId}/api-keys/${keyId}`,
   );
   return res.data;
 }
 
 export async function rotateAPIKey(
   orgId: string,
-  keyId: string
+  keyId: string,
 ): Promise<APIKeyResponse> {
   const res = await client.post<APIKeyResponse>(
-    `/organizations/${orgId}/api-keys/${keyId}/rotate`
+    `/organizations/${orgId}/api-keys/${keyId}/rotate`,
   );
   return res.data;
 }
@@ -44,7 +42,7 @@ export async function rotateAPIKey(
 export async function deleteAPIKey(
   orgId: string,
   keyId: string,
-  permanent = false
+  permanent = false,
 ): Promise<void> {
   await client.delete(`/organizations/${orgId}/api-keys/${keyId}`, {
     params: { permanent },

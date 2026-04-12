@@ -55,7 +55,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={t.id}
             className={cn(
               "border p-4 shadow-lg animate-slide-up",
-              variantStyles[t.variant ?? "default"]
+              variantStyles[t.variant ?? "default"],
             )}
             onOpenChange={(open) => {
               if (!open) removeToast(t.id);

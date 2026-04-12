@@ -35,7 +35,7 @@ export function useUrlState<T extends ParamConfig>(config: T) {
       const qs = params.toString();
       router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
     },
-    [searchParams, pathname, router, config]
+    [searchParams, pathname, router, config],
   );
 
   const page = parseInt(values.page as string, 10) || 1;
@@ -43,18 +43,21 @@ export function useUrlState<T extends ParamConfig>(config: T) {
   const offset = (page - 1) * limit;
 
   const setPage = useCallback(
-    (p: number) => set({ page: String(Math.max(1, p)) } as Partial<{ [K in keyof T]: string }>),
-    [set]
+    (p: number) =>
+      set({ page: String(Math.max(1, p)) } as Partial<{
+        [K in keyof T]: string;
+      }>),
+    [set],
   );
 
   const resetPage = useCallback(
     () => set({ page: "1" } as Partial<{ [K in keyof T]: string }>),
-    [set]
+    [set],
   );
 
   const totalPages = useCallback(
     (total: number) => Math.max(1, Math.ceil(total / limit)),
-    [limit]
+    [limit],
   );
 
   return { values, set, page, limit, offset, setPage, resetPage, totalPages };

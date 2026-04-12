@@ -24,7 +24,7 @@ export function useProjectPath(path = ""): string {
 import { STORAGE_KEYS } from "@/lib/utils/constants";
 
 export function useResolvedProjectId(
-  projects: { id: string }[]
+  projects: { id: string }[],
 ): string | null {
   const projectIdFromUrl = useProjectId();
   if (projectIdFromUrl) return projectIdFromUrl;

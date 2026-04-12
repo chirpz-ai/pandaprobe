@@ -50,7 +50,10 @@ export default function BillingPage() {
     billingQuery.isPending ||
     plansQuery.isPending;
   const error =
-    subQuery.error || usageQuery.error || billingQuery.error || plansQuery.error;
+    subQuery.error ||
+    usageQuery.error ||
+    billingQuery.error ||
+    plansQuery.error;
 
   async function handleCheckout(plan: string) {
     try {
@@ -77,10 +80,7 @@ export default function BillingPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (error)
-    return (
-      <ErrorState message={extractErrorMessage(error)} />
-    );
+  if (error) return <ErrorState message={extractErrorMessage(error)} />;
 
   const subscription = subQuery.data;
   const usage = usageQuery.data;
@@ -185,7 +185,7 @@ export default function BillingPage() {
                     </div>
                   </div>
                 </div>
-              )
+              ),
             )}
           </div>
           <div className="flex justify-between border-t border-border pt-3">
@@ -204,7 +204,10 @@ export default function BillingPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {plans.map((plan) => (
-              <div key={plan.name} className="border border-border p-4 space-y-2">
+              <div
+                key={plan.name}
+                className="border border-border p-4 space-y-2"
+              >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-mono text-text">
                     {plan.name}
@@ -215,9 +218,7 @@ export default function BillingPage() {
                 </div>
                 <div className="text-xs text-text-dim space-y-1">
                   <div>Traces: {plan.base_traces ?? "Unlimited"}</div>
-                  <div>
-                    Trace Evals: {plan.base_trace_evals ?? "Unlimited"}
-                  </div>
+                  <div>Trace Evals: {plan.base_trace_evals ?? "Unlimited"}</div>
                   <div>
                     Session Evals: {plan.base_session_evals ?? "Unlimited"}
                   </div>

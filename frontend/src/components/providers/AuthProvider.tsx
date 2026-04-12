@@ -65,14 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       await _signInWithEmail(email, password);
     },
-    []
+    [],
   );
 
   const signUpWithEmail = useCallback(
     async (email: string, password: string) => {
       await _signUpWithEmail(email, password);
     },
-    []
+    [],
   );
 
   const signOut = useCallback(async () => {

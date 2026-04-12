@@ -73,9 +73,7 @@ function LoginForm() {
         <h1 className="text-xl font-mono text-primary tracking-tight">
           PandaProbe
         </h1>
-        <p className="mt-1 text-xs text-text-dim">
-          Agent engineering platform
-        </p>
+        <p className="mt-1 text-xs text-text-dim">Agent engineering platform</p>
       </div>
 
       <Button
@@ -143,9 +141,7 @@ function LoginForm() {
           />
         </div>
 
-        {error && (
-          <p className="text-xs text-error font-mono">{error}</p>
-        )}
+        {error && <p className="text-xs text-error font-mono">{error}</p>}
 
         <Button type="submit" className="w-full" disabled={submitting}>
           {submitting ? (

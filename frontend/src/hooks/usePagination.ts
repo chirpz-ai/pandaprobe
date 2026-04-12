@@ -14,7 +14,7 @@ interface UsePaginationResult {
 }
 
 export function usePagination(
-  initialLimit = DEFAULT_PAGE_SIZE
+  initialLimit = DEFAULT_PAGE_SIZE,
 ): UsePaginationResult {
   const [limit, setLimitState] = useState(initialLimit);
   const [page, setPageState] = useState(1);
@@ -32,7 +32,7 @@ export function usePagination(
 
   const totalPages = useCallback(
     (total: number) => Math.max(1, Math.ceil(total / limit)),
-    [limit]
+    [limit],
   );
 
   const reset = useCallback(() => {

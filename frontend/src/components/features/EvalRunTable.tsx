@@ -16,12 +16,24 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
       <table className="w-full text-xs font-mono">
         <thead>
           <tr className="border-b border-border bg-surface-hi">
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Name / ID</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Status</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Metrics</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Progress</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Target</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Created</th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Name / ID
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Status
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Metrics
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Progress
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Target
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Created
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -40,14 +52,18 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
               <td className="px-3 py-2">
                 <div className="flex gap-1 flex-wrap">
                   {run.metric_names.slice(0, 3).map((m) => (
-                    <Badge key={m} variant="info">{m}</Badge>
+                    <Badge key={m} variant="info">
+                      {m}
+                    </Badge>
                   ))}
                 </div>
               </td>
               <td className="px-3 py-2 text-text-dim">
                 {run.evaluated_count}/{run.total_targets}
                 {run.failed_count > 0 && (
-                  <span className="text-error ml-1">({run.failed_count} failed)</span>
+                  <span className="text-error ml-1">
+                    ({run.failed_count} failed)
+                  </span>
                 )}
               </td>
               <td className="px-3 py-2 text-text-dim">{run.target_type}</td>

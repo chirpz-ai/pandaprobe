@@ -21,25 +21,42 @@ export default function SessionRunsPage() {
   useDocumentTitle("Session Runs");
 
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.evaluations.sessionRuns.list(projectId, { limit: pagination.limit, offset: pagination.offset }),
-    queryFn: () => listSessionRuns({ limit: pagination.limit, offset: pagination.offset }),
+    queryKey: queryKeys.evaluations.sessionRuns.list(projectId, {
+      limit: pagination.limit,
+      offset: pagination.offset,
+    }),
+    queryFn: () =>
+      listSessionRuns({ limit: pagination.limit, offset: pagination.offset }),
     enabled: !!currentProject,
   });
 
   if (!currentProject) {
-    return <EmptyState title="Select a project" description="Choose a project to view session evaluation runs." />;
+    return (
+      <EmptyState
+        title="Select a project"
+        description="Choose a project to view session evaluation runs."
+      />
+    );
   }
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <h1 className="text-lg font-mono text-primary">Session Evaluation Runs</h1>
+      <h1 className="text-lg font-mono text-primary">
+        Session Evaluation Runs
+      </h1>
 
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
+        <ErrorState
+          message={extractErrorMessage(error)}
+          onRetry={() => refetch()}
+        />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState title="No session evaluation runs" description="Create a session evaluation run to get started." />
+        <EmptyState
+          title="No session evaluation runs"
+          description="Create a session evaluation run to get started."
+        />
       ) : (
         <>
           <EvalRunTable runs={data.items} />

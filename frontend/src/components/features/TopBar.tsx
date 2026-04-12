@@ -4,7 +4,8 @@ import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { AUTH_ENABLED } from "@/lib/auth/firebase";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getBreadcrumbs(pathname: string): string[] {
   const segments = pathname.split("/").filter(Boolean);
@@ -14,7 +15,7 @@ function getBreadcrumbs(pathname: string): string[] {
     if (seg === "org" || seg === "project") continue;
     if (UUID_RE.test(seg)) continue;
     meaningful.push(
-      seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+      seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
     );
   }
 

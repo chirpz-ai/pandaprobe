@@ -5,23 +5,22 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-  return (
-    <div
-      className={cn(
-        "animate-pulse bg-surface-hi",
-        className
-      )}
-    />
-  );
+  return <div className={cn("animate-pulse bg-surface-hi", className)} />;
 }
 
-export function SkeletonText({ className, lines = 1 }: SkeletonProps & { lines?: number }) {
+export function SkeletonText({
+  className,
+  lines = 1,
+}: SkeletonProps & { lines?: number }) {
   return (
     <div className={cn("space-y-2", className)}>
       {Array.from({ length: lines }).map((_, i) => (
         <Skeleton
           key={i}
-          className={cn("h-3", i === lines - 1 && lines > 1 ? "w-3/4" : "w-full")}
+          className={cn(
+            "h-3",
+            i === lines - 1 && lines > 1 ? "w-3/4" : "w-full",
+          )}
         />
       ))}
     </div>
@@ -40,7 +39,13 @@ export function SkeletonTableRow({ cols = 5 }: { cols?: number }) {
   );
 }
 
-export function SkeletonTable({ rows = 8, cols = 5 }: { rows?: number; cols?: number }) {
+export function SkeletonTable({
+  rows = 8,
+  cols = 5,
+}: {
+  rows?: number;
+  cols?: number;
+}) {
   return (
     <div className="border border-border overflow-hidden">
       <div className="border-b border-border bg-surface-hi px-3 py-2 flex gap-6">
@@ -61,7 +66,9 @@ export function SkeletonTable({ rows = 8, cols = 5 }: { rows?: number; cols?: nu
 
 export function SkeletonCard({ className }: SkeletonProps) {
   return (
-    <div className={cn("border border-border bg-surface p-4 space-y-3", className)}>
+    <div
+      className={cn("border border-border bg-surface p-4 space-y-3", className)}
+    >
       <Skeleton className="h-4 w-1/3" />
       <Skeleton className="h-3 w-full" />
       <Skeleton className="h-3 w-2/3" />

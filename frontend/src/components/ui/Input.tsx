@@ -16,13 +16,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           "focus-visible:outline-none focus-visible:border-border-hi focus-visible:ring-1 focus-visible:ring-border-hi",
           "disabled:cursor-not-allowed disabled:opacity-50",
           "transition-colors duration-150",
-          className
+          className,
         )}
         ref={ref}
         {...props}
       />
     );
-  }
+  },
 );
 Input.displayName = "Input";
 

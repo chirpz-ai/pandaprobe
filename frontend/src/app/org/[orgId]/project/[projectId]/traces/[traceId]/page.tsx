@@ -61,9 +61,7 @@ export default function TraceDetailPage({
 
   if (traceQuery.isPending) return <LoadingState />;
   if (traceQuery.error)
-    return (
-      <ErrorState message={extractErrorMessage(traceQuery.error)} />
-    );
+    return <ErrorState message={extractErrorMessage(traceQuery.error)} />;
 
   const trace = traceQuery.data;
   if (!trace) return <ErrorState message="Trace not found" />;
@@ -117,9 +115,7 @@ export default function TraceDetailPage({
           </div>
           <div>
             <span className="text-text-muted block">Ended</span>
-            <span className="text-text">
-              {formatDateTime(trace.ended_at)}
-            </span>
+            <span className="text-text">{formatDateTime(trace.ended_at)}</span>
           </div>
           {trace.session_id && (
             <div>

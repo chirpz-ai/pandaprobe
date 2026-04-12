@@ -46,7 +46,12 @@ export default function APIKeysPage() {
 
   useDocumentTitle("API Keys");
 
-  const { data: keys = [], isPending, error, refetch } = useQuery({
+  const {
+    data: keys = [],
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.apiKeys.list(orgId),
     queryFn: () => listAPIKeys(orgId),
     enabled: !!currentOrg,
@@ -115,7 +120,9 @@ export default function APIKeysPage() {
       <div className="border-engraved bg-surface p-4">
         <div className="flex items-end gap-3 mb-4">
           <div className="flex-1">
-            <label className="text-xs font-mono text-text-muted block mb-1">Key Name</label>
+            <label className="text-xs font-mono text-text-muted block mb-1">
+              Key Name
+            </label>
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -128,7 +135,9 @@ export default function APIKeysPage() {
             </SelectTrigger>
             <SelectContent>
               {Object.values(KeyExpiration).map((e) => (
-                <SelectItem key={e} value={e}>{e}</SelectItem>
+                <SelectItem key={e} value={e}>
+                  {e}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -146,10 +155,22 @@ export default function APIKeysPage() {
               <code className="flex-1 text-xs font-mono text-text bg-bg px-2 py-1 border border-border overflow-hidden">
                 {showRawKey ? newRawKey : "••••••••••••••••"}
               </code>
-              <Button variant="ghost" size="icon" onClick={() => setShowRawKey(!showRawKey)}>
-                {showRawKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowRawKey(!showRawKey)}
+              >
+                {showRawKey ? (
+                  <EyeOff className="h-3 w-3" />
+                ) : (
+                  <Eye className="h-3 w-3" />
+                )}
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => copyToClipboard(newRawKey)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => copyToClipboard(newRawKey)}
+              >
                 <Copy className="h-3 w-3" />
               </Button>
             </div>
@@ -160,27 +181,50 @@ export default function APIKeysPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
+        <ErrorState
+          message={extractErrorMessage(error)}
+          onRetry={() => refetch()}
+        />
       ) : keys.length === 0 ? (
-        <EmptyState title="No API keys" description="Create an API key to authenticate programmatic access." />
+        <EmptyState
+          title="No API keys"
+          description="Create an API key to authenticate programmatic access."
+        />
       ) : (
         <div className="border border-border overflow-x-auto">
           <table className="w-full text-xs font-mono">
             <thead>
               <tr className="border-b border-border bg-surface-hi">
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Name</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Prefix</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Status</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Expires</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Created</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Actions</th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Name
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Prefix
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Status
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Expires
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Created
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {keys.map((key) => (
-                <tr key={key.id} className="border-b border-border hover:bg-surface-hi">
+                <tr
+                  key={key.id}
+                  className="border-b border-border hover:bg-surface-hi"
+                >
                   <td className="px-3 py-2 text-text">{key.name}</td>
-                  <td className="px-3 py-2 text-text-dim font-mono">{key.key_prefix}...</td>
+                  <td className="px-3 py-2 text-text-dim font-mono">
+                    {key.key_prefix}...
+                  </td>
                   <td className="px-3 py-2">
                     <Badge variant={key.is_active ? "success" : "error"}>
                       {key.is_active ? "Active" : "Revoked"}
@@ -189,12 +233,22 @@ export default function APIKeysPage() {
                   <td className="px-3 py-2 text-text-dim">
                     {key.expires_at ? formatDateTime(key.expires_at) : "Never"}
                   </td>
-                  <td className="px-3 py-2 text-text-dim">{formatDateTime(key.created_at)}</td>
+                  <td className="px-3 py-2 text-text-dim">
+                    {formatDateTime(key.created_at)}
+                  </td>
                   <td className="px-3 py-2 flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleRotate(key.id)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRotate(key.id)}
+                    >
                       <RotateCw className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(key)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteTarget(key)}
+                    >
                       <Trash2 className="h-3 w-3 text-error" />
                     </Button>
                   </td>

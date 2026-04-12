@@ -27,9 +27,7 @@ import type {
   AnalyticsGranularity,
 } from "./enums";
 
-export async function createTrace(
-  data: TraceCreate
-): Promise<TraceAccepted> {
+export async function createTrace(data: TraceCreate): Promise<TraceAccepted> {
   const res = await client.post<TraceAccepted>("/traces", data);
   return res.data;
 }
@@ -49,7 +47,7 @@ export interface ListTracesParams {
 }
 
 export async function listTraces(
-  params?: ListTracesParams
+  params?: ListTracesParams,
 ): Promise<PaginatedResponse<TraceListItem>> {
   const res = await client.get<PaginatedResponse<TraceListItem>>("/traces", {
     params,
@@ -65,7 +63,7 @@ export interface TraceAnalyticsParams {
 }
 
 export async function getTraceAnalytics(
-  params: TraceAnalyticsParams
+  params: TraceAnalyticsParams,
 ): Promise<AnalyticsBucket[] | TokenCostBucket[] | TopModel[]> {
   const res = await client.get<
     AnalyticsBucket[] | TokenCostBucket[] | TopModel[]
@@ -79,28 +77,25 @@ export async function listTraceUsers(params?: {
 }): Promise<PaginatedResponse<UserSummary>> {
   const res = await client.get<PaginatedResponse<UserSummary>>(
     "/traces/users",
-    { params }
+    { params },
   );
   return res.data;
 }
 
 export async function batchDeleteTraces(
-  data: BatchDeleteRequest
+  data: BatchDeleteRequest,
 ): Promise<BatchDeleteResponse> {
   const res = await client.post<BatchDeleteResponse>(
     "/traces/batch/delete",
-    data
+    data,
   );
   return res.data;
 }
 
 export async function batchUpdateTags(
-  data: BatchTagsRequest
+  data: BatchTagsRequest,
 ): Promise<BatchTagsResponse> {
-  const res = await client.post<BatchTagsResponse>(
-    "/traces/batch/tags",
-    data
-  );
+  const res = await client.post<BatchTagsResponse>("/traces/batch/tags", data);
   return res.data;
 }
 
@@ -111,7 +106,7 @@ export async function getTrace(traceId: string): Promise<TraceResponse> {
 
 export async function updateTrace(
   traceId: string,
-  data: TraceUpdate
+  data: TraceUpdate,
 ): Promise<TraceResponse> {
   const res = await client.patch<TraceResponse>(`/traces/${traceId}`, data);
   return res.data;
@@ -123,11 +118,11 @@ export async function deleteTrace(traceId: string): Promise<void> {
 
 export async function createSpans(
   traceId: string,
-  data: SpanCreate[]
+  data: SpanCreate[],
 ): Promise<SpansAccepted> {
   const res = await client.post<SpansAccepted>(
     `/traces/${traceId}/spans`,
-    data
+    data,
   );
   return res.data;
 }
@@ -135,11 +130,11 @@ export async function createSpans(
 export async function updateSpan(
   traceId: string,
   spanId: string,
-  data: SpanUpdate
+  data: SpanUpdate,
 ): Promise<SpanResponse> {
   const res = await client.patch<SpanResponse>(
     `/traces/${traceId}/spans/${spanId}`,
-    data
+    data,
   );
   return res.data;
 }

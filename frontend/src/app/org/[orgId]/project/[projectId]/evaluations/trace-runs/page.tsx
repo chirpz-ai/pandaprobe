@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { listTraceRuns, deleteTraceRun, retryTraceRun } from "@/lib/api/evaluations";
+import {
+  listTraceRuns,
+  deleteTraceRun,
+  retryTraceRun,
+} from "@/lib/api/evaluations";
 import type { EvalRunResponse } from "@/lib/api/types";
 import { EvalRunTable } from "@/components/features/EvalRunTable";
 import { Pagination } from "@/components/common/Pagination";
@@ -34,8 +38,12 @@ export default function TraceRunsPage() {
   const [selected, setSelected] = useState<EvalRunResponse | null>(null);
 
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.evaluations.traceRuns.list(projectId, { limit: pagination.limit, offset: pagination.offset }),
-    queryFn: () => listTraceRuns({ limit: pagination.limit, offset: pagination.offset }),
+    queryKey: queryKeys.evaluations.traceRuns.list(projectId, {
+      limit: pagination.limit,
+      offset: pagination.offset,
+    }),
+    queryFn: () =>
+      listTraceRuns({ limit: pagination.limit, offset: pagination.offset }),
     enabled: !!currentProject,
   });
 
@@ -43,7 +51,9 @@ export default function TraceRunsPage() {
     try {
       await retryTraceRun(runId);
       toast({ title: "Run retried", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.traceRuns.all(projectId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.evaluations.traceRuns.all(projectId),
+      });
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
     }
@@ -54,14 +64,21 @@ export default function TraceRunsPage() {
       await deleteTraceRun(runId, false);
       toast({ title: "Run deleted", variant: "success" });
       setSelected(null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.traceRuns.all(projectId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.evaluations.traceRuns.all(projectId),
+      });
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
   if (!currentProject) {
-    return <EmptyState title="Select a project" description="Choose a project to view trace evaluation runs." />;
+    return (
+      <EmptyState
+        title="Select a project"
+        description="Choose a project to view trace evaluation runs."
+      />
+    );
   }
 
   return (
@@ -71,9 +88,15 @@ export default function TraceRunsPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
+        <ErrorState
+          message={extractErrorMessage(error)}
+          onRetry={() => refetch()}
+        />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState title="No evaluation runs" description="Create an evaluation run to get started." />
+        <EmptyState
+          title="No evaluation runs"
+          description="Create an evaluation run to get started."
+        />
       ) : (
         <>
           <EvalRunTable runs={data.items} onSelect={setSelected} />
@@ -86,7 +109,10 @@ export default function TraceRunsPage() {
         </>
       )}
 
-      <Dialog.Root open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+      <Dialog.Root
+        open={!!selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+      >
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
           <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 border border-border bg-surface p-6 animate-fade-in">
@@ -108,39 +134,59 @@ export default function TraceRunsPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <span className="text-text-muted block">Progress</span>
-                      <span className="text-text">{selected.evaluated_count}/{selected.total_targets}</span>
+                      <span className="text-text">
+                        {selected.evaluated_count}/{selected.total_targets}
+                      </span>
                     </div>
                     <div>
                       <span className="text-text-muted block">Failed</span>
-                      <span className="text-error">{selected.failed_count}</span>
+                      <span className="text-error">
+                        {selected.failed_count}
+                      </span>
                     </div>
                     <div>
                       <span className="text-text-muted block">Created</span>
-                      <span className="text-text">{formatDateTime(selected.created_at)}</span>
+                      <span className="text-text">
+                        {formatDateTime(selected.created_at)}
+                      </span>
                     </div>
                     <div>
                       <span className="text-text-muted block">Completed</span>
-                      <span className="text-text">{formatDateTime(selected.completed_at)}</span>
+                      <span className="text-text">
+                        {formatDateTime(selected.completed_at)}
+                      </span>
                     </div>
                   </div>
                   <div>
                     <span className="text-text-muted block mb-1">Metrics</span>
                     <div className="flex gap-1 flex-wrap">
                       {selected.metric_names.map((m) => (
-                        <Badge key={m} variant="info">{m}</Badge>
+                        <Badge key={m} variant="info">
+                          {m}
+                        </Badge>
                       ))}
                     </div>
                   </div>
                   {selected.error_message && (
                     <div className="bg-error/5 border border-error/20 p-2">
-                      <span className="text-error">{selected.error_message}</span>
+                      <span className="text-error">
+                        {selected.error_message}
+                      </span>
                     </div>
                   )}
                   <div className="flex gap-2 pt-2">
-                    <Button variant="secondary" size="sm" onClick={() => handleRetry(selected.id)}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleRetry(selected.id)}
+                    >
                       <RotateCw className="h-3 w-3" /> Retry
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(selected.id)}>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(selected.id)}
+                    >
                       <Trash2 className="h-3 w-3" /> Delete
                     </Button>
                   </div>

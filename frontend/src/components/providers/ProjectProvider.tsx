@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useOrganization } from "./OrganizationProvider";
 import type { ProjectResponse } from "@/lib/api/types";

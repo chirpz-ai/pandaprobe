@@ -22,7 +22,7 @@ export interface ListSessionsParams {
 }
 
 export async function listSessions(
-  params?: ListSessionsParams
+  params?: ListSessionsParams,
 ): Promise<PaginatedResponse<SessionSummary>> {
   const res = await client.get<PaginatedResponse<SessionSummary>>("/sessions", {
     params,
@@ -37,18 +37,18 @@ export interface SessionAnalyticsParams {
 }
 
 export async function getSessionAnalytics(
-  params: SessionAnalyticsParams
+  params: SessionAnalyticsParams,
 ): Promise<SessionAnalyticsBucket[]> {
   const res = await client.get<SessionAnalyticsBucket[]>(
     "/sessions/analytics",
-    { params }
+    { params },
   );
   return res.data;
 }
 
 export async function getSession(
   sessionId: string,
-  params?: { limit?: number; offset?: number }
+  params?: { limit?: number; offset?: number },
 ): Promise<SessionDetail> {
   const res = await client.get<SessionDetail>(`/sessions/${sessionId}`, {
     params,
@@ -57,10 +57,10 @@ export async function getSession(
 }
 
 export async function deleteSession(
-  sessionId: string
+  sessionId: string,
 ): Promise<SessionDeleteResponse> {
   const res = await client.delete<SessionDeleteResponse>(
-    `/sessions/${sessionId}`
+    `/sessions/${sessionId}`,
   );
   return res.data;
 }

@@ -21,7 +21,7 @@ export async function signInWithGoogle(): Promise<User> {
 
 export async function signInWithEmail(
   email: string,
-  password: string
+  password: string,
 ): Promise<User> {
   if (!auth) throw new Error("Auth is not enabled");
   const result = await signInWithEmailAndPassword(auth, email, password);
@@ -30,7 +30,7 @@ export async function signInWithEmail(
 
 export async function signUpWithEmail(
   email: string,
-  password: string
+  password: string,
 ): Promise<User> {
   if (!auth) throw new Error("Auth is not enabled");
   const result = await createUserWithEmailAndPassword(auth, email, password);
@@ -54,7 +54,7 @@ export function clearSessionCookie(): void {
 }
 
 export async function getCurrentToken(
-  forceRefresh = false
+  forceRefresh = false,
 ): Promise<string | null> {
   if (!AUTH_ENABLED) return null;
   if (!auth?.currentUser) return null;
@@ -62,7 +62,7 @@ export async function getCurrentToken(
 }
 
 export function onAuthStateChanged(
-  callback: (user: User | null) => void
+  callback: (user: User | null) => void,
 ): Unsubscribe {
   if (!auth) {
     callback(null);
@@ -72,7 +72,7 @@ export function onAuthStateChanged(
 }
 
 export function onIdTokenChanged(
-  callback: (user: User | null) => void
+  callback: (user: User | null) => void,
 ): Unsubscribe {
   if (!auth) {
     callback(null);

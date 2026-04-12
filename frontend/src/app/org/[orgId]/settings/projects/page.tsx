@@ -5,11 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import {
-  listProjects,
-  createProject,
-  deleteProject,
-} from "@/lib/api/projects";
+import { listProjects, createProject, deleteProject } from "@/lib/api/projects";
 import { extractErrorMessage } from "@/lib/api/client";
 import type { ProjectResponse } from "@/lib/api/types";
 import { Button } from "@/components/ui/Button";
@@ -30,11 +26,18 @@ export default function ProjectsPage() {
 
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<ProjectResponse | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectResponse | null>(
+    null,
+  );
 
   useDocumentTitle("Projects");
 
-  const { data: projects = [], isPending, error, refetch } = useQuery({
+  const {
+    data: projects = [],
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.projects.list(orgId),
     queryFn: () => listProjects(orgId),
     enabled: !!currentOrg,
@@ -80,7 +83,9 @@ export default function ProjectsPage() {
       <div className="border-engraved bg-surface p-4">
         <div className="flex items-end gap-3">
           <div className="flex-1">
-            <label className="text-xs font-mono text-text-muted block mb-1">Name</label>
+            <label className="text-xs font-mono text-text-muted block mb-1">
+              Name
+            </label>
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -88,7 +93,9 @@ export default function ProjectsPage() {
             />
           </div>
           <div className="flex-1">
-            <label className="text-xs font-mono text-text-muted block mb-1">Description</label>
+            <label className="text-xs font-mono text-text-muted block mb-1">
+              Description
+            </label>
             <Input
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
@@ -104,30 +111,53 @@ export default function ProjectsPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
+        <ErrorState
+          message={extractErrorMessage(error)}
+          onRetry={() => refetch()}
+        />
       ) : projects.length === 0 ? (
-        <EmptyState title="No projects" description="Create a project to get started." />
+        <EmptyState
+          title="No projects"
+          description="Create a project to get started."
+        />
       ) : (
         <div className="border border-border overflow-x-auto">
           <table className="w-full text-xs font-mono">
             <thead>
               <tr className="border-b border-border bg-surface-hi">
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Name</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Description</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Created</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Actions</th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Name
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Description
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Created
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {projects.map((p) => (
-                <tr key={p.id} className="border-b border-border hover:bg-surface-hi">
+                <tr
+                  key={p.id}
+                  className="border-b border-border hover:bg-surface-hi"
+                >
                   <td className="px-3 py-2 text-text">{p.name}</td>
                   <td className="px-3 py-2 text-text-dim max-w-[300px] truncate">
                     {p.description || "—"}
                   </td>
-                  <td className="px-3 py-2 text-text-dim">{formatDateTime(p.created_at)}</td>
+                  <td className="px-3 py-2 text-text-dim">
+                    {formatDateTime(p.created_at)}
+                  </td>
                   <td className="px-3 py-2">
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(p)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteTarget(p)}
+                    >
                       <Trash2 className="h-3 w-3 text-error" />
                     </Button>
                   </td>

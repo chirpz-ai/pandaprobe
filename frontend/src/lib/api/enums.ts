@@ -14,7 +14,8 @@ export const SpanStatusCode = {
   OK: "OK",
   ERROR: "ERROR",
 } as const;
-export type SpanStatusCode = (typeof SpanStatusCode)[keyof typeof SpanStatusCode];
+export type SpanStatusCode =
+  (typeof SpanStatusCode)[keyof typeof SpanStatusCode];
 
 export const TraceStatus = {
   PENDING: "PENDING",
@@ -94,8 +95,7 @@ export const SessionSortBy = {
   latency: "latency",
   cost: "cost",
 } as const;
-export type SessionSortBy =
-  (typeof SessionSortBy)[keyof typeof SessionSortBy];
+export type SessionSortBy = (typeof SessionSortBy)[keyof typeof SessionSortBy];
 
 export const AnalyticsGranularity = {
   hour: "hour",
@@ -109,8 +109,7 @@ export const MonitorStatus = {
   ACTIVE: "ACTIVE",
   PAUSED: "PAUSED",
 } as const;
-export type MonitorStatus =
-  (typeof MonitorStatus)[keyof typeof MonitorStatus];
+export type MonitorStatus = (typeof MonitorStatus)[keyof typeof MonitorStatus];
 
 export const MonitorCadence = {
   every_6h: "every_6h",
@@ -145,12 +144,10 @@ export const UsageCategory = {
   trace_evals: "trace_evals",
   session_evals: "session_evals",
 } as const;
-export type UsageCategory =
-  (typeof UsageCategory)[keyof typeof UsageCategory];
+export type UsageCategory = (typeof UsageCategory)[keyof typeof UsageCategory];
 
 export const KeyExpiration = {
   never: "never",
   "90d": "90d",
 } as const;
-export type KeyExpiration =
-  (typeof KeyExpiration)[keyof typeof KeyExpiration];
+export type KeyExpiration = (typeof KeyExpiration)[keyof typeof KeyExpiration];

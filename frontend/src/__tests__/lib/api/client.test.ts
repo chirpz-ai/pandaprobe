@@ -17,13 +17,13 @@ describe("extractErrorMessage", () => {
 
   it("handles plain Error", () => {
     expect(extractErrorMessage(new Error("something broke"))).toBe(
-      "something broke"
+      "something broke",
     );
   });
 
   it("returns default for unknown types", () => {
     expect(extractErrorMessage("string error")).toBe(
-      "An unexpected error occurred"
+      "An unexpected error occurred",
     );
     expect(extractErrorMessage(null)).toBe("An unexpected error occurred");
     expect(extractErrorMessage(undefined)).toBe("An unexpected error occurred");

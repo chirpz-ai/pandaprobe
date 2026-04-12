@@ -19,7 +19,10 @@ export default function OrganizationSettingsPage() {
   useDocumentTitle("Organization Settings");
 
   if (loading) return <LoadingState />;
-  if (!currentOrg) return <div className="text-text-dim text-sm">No organization selected</div>;
+  if (!currentOrg)
+    return (
+      <div className="text-text-dim text-sm">No organization selected</div>
+    );
 
   async function handleSave() {
     if (!currentOrg || !name.trim()) return;
@@ -44,7 +47,9 @@ export default function OrganizationSettingsPage() {
           <label className="text-xs font-mono text-text-muted block mb-1">
             Organization ID
           </label>
-          <span className="text-xs font-mono text-text-dim">{currentOrg.id}</span>
+          <span className="text-xs font-mono text-text-dim">
+            {currentOrg.id}
+          </span>
         </div>
         <div>
           <label className="text-xs font-mono text-text-muted block mb-1">

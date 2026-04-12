@@ -7,30 +7,28 @@ import type {
 
 export async function createProject(
   orgId: string,
-  data: CreateProjectRequest
+  data: CreateProjectRequest,
 ): Promise<ProjectResponse> {
   const res = await client.post<ProjectResponse>(
     `/organizations/${orgId}/projects`,
-    data
+    data,
   );
   return res.data;
 }
 
-export async function listProjects(
-  orgId: string
-): Promise<ProjectResponse[]> {
+export async function listProjects(orgId: string): Promise<ProjectResponse[]> {
   const res = await client.get<ProjectResponse[]>(
-    `/organizations/${orgId}/projects`
+    `/organizations/${orgId}/projects`,
   );
   return res.data;
 }
 
 export async function getProject(
   orgId: string,
-  projectId: string
+  projectId: string,
 ): Promise<ProjectResponse> {
   const res = await client.get<ProjectResponse>(
-    `/organizations/${orgId}/projects/${projectId}`
+    `/organizations/${orgId}/projects/${projectId}`,
   );
   return res.data;
 }
@@ -38,18 +36,18 @@ export async function getProject(
 export async function updateProject(
   orgId: string,
   projectId: string,
-  data: UpdateProjectRequest
+  data: UpdateProjectRequest,
 ): Promise<ProjectResponse> {
   const res = await client.patch<ProjectResponse>(
     `/organizations/${orgId}/projects/${projectId}`,
-    data
+    data,
   );
   return res.data;
 }
 
 export async function deleteProject(
   orgId: string,
-  projectId: string
+  projectId: string,
 ): Promise<void> {
   await client.delete(`/organizations/${orgId}/projects/${projectId}`);
 }

@@ -30,8 +30,12 @@ export default function MonitorsPage() {
   useDocumentTitle("Monitors");
 
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.evaluations.monitors.list(projectId, { limit: pagination.limit, offset: pagination.offset }),
-    queryFn: () => listMonitors({ limit: pagination.limit, offset: pagination.offset }),
+    queryKey: queryKeys.evaluations.monitors.list(projectId, {
+      limit: pagination.limit,
+      offset: pagination.offset,
+    }),
+    queryFn: () =>
+      listMonitors({ limit: pagination.limit, offset: pagination.offset }),
     enabled: !!currentProject,
   });
 
@@ -39,7 +43,9 @@ export default function MonitorsPage() {
     try {
       await pauseMonitor(id);
       toast({ title: "Monitor paused", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors.all(projectId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.evaluations.monitors.all(projectId),
+      });
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
     }
@@ -49,7 +55,9 @@ export default function MonitorsPage() {
     try {
       await resumeMonitor(id);
       toast({ title: "Monitor resumed", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors.all(projectId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.evaluations.monitors.all(projectId),
+      });
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
     }
@@ -59,7 +67,9 @@ export default function MonitorsPage() {
     try {
       await triggerMonitor(id);
       toast({ title: "Monitor triggered", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors.all(projectId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.evaluations.monitors.all(projectId),
+      });
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
     }
@@ -69,14 +79,21 @@ export default function MonitorsPage() {
     try {
       await deleteMonitor(id);
       toast({ title: "Monitor deleted", variant: "success" });
-      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations.monitors.all(projectId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.evaluations.monitors.all(projectId),
+      });
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
     }
   }
 
   if (!currentProject) {
-    return <EmptyState title="Select a project" description="Choose a project to view monitors." />;
+    return (
+      <EmptyState
+        title="Select a project"
+        description="Choose a project to view monitors."
+      />
+    );
   }
 
   return (
@@ -86,9 +103,15 @@ export default function MonitorsPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
+        <ErrorState
+          message={extractErrorMessage(error)}
+          onRetry={() => refetch()}
+        />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState title="No monitors" description="Create a monitor to automate evaluations." />
+        <EmptyState
+          title="No monitors"
+          description="Create a monitor to automate evaluations."
+        />
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

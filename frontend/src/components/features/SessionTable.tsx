@@ -3,7 +3,11 @@
 import Link from "next/link";
 import type { SessionSummary } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
-import { formatRelativeTime, formatDuration, formatCost } from "@/lib/utils/format";
+import {
+  formatRelativeTime,
+  formatDuration,
+  formatCost,
+} from "@/lib/utils/format";
 import { useProjectPath } from "@/hooks/useNavigation";
 
 interface SessionTableProps {
@@ -17,14 +21,30 @@ export function SessionTable({ sessions }: SessionTableProps) {
       <table className="w-full text-xs font-mono">
         <thead>
           <tr className="border-b border-border bg-surface-hi">
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Session ID</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Traces</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Error</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Latency</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Tokens</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Cost</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">First Trace</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Tags</th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Session ID
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Traces
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Error
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Latency
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Tokens
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Cost
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              First Trace
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Tags
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -52,7 +72,9 @@ export function SessionTable({ sessions }: SessionTableProps) {
               <td className="px-3 py-2 text-text-dim">
                 {formatDuration(session.total_latency_ms)}
               </td>
-              <td className="px-3 py-2 text-text-dim">{session.total_tokens}</td>
+              <td className="px-3 py-2 text-text-dim">
+                {session.total_tokens}
+              </td>
               <td className="px-3 py-2 text-text-dim">
                 {formatCost(session.total_cost)}
               </td>
@@ -62,7 +84,9 @@ export function SessionTable({ sessions }: SessionTableProps) {
               <td className="px-3 py-2">
                 <div className="flex gap-1 flex-wrap">
                   {session.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="default">{tag}</Badge>
+                    <Badge key={tag} variant="default">
+                      {tag}
+                    </Badge>
                   ))}
                 </div>
               </td>

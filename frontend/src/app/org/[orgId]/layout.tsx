@@ -5,11 +5,7 @@ import { AuthGuard } from "@/components/features/AuthGuard";
 import { Sidebar } from "@/components/features/Sidebar";
 import { TopBar } from "@/components/features/TopBar";
 
-export default function OrgLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function OrgLayout({ children }: { children: React.ReactNode }) {
   return (
     <OrganizationProvider>
       <AuthGuard>

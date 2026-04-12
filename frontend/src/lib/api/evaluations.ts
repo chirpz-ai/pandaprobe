@@ -32,47 +32,43 @@ export async function getProviders(): Promise<ProviderInfo[]> {
 }
 
 export async function getTraceMetrics(): Promise<MetricSummary[]> {
-  const res = await client.get<MetricSummary[]>(
-    "/evaluations/trace-metrics"
-  );
+  const res = await client.get<MetricSummary[]>("/evaluations/trace-metrics");
   return res.data;
 }
 
 export async function getSessionMetrics(): Promise<MetricSummary[]> {
-  const res = await client.get<MetricSummary[]>(
-    "/evaluations/session-metrics"
-  );
+  const res = await client.get<MetricSummary[]>("/evaluations/session-metrics");
   return res.data;
 }
 
 /* ─── Trace Eval Runs ──────────────────────────────────────────────────────── */
 
 export async function getTraceRunTemplate(
-  metric: string
+  metric: string,
 ): Promise<EvalRunTemplate> {
   const res = await client.get<EvalRunTemplate>(
     "/evaluations/trace-runs/template",
-    { params: { metric } }
+    { params: { metric } },
   );
   return res.data;
 }
 
 export async function createTraceRun(
-  data: CreateEvalRunRequest
+  data: CreateEvalRunRequest,
 ): Promise<EvalRunResponse> {
   const res = await client.post<EvalRunResponse>(
     "/evaluations/trace-runs",
-    data
+    data,
   );
   return res.data;
 }
 
 export async function createBatchTraceRun(
-  data: CreateBatchEvalRunRequest
+  data: CreateBatchEvalRunRequest,
 ): Promise<EvalRunResponse> {
   const res = await client.post<EvalRunResponse>(
     "/evaluations/trace-runs/batch",
-    data
+    data,
   );
   return res.data;
 }
@@ -84,43 +80,39 @@ export async function listTraceRuns(params?: {
 }): Promise<PaginatedResponse<EvalRunResponse>> {
   const res = await client.get<PaginatedResponse<EvalRunResponse>>(
     "/evaluations/trace-runs",
-    { params }
+    { params },
   );
   return res.data;
 }
 
-export async function getTraceRun(
-  runId: string
-): Promise<EvalRunResponse> {
+export async function getTraceRun(runId: string): Promise<EvalRunResponse> {
   const res = await client.get<EvalRunResponse>(
-    `/evaluations/trace-runs/${runId}`
+    `/evaluations/trace-runs/${runId}`,
   );
   return res.data;
 }
 
 export async function deleteTraceRun(
   runId: string,
-  deleteScores = false
+  deleteScores = false,
 ): Promise<void> {
   await client.delete(`/evaluations/trace-runs/${runId}`, {
     params: { delete_scores: deleteScores },
   });
 }
 
-export async function retryTraceRun(
-  runId: string
-): Promise<EvalRunResponse> {
+export async function retryTraceRun(runId: string): Promise<EvalRunResponse> {
   const res = await client.post<EvalRunResponse>(
-    `/evaluations/trace-runs/${runId}/retry`
+    `/evaluations/trace-runs/${runId}/retry`,
   );
   return res.data;
 }
 
 export async function getTraceRunScores(
-  runId: string
+  runId: string,
 ): Promise<TraceScoreResponse[]> {
   const res = await client.get<TraceScoreResponse[]>(
-    `/evaluations/trace-runs/${runId}/scores`
+    `/evaluations/trace-runs/${runId}/scores`,
   );
   return res.data;
 }
@@ -128,11 +120,11 @@ export async function getTraceRunScores(
 /* ─── Trace Scores ─────────────────────────────────────────────────────────── */
 
 export async function createTraceScore(
-  data: CreateTraceScoreRequest
+  data: CreateTraceScoreRequest,
 ): Promise<TraceScoreResponse> {
   const res = await client.post<TraceScoreResponse>(
     "/evaluations/trace-scores",
-    data
+    data,
   );
   return res.data;
 }
@@ -152,31 +144,31 @@ export interface ListTraceScoresParams {
 }
 
 export async function listTraceScores(
-  params?: ListTraceScoresParams
+  params?: ListTraceScoresParams,
 ): Promise<PaginatedResponse<TraceScoreResponse>> {
   const res = await client.get<PaginatedResponse<TraceScoreResponse>>(
     "/evaluations/trace-scores",
-    { params }
+    { params },
   );
   return res.data;
 }
 
 export async function getTraceScoresByTraceId(
-  traceId: string
+  traceId: string,
 ): Promise<TraceScoreResponse[]> {
   const res = await client.get<TraceScoreResponse[]>(
-    `/evaluations/trace-scores/${traceId}`
+    `/evaluations/trace-scores/${traceId}`,
   );
   return res.data;
 }
 
 export async function updateTraceScore(
   scoreId: string,
-  data: UpdateTraceScoreRequest
+  data: UpdateTraceScoreRequest,
 ): Promise<TraceScoreResponse> {
   const res = await client.patch<TraceScoreResponse>(
     `/evaluations/trace-scores/${scoreId}`,
-    data
+    data,
   );
   return res.data;
 }
@@ -193,7 +185,7 @@ export async function getTraceScoreSummary(params?: {
 }): Promise<ScoreSummaryItem[]> {
   const res = await client.get<ScoreSummaryItem[]>(
     "/evaluations/analytics/trace-scores/summary",
-    { params }
+    { params },
   );
   return res.data;
 }
@@ -206,7 +198,7 @@ export async function getTraceScoreTrend(params: {
 }): Promise<ScoreTrendItem[]> {
   const res = await client.get<ScoreTrendItem[]>(
     "/evaluations/analytics/trace-scores/trend",
-    { params }
+    { params },
   );
   return res.data;
 }
@@ -219,7 +211,7 @@ export async function getTraceScoreDistribution(params: {
 }): Promise<ScoreDistributionItem[]> {
   const res = await client.get<ScoreDistributionItem[]>(
     "/evaluations/analytics/trace-scores/distribution",
-    { params }
+    { params },
   );
   return res.data;
 }
@@ -227,21 +219,21 @@ export async function getTraceScoreDistribution(params: {
 /* ─── Session Eval Runs ────────────────────────────────────────────────────── */
 
 export async function createSessionRun(
-  data: CreateSessionEvalRunRequest
+  data: CreateSessionEvalRunRequest,
 ): Promise<EvalRunResponse> {
   const res = await client.post<EvalRunResponse>(
     "/evaluations/session-runs",
-    data
+    data,
   );
   return res.data;
 }
 
 export async function createBatchSessionRun(
-  data: CreateBatchSessionEvalRunRequest
+  data: CreateBatchSessionEvalRunRequest,
 ): Promise<EvalRunResponse> {
   const res = await client.post<EvalRunResponse>(
     "/evaluations/session-runs/batch",
-    data
+    data,
   );
   return res.data;
 }
@@ -253,43 +245,39 @@ export async function listSessionRuns(params?: {
 }): Promise<PaginatedResponse<EvalRunResponse>> {
   const res = await client.get<PaginatedResponse<EvalRunResponse>>(
     "/evaluations/session-runs",
-    { params }
+    { params },
   );
   return res.data;
 }
 
-export async function getSessionRun(
-  runId: string
-): Promise<EvalRunResponse> {
+export async function getSessionRun(runId: string): Promise<EvalRunResponse> {
   const res = await client.get<EvalRunResponse>(
-    `/evaluations/session-runs/${runId}`
+    `/evaluations/session-runs/${runId}`,
   );
   return res.data;
 }
 
 export async function deleteSessionRun(
   runId: string,
-  deleteScores = false
+  deleteScores = false,
 ): Promise<void> {
   await client.delete(`/evaluations/session-runs/${runId}`, {
     params: { delete_scores: deleteScores },
   });
 }
 
-export async function retrySessionRun(
-  runId: string
-): Promise<EvalRunResponse> {
+export async function retrySessionRun(runId: string): Promise<EvalRunResponse> {
   const res = await client.post<EvalRunResponse>(
-    `/evaluations/session-runs/${runId}/retry`
+    `/evaluations/session-runs/${runId}/retry`,
   );
   return res.data;
 }
 
 export async function getSessionRunScores(
-  runId: string
+  runId: string,
 ): Promise<SessionScoreResponse[]> {
   const res = await client.get<SessionScoreResponse[]>(
-    `/evaluations/session-runs/${runId}/scores`
+    `/evaluations/session-runs/${runId}/scores`,
   );
   return res.data;
 }
@@ -309,20 +297,20 @@ export interface ListSessionScoresParams {
 }
 
 export async function listSessionScores(
-  params?: ListSessionScoresParams
+  params?: ListSessionScoresParams,
 ): Promise<PaginatedResponse<SessionScoreResponse>> {
   const res = await client.get<PaginatedResponse<SessionScoreResponse>>(
     "/evaluations/session-scores",
-    { params }
+    { params },
   );
   return res.data;
 }
 
 export async function getSessionScoresBySessionId(
-  sessionId: string
+  sessionId: string,
 ): Promise<SessionScoreResponse[]> {
   const res = await client.get<SessionScoreResponse[]>(
-    `/evaluations/session-scores/${sessionId}`
+    `/evaluations/session-scores/${sessionId}`,
   );
   return res.data;
 }
@@ -339,7 +327,7 @@ export async function getSessionScoreSummary(params?: {
 }): Promise<ScoreSummaryItem[]> {
   const res = await client.get<ScoreSummaryItem[]>(
     "/evaluations/analytics/session-scores/summary",
-    { params }
+    { params },
   );
   return res.data;
 }
@@ -352,7 +340,7 @@ export async function getSessionScoreTrend(params: {
 }): Promise<ScoreTrendItem[]> {
   const res = await client.get<ScoreTrendItem[]>(
     "/evaluations/analytics/session-scores/trend",
-    { params }
+    { params },
   );
   return res.data;
 }
@@ -365,18 +353,18 @@ export async function getSessionScoreDistribution(params: {
 }): Promise<ScoreDistributionItem[]> {
   const res = await client.get<ScoreDistributionItem[]>(
     "/evaluations/analytics/session-scores/distribution",
-    { params }
+    { params },
   );
   return res.data;
 }
 
 export async function getSessionScoreHistory(
   sessionId: string,
-  params?: { metric_name?: string; limit?: number }
+  params?: { metric_name?: string; limit?: number },
 ): Promise<SessionScoreHistoryItem[]> {
   const res = await client.get<SessionScoreHistoryItem[]>(
     `/evaluations/analytics/session-scores/history/${sessionId}`,
-    { params }
+    { params },
   );
   return res.data;
 }
@@ -389,7 +377,7 @@ export async function getSessionScoreComparison(params: {
 }): Promise<PaginatedResponse<SessionComparisonItem>> {
   const res = await client.get<PaginatedResponse<SessionComparisonItem>>(
     "/evaluations/analytics/session-scores/comparison",
-    { params }
+    { params },
   );
   return res.data;
 }
@@ -397,12 +385,9 @@ export async function getSessionScoreComparison(params: {
 /* ─── Monitors ─────────────────────────────────────────────────────────────── */
 
 export async function createMonitor(
-  data: CreateMonitorRequest
+  data: CreateMonitorRequest,
 ): Promise<MonitorResponse> {
-  const res = await client.post<MonitorResponse>(
-    "/evaluations/monitors",
-    data
-  );
+  const res = await client.post<MonitorResponse>("/evaluations/monitors", data);
   return res.data;
 }
 
@@ -413,27 +398,25 @@ export async function listMonitors(params?: {
 }): Promise<PaginatedResponse<MonitorResponse>> {
   const res = await client.get<PaginatedResponse<MonitorResponse>>(
     "/evaluations/monitors",
-    { params }
+    { params },
   );
   return res.data;
 }
 
-export async function getMonitor(
-  monitorId: string
-): Promise<MonitorResponse> {
+export async function getMonitor(monitorId: string): Promise<MonitorResponse> {
   const res = await client.get<MonitorResponse>(
-    `/evaluations/monitors/${monitorId}`
+    `/evaluations/monitors/${monitorId}`,
   );
   return res.data;
 }
 
 export async function updateMonitor(
   monitorId: string,
-  data: UpdateMonitorRequest
+  data: UpdateMonitorRequest,
 ): Promise<MonitorResponse> {
   const res = await client.patch<MonitorResponse>(
     `/evaluations/monitors/${monitorId}`,
-    data
+    data,
   );
   return res.data;
 }
@@ -443,39 +426,39 @@ export async function deleteMonitor(monitorId: string): Promise<void> {
 }
 
 export async function pauseMonitor(
-  monitorId: string
+  monitorId: string,
 ): Promise<MonitorResponse> {
   const res = await client.post<MonitorResponse>(
-    `/evaluations/monitors/${monitorId}/pause`
+    `/evaluations/monitors/${monitorId}/pause`,
   );
   return res.data;
 }
 
 export async function resumeMonitor(
-  monitorId: string
+  monitorId: string,
 ): Promise<MonitorResponse> {
   const res = await client.post<MonitorResponse>(
-    `/evaluations/monitors/${monitorId}/resume`
+    `/evaluations/monitors/${monitorId}/resume`,
   );
   return res.data;
 }
 
 export async function triggerMonitor(
-  monitorId: string
+  monitorId: string,
 ): Promise<EvalRunResponse> {
   const res = await client.post<EvalRunResponse>(
-    `/evaluations/monitors/${monitorId}/trigger`
+    `/evaluations/monitors/${monitorId}/trigger`,
   );
   return res.data;
 }
 
 export async function getMonitorRuns(
   monitorId: string,
-  params?: { limit?: number; offset?: number }
+  params?: { limit?: number; offset?: number },
 ): Promise<PaginatedResponse<EvalRunResponse>> {
   const res = await client.get<PaginatedResponse<EvalRunResponse>>(
     `/evaluations/monitors/${monitorId}/runs`,
-    { params }
+    { params },
   );
   return res.data;
 }

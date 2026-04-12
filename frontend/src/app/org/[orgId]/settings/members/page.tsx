@@ -45,11 +45,18 @@ export default function MembersPage() {
 
   const [newUserId, setNewUserId] = useState("");
   const [newRole, setNewRole] = useState<string>(MembershipRole.MEMBER);
-  const [deleteTarget, setDeleteTarget] = useState<MembershipResponse | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MembershipResponse | null>(
+    null,
+  );
 
   useDocumentTitle("Members");
 
-  const { data: members = [], isPending, error, refetch } = useQuery({
+  const {
+    data: members = [],
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.members.list(orgId),
     queryFn: () => listMembers(orgId),
     enabled: !!currentOrg,
@@ -107,7 +114,9 @@ export default function MembersPage() {
       <div className="border-engraved bg-surface p-4">
         <div className="flex items-end gap-3 mb-4">
           <div className="flex-1">
-            <label className="text-xs font-mono text-text-muted block mb-1">User ID</label>
+            <label className="text-xs font-mono text-text-muted block mb-1">
+              User ID
+            </label>
             <Input
               value={newUserId}
               onChange={(e) => setNewUserId(e.target.value)}
@@ -120,7 +129,9 @@ export default function MembersPage() {
             </SelectTrigger>
             <SelectContent>
               {Object.values(MembershipRole).map((r) => (
-                <SelectItem key={r} value={r}>{r}</SelectItem>
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -133,7 +144,10 @@ export default function MembersPage() {
       {isPending ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={extractErrorMessage(error)} onRetry={() => refetch()} />
+        <ErrorState
+          message={extractErrorMessage(error)}
+          onRetry={() => refetch()}
+        />
       ) : members.length === 0 ? (
         <EmptyState title="No members" />
       ) : (
@@ -141,15 +155,26 @@ export default function MembersPage() {
           <table className="w-full text-xs font-mono">
             <thead>
               <tr className="border-b border-border bg-surface-hi">
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Name</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Email</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Role</th>
-                <th className="text-left px-3 py-2 text-text-muted font-normal">Actions</th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Name
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Email
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Role
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {members.map((m) => (
-                <tr key={m.id} className="border-b border-border hover:bg-surface-hi">
+                <tr
+                  key={m.id}
+                  className="border-b border-border hover:bg-surface-hi"
+                >
                   <td className="px-3 py-2 text-text">{m.display_name}</td>
                   <td className="px-3 py-2 text-text-dim">{m.email}</td>
                   <td className="px-3 py-2">
@@ -164,9 +189,13 @@ export default function MembersPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.values(MembershipRole).filter(r => r !== MembershipRole.OWNER).map((r) => (
-                            <SelectItem key={r} value={r}>{r}</SelectItem>
-                          ))}
+                          {Object.values(MembershipRole)
+                            .filter((r) => r !== MembershipRole.OWNER)
+                            .map((r) => (
+                              <SelectItem key={r} value={r}>
+                                {r}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     )}

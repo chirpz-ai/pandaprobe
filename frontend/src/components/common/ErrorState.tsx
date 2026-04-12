@@ -15,7 +15,12 @@ export function ErrorState({ message, onRetry }: ErrorStateProps) {
       <h3 className="text-sm font-mono text-text-dim">Something went wrong</h3>
       <p className="mt-1 text-xs text-text-muted max-w-sm">{message}</p>
       {onRetry && (
-        <Button variant="secondary" size="sm" className="mt-4" onClick={onRetry}>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-4"
+          onClick={onRetry}
+        >
           Retry
         </Button>
       )}

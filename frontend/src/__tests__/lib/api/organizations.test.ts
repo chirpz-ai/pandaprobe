@@ -39,7 +39,9 @@ describe("organizations API", () => {
   it("createOrganization posts to /organizations", async () => {
     mockClient.post.mockResolvedValue({ data: { id: "o1", name: "Org" } });
     const result = await createOrganization({ name: "Org" });
-    expect(mockClient.post).toHaveBeenCalledWith("/organizations", { name: "Org" });
+    expect(mockClient.post).toHaveBeenCalledWith("/organizations", {
+      name: "Org",
+    });
     expect(result.name).toBe("Org");
   });
 
@@ -58,7 +60,9 @@ describe("organizations API", () => {
   it("updateOrganization patches /organizations/:id", async () => {
     mockClient.patch.mockResolvedValue({ data: { id: "o1" } });
     await updateOrganization("o1", { name: "Updated" });
-    expect(mockClient.patch).toHaveBeenCalledWith("/organizations/o1", { name: "Updated" });
+    expect(mockClient.patch).toHaveBeenCalledWith("/organizations/o1", {
+      name: "Updated",
+    });
   });
 
   it("deleteOrganization deletes /organizations/:id", async () => {
@@ -85,14 +89,19 @@ describe("organizations API", () => {
   it("updateMemberRole patches /organizations/:id/members/:userId", async () => {
     mockClient.patch.mockResolvedValue({ data: { id: "m1" } });
     await updateMemberRole("o1", "u1", { role: "ADMIN" });
-    expect(mockClient.patch).toHaveBeenCalledWith("/organizations/o1/members/u1", {
-      role: "ADMIN",
-    });
+    expect(mockClient.patch).toHaveBeenCalledWith(
+      "/organizations/o1/members/u1",
+      {
+        role: "ADMIN",
+      },
+    );
   });
 
   it("removeMember deletes /organizations/:id/members/:userId", async () => {
     mockClient.delete.mockResolvedValue({});
     await removeMember("o1", "u1");
-    expect(mockClient.delete).toHaveBeenCalledWith("/organizations/o1/members/u1");
+    expect(mockClient.delete).toHaveBeenCalledWith(
+      "/organizations/o1/members/u1",
+    );
   });
 });

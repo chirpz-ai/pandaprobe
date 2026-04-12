@@ -70,9 +70,7 @@ function SpanNode({ node, depth }: { node: SpanNode; depth: number }) {
         <span className="text-xs text-text-dim ml-2">
           {formatDuration(node.latency_ms)}
         </span>
-        {node.model && (
-          <Badge variant="info">{node.model}</Badge>
-        )}
+        {node.model && <Badge variant="info">{node.model}</Badge>}
       </div>
 
       {showDetail && (

@@ -26,9 +26,7 @@ export async function getBilling(): Promise<BillingResponse> {
   return res.data;
 }
 
-export async function getInvoices(
-  limit = 12
-): Promise<UsageHistoryItem[]> {
+export async function getInvoices(limit = 12): Promise<UsageHistoryItem[]> {
   const res = await client.get<UsageHistoryItem[]>("/subscriptions/invoices", {
     params: { limit },
   });
@@ -41,21 +39,18 @@ export async function getPlans(): Promise<PlanInfo[]> {
 }
 
 export async function createCheckout(
-  data: CheckoutRequest
+  data: CheckoutRequest,
 ): Promise<CheckoutResponse> {
   const res = await client.post<CheckoutResponse>(
     "/subscriptions/checkout",
-    data
+    data,
   );
   return res.data;
 }
 
 export async function createPortalSession(
-  data: PortalRequest
+  data: PortalRequest,
 ): Promise<PortalResponse> {
-  const res = await client.post<PortalResponse>(
-    "/subscriptions/portal",
-    data
-  );
+  const res = await client.post<PortalResponse>("/subscriptions/portal", data);
   return res.data;
 }

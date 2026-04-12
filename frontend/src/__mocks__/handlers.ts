@@ -4,7 +4,11 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export const handlers = [
   http.get(`${API}/health`, () =>
-    HttpResponse.json({ status: "healthy", version: "1.0.0", environment: "development" })
+    HttpResponse.json({
+      status: "healthy",
+      version: "1.0.0",
+      environment: "development",
+    }),
   ),
 
   http.get(`${API}/user`, () =>
@@ -14,7 +18,7 @@ export const handlers = [
       display_name: "Dev User",
       created_at: "2024-01-01T00:00:00Z",
       last_sign_in_at: null,
-    })
+    }),
   ),
 
   http.get(`${API}/organizations`, () =>
@@ -25,7 +29,7 @@ export const handlers = [
         created_at: "2024-01-01T00:00:00Z",
         role: "OWNER",
       },
-    ])
+    ]),
   ),
 
   http.get(`${API}/organizations/:orgId/projects`, () =>
@@ -37,7 +41,7 @@ export const handlers = [
         description: "",
         created_at: "2024-01-01T00:00:00Z",
       },
-    ])
+    ]),
   ),
 
   http.get(`${API}/traces`, () =>
@@ -63,7 +67,7 @@ export const handlers = [
       total: 1,
       limit: 50,
       offset: 0,
-    })
+    }),
   ),
 
   http.get(`${API}/sessions`, () =>
@@ -72,7 +76,7 @@ export const handlers = [
       total: 0,
       limit: 50,
       offset: 0,
-    })
+    }),
   ),
 
   http.get(`${API}/subscriptions`, () =>
@@ -85,7 +89,7 @@ export const handlers = [
       current_period_end: "2024-02-01T00:00:00Z",
       canceled_at: null,
       created_at: "2024-01-01T00:00:00Z",
-    })
+    }),
   ),
 
   http.get(`${API}/subscriptions/usage`, () =>
@@ -98,10 +102,10 @@ export const handlers = [
       trace_evals: 10,
       session_evals: 5,
       limits: {},
-    })
+    }),
   ),
 
   http.get(`${API}/evaluations/monitors`, () =>
-    HttpResponse.json({ items: [], total: 0, limit: 50, offset: 0 })
+    HttpResponse.json({ items: [], total: 0, limit: 50, offset: 0 }),
   ),
 ];

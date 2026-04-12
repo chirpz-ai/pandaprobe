@@ -39,16 +39,22 @@ export default function SessionsPage() {
 
   useDocumentTitle("Sessions");
 
-  const params = useMemo<ListSessionsParams>(() => ({
-    limit,
-    offset,
-    sort_by: values.sortBy as ListSessionsParams["sort_by"],
-    sort_order: values.sortOrder as ListSessionsParams["sort_order"],
-    ...(values.query ? { query: values.query } : {}),
-  }), [limit, offset, values.sortBy, values.sortOrder, values.query]);
+  const params = useMemo<ListSessionsParams>(
+    () => ({
+      limit,
+      offset,
+      sort_by: values.sortBy as ListSessionsParams["sort_by"],
+      sort_order: values.sortOrder as ListSessionsParams["sort_order"],
+      ...(values.query ? { query: values.query } : {}),
+    }),
+    [limit, offset, values.sortBy, values.sortOrder, values.query],
+  );
 
   const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.sessions.list(projectId, params as unknown as Record<string, unknown>),
+    queryKey: queryKeys.sessions.list(
+      projectId,
+      params as unknown as Record<string, unknown>,
+    ),
     queryFn: () => listSessions(params),
     enabled: !!currentProject,
   });
@@ -85,7 +91,10 @@ export default function SessionsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={values.sortOrder} onValueChange={(v) => set({ sortOrder: v })}>
+        <Select
+          value={values.sortOrder}
+          onValueChange={(v) => set({ sortOrder: v })}
+        >
           <SelectTrigger className="w-24">
             <SelectValue />
           </SelectTrigger>

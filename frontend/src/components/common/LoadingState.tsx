@@ -9,7 +9,11 @@ interface LoadingStateProps {
   cols?: number;
 }
 
-export function LoadingState({ variant = "table", rows = 6, cols = 5 }: LoadingStateProps) {
+export function LoadingState({
+  variant = "table",
+  rows = 6,
+  cols = 5,
+}: LoadingStateProps) {
   if (variant === "table") {
     return <SkeletonTable rows={rows} cols={cols} />;
   }

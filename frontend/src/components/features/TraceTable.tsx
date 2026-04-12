@@ -3,7 +3,11 @@
 import Link from "next/link";
 import type { TraceListItem } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { formatRelativeTime, formatDuration, formatCost } from "@/lib/utils/format";
+import {
+  formatRelativeTime,
+  formatDuration,
+  formatCost,
+} from "@/lib/utils/format";
 import { Badge } from "@/components/ui/Badge";
 import { useProjectPath } from "@/hooks/useNavigation";
 
@@ -18,14 +22,30 @@ export function TraceTable({ traces }: TraceTableProps) {
       <table className="w-full text-xs font-mono">
         <thead>
           <tr className="border-b border-border bg-surface-hi">
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Name</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Status</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Latency</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Tokens</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Cost</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Spans</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Started</th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">Tags</th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Name
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Status
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Latency
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Tokens
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Cost
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Spans
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Started
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Tags
+            </th>
           </tr>
         </thead>
         <tbody>

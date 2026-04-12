@@ -24,7 +24,9 @@ interface OrganizationContextValue {
   refetchProjects: () => void;
 }
 
-const OrganizationContext = createContext<OrganizationContextValue | null>(null);
+const OrganizationContext = createContext<OrganizationContextValue | null>(
+  null,
+);
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const params = useParams();
@@ -48,15 +50,22 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   });
 
   const organizations = useMemo(() => orgsQuery.data ?? [], [orgsQuery.data]);
-  const projects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
+  const projects = useMemo(
+    () => projectsQuery.data ?? [],
+    [projectsQuery.data],
+  );
   const loading = orgsQuery.isPending || projectsQuery.isPending;
   const currentOrg = useMemo(
     () => organizations.find((o) => o.id === orgId) ?? null,
-    [organizations, orgId]
+    [organizations, orgId],
   );
 
   useEffect(() => {
-    if (orgsQuery.isSuccess && orgId && !organizations.some((o) => o.id === orgId)) {
+    if (
+      orgsQuery.isSuccess &&
+      orgId &&
+      !organizations.some((o) => o.id === orgId)
+    ) {
       router.replace("/");
     }
   }, [orgsQuery.isSuccess, orgId, organizations, router]);
@@ -91,7 +100,7 @@ export function useOrganization(): OrganizationContextValue {
   const context = useContext(OrganizationContext);
   if (!context) {
     throw new Error(
-      "useOrganization must be used within an OrganizationProvider"
+      "useOrganization must be used within an OrganizationProvider",
     );
   }
   return context;

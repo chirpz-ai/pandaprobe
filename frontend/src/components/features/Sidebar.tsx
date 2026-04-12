@@ -59,7 +59,7 @@ function NavLink({
         active
           ? "bg-surface-hi text-primary border-l-2 border-primary"
           : "text-text-dim hover:text-text hover:bg-surface-hi border-l-2 border-transparent",
-        collapsed && "justify-center px-2"
+        collapsed && "justify-center px-2",
       )}
     >
       {item.icon}
@@ -108,7 +108,7 @@ function SwitcherDropdown({
       className={cn(
         "flex w-full items-center gap-3 px-3 py-2 text-sm font-mono transition-colors duration-150",
         "text-text hover:bg-surface-hi",
-        collapsed && "justify-center px-2"
+        collapsed && "justify-center px-2",
       )}
     >
       {icon}
@@ -153,7 +153,7 @@ function SwitcherDropdown({
                 "flex items-center px-2 py-1.5 text-xs font-mono cursor-pointer outline-none",
                 item.id === activeId
                   ? "text-primary bg-surface-hi"
-                  : "text-text-dim hover:text-text hover:bg-surface-hi"
+                  : "text-text-dim hover:text-text hover:bg-surface-hi",
               )}
               onSelect={() => onSelect(item.id)}
             >
@@ -224,23 +224,47 @@ export function Sidebar() {
         icon: <BarChart3 className="h-4 w-4" />,
       },
     ],
-    [orgBase, projectBase, projectHome]
+    [orgBase, projectBase, projectHome],
   );
 
   const settingsNav = useMemo<NavItem[]>(
     () => [
-      { label: "Organization", href: `${orgBase}/settings/organization`, icon: <SlidersHorizontal className="h-4 w-4" /> },
-      { label: "Members", href: `${orgBase}/settings/members`, icon: <Users className="h-4 w-4" /> },
-      { label: "Projects", href: `${orgBase}/settings/projects`, icon: <FolderKanban className="h-4 w-4" /> },
-      { label: "API Keys", href: `${orgBase}/settings/api-keys`, icon: <KeyRound className="h-4 w-4" /> },
-      { label: "Billing", href: `${orgBase}/settings/billing`, icon: <CreditCard className="h-4 w-4" /> },
+      {
+        label: "Organization",
+        href: `${orgBase}/settings/organization`,
+        icon: <SlidersHorizontal className="h-4 w-4" />,
+      },
+      {
+        label: "Members",
+        href: `${orgBase}/settings/members`,
+        icon: <Users className="h-4 w-4" />,
+      },
+      {
+        label: "Projects",
+        href: `${orgBase}/settings/projects`,
+        icon: <FolderKanban className="h-4 w-4" />,
+      },
+      {
+        label: "API Keys",
+        href: `${orgBase}/settings/api-keys`,
+        icon: <KeyRound className="h-4 w-4" />,
+      },
+      {
+        label: "Billing",
+        href: `${orgBase}/settings/billing`,
+        icon: <CreditCard className="h-4 w-4" />,
+      },
     ],
-    [orgBase]
+    [orgBase],
   );
 
   function isActive(item: NavItem): boolean {
     if (item.exact) return pathname === item.href;
-    return pathname.startsWith(item.href) && item.href !== orgBase && item.href !== projectHome;
+    return (
+      pathname.startsWith(item.href) &&
+      item.href !== orgBase &&
+      item.href !== projectHome
+    );
   }
 
   function toggleCollapsed() {
@@ -284,7 +308,7 @@ export function Sidebar() {
       <aside
         className={cn(
           "flex flex-col h-full bg-surface border-r border-border transition-all duration-200",
-          collapsed ? "w-14" : "w-56"
+          collapsed ? "w-14" : "w-56",
         )}
       >
         {/* ── Header (h-12 to match TopBar) ──────────────────────── */}
@@ -294,7 +318,13 @@ export function Sidebar() {
               onClick={exitSettings}
               className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight hover:text-text transition-colors"
             >
-              <Image src="/favicon-32x32.png" alt="" width={18} height={18} className="flex-shrink-0" />
+              <Image
+                src="/favicon-32x32.png"
+                alt=""
+                width={18}
+                height={18}
+                className="flex-shrink-0"
+              />
               <span>PandaProbe</span>
             </button>
           ) : !collapsed ? (
@@ -302,7 +332,13 @@ export function Sidebar() {
               href={projectHome}
               className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight"
             >
-              <Image src="/favicon-32x32.png" alt="" width={18} height={18} className="flex-shrink-0" />
+              <Image
+                src="/favicon-32x32.png"
+                alt=""
+                width={18}
+                height={18}
+                className="flex-shrink-0"
+              />
               PandaProbe
             </Link>
           ) : null}
@@ -316,7 +352,6 @@ export function Sidebar() {
               <ChevronLeft className="h-4 w-4" />
             )}
           </button>
-     
         </div>
 
         {/* ── Navigation ─────────────────────────────────────────── */}
@@ -385,7 +420,7 @@ export function Sidebar() {
                   onClick={exitSettings}
                   className={cn(
                     "flex items-center gap-3 w-full px-3 py-2 text-sm font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
-                    collapsed && "justify-center px-2"
+                    collapsed && "justify-center px-2",
                   )}
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -396,7 +431,7 @@ export function Sidebar() {
                   onClick={openSettings}
                   className={cn(
                     "flex items-center gap-3 w-full px-3 py-2 text-sm font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
-                    collapsed && "justify-center px-2"
+                    collapsed && "justify-center px-2",
                   )}
                 >
                   <Settings className="h-4 w-4" />
@@ -426,13 +461,11 @@ export function Sidebar() {
               <DropdownMenu.Trigger
                 className={cn(
                   "flex items-center gap-2 w-full px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
-                  collapsed && "justify-center"
+                  collapsed && "justify-center",
                 )}
               >
                 <CircleUser className="h-4 w-4 flex-shrink-0" />
-                {!collapsed && (
-                  <span className="truncate">{displayName}</span>
-                )}
+                {!collapsed && <span className="truncate">{displayName}</span>}
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
@@ -482,7 +515,7 @@ export function Sidebar() {
             <div
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-muted",
-                collapsed && "justify-center"
+                collapsed && "justify-center",
               )}
             >
               <CircleUser className="h-4 w-4 flex-shrink-0" />

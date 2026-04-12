@@ -10,12 +10,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary:
-          "bg-primary text-bg hover:bg-accent border border-primary",
+        primary: "bg-primary text-bg hover:bg-accent border border-primary",
         secondary:
           "bg-surface text-text border border-border hover:bg-surface-hi hover:border-border-hi",
-        ghost:
-          "text-text-dim hover:text-text hover:bg-surface-hi",
+        ghost: "text-text-dim hover:text-text hover:bg-surface-hi",
         destructive:
           "bg-error/10 text-error border border-error/30 hover:bg-error/20",
         link: "text-text-dim underline-offset-4 hover:underline hover:text-text",
@@ -31,11 +29,12 @@ const buttonVariants = cva(
       variant: "primary",
       size: "md",
     },
-  }
+  },
 );
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
@@ -50,7 +49,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       />
     );
-  }
+  },
 );
 Button.displayName = "Button";
 

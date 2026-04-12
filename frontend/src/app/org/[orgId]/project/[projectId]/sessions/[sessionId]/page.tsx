@@ -34,7 +34,11 @@ export default function SessionDetailPage({
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const { data: session, isPending, error } = useQuery({
+  const {
+    data: session,
+    isPending,
+    error,
+  } = useQuery({
     queryKey: queryKeys.sessions.detail(sessionId),
     queryFn: () => getSession(sessionId),
   });
@@ -53,10 +57,7 @@ export default function SessionDetailPage({
   }
 
   if (isPending) return <LoadingState />;
-  if (error)
-    return (
-      <ErrorState message={extractErrorMessage(error)} />
-    );
+  if (error) return <ErrorState message={extractErrorMessage(error)} />;
   if (!session) return <ErrorState message="Session not found" />;
 
   const traceListItems = session.traces.map((t) => ({

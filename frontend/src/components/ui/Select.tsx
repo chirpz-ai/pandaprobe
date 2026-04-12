@@ -21,7 +21,7 @@ const SelectTrigger = forwardRef<
       "focus:outline-none focus:border-border-hi focus:ring-1 focus:ring-border-hi",
       "disabled:cursor-not-allowed disabled:opacity-50",
       "transition-colors duration-150",
-      className
+      className,
     )}
     {...props}
   >
@@ -44,7 +44,7 @@ const SelectContent = forwardRef<
         "relative z-50 max-h-96 min-w-[8rem] overflow-hidden bg-surface border border-border shadow-md",
         "data-[state=open]:animate-fade-in",
         position === "popper" && "translate-y-1",
-        className
+        className,
       )}
       position={position}
       {...props}
@@ -53,7 +53,7 @@ const SelectContent = forwardRef<
         className={cn(
           "p-1",
           position === "popper" &&
-            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]",
         )}
       >
         {children}
@@ -73,7 +73,7 @@ const SelectItem = forwardRef<
       "relative flex w-full cursor-pointer select-none items-center py-1.5 pl-8 pr-2 text-sm font-mono text-text",
       "outline-none focus:bg-surface-hi",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-      className
+      className,
     )}
     {...props}
   >
