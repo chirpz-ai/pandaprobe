@@ -22,15 +22,19 @@ export function formatDateTime(iso: string | null | undefined): string {
 export function formatRelativeTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const diff = Date.now() - new Date(iso).getTime();
-  const seconds = Math.floor(diff / 1000);
+  const absDiff = Math.abs(diff);
+  const seconds = Math.floor(absDiff / 1000);
+  const future = diff < 0;
+  const suffix = future ? "" : " ago";
+  const prefix = future ? "in " : "";
 
-  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 60) return `${prefix}${seconds}s${suffix}`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${prefix}${minutes}m${suffix}`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${prefix}${hours}h${suffix}`;
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return `${prefix}${days}d${suffix}`;
   return formatDate(iso);
 }
 
