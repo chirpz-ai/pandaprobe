@@ -61,7 +61,6 @@ export default function SessionDetailPage({
   if (!session) return <ErrorState message="Session not found" />;
 
   const traceListItems = session.traces.map((t) => {
-
     return {
       trace_id: t.trace_id,
       name: t.name,
