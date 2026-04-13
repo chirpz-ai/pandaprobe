@@ -14,7 +14,7 @@ services:
   # ---------- FastAPI application ----------
   app:
     container_name: pandaprobe-app
-    image: ghcr.io/chirpz/pandaprobe-backend:latest
+    image: ghcr.io/chirpz-ai/pandaprobe-backend:latest
     ports:
       - "8000:8000"
     volumes:
@@ -42,10 +42,10 @@ services:
   # ---------- Celery background worker ----------
   worker:
     container_name: pandaprobe-worker
-    image: ghcr.io/chirpz/pandaprobe-backend:latest
+    image: ghcr.io/chirpz-ai/pandaprobe-backend:latest
     command:
       [
-        "celery",
+        "/app/.venv/bin/celery",
         "-A", "app.infrastructure.queue.celery_app",
         "worker",
         "--loglevel=info",
@@ -70,10 +70,10 @@ services:
   # ---------- Celery Beat scheduler ----------
   beat:
     container_name: pandaprobe-beat
-    image: ghcr.io/chirpz/pandaprobe-backend:latest
+    image: ghcr.io/chirpz-ai/pandaprobe-backend:latest
     command:
       [
-        "celery",
+        "/app/.venv/bin/celery",
         "-A", "app.infrastructure.queue.celery_app",
         "beat",
         "--loglevel=info",
@@ -132,7 +132,7 @@ services:
   # ---------- Next.js frontend ----------
   frontend:
     container_name: pandaprobe-frontend
-    image: ghcr.io/chirpz/pandaprobe-frontend:latest
+    image: ghcr.io/chirpz-ai/pandaprobe-frontend:latest
     ports:
       - "3000:3000"
     healthcheck:

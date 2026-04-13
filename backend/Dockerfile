@@ -9,7 +9,8 @@ ENV APP_ENV=${APP_ENV} \
     PYTHONUNBUFFERED=1 \
     PYTHONHASHSEED=random \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=on
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PATH="/app/.venv/bin:$PATH"
 
 # System deps: libpq (psycopg2), curl (healthcheck), pg client + redis
 # tools (entrypoint connectivity checks)
