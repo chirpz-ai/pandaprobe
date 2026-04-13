@@ -15,7 +15,7 @@ replace() {
 
   # Escape special sed characters in the value
   local escaped_value
-  escaped_value=$(printf '%s' "$value" | sed 's/[&|\\]/\\&/g')
+  escaped_value=$(printf '%s' "$value" | sed -e 's/[\\]/\\&/g' -e 's/[&|]/\\&/g' -e 's/\$/\\$/g')
 
   find "$NEXT_DIR" -type f \( -name '*.js' -o -name '*.html' \) \
     -exec sed -i "s|${placeholder}|${escaped_value}|g" {} +
