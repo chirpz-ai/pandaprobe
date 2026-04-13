@@ -58,7 +58,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: make install
+        run: make backend-install
 
       - name: Run integration tests
         working-directory: backend

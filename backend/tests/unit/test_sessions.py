@@ -160,6 +160,8 @@ def test_session_detail_includes_full_traces() -> None:
         user_id="user-a",
         tags=["tag1"],
         spans=[],
+        total_tokens=100,
+        total_cost=0.005,
     )
     detail = SessionDetail(
         session_id="sess-1",

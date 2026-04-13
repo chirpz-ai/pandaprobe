@@ -1,0 +1,54 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { AUTH_ENABLED } from "@/lib/auth/firebase";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function getBreadcrumbs(pathname: string): string[] {
+  const segments = pathname.split("/").filter(Boolean);
+
+  const meaningful: string[] = [];
+  for (const seg of segments) {
+    if (seg === "org" || seg === "project") continue;
+    if (UUID_RE.test(seg)) continue;
+    meaningful.push(
+      seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    );
+  }
+
+  if (meaningful.length === 0) return ["Home"];
+  return meaningful;
+}
+
+export function TopBar() {
+  const pathname = usePathname();
+  const crumbs = getBreadcrumbs(pathname);
+
+  return (
+    <header className="flex items-center justify-between h-12 px-4 border-b border-border bg-surface">
+      <nav className="flex items-center gap-1 text-xs font-mono">
+        {crumbs.map((crumb, i) => (
+          <span key={i} className="flex items-center gap-1">
+            {i > 0 && <ChevronRight className="h-3 w-3 text-text-muted" />}
+            <span
+              className={
+                i === crumbs.length - 1 ? "text-text" : "text-text-dim"
+              }
+            >
+              {crumb}
+            </span>
+          </span>
+        ))}
+      </nav>
+
+      {!AUTH_ENABLED && (
+        <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-warning border border-warning/30 bg-warning/5">
+          Dev Mode
+        </span>
+      )}
+    </header>
+  );
+}

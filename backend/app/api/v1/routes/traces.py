@@ -22,7 +22,7 @@ from app.api.context import ApiContext
 from app.api.dependencies import require_project
 from app.api.rate_limit import limiter
 from app.api.v1.schemas import PaginatedResponse
-from app.core.traces.entities import Span, Trace
+from app.core.traces.entities import Span, Trace, TraceDetail
 from app.infrastructure.db.engine import get_db_session
 from app.infrastructure.redis.client import get_redis
 from app.registry.constants import (
@@ -169,6 +169,8 @@ class TraceResponse(BaseModel):
     environment: str | None = None
     release: str | None = None
     spans: list[SpanResponse] = Field(default_factory=list)
+    total_tokens: int = 0
+    total_cost: float = 0.0
 
 
 class TraceListItem(BaseModel):
@@ -525,8 +527,8 @@ async def update_trace(
     fields = body.model_dump(exclude_unset=True)
 
     svc = TraceService(session)
-    trace = await svc.update_trace(trace_id, ctx.project.id, **fields)
-    return _trace_to_response(trace)
+    detail = await svc.update_trace(trace_id, ctx.project.id, **fields)
+    return _trace_to_response(detail)
 
 
 @router.post("/{trace_id}/spans", status_code=201, response_model=SpansAccepted)
@@ -598,8 +600,8 @@ async def get_trace(
     Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """
     svc = TraceService(session)
-    trace = await svc.get_trace(trace_id, ctx.project.id)
-    return _trace_to_response(trace)
+    detail = await svc.get_trace(trace_id, ctx.project.id)
+    return _trace_to_response(detail)
 
 
 @router.delete("/{trace_id}", status_code=204)
@@ -673,21 +675,24 @@ def _row_to_list_item(r: Any) -> TraceListItem:
     )
 
 
-def _trace_to_response(trace: Trace) -> TraceResponse:
+def _trace_to_response(detail: TraceDetail) -> TraceResponse:
+    t = detail.trace
     return TraceResponse(
-        trace_id=trace.trace_id,
-        project_id=trace.project_id,
-        name=trace.name,
-        status=trace.status,
-        input=trace.input,
-        output=trace.output,
-        metadata=trace.metadata,
-        started_at=trace.started_at.isoformat(),
-        ended_at=trace.ended_at.isoformat() if trace.ended_at else None,
-        session_id=trace.session_id,
-        user_id=trace.user_id,
-        tags=trace.tags,
-        environment=trace.environment,
-        release=trace.release,
-        spans=[_span_to_response(s) for s in trace.spans],
+        trace_id=t.trace_id,
+        project_id=t.project_id,
+        name=t.name,
+        status=t.status,
+        input=t.input,
+        output=t.output,
+        metadata=t.metadata,
+        started_at=t.started_at.isoformat(),
+        ended_at=t.ended_at.isoformat() if t.ended_at else None,
+        session_id=t.session_id,
+        user_id=t.user_id,
+        tags=t.tags,
+        environment=t.environment,
+        release=t.release,
+        spans=[_span_to_response(s) for s in t.spans],
+        total_tokens=detail.total_tokens,
+        total_cost=detail.total_cost,
     )

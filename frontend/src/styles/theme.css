@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ────────────────────────────────────────────────────────── */
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-bg:         #18191b;
+  --color-surface:    #1f2022;
+  --color-surface-hi: #252628;
+
+  --color-border:     #2d2e30;
+  --color-border-hi:  #3a3b3e;
+
+  --color-text:       #d1d5db;
+  --color-text-dim:   #6b7280;
+  --color-text-muted: #4b5563;
+
+  --color-accent:     #e5e7eb;
+  --color-primary:    #ffffff;
+
+  --color-success:    #22c55e;
+  --color-warning:    #eab308;
+  --color-error:      #ef4444;
+  --color-info:       #3b82f6;
+
+  --radius:           0px;
+  --radius-sm:        0px;
+  --radius-md:        0px;
+  --radius-lg:        0px;
+  --radius-xl:        0px;
+  --radius-full:      0px;
+
+  --animate-fade-in:  fadeIn 0.4s ease-out forwards;
+  --animate-slide-up: slideUp 0.4s ease-out forwards;
+}
+
+/* ─── Keyframes ────────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    border-radius: 0 !important;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-mono), "JetBrains Mono", "Fira Code", monospace;
+    line-height: 1.6;
+  }
+
+  ::selection {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: var(--color-primary);
+  }
+
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: var(--color-bg); }
+  ::-webkit-scrollbar-thumb  { background: var(--color-border-hi); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+  input[type="checkbox"] {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--color-border-hi);
+    background: var(--color-surface);
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+  }
+  input[type="checkbox"]:hover {
+    border-color: var(--color-text-muted);
+  }
+  input[type="checkbox"]:checked {
+    background: var(--color-text-muted);
+    border-color: var(--color-text-dim);
+  }
+  input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 3.5px;
+    top: 1px;
+    width: 5px;
+    height: 8px;
+    border: solid var(--color-primary);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+  }
+  input[type="checkbox"]:indeterminate {
+    background: var(--color-surface-hi);
+    border-color: var(--color-text-dim);
+  }
+  input[type="checkbox"]:indeterminate::after {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 5px;
+    width: 8px;
+    height: 1.5px;
+    background: var(--color-text-dim);
+  }
+}
+
+/* ─── Components ────────────────────────────────────────────────────────────── */
+@layer components {
+  .border-engraved {
+    border: 1px solid var(--color-border);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 0 0 1px rgba(255, 255, 255, 0.02);
+  }
+
+  .bg-dot-grid {
+    background-image:
+      radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .bg-hero-glow {
+    background-image: radial-gradient(
+      ellipse 80% 60% at 50% -5%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 70%
+    );
+  }
+
+  .token-keyword     { color: #c792ea; }
+  .token-string      { color: #c3e88d; }
+  .token-comment     { color: var(--color-text-dim); font-style: italic; }
+  .token-function    { color: #82aaff; }
+  .token-number      { color: #f78c6c; }
+  .token-operator    { color: #89ddff; }
+  .token-punctuation { color: var(--color-text-dim); }
+  .token-param       { color: #ffcb6b; }
+  .token-class       { color: #ffcb6b; }
+}
+
+/* ─── Utilities ─────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .section-container { max-width: 1100px; margin-inline: auto; }
+  .prose-limit       { max-width: 1050px; }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #ffffff 0%, #9ca3af 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .animate-delay-100 { animation-delay: 100ms; }
+  .animate-delay-200 { animation-delay: 200ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-delay-400 { animation-delay: 400ms; }
+}

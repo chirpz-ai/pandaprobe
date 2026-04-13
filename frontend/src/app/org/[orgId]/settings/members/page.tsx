@@ -1,0 +1,232 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
+import { useOrganization } from "@/components/providers/OrganizationProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import {
+  listMembers,
+  addMember,
+  updateMemberRole,
+  removeMember,
+} from "@/lib/api/organizations";
+import { extractErrorMessage } from "@/lib/api/client";
+import type { MembershipResponse } from "@/lib/api/types";
+import { MembershipRole } from "@/lib/api/enums";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { EmptyState } from "@/components/common/EmptyState";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { useToast } from "@/components/providers/ToastProvider";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/Select";
+import { Trash2, UserPlus } from "lucide-react";
+
+const roleVariant: Record<string, "primary" | "info" | "default"> = {
+  OWNER: "primary",
+  ADMIN: "info",
+  MEMBER: "default",
+};
+
+export default function MembersPage() {
+  const { currentOrg } = useOrganization();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const orgId = currentOrg?.id ?? "";
+
+  const [newUserId, setNewUserId] = useState("");
+  const [newRole, setNewRole] = useState<string>(MembershipRole.MEMBER);
+  const [deleteTarget, setDeleteTarget] = useState<MembershipResponse | null>(
+    null,
+  );
+
+  useDocumentTitle("Members");
+
+  const {
+    data: members = [],
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.members.list(orgId),
+    queryFn: () => listMembers(orgId),
+    enabled: !!currentOrg,
+  });
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.members.list(orgId) });
+
+  async function handleAdd() {
+    if (!currentOrg || !newUserId.trim()) return;
+    try {
+      await addMember(currentOrg.id, {
+        user_id: newUserId.trim(),
+        role: newRole as MembershipResponse["role"],
+      });
+      toast({ title: "Member added", variant: "success" });
+      setNewUserId("");
+      invalidate();
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
+    }
+  }
+
+  async function handleRoleChange(userId: string, role: string) {
+    if (!currentOrg) return;
+    try {
+      await updateMemberRole(currentOrg.id, userId, {
+        role: role as MembershipResponse["role"],
+      });
+      toast({ title: "Role updated", variant: "success" });
+      invalidate();
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
+    }
+  }
+
+  async function handleRemove() {
+    if (!currentOrg || !deleteTarget) return;
+    try {
+      await removeMember(currentOrg.id, deleteTarget.user_id);
+      toast({ title: "Member removed", variant: "success" });
+      setDeleteTarget(null);
+      invalidate();
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
+    }
+  }
+
+  if (!currentOrg) return <EmptyState title="No organization selected" />;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <h1 className="text-lg font-mono text-primary">Members</h1>
+
+      <div className="border-engraved bg-surface p-4">
+        <div className="flex items-end gap-3 mb-4">
+          <div className="flex-1">
+            <label className="text-xs font-mono text-text-muted block mb-1">
+              User ID
+            </label>
+            <Input
+              value={newUserId}
+              onChange={(e) => setNewUserId(e.target.value)}
+              placeholder="User UUID"
+            />
+          </div>
+          <Select value={newRole} onValueChange={setNewRole}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(MembershipRole).map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={handleAdd} disabled={!newUserId.trim()}>
+            <UserPlus className="h-3 w-3" /> Add
+          </Button>
+        </div>
+      </div>
+
+      {isPending ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState
+          message={extractErrorMessage(error)}
+          onRetry={() => refetch()}
+        />
+      ) : members.length === 0 ? (
+        <EmptyState title="No members" />
+      ) : (
+        <div className="border border-border overflow-x-auto">
+          <table className="w-full text-xs font-mono">
+            <thead>
+              <tr className="border-b border-border bg-surface-hi">
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Name
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Email
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Role
+                </th>
+                <th className="text-left px-3 py-2 text-text-muted font-normal">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((m) => (
+                <tr
+                  key={m.id}
+                  className="border-b border-border hover:bg-surface-hi"
+                >
+                  <td className="px-3 py-2 text-text">{m.display_name}</td>
+                  <td className="px-3 py-2 text-text-dim">{m.email}</td>
+                  <td className="px-3 py-2">
+                    {m.role === MembershipRole.OWNER ? (
+                      <Badge variant={roleVariant[m.role]}>{m.role}</Badge>
+                    ) : (
+                      <Select
+                        value={m.role}
+                        onValueChange={(r) => handleRoleChange(m.user_id, r)}
+                      >
+                        <SelectTrigger className="w-28 h-7">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(MembershipRole)
+                            .filter((r) => r !== MembershipRole.OWNER)
+                            .map((r) => (
+                              <SelectItem key={r} value={r}>
+                                {r}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {m.role !== MembershipRole.OWNER && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteTarget(m)}
+                      >
+                        <Trash2 className="h-3 w-3 text-error" />
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Remove member"
+        description={`Remove ${deleteTarget?.display_name ?? "this member"} from the organization?`}
+        confirmLabel="Remove"
+        onConfirm={handleRemove}
+        destructive
+      />
+    </div>
+  );
+}

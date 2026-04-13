@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  dependencies:
-    name: Verify dependencies
+  backend-deps:
+    name: Backend – Verify dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -27,17 +27,46 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: make install
+        run: make backend-install
 
       - name: Verify app is importable
         working-directory: backend
         run: uv run python -c "import app.main; print('OK')"
 
-  docker:
-    name: Docker build
+  backend-docker:
+    name: Backend – Docker build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
       - name: Build Docker image
-        run: docker build -t pandaprobe:ci-${{ github.sha }} ./backend
+        run: docker build -t pandaprobe-backend:ci-${{ github.sha }} ./backend
+
+  frontend-build:
+    name: Frontend – Production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        run: make frontend-install
+
+      - name: Build
+        run: make frontend-build
+        env:
+          NEXT_PUBLIC_AUTH_ENABLED: "false"
+
+  frontend-docker:
+    name: Frontend – Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build Docker image
+        run: docker build -t pandaprobe-frontend:ci-${{ github.sha }} ./frontend

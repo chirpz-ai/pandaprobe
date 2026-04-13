@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit:
-    name: pytest unit
+  backend:
+    name: Backend – pytest unit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -27,7 +27,25 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: make install
+        run: make backend-install
 
       - name: Run unit tests
-        run: make test-unit
+        run: make backend-test-unit
+
+  frontend:
+    name: Frontend – Jest unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        run: make frontend-install
+
+      - name: Run unit tests
+        run: make frontend-test-unit

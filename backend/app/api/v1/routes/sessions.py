@@ -169,7 +169,7 @@ async def get_session(
     """
     svc = TraceService(session)
     summary = await svc.get_session_summary(ctx.project.id, session_id)
-    traces, _total = await svc.get_session_traces(
+    details, _total = await svc.get_session_traces(
         ctx.project.id,
         session_id,
         limit=limit,
@@ -188,7 +188,7 @@ async def get_session(
         total_span_count=int(summary.total_span_count) if summary.total_span_count is not None else 0,
         total_tokens=int(summary.total_tokens) if summary.total_tokens is not None else 0,
         total_cost=float(summary.total_cost) if summary.total_cost is not None else 0.0,
-        traces=[_trace_to_response(t) for t in traces],
+        traces=[_trace_to_response(d) for d in details],
     )
 
 

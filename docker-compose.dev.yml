@@ -1,3 +1,13 @@
+# =============================================================================
+# PandaProbe — Build-from-source Docker Compose (for contributors)
+#
+# Builds images locally with source-code bind mounts for hot reload.
+#
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# For running with pre-built public images, use docker-compose.yml instead.
+# =============================================================================
+
 services:
   # ---------- FastAPI application ----------
   app:
@@ -125,6 +135,38 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+    networks:
+      - pandaprobe
+
+  # ---------- Next.js frontend ----------
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/next.config.ts:/app/next.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/postcss.config.mjs:/app/postcss.config.mjs
+    env_file:
+      - path: ./frontend/.env.development
+        required: false
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_OPTIONS=--max-old-space-size=2048
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: on-failure
+    depends_on:
+      app:
+        condition: service_healthy
     networks:
       - pandaprobe
 

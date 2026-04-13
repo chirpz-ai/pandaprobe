@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Ruff lint & format
+  backend:
+    name: Backend – Ruff lint & format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -27,12 +27,35 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: make install
+        run: make backend-install
 
       - name: Run linter
-        run: make lint
+        run: make backend-lint
 
       - name: Check formatting
         working-directory: backend
-        run: |
-          uv run --group dev ruff format --check app/ tests/
+        run: uv run --group dev ruff format --check app/ tests/
+
+  frontend:
+    name: Frontend – ESLint, TypeScript & Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        run: make frontend-install
+
+      - name: TypeScript check
+        run: make frontend-typecheck
+
+      - name: Lint
+        run: make frontend-lint
+
+      - name: Check formatting
+        run: make frontend-format-check

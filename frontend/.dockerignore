@@ -1,0 +1,37 @@
+# Dependencies (installed inside the image)
+node_modules
+
+# Build output (rebuilt inside the image)
+.next
+
+# Version control
+.git
+.gitignore
+
+# Environment files — NEVER bake secrets into images
+.env*
+!.env.example
+
+# Test and lint config (tests run on host / CI, not in Docker)
+e2e/
+src/__tests__/
+src/__mocks__/
+jest.config.ts
+playwright.config.ts
+eslint.config.mjs
+.prettierrc*
+coverage/
+test-results/
+playwright-report/
+
+# Documentation
+*.md
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Docker metadata (avoid recursive context)
+Dockerfile
+docker-compose*.yml
