@@ -12,7 +12,7 @@ from uuid import UUID
 from sqlalchemy import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.traces.entities import Span, Trace
+from app.core.traces.entities import Span, Trace, TraceDetail
 from app.infrastructure.db.repositories.trace_repo import TraceRepository
 from app.logging import logger
 from app.registry.constants import (
@@ -49,17 +49,25 @@ class TraceService:
 
     # -- Update ----------------------------------------------------------
 
+    async def _enrich_trace(self, trace: Trace) -> TraceDetail:
+        """Attach aggregated span stats to a Trace."""
+        stats = await self._repo.get_trace_span_stats(
+            trace.project_id, [trace.trace_id],
+        )
+        tokens, cost = stats.get(trace.trace_id, (0, 0.0))
+        return TraceDetail(trace=trace, total_tokens=tokens, total_cost=cost)
+
     async def update_trace(
         self,
         trace_id: UUID,
         project_id: UUID,
         **fields: Any,
-    ) -> Trace:
+    ) -> TraceDetail:
         """Update trace fields or raise ``NotFoundError``."""
         row = await self._repo.update_trace(trace_id, project_id, **fields)
         if row is None:
             raise NotFoundError(f"Trace {trace_id} not found.")
-        return self._repo._to_trace(row)
+        return await self._enrich_trace(self._repo._to_trace(row))
 
     async def update_span(
         self,
@@ -87,12 +95,12 @@ class TraceService:
 
     # -- Read -----------------------------------------------------------------
 
-    async def get_trace(self, trace_id: UUID, project_id: UUID) -> Trace:
-        """Fetch a single trace or raise ``NotFoundError``."""
+    async def get_trace(self, trace_id: UUID, project_id: UUID) -> TraceDetail:
+        """Fetch a single trace with stats, or raise ``NotFoundError``."""
         trace = await self._repo.get_trace(trace_id, project_id)
         if trace is None:
             raise NotFoundError(f"Trace {trace_id} not found.")
-        return trace
+        return await self._enrich_trace(trace)
 
     async def list_traces(
         self,
@@ -208,12 +216,8 @@ class TraceService:
         session_id: str,
         limit: int = 200,
         offset: int = 0,
-    ) -> tuple[list[Trace], int, dict[UUID, tuple[int, float]]]:
-        """Return paginated Trace entities with per-trace span stats.
-
-        Returns ``(traces, total_count, stats)`` where *stats* maps
-        ``trace_id -> (total_tokens, total_cost)``.
-        """
+    ) -> tuple[list[TraceDetail], int]:
+        """Return paginated ``TraceDetail`` entities for a session."""
         traces, total = await self._repo.get_session_traces(
             project_id,
             session_id,
@@ -224,7 +228,16 @@ class TraceService:
             project_id,
             [t.trace_id for t in traces],
         )
-        return traces, total, stats
+        details = [
+            TraceDetail(
+                trace=t,
+                total_tokens=tokens,
+                total_cost=cost,
+            )
+            for t in traces
+            for tokens, cost in [stats.get(t.trace_id, (0, 0.0))]
+        ]
+        return details, total
 
     async def delete_session(self, project_id: UUID, session_id: str) -> int:
         """Delete all traces in a session.  Raises ``NotFoundError`` if none found."""

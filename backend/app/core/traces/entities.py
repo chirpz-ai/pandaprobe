@@ -5,6 +5,7 @@ exported data can be correlated with OTel-based tooling.  These
 models have **zero** infrastructure dependencies.
 """
 
+import dataclasses
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -65,3 +66,12 @@ class Trace(BaseModel):
     environment: str | None = Field(default=None, max_length=255)
     release: str | None = Field(default=None, max_length=255)
     spans: list[Span] = Field(default_factory=list)
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class TraceDetail:
+    """A Trace bundled with its aggregated span statistics."""
+
+    trace: Trace
+    total_tokens: int
+    total_cost: float
