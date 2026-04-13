@@ -208,14 +208,23 @@ class TraceService:
         session_id: str,
         limit: int = 200,
         offset: int = 0,
-    ) -> tuple[list[Trace], int]:
-        """Return paginated full Trace entities (with spans) for a session."""
-        return await self._repo.get_session_traces(
+    ) -> tuple[list[Trace], int, dict[UUID, tuple[int, float]]]:
+        """Return paginated Trace entities with per-trace span stats.
+
+        Returns ``(traces, total_count, stats)`` where *stats* maps
+        ``trace_id -> (total_tokens, total_cost)``.
+        """
+        traces, total = await self._repo.get_session_traces(
             project_id,
             session_id,
             limit=limit,
             offset=offset,
         )
+        stats = await self._repo.get_trace_span_stats(
+            project_id,
+            [t.trace_id for t in traces],
+        )
+        return traces, total, stats
 
     async def delete_session(self, project_id: UUID, session_id: str) -> int:
         """Delete all traces in a session.  Raises ``NotFoundError`` if none found."""

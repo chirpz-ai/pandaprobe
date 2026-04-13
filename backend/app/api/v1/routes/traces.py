@@ -169,6 +169,8 @@ class TraceResponse(BaseModel):
     environment: str | None = None
     release: str | None = None
     spans: list[SpanResponse] = Field(default_factory=list)
+    total_tokens: int = 0
+    total_cost: float = 0.0
 
 
 class TraceListItem(BaseModel):

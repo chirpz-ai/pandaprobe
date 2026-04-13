@@ -614,6 +614,37 @@ class TraceRepository:
         rows = (await self._session.execute(data_stmt)).scalars().all()
         return [self._to_trace(r) for r in rows], total
 
+    async def get_trace_span_stats(
+        self,
+        project_id: UUID,
+        trace_ids: list[UUID],
+    ) -> dict[UUID, tuple[int, float]]:
+        """Return per-trace (total_tokens, total_cost) for the given trace IDs.
+
+        Uses the same aggregation logic as ``_span_stats_subquery`` but
+        filtered to specific traces for efficiency.
+        """
+        if not trace_ids:
+            return {}
+
+        span_stats = self._span_stats_subquery(project_id)
+        stmt = (
+            select(
+                span_stats.c._trace_id,
+                span_stats.c.total_tokens,
+                span_stats.c.total_cost,
+            )
+            .where(span_stats.c._trace_id.in_(trace_ids))
+        )
+        rows = (await self._session.execute(stmt)).all()
+        return {
+            row._trace_id: (
+                int(row.total_tokens) if row.total_tokens else 0,
+                float(row.total_cost) if row.total_cost else 0.0,
+            )
+            for row in rows
+        }
+
     async def delete_session(self, project_id: UUID, session_id: str) -> int:
         """Delete all traces (CASCADE removes spans) for a session.  Returns count."""
         result = await self._session.execute(
