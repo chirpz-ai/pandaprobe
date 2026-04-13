@@ -52,7 +52,8 @@ class TraceService:
     async def _enrich_trace(self, trace: Trace) -> TraceDetail:
         """Attach aggregated span stats to a Trace."""
         stats = await self._repo.get_trace_span_stats(
-            trace.project_id, [trace.trace_id],
+            trace.project_id,
+            [trace.trace_id],
         )
         tokens, cost = stats.get(trace.trace_id, (0, 0.0))
         return TraceDetail(trace=trace, total_tokens=tokens, total_cost=cost)
