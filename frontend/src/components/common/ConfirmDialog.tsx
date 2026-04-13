@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 interface ConfirmDialogProps {
@@ -10,7 +11,7 @@ interface ConfirmDialogProps {
   title: string;
   description: string;
   confirmLabel?: string;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
   destructive?: boolean;
 }
 
@@ -23,8 +24,25 @@ export function ConfirmDialog({
   onConfirm,
   destructive = false,
 }: ConfirmDialogProps) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleConfirm() {
+    setLoading(true);
+    try {
+      await onConfirm();
+      onOpenChange(false);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(v) => {
+        if (!loading) onOpenChange(v);
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 border border-border bg-surface p-6 animate-fade-in">
@@ -32,7 +50,10 @@ export function ConfirmDialog({
             <Dialog.Title className="text-sm font-mono text-primary">
               {title}
             </Dialog.Title>
-            <Dialog.Close className="text-text-muted hover:text-text transition-colors">
+            <Dialog.Close
+              disabled={loading}
+              className="text-text-muted hover:text-text transition-colors disabled:opacity-50"
+            >
               <X className="h-4 w-4" />
             </Dialog.Close>
           </div>
@@ -43,6 +64,7 @@ export function ConfirmDialog({
             <Button
               variant="secondary"
               size="sm"
+              disabled={loading}
               onClick={() => onOpenChange(false)}
             >
               Cancel
@@ -50,11 +72,10 @@ export function ConfirmDialog({
             <Button
               variant={destructive ? "destructive" : "primary"}
               size="sm"
-              onClick={() => {
-                onConfirm();
-                onOpenChange(false);
-              }}
+              disabled={loading}
+              onClick={handleConfirm}
             >
+              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {confirmLabel}
             </Button>
           </div>
