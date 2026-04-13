@@ -7,7 +7,8 @@ replace() {
   local placeholder="$1"
   local var_name="$2"
 
-  eval "local value=\${${var_name}:-}"
+  local value
+  value=$(printenv "$var_name" 2>/dev/null) || true
 
   if [ -z "$value" ]; then
     return
