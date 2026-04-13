@@ -63,7 +63,7 @@ export default function SessionDetailPage({
   const traceListItems = session.traces.map((t) => {
     let totalTokens = 0;
     let totalCost = 0;
-
+    
     for (const span of t.spans) {
       const tokens = span.token_usage?.total_tokens;
       if (typeof tokens === "number") totalTokens += tokens;
