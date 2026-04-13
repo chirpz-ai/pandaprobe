@@ -16,12 +16,13 @@ describe("auth config", () => {
     expect(AUTH_ENABLED).toBe(true);
   });
 
-  it("AUTH_ENABLED is false when flag=false in development", async () => {
-    Object.defineProperty(process.env, "NODE_ENV", {
-      value: "development",
-      writable: true,
-      configurable: true,
-    });
+  it("AUTH_ENABLED is true when flag=true", async () => {
+    process.env.NEXT_PUBLIC_AUTH_ENABLED = "true";
+    const { AUTH_ENABLED } = await import("@/lib/auth/config");
+    expect(AUTH_ENABLED).toBe(true);
+  });
+
+  it("AUTH_ENABLED is false when flag=false", async () => {
     process.env.NEXT_PUBLIC_AUTH_ENABLED = "false";
     const { AUTH_ENABLED } = await import("@/lib/auth/config");
     expect(AUTH_ENABLED).toBe(false);

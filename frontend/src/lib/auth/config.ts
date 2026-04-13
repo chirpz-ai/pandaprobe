@@ -1,8 +1,15 @@
 /**
  * Shared auth configuration. Safe to import from Edge middleware and client code.
  *
- * Respects the NEXT_PUBLIC_AUTH_ENABLED env var at runtime (injected via
- * docker-entrypoint.sh for production images). Defaults to true when unset.
+ * Two-build strategy:
+ *   - Public image (GHCR): built with NEXT_PUBLIC_AUTH_ENABLED=false.
+ *     The bundler constant-folds the comparison below to "false"
+ *   - Private image: built with NEXT_PUBLIC_AUTH_ENABLED=true.
+ *     Firebase is initialized and auth flows are active.
+ *   - Local dev: reads from .env.development at dev-server time (no bundling).
+ *
+ * AUTH_ENABLED cannot be toggled at container runtime — Next.js bakes the
+ * comparison result into the JS bundle at build time (constant folding).
  */
 
 export const AUTH_ENABLED = process.env.NEXT_PUBLIC_AUTH_ENABLED !== "false";

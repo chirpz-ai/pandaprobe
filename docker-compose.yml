@@ -135,12 +135,6 @@ services:
     image: ghcr.io/chirpz/pandaprobe-frontend:latest
     ports:
       - "3000:3000"
-    env_file:
-      - path: ./frontend/.env.development
-        required: false
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NEXT_PUBLIC_AUTH_ENABLED=false
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
       interval: 30s
