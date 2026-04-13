@@ -60,25 +60,41 @@ export default function SessionDetailPage({
   if (error) return <ErrorState message={extractErrorMessage(error)} />;
   if (!session) return <ErrorState message="Session not found" />;
 
-  const traceListItems = session.traces.map((t) => ({
-    trace_id: t.trace_id,
-    name: t.name,
-    status: t.status,
-    started_at: t.started_at,
-    ended_at: t.ended_at,
-    session_id: t.session_id,
-    user_id: t.user_id,
-    tags: t.tags,
-    environment: t.environment,
-    release: t.release,
-    latency_ms:
-      t.started_at && t.ended_at
-        ? new Date(t.ended_at).getTime() - new Date(t.started_at).getTime()
-        : null,
-    span_count: t.spans.length,
-    total_tokens: 0,
-    total_cost: 0,
-  }));
+  const traceListItems = session.traces.map((t) => {
+    let totalTokens = 0;
+    let totalCost = 0;
+
+    for (const span of t.spans) {
+      const tokens = span.token_usage?.total_tokens;
+      if (typeof tokens === "number") totalTokens += tokens;
+
+      if (span.cost) {
+        for (const v of Object.values(span.cost)) {
+          if (typeof v === "number") totalCost += v;
+        }
+      }
+    }
+
+    return {
+      trace_id: t.trace_id,
+      name: t.name,
+      status: t.status,
+      started_at: t.started_at,
+      ended_at: t.ended_at,
+      session_id: t.session_id,
+      user_id: t.user_id,
+      tags: t.tags,
+      environment: t.environment,
+      release: t.release,
+      latency_ms:
+        t.started_at && t.ended_at
+          ? new Date(t.ended_at).getTime() - new Date(t.started_at).getTime()
+          : null,
+      span_count: t.spans.length,
+      total_tokens: totalTokens,
+      total_cost: totalCost,
+    };
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
