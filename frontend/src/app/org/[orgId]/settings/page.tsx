@@ -1,8 +1,10 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useParams, redirect } from "next/navigation";
-
-export default function SettingsPage() {
-  const params = useParams();
-  redirect(`/org/${params.orgId}/settings/organization`);
+export default async function SettingsPage({
+  params,
+}: {
+  params: Promise<{ orgId: string }>;
+}) {
+  const { orgId } = await params;
+  redirect(`/org/${orgId}/settings/organization`);
 }

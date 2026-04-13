@@ -40,7 +40,7 @@ export default function SessionDetailPage({
     error,
   } = useQuery({
     queryKey: queryKeys.sessions.detail(sessionId),
-    queryFn: () => getSession(sessionId),
+    queryFn: () => getSession(sessionId, { limit: 1000 }),
   });
 
   async function handleDelete() {
@@ -150,7 +150,10 @@ export default function SessionDetailPage({
 
       <div>
         <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-          Traces ({session.trace_count})
+          Traces ({traceListItems.length}
+          {traceListItems.length < session.trace_count &&
+            ` of ${session.trace_count}`}
+          )
         </h2>
         <TraceTable traces={traceListItems} />
       </div>
