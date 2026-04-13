@@ -628,14 +628,11 @@ class TraceRepository:
             return {}
 
         span_stats = self._span_stats_subquery(project_id)
-        stmt = (
-            select(
-                span_stats.c._trace_id,
-                span_stats.c.total_tokens,
-                span_stats.c.total_cost,
-            )
-            .where(span_stats.c._trace_id.in_(trace_ids))
-        )
+        stmt = select(
+            span_stats.c._trace_id,
+            span_stats.c.total_tokens,
+            span_stats.c.total_cost,
+        ).where(span_stats.c._trace_id.in_(trace_ids))
         rows = (await self._session.execute(stmt)).all()
         return {
             row._trace_id: (
