@@ -306,6 +306,8 @@ export interface TraceResponse {
   environment: string | null;
   release: string | null;
   spans: SpanResponse[];
+  total_tokens: number;
+  total_cost: number;
 }
 
 export interface TraceListItem {

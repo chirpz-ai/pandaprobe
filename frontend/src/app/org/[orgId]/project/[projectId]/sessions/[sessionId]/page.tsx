@@ -61,19 +61,6 @@ export default function SessionDetailPage({
   if (!session) return <ErrorState message="Session not found" />;
 
   const traceListItems = session.traces.map((t) => {
-    let totalTokens = 0;
-    let totalCost = 0;
-    
-    for (const span of t.spans) {
-      const tokens = span.token_usage?.total_tokens;
-      if (typeof tokens === "number") totalTokens += tokens;
-
-      if (span.cost) {
-        for (const v of Object.values(span.cost)) {
-          if (typeof v === "number") totalCost += v;
-        }
-      }
-    }
 
     return {
       trace_id: t.trace_id,
@@ -91,8 +78,8 @@ export default function SessionDetailPage({
           ? new Date(t.ended_at).getTime() - new Date(t.started_at).getTime()
           : null,
       span_count: t.spans.length,
-      total_tokens: totalTokens,
-      total_cost: totalCost,
+      total_tokens: t.total_tokens,
+      total_cost: t.total_cost,
     };
   });
 
