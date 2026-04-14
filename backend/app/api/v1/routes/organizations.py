@@ -129,21 +129,26 @@ async def list_my_organizations(
     return result
 
 
-@router.get("/{org_id}", response_model=OrganizationResponse)
+@router.get("/{org_id}", response_model=MyOrganizationResponse)
 async def get_organization(
     org_id: UUID,
     ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
-) -> OrganizationResponse:
-    """Get details of a specific organization.
+) -> MyOrganizationResponse:
+    """Get details of a specific organization, including the caller's role.
 
     Auth: `Bearer` · role: any member
     """
     _require_user(ctx)
     svc = IdentityService(session)
-    await svc.require_membership(ctx.user.id, org_id)
+    membership = await svc.require_membership(ctx.user.id, org_id)
     org = await svc.get_organization(org_id)
-    return OrganizationResponse(id=org.id, name=org.name, created_at=org.created_at.isoformat())
+    return MyOrganizationResponse(
+        id=org.id,
+        name=org.name,
+        created_at=org.created_at.isoformat(),
+        role=membership.role,
+    )
 
 
 @router.patch("/{org_id}", response_model=OrganizationResponse)
