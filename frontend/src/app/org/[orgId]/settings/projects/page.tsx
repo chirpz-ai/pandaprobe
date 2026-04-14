@@ -186,7 +186,7 @@ export default function ProjectsPage() {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1">
-                      <Tooltip content="Edit" side="bottom">
+                      <Tooltip content="Edit">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -195,7 +195,7 @@ export default function ProjectsPage() {
                           <Pencil className="h-3 w-3" />
                         </Button>
                       </Tooltip>
-                      <Tooltip content="Delete" side="bottom">
+                      <Tooltip content="Delete">
                         <Button
                           variant="ghost"
                           size="sm"
