@@ -44,7 +44,9 @@ export default function APIKeysPage() {
   const [newRawKey, setNewRawKey] = useState<string | null>(null);
   const [showRawKey, setShowRawKey] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<APIKeyResponse | null>(null);
-  const [deleteMode, setDeleteMode] = useState<"revoke" | "permanent">("revoke");
+  const [deleteMode, setDeleteMode] = useState<"revoke" | "permanent">(
+    "revoke",
+  );
 
   useDocumentTitle("API Keys");
 
@@ -251,7 +253,13 @@ export default function APIKeysPage() {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1">
-                      <Tooltip content={canManage ? "Rotate" : "Only owner and admins can rotate keys"}>
+                      <Tooltip
+                        content={
+                          canManage
+                            ? "Rotate"
+                            : "Only owner and admins can rotate keys"
+                        }
+                      >
                         <span tabIndex={canManage ? undefined : 0}>
                           <Button
                             variant="ghost"
@@ -263,7 +271,13 @@ export default function APIKeysPage() {
                           </Button>
                         </span>
                       </Tooltip>
-                      <Tooltip content={canManage ? "Revoke / Delete" : "Only owner and admins can revoke keys"}>
+                      <Tooltip
+                        content={
+                          canManage
+                            ? "Revoke / Delete"
+                            : "Only owner and admins can revoke keys"
+                        }
+                      >
                         <span tabIndex={canManage ? undefined : 0}>
                           <Button
                             variant="ghost"
@@ -299,7 +313,9 @@ export default function APIKeysPage() {
             Applications using this key will lose access.
           </>
         }
-        submitLabel={deleteMode === "permanent" ? "Permanently Delete" : "Revoke Key"}
+        submitLabel={
+          deleteMode === "permanent" ? "Permanently Delete" : "Revoke Key"
+        }
         submitDisabled={false}
         onSubmit={handleDelete}
       >
