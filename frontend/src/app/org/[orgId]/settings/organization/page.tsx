@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Copy, Check } from "lucide-react";
+import { AlertTriangle, Copy, Check, Save, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -160,8 +160,8 @@ export default function OrganizationSettingsPage() {
             />
           </div>
           {canEdit && (
-            <Button onClick={handleSave} disabled={saving || !name.trim()}>
-              {saving ? "Saving..." : "Save"}
+            <Button size="sm" onClick={handleSave} disabled={saving || !name.trim() || name.trim() === currentOrg.name}>
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} {saving ? "Saving..." : "Save"}
             </Button>
           )}
         </div>
