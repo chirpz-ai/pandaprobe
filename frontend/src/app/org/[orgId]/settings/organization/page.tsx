@@ -6,7 +6,10 @@ import { AlertTriangle, Copy, Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { updateOrganization, deleteOrganization } from "@/lib/api/organizations";
+import {
+  updateOrganization,
+  deleteOrganization,
+} from "@/lib/api/organizations";
 import { extractErrorMessage } from "@/lib/api/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -84,7 +87,9 @@ export default function OrganizationSettingsPage() {
     // A refetch would send X-Organization-ID with the deleted org's ID
     // (still in URL params), causing a 401 → sign-out.
     queryClient.removeQueries({ queryKey: queryKeys.organizations.all });
-    queryClient.removeQueries({ queryKey: queryKeys.projects.all(currentOrg.id) });
+    queryClient.removeQueries({
+      queryKey: queryKeys.projects.all(currentOrg.id),
+    });
 
     localStorage.removeItem(STORAGE_KEYS.orgId);
     if (nextOrg) {
@@ -201,10 +206,28 @@ function DeleteOrganizationSection({
   }
 
   return (
-    <div className={disabled ? "border border-border bg-surface p-4 space-y-3 opacity-60" : "border border-error/30 bg-error/5 p-4 space-y-3"}>
+    <div
+      className={
+        disabled
+          ? "border border-border bg-surface p-4 space-y-3 opacity-60"
+          : "border border-error/30 bg-error/5 p-4 space-y-3"
+      }
+    >
       <div className="flex items-center gap-2">
-        <AlertTriangle className={disabled ? "h-4 w-4 text-text-muted" : "h-4 w-4 text-error"} />
-        <h2 className={disabled ? "text-sm font-mono text-text-muted" : "text-sm font-mono text-error"}>Danger Zone</h2>
+        <AlertTriangle
+          className={
+            disabled ? "h-4 w-4 text-text-muted" : "h-4 w-4 text-error"
+          }
+        />
+        <h2
+          className={
+            disabled
+              ? "text-sm font-mono text-text-muted"
+              : "text-sm font-mono text-error"
+          }
+        >
+          Danger Zone
+        </h2>
       </div>
       <p className="text-xs font-mono text-text-dim">
         {disabled
@@ -212,7 +235,12 @@ function DeleteOrganizationSection({
           : "Deleting this organization is permanent. All projects, traces, evaluations, API keys, and member data will be irreversibly removed."}
       </p>
 
-      <Button variant="destructive" size="sm" disabled={disabled} onClick={() => setOpen(true)}>
+      <Button
+        variant="destructive"
+        size="sm"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+      >
         Delete Organization
       </Button>
 
@@ -238,8 +266,7 @@ function DeleteOrganizationSection({
       >
         <div>
           <label className="text-xs font-mono text-text-muted block mb-1">
-            Type{" "}
-            <span className="text-text font-semibold">{orgName}</span> to
+            Type <span className="text-text font-semibold">{orgName}</span> to
             confirm
           </label>
           <Input

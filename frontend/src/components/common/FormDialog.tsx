@@ -36,7 +36,8 @@ export function FormDialog({
   const [loading, setLoading] = useState(false);
 
   const destructive = variant === "destructive";
-  const resolvedSubmitVariant = submitVariant ?? (destructive ? "destructive" : "primary");
+  const resolvedSubmitVariant =
+    submitVariant ?? (destructive ? "destructive" : "primary");
 
   function handleOpenChange(v: boolean) {
     if (!loading) onOpenChange(v);
@@ -103,9 +104,7 @@ export function FormDialog({
                 disabled={loading || submitDisabled}
                 onClick={handleSubmit}
               >
-                {loading && (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                )}
+                {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 {submitLabel}
               </Button>
             </div>

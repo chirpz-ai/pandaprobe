@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { getProfile } from "@/lib/api/user";
-import {
-  listOrganizations,
-  createOrganization,
-} from "@/lib/api/organizations";
+import { listOrganizations, createOrganization } from "@/lib/api/organizations";
 import { extractErrorMessage } from "@/lib/api/client";
 import { STORAGE_KEYS } from "@/lib/utils/constants";
 import { Spinner } from "@/components/ui/Spinner";
@@ -92,9 +89,7 @@ export default function RootPage() {
             }}
             autoFocus
           />
-          {error && (
-            <p className="text-xs font-mono text-error">{error}</p>
-          )}
+          {error && <p className="text-xs font-mono text-error">{error}</p>}
           <Button
             onClick={handleCreateOrg}
             disabled={creating || !newOrgName.trim()}
