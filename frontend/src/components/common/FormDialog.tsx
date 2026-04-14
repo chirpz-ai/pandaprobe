@@ -1,0 +1,98 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { X, Loader2 } from "lucide-react";
+import { Button, type ButtonProps } from "@/components/ui/Button";
+
+interface FormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: string;
+  submitLabel?: string;
+  submitVariant?: ButtonProps["variant"];
+  submitDisabled?: boolean;
+  onSubmit: () => Promise<void>;
+  children: ReactNode;
+}
+
+export function FormDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  submitLabel = "Submit",
+  submitVariant = "primary",
+  submitDisabled = false,
+  onSubmit,
+  children,
+}: FormDialogProps) {
+  const [loading, setLoading] = useState(false);
+
+  function handleOpenChange(v: boolean) {
+    if (!loading) onOpenChange(v);
+  }
+
+  async function handleSubmit() {
+    setLoading(true);
+    try {
+      await onSubmit();
+      handleOpenChange(false);
+    } catch {
+      // Error handling is delegated to the onSubmit caller
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 border border-border bg-surface p-6 animate-fade-in">
+          <div className="flex items-start justify-between mb-4">
+            <Dialog.Title className="text-sm font-mono text-primary">
+              {title}
+            </Dialog.Title>
+            <Dialog.Close
+              disabled={loading}
+              className="text-text-muted hover:text-text transition-colors disabled:opacity-50"
+            >
+              <X className="h-4 w-4" />
+            </Dialog.Close>
+          </div>
+          {description && (
+            <Dialog.Description className="text-xs text-text-dim mb-4">
+              {description}
+            </Dialog.Description>
+          )}
+          <div className="space-y-4">
+            {children}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={loading}
+                onClick={() => handleOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={submitVariant}
+                size="sm"
+                disabled={loading || submitDisabled}
+                onClick={handleSubmit}
+              >
+                {loading && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                )}
+                {submitLabel}
+              </Button>
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
