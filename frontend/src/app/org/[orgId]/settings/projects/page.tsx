@@ -22,6 +22,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { FormDialog } from "@/components/common/FormDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { formatDateTime } from "@/lib/utils/format";
 
 export default function ProjectsPage() {
@@ -185,20 +186,24 @@ export default function ProjectsPage() {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEdit(p)}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteTarget(p)}
-                      >
-                        <Trash2 className="h-3 w-3 text-error" />
-                      </Button>
+                      <Tooltip content="Edit" side="bottom">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEdit(p)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip content="Delete" side="bottom">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteTarget(p)}
+                        >
+                          <Trash2 className="h-3 w-3 text-error" />
+                        </Button>
+                      </Tooltip>
                     </div>
                   </td>
                 </tr>
