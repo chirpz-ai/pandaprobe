@@ -5,7 +5,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { listProjects, createProject, deleteProject } from "@/lib/api/projects";
+import {
+  listProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+} from "@/lib/api/projects";
 import { extractErrorMessage } from "@/lib/api/client";
 import type { ProjectResponse } from "@/lib/api/types";
 import { Button } from "@/components/ui/Button";
@@ -14,8 +19,9 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { FormDialog } from "@/components/common/FormDialog";
 import { useToast } from "@/components/providers/ToastProvider";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";
 
 export default function ProjectsPage() {
@@ -26,6 +32,9 @@ export default function ProjectsPage() {
 
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
+  const [editTarget, setEditTarget] = useState<ProjectResponse | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ProjectResponse | null>(
     null,
   );
@@ -59,6 +68,28 @@ export default function ProjectsPage() {
       invalidate();
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
+    }
+  }
+
+  function openEdit(p: ProjectResponse) {
+    setEditTarget(p);
+    setEditName(p.name);
+    setEditDesc(p.description ?? "");
+  }
+
+  async function handleEdit() {
+    if (!currentOrg || !editTarget || !editName.trim()) return;
+    try {
+      await updateProject(currentOrg.id, editTarget.id, {
+        name: editName.trim(),
+        description: editDesc.trim() || undefined,
+      });
+      toast({ title: "Project updated", variant: "success" });
+      setEditTarget(null);
+      invalidate();
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
+      throw err;
     }
   }
 
@@ -153,13 +184,22 @@ export default function ProjectsPage() {
                     {formatDateTime(p.created_at)}
                   </td>
                   <td className="px-3 py-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteTarget(p)}
-                    >
-                      <Trash2 className="h-3 w-3 text-error" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEdit(p)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteTarget(p)}
+                      >
+                        <Trash2 className="h-3 w-3 text-error" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -167,6 +207,39 @@ export default function ProjectsPage() {
           </table>
         </div>
       )}
+
+      <FormDialog
+        open={!!editTarget}
+        onOpenChange={(v) => {
+          if (!v) setEditTarget(null);
+        }}
+        title="Edit Project"
+        submitLabel="Save"
+        submitDisabled={!editName.trim()}
+        onSubmit={handleEdit}
+      >
+        <div>
+          <label className="text-xs font-mono text-text-muted block mb-1">
+            Name
+          </label>
+          <Input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            placeholder="Project name"
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="text-xs font-mono text-text-muted block mb-1">
+            Description
+          </label>
+          <Input
+            value={editDesc}
+            onChange={(e) => setEditDesc(e.target.value)}
+            placeholder="Optional"
+          />
+        </div>
+      </FormDialog>
 
       <ConfirmDialog
         open={!!deleteTarget}
