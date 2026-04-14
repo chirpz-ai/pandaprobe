@@ -50,7 +50,7 @@ PLAN_LIMITS: dict[SubscriptionPlan, PlanConfig] = {
         base_trace_evals=None,
         base_session_evals=None,
         monitoring_allowed=True,
-        max_members=None,
+        max_members=1,
         pay_as_you_go=False,
         monthly_price_cents=0,
     ),
