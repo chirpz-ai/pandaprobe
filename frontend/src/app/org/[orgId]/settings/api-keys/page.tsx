@@ -120,6 +120,8 @@ export default function APIKeysPage() {
 
   if (!currentOrg) return <EmptyState title="No organization selected" />;
 
+  const canManage = currentOrg.role !== "MEMBER";
+
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-lg font-mono text-primary">API Keys</h1>
@@ -249,23 +251,29 @@ export default function APIKeysPage() {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1">
-                      <Tooltip content="Rotate">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRotate(key.id)}
-                        >
-                          <RotateCw className="h-3 w-3" />
-                        </Button>
+                      <Tooltip content={canManage ? "Rotate" : "Only owner and admins can rotate keys"}>
+                        <span tabIndex={canManage ? undefined : 0}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!canManage}
+                            onClick={() => handleRotate(key.id)}
+                          >
+                            <RotateCw className="h-3 w-3" />
+                          </Button>
+                        </span>
                       </Tooltip>
-                      <Tooltip content="Revoke / Delete">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDelete(key)}
-                        >
-                          <Trash2 className="h-3 w-3 text-error" />
-                        </Button>
+                      <Tooltip content={canManage ? "Revoke / Delete" : "Only owner and admins can revoke keys"}>
+                        <span tabIndex={canManage ? undefined : 0}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!canManage}
+                            onClick={() => openDelete(key)}
+                          >
+                            <Trash2 className="h-3 w-3 text-error" />
+                          </Button>
+                        </span>
                       </Tooltip>
                     </div>
                   </td>
