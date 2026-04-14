@@ -84,8 +84,6 @@ export default function OrganizationSettingsPage() {
     await deleteOrganization(currentOrg.id);
 
     // Clear the org query cache entirely instead of refetching.
-    // A refetch would send X-Organization-ID with the deleted org's ID
-    // (still in URL params), causing a 401 → sign-out.
     queryClient.removeQueries({ queryKey: queryKeys.organizations.all });
     queryClient.removeQueries({
       queryKey: queryKeys.projects.all(currentOrg.id),
