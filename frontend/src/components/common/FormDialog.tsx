@@ -3,13 +3,16 @@
 import { useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 import { Button, type ButtonProps } from "@/components/ui/Button";
 
 interface FormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description?: string;
+  titleIcon?: ReactNode;
+  description?: ReactNode;
+  variant?: "default" | "destructive";
   submitLabel?: string;
   submitVariant?: ButtonProps["variant"];
   submitDisabled?: boolean;
@@ -21,14 +24,19 @@ export function FormDialog({
   open,
   onOpenChange,
   title,
+  titleIcon,
   description,
+  variant = "default",
   submitLabel = "Submit",
-  submitVariant = "primary",
+  submitVariant,
   submitDisabled = false,
   onSubmit,
   children,
 }: FormDialogProps) {
   const [loading, setLoading] = useState(false);
+
+  const destructive = variant === "destructive";
+  const resolvedSubmitVariant = submitVariant ?? (destructive ? "destructive" : "primary");
 
   function handleOpenChange(v: boolean) {
     if (!loading) onOpenChange(v);
@@ -50,9 +58,20 @@ export function FormDialog({
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 border border-border bg-surface p-6 animate-fade-in">
+        <Dialog.Content
+          className={cn(
+            "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 bg-surface p-6 animate-fade-in",
+            destructive ? "border border-error/30" : "border border-border",
+          )}
+        >
           <div className="flex items-start justify-between mb-4">
-            <Dialog.Title className="text-sm font-mono text-primary">
+            <Dialog.Title
+              className={cn(
+                "text-sm font-mono flex items-center gap-2",
+                destructive ? "text-error" : "text-primary",
+              )}
+            >
+              {titleIcon}
               {title}
             </Dialog.Title>
             <Dialog.Close
@@ -79,7 +98,7 @@ export function FormDialog({
                 Cancel
               </Button>
               <Button
-                variant={submitVariant}
+                variant={resolvedSubmitVariant}
                 size="sm"
                 disabled={loading || submitDisabled}
                 onClick={handleSubmit}
