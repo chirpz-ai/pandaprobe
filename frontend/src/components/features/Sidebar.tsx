@@ -25,11 +25,17 @@ import {
   Bug,
   ChevronsUpDown,
   CircleUser,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useOrgId, useResolvedProjectId } from "@/hooks/useNavigation";
+import { createOrganization } from "@/lib/api/organizations";
+import { extractErrorMessage } from "@/lib/api/client";
+import { useToast } from "@/components/providers/ToastProvider";
+import { FormDialog } from "@/components/common/FormDialog";
+import { Input } from "@/components/ui/Input";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
@@ -94,6 +100,7 @@ function SwitcherDropdown({
   onSelect,
   collapsed,
   side = "right",
+  footerAction,
 }: {
   label: string;
   icon: React.ReactNode;
@@ -102,6 +109,7 @@ function SwitcherDropdown({
   onSelect: (id: string) => void;
   collapsed: boolean;
   side?: "right" | "bottom";
+  footerAction?: { label: string; icon: React.ReactNode; onSelect: () => void };
 }) {
   const trigger = (
     <DropdownMenu.Trigger
@@ -160,6 +168,18 @@ function SwitcherDropdown({
               {item.name}
             </DropdownMenu.Item>
           ))}
+          {footerAction && (
+            <>
+              <DropdownMenu.Separator className="my-1 mx-1 border-t border-border" />
+              <DropdownMenu.Item
+                className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-muted hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
+                onSelect={footerAction.onSelect}
+              >
+                {footerAction.icon}
+                {footerAction.label}
+              </DropdownMenu.Item>
+            </>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
@@ -170,11 +190,15 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { signOut, authEnabled, user } = useAuth();
-  const { organizations, currentOrg, projects } = useOrganization();
+  const { organizations, currentOrg, projects, refetchOrgs } =
+    useOrganization();
+  const { toast } = useToast();
   const orgId = useOrgId();
   const resolvedProjectId = useResolvedProjectId(projects);
 
   const [collapsed, setCollapsed] = useState(false);
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
 
   const inSettingsRoute = pathname.includes("/settings");
   const [settingsView, setSettingsView] = useState(inSettingsRoute);
@@ -296,6 +320,20 @@ export function Sidebar() {
     router.push(target);
   }
 
+  async function handleCreateOrg() {
+    if (!newOrgName.trim()) return;
+    try {
+      const org = await createOrganization({ name: newOrgName.trim() });
+      toast({ title: "Organization created", variant: "success" });
+      setNewOrgName("");
+      refetchOrgs();
+      router.push(`/org/${org.id}/settings/organization`);
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
+      throw err;
+    }
+  }
+
   const currentProjectName = resolvedProjectId
     ? projects.find((p) => p.id === resolvedProjectId)?.name
     : null;
@@ -366,6 +404,11 @@ export function Sidebar() {
                 activeId={currentOrg?.id ?? null}
                 onSelect={switchOrg}
                 collapsed={collapsed}
+                footerAction={{
+                  label: "New Organization",
+                  icon: <Plus className="h-3.5 w-3.5" />,
+                  onSelect: () => setCreateOrgOpen(true),
+                }}
               />
 
               <div className="space-y-0.5 mt-1">
@@ -524,6 +567,34 @@ export function Sidebar() {
           ) : null}
         </div>
       </aside>
+
+      <FormDialog
+        open={createOrgOpen}
+        onOpenChange={(v) => {
+          setCreateOrgOpen(v);
+          if (!v) setNewOrgName("");
+        }}
+        title="Create Organization"
+        description="Organizations are isolated workspaces for your projects, traces, and team members. You can own up to 2 organizations."
+        submitLabel="Create"
+        submitDisabled={!newOrgName.trim()}
+        onSubmit={handleCreateOrg}
+      >
+        <div>
+          <label className="text-xs font-mono text-text-muted block mb-1">
+            Organization Name
+          </label>
+          <Input
+            value={newOrgName}
+            onChange={(e) => setNewOrgName(e.target.value)}
+            placeholder="My Organization"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newOrgName.trim()) handleCreateOrg();
+            }}
+            autoFocus
+          />
+        </div>
+      </FormDialog>
     </Tooltip.Provider>
   );
 }
