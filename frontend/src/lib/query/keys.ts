@@ -51,10 +51,10 @@ export const queryKeys = {
       ["analytics", "scores", projectId, params] as const,
   },
   subscriptions: {
-    current: ["subscription"] as const,
-    usage: ["subscription", "usage"] as const,
-    billing: ["subscription", "billing"] as const,
-    invoices: ["subscription", "invoices"] as const,
+    current: (orgId: string) => ["subscription", orgId] as const,
+    usage: (orgId: string) => ["subscription", orgId, "usage"] as const,
+    billing: (orgId: string) => ["subscription", orgId, "billing"] as const,
+    invoices: (orgId: string) => ["subscription", orgId, "invoices"] as const,
     plans: ["subscription", "plans"] as const,
   },
   dashboardStats: {
