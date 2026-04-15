@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
   getSubscription,
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
+import { EmptyState } from "@/components/common/EmptyState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useToast } from "@/components/providers/ToastProvider";
 import { formatNumber, formatDate } from "@/lib/utils/format";
@@ -23,26 +25,33 @@ import { ExternalLink } from "lucide-react";
 import type { SubscriptionPlan } from "@/lib/api/enums";
 
 export default function BillingPage() {
+  const { currentOrg } = useOrganization();
   const { toast } = useToast();
+  const orgId = currentOrg?.id ?? "";
 
   useDocumentTitle("Billing");
 
   const subQuery = useQuery({
-    queryKey: queryKeys.subscriptions.current,
-    queryFn: getSubscription,
+    queryKey: queryKeys.subscriptions.current(orgId),
+    queryFn: () => getSubscription(orgId),
+    enabled: !!currentOrg,
   });
   const usageQuery = useQuery({
-    queryKey: queryKeys.subscriptions.usage,
-    queryFn: getUsage,
+    queryKey: queryKeys.subscriptions.usage(orgId),
+    queryFn: () => getUsage(orgId),
+    enabled: !!currentOrg,
   });
   const billingQuery = useQuery({
-    queryKey: queryKeys.subscriptions.billing,
-    queryFn: getBilling,
+    queryKey: queryKeys.subscriptions.billing(orgId),
+    queryFn: () => getBilling(orgId),
+    enabled: !!currentOrg,
   });
   const plansQuery = useQuery({
     queryKey: queryKeys.subscriptions.plans,
     queryFn: getPlans,
   });
+
+  if (!currentOrg) return <EmptyState title="No organization selected" />;
 
   const loading =
     subQuery.isPending ||
@@ -57,7 +66,7 @@ export default function BillingPage() {
 
   async function handleCheckout(plan: string) {
     try {
-      const { checkout_url } = await createCheckout({
+      const { checkout_url } = await createCheckout(orgId, {
         plan: plan as SubscriptionPlan,
         success_url: window.location.href,
         cancel_url: window.location.href,
@@ -70,7 +79,7 @@ export default function BillingPage() {
 
   async function handlePortal() {
     try {
-      const { portal_url } = await createPortalSession({
+      const { portal_url } = await createPortalSession(orgId, {
         return_url: window.location.href,
       });
       window.location.assign(portal_url);
