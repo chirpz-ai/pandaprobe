@@ -30,7 +30,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { Plus, RotateCw, Trash2, Copy, Eye, EyeOff } from "lucide-react";
+import { Plus, RotateCw, Trash2, Copy, Eye, EyeOff, Check } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";
 
 export default function APIKeysPage() {
@@ -334,12 +334,16 @@ export default function APIKeysPage() {
               }`}
             >
               <span
-                className={`flex-shrink-0 h-3.5 w-3.5 border ${
+                className={`flex-shrink-0 h-3.5 w-3.5 border flex items-center justify-center ${
                   deleteMode === "revoke"
-                    ? "border-error bg-error"
+                    ? "border-text-muted bg-surface-hi"
                     : "border-border bg-surface"
                 }`}
-              />
+              >
+                {deleteMode === "revoke" && (
+                  <Check className="h-2.5 w-2.5 text-text-muted" />
+                )}
+              </span>
               <div>
                 <span className="text-xs font-mono text-text">Revoke</span>
                 <p className="text-xs text-text-dim">
@@ -357,12 +361,16 @@ export default function APIKeysPage() {
               }`}
             >
               <span
-                className={`flex-shrink-0 h-3.5 w-3.5 border ${
+                className={`flex-shrink-0 h-3.5 w-3.5 border flex items-center justify-center ${
                   deleteMode === "permanent"
-                    ? "border-error bg-error"
+                    ? "border-text-muted bg-surface-hi"
                     : "border-border bg-surface"
                 }`}
-              />
+              >
+                {deleteMode === "permanent" && (
+                  <Check className="h-2.5 w-2.5 text-text-muted" />
+                )}
+              </span>
               <div>
                 <span className="text-xs font-mono text-primary">
                   Permanently delete
