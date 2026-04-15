@@ -36,11 +36,13 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 _api_key_scheme = APIKeyHeader(name="X-API-Key", scheme_name="ApiKey", auto_error=False)
 _project_id_scheme = APIKeyHeader(name="X-Project-ID", scheme_name="ProjectID", auto_error=False)
 _project_name_scheme = APIKeyHeader(name="X-Project-Name", scheme_name="ProjectName", auto_error=False)
+_org_id_scheme = APIKeyHeader(name="X-Organization-ID", scheme_name="OrganizationID", auto_error=False)
 
 
 async def get_api_context(
     request: Request,
     bearer: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+    _org_id: str | None = Depends(_org_id_scheme),
     session: AsyncSession = Depends(get_db_session),
 ) -> ApiContext:
     """Dependency for management routes — Bearer JWT only.
@@ -65,6 +67,7 @@ async def get_api_context(
 async def get_data_plane_context(
     request: Request,
     bearer: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
+    _org_id: str | None = Depends(_org_id_scheme),
     x_api_key: str | None = Depends(_api_key_scheme),
     x_project_id: str | None = Depends(_project_id_scheme),
     x_project_name: str | None = Depends(_project_name_scheme),
