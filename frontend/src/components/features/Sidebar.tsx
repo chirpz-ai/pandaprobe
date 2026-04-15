@@ -25,11 +25,18 @@ import {
   Bug,
   ChevronsUpDown,
   CircleUser,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useOrgId, useResolvedProjectId } from "@/hooks/useNavigation";
+import { createOrganization } from "@/lib/api/organizations";
+import { extractErrorMessage } from "@/lib/api/client";
+import { useToast } from "@/components/providers/ToastProvider";
+import { FormDialog } from "@/components/common/FormDialog";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
@@ -94,6 +101,7 @@ function SwitcherDropdown({
   onSelect,
   collapsed,
   side = "right",
+  footerAction,
 }: {
   label: string;
   icon: React.ReactNode;
@@ -102,6 +110,7 @@ function SwitcherDropdown({
   onSelect: (id: string) => void;
   collapsed: boolean;
   side?: "right" | "bottom";
+  footerAction?: { label: string; icon: React.ReactNode; onSelect: () => void };
 }) {
   const trigger = (
     <DropdownMenu.Trigger
@@ -160,6 +169,18 @@ function SwitcherDropdown({
               {item.name}
             </DropdownMenu.Item>
           ))}
+          {footerAction && (
+            <>
+              <DropdownMenu.Separator className="my-1 mx-1 border-t border-border" />
+              <DropdownMenu.Item
+                className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-muted hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
+                onSelect={footerAction.onSelect}
+              >
+                {footerAction.icon}
+                {footerAction.label}
+              </DropdownMenu.Item>
+            </>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
@@ -170,11 +191,15 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { signOut, authEnabled, user } = useAuth();
-  const { organizations, currentOrg, projects } = useOrganization();
+  const { organizations, currentOrg, projects, refetchOrgs } =
+    useOrganization();
+  const { toast } = useToast();
   const orgId = useOrgId();
   const resolvedProjectId = useResolvedProjectId(projects);
 
   const [collapsed, setCollapsed] = useState(false);
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
 
   const inSettingsRoute = pathname.includes("/settings");
   const [settingsView, setSettingsView] = useState(inSettingsRoute);
@@ -296,6 +321,20 @@ export function Sidebar() {
     router.push(target);
   }
 
+  async function handleCreateOrg() {
+    if (!newOrgName.trim()) return;
+    try {
+      const org = await createOrganization({ name: newOrgName.trim() });
+      toast({ title: "Organization created", variant: "success" });
+      setNewOrgName("");
+      refetchOrgs();
+      router.push(`/org/${org.id}/settings/organization`);
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
+      throw err;
+    }
+  }
+
   const currentProjectName = resolvedProjectId
     ? projects.find((p) => p.id === resolvedProjectId)?.name
     : null;
@@ -366,6 +405,11 @@ export function Sidebar() {
                 activeId={currentOrg?.id ?? null}
                 onSelect={switchOrg}
                 collapsed={collapsed}
+                footerAction={{
+                  label: "New Organization",
+                  icon: <Plus className="h-3.5 w-3.5" />,
+                  onSelect: () => setCreateOrgOpen(true),
+                }}
               />
 
               <div className="space-y-0.5 mt-1">
@@ -412,31 +456,33 @@ export function Sidebar() {
         </nav>
 
         {/* ── Settings / Back button (above divider) ──────────────── */}
-        <div className="px-2 pb-2">
+        <div className="pb-2">
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
               {settingsView ? (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={exitSettings}
                   className={cn(
-                    "flex items-center gap-3 w-full px-3 py-2 text-sm font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                    "w-full justify-start gap-3 px-3 py-2",
                     collapsed && "justify-center px-2",
                   )}
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  {!collapsed && <span>Back to Projects</span>}
-                </button>
+                  {!collapsed && <span>Back to Home</span>}
+                </Button>
               ) : (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={openSettings}
                   className={cn(
-                    "flex items-center gap-3 w-full px-3 py-2 text-sm font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                    "w-full justify-start gap-3 px-3 py-2",
                     collapsed && "justify-center px-2",
                   )}
                 >
                   <Settings className="h-4 w-4" />
                   {!collapsed && <span>Settings</span>}
-                </button>
+                </Button>
               )}
             </Tooltip.Trigger>
             {collapsed && (
@@ -446,7 +492,7 @@ export function Sidebar() {
                   sideOffset={8}
                   className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
                 >
-                  {settingsView ? "Back to Projects" : "Settings"}
+                  {settingsView ? "Back to Home" : "Settings"}
                 </Tooltip.Content>
               </Tooltip.Portal>
             )}
@@ -454,14 +500,14 @@ export function Sidebar() {
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────── */}
-        <div className="border-t border-border p-2">
+        <div className="border-t border-border py-2">
           {/* User menu */}
           {authEnabled && user ? (
             <DropdownMenu.Root>
               <DropdownMenu.Trigger
                 className={cn(
-                  "flex items-center gap-2 w-full px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
-                  collapsed && "justify-center",
+                  "flex items-center gap-2 w-full px-3 py-2 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                  collapsed && "justify-center px-2",
                 )}
               >
                 <CircleUser className="h-4 w-4 flex-shrink-0" />
@@ -470,9 +516,9 @@ export function Sidebar() {
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
                   side="top"
-                  align="start"
-                  sideOffset={4}
-                  className="z-50 min-w-[200px] bg-surface border border-border p-1 shadow-lg"
+                  align="center"
+                  sideOffset={8}
+                  className="z-50 w-[calc(14rem-16px)] bg-surface border border-border p-1 shadow-lg"
                 >
                   <div className="px-2 py-2 border-b border-border mb-1">
                     <p className="text-xs font-mono text-text truncate">
@@ -514,8 +560,8 @@ export function Sidebar() {
           ) : !authEnabled ? (
             <div
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-muted",
-                collapsed && "justify-center",
+                "flex items-center gap-2 px-3 py-2 text-xs font-mono text-text-muted",
+                collapsed && "justify-center px-2",
               )}
             >
               <CircleUser className="h-4 w-4 flex-shrink-0" />
@@ -524,6 +570,31 @@ export function Sidebar() {
           ) : null}
         </div>
       </aside>
+
+      <FormDialog
+        open={createOrgOpen}
+        onOpenChange={(v) => {
+          setCreateOrgOpen(v);
+          if (!v) setNewOrgName("");
+        }}
+        title="Create Organization"
+        description="Organizations are isolated workspaces for your projects, traces, and team members. You can own up to 2 organizations."
+        submitLabel="Create"
+        submitDisabled={!newOrgName.trim()}
+        onSubmit={handleCreateOrg}
+      >
+        <div>
+          <label className="text-xs font-mono text-text-muted block mb-1">
+            Organization Name
+          </label>
+          <Input
+            value={newOrgName}
+            onChange={(e) => setNewOrgName(e.target.value)}
+            placeholder="My Organization"
+            autoFocus
+          />
+        </div>
+      </FormDialog>
     </Tooltip.Provider>
   );
 }

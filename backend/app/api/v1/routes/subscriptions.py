@@ -1,6 +1,8 @@
 """Routes for subscription management and usage information.
 
-All endpoints require a valid Bearer JWT.
+Org-scoped endpoints live under ``/organizations/{org_id}/subscriptions``
+and require explicit membership verification.  The static ``GET /plans``
+endpoint remains at ``/subscriptions/plans`` (no org context needed).
 """
 
 from decimal import ROUND_HALF_UP, Decimal
@@ -24,7 +26,8 @@ from app.services.billing_service import BillingService
 from app.services.identity_service import IdentityService
 from app.services.usage_service import UsageService
 
-router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
+router = APIRouter(prefix="/organizations/{org_id}/subscriptions", tags=["subscriptions"])
+plans_router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
 
 def _require_user(ctx: ApiContext) -> None:
@@ -142,23 +145,26 @@ class PortalResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Endpoints
+# Org-scoped endpoints — /organizations/{org_id}/subscriptions/...
 # ---------------------------------------------------------------------------
 
 
 @router.get("", response_model=SubscriptionResponse)
 async def get_subscription(
+    org_id: UUID,
     ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
 ) -> SubscriptionResponse:
-    """Get the current organization's subscription.
+    """Get the organization's subscription.
 
-    Auth: `Bearer`
+    Auth: `Bearer` · role: any member
     """
     _require_user(ctx)
+    svc = IdentityService(session)
+    await svc.require_membership(ctx.user.id, org_id)
 
     repo = BillingRepository(session)
-    sub = await repo.get_subscription_by_org(ctx.organization.id)
+    sub = await repo.get_subscription_by_org(org_id)
     if sub is None:
         raise NotFoundError("No subscription found for this organization.")
 
@@ -176,17 +182,21 @@ async def get_subscription(
 
 @router.get("/usage", response_model=UsageResponse)
 async def get_usage(
+    org_id: UUID,
     ctx: ApiContext = Depends(get_api_context),
     redis_client: aioredis.Redis = Depends(get_redis),
     session: AsyncSession = Depends(get_db_session),
 ) -> UsageResponse:
     """Get the current period's usage breakdown.
 
-    Auth: `Bearer`
+    Auth: `Bearer` · role: any member
     """
     _require_user(ctx)
+    svc = IdentityService(session)
+    await svc.require_membership(ctx.user.id, org_id)
+
     usage_svc = UsageService(redis_client, session)
-    summary = await usage_svc.get_current_usage(ctx.organization.id)
+    summary = await usage_svc.get_current_usage(org_id)
     return UsageResponse(
         plan=summary.plan,
         status=summary.status,
@@ -201,6 +211,7 @@ async def get_usage(
 
 @router.get("/billing", response_model=BillingResponse)
 async def get_billing(
+    org_id: UUID,
     ctx: ApiContext = Depends(get_api_context),
     redis_client: aioredis.Redis = Depends(get_redis),
     session: AsyncSession = Depends(get_db_session),
@@ -210,12 +221,14 @@ async def get_billing(
     Returns the base plan price, per-category overage breakdown, and
     the estimated total for the current period.
 
-    Auth: `Bearer`
+    Auth: `Bearer` · role: any member
     """
     _require_user(ctx)
+    svc = IdentityService(session)
+    await svc.require_membership(ctx.user.id, org_id)
 
     repo = BillingRepository(session)
-    sub = await repo.get_subscription_by_org(ctx.organization.id)
+    sub = await repo.get_subscription_by_org(org_id)
     if sub is None:
         raise NotFoundError("No subscription found for this organization.")
 
@@ -223,7 +236,7 @@ async def get_billing(
     plan_cfg = get_plan_config(plan)
 
     usage_svc = UsageService(redis_client, session)
-    summary = await usage_svc.get_current_usage(ctx.organization.id)
+    summary = await usage_svc.get_current_usage(org_id)
 
     base_t = plan_cfg.base_traces or 0
     base_e = plan_cfg.base_trace_evals or 0
@@ -235,7 +248,7 @@ async def get_billing(
     total_overage = OVERAGE_UNIT_PRICE * (total_t_over + total_e_over + total_s_over)
 
     reported_overage = Decimal("0")
-    usage_record = await repo.get_current_usage_record(ctx.organization.id, sub.current_period_start)
+    usage_record = await repo.get_current_usage_record(org_id, sub.current_period_start)
     if usage_record:
         reported_overage = OVERAGE_UNIT_PRICE * (
             max(0, usage_record.reported_trace_count - base_t)
@@ -281,6 +294,7 @@ async def get_billing(
 
 @router.get("/invoices", response_model=list[UsageHistoryItem])
 async def get_invoices(
+    org_id: UUID,
     ctx: ApiContext = Depends(get_api_context),
     session: AsyncSession = Depends(get_db_session),
     limit: int = Query(default=12, ge=1, le=36),
@@ -289,12 +303,14 @@ async def get_invoices(
 
     Returns up to ``limit`` periods, most recent first.
 
-    Auth: `Bearer`
+    Auth: `Bearer` · role: any member
     """
     _require_user(ctx)
+    svc = IdentityService(session)
+    await svc.require_membership(ctx.user.id, org_id)
 
     repo = BillingRepository(session)
-    records = await repo.list_usage_history(ctx.organization.id, limit=limit)
+    records = await repo.list_usage_history(org_id, limit=limit)
 
     return [
         UsageHistoryItem(
@@ -310,7 +326,59 @@ async def get_invoices(
     ]
 
 
-@router.get("/plans", response_model=list[PlanInfo])
+@router.post("/checkout", response_model=CheckoutResponse)
+async def create_checkout(
+    org_id: UUID,
+    body: CheckoutRequest,
+    ctx: ApiContext = Depends(get_api_context),
+    session: AsyncSession = Depends(get_db_session),
+) -> CheckoutResponse:
+    """Create a Stripe Checkout session for upgrading the subscription.
+
+    Auth: `Bearer` · role: `ADMIN` or `OWNER`
+    """
+    _require_user(ctx)
+    await IdentityService(session).require_admin(ctx.user.id, org_id)
+    if body.plan not in (SubscriptionPlan.PRO, SubscriptionPlan.STARTUP):
+        raise ValidationError("Checkout is only available for PRO and STARTUP plans.")
+
+    billing_svc = BillingService(session)
+    url = await billing_svc.create_checkout_session(
+        org_id=org_id,
+        plan=body.plan,
+        success_url=body.success_url,
+        cancel_url=body.cancel_url,
+    )
+    return CheckoutResponse(checkout_url=url)
+
+
+@router.post("/portal", response_model=PortalResponse)
+async def create_portal(
+    org_id: UUID,
+    body: PortalRequest,
+    ctx: ApiContext = Depends(get_api_context),
+    session: AsyncSession = Depends(get_db_session),
+) -> PortalResponse:
+    """Create a Stripe Customer Portal session for self-service billing management.
+
+    Auth: `Bearer` · role: `ADMIN` or `OWNER`
+    """
+    _require_user(ctx)
+    await IdentityService(session).require_admin(ctx.user.id, org_id)
+    billing_svc = BillingService(session)
+    url = await billing_svc.create_portal_session(
+        org_id=org_id,
+        return_url=body.return_url,
+    )
+    return PortalResponse(portal_url=url)
+
+
+# ---------------------------------------------------------------------------
+# Static endpoint — /subscriptions/plans (no org context)
+# ---------------------------------------------------------------------------
+
+
+@plans_router.get("/plans", response_model=list[PlanInfo])
 async def get_plans(
     ctx: ApiContext = Depends(get_api_context),
 ) -> list[PlanInfo]:
@@ -334,48 +402,3 @@ async def get_plans(
         for plan, cfg in PLAN_LIMITS.items()
         if plan != SubscriptionPlan.DEVELOPMENT
     ]
-
-
-@router.post("/checkout", response_model=CheckoutResponse)
-async def create_checkout(
-    body: CheckoutRequest,
-    ctx: ApiContext = Depends(get_api_context),
-    session: AsyncSession = Depends(get_db_session),
-) -> CheckoutResponse:
-    """Create a Stripe Checkout session for upgrading the subscription.
-
-    Auth: `Bearer` - role: `OWNER` or `ADMIN`
-    """
-    _require_user(ctx)
-    await IdentityService(session).require_admin(ctx.user.id, ctx.organization.id)
-    if body.plan not in (SubscriptionPlan.PRO, SubscriptionPlan.STARTUP):
-        raise ValidationError("Checkout is only available for PRO and STARTUP plans.")
-
-    billing_svc = BillingService(session)
-    url = await billing_svc.create_checkout_session(
-        org_id=ctx.organization.id,
-        plan=body.plan,
-        success_url=body.success_url,
-        cancel_url=body.cancel_url,
-    )
-    return CheckoutResponse(checkout_url=url)
-
-
-@router.post("/portal", response_model=PortalResponse)
-async def create_portal(
-    body: PortalRequest,
-    ctx: ApiContext = Depends(get_api_context),
-    session: AsyncSession = Depends(get_db_session),
-) -> PortalResponse:
-    """Create a Stripe Customer Portal session for self-service billing management.
-
-    Auth: `Bearer` - role: `OWNER` or `ADMIN`
-    """
-    _require_user(ctx)
-    await IdentityService(session).require_admin(ctx.user.id, ctx.organization.id)
-    billing_svc = BillingService(session)
-    url = await billing_svc.create_portal_session(
-        org_id=ctx.organization.id,
-        return_url=body.return_url,
-    )
-    return PortalResponse(portal_url=url)

@@ -17,10 +17,11 @@ import { KeyExpiration } from "@/lib/api/enums";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
-import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { FormDialog } from "@/components/common/FormDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import {
   Select,
@@ -29,7 +30,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { Plus, RotateCw, Trash2, Copy, Eye, EyeOff } from "lucide-react";
+import { Plus, RotateCw, Trash2, Copy, Eye, EyeOff, Check } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";
 
 export default function APIKeysPage() {
@@ -43,6 +44,9 @@ export default function APIKeysPage() {
   const [newRawKey, setNewRawKey] = useState<string | null>(null);
   const [showRawKey, setShowRawKey] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<APIKeyResponse | null>(null);
+  const [deleteMode, setDeleteMode] = useState<"revoke" | "permanent">(
+    "revoke",
+  );
 
   useDocumentTitle("API Keys");
 
@@ -90,15 +94,25 @@ export default function APIKeysPage() {
     }
   }
 
+  function openDelete(key: APIKeyResponse) {
+    setDeleteTarget(key);
+    setDeleteMode("revoke");
+  }
+
   async function handleDelete() {
     if (!currentOrg || !deleteTarget) return;
+    const permanent = deleteMode === "permanent";
     try {
-      await deleteAPIKey(currentOrg.id, deleteTarget.id, false);
-      toast({ title: "API key deleted", variant: "success" });
+      await deleteAPIKey(currentOrg.id, deleteTarget.id, permanent);
+      toast({
+        title: permanent ? "API key permanently deleted" : "API key revoked",
+        variant: "success",
+      });
       setDeleteTarget(null);
       invalidate();
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
+      throw err;
     }
   }
 
@@ -109,12 +123,14 @@ export default function APIKeysPage() {
 
   if (!currentOrg) return <EmptyState title="No organization selected" />;
 
+  const canManage = currentOrg.role !== "MEMBER";
+
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-lg font-mono text-primary">API Keys</h1>
 
       <div className="border-engraved bg-surface p-4">
-        <div className="flex items-end gap-3 mb-4">
+        <div className="flex items-end gap-3">
           <div className="flex-1">
             <label className="text-xs font-mono text-text-muted block mb-1">
               Key Name
@@ -141,16 +157,18 @@ export default function APIKeysPage() {
             <Plus className="h-3 w-3" /> Create
           </Button>
         </div>
+      </div>
 
-        {newRawKey && (
-          <div className="bg-warning/5 border border-warning/20 p-3 mt-3">
-            <p className="text-xs text-warning font-mono mb-2">
-              Copy this key now. You won&apos;t be able to see it again.
-            </p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs font-mono text-text bg-bg px-2 py-1 border border-border overflow-hidden">
-                {showRawKey ? newRawKey : "••••••••••••••••"}
-              </code>
+      {newRawKey && (
+        <div className="bg-warning/5 border border-warning/20 p-3">
+          <p className="text-xs text-warning font-mono mb-2">
+            Copy this key now. You won&apos;t be able to see it again.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs font-mono text-text bg-bg px-2 py-1 border border-border overflow-hidden">
+              {showRawKey ? newRawKey : "••••••••••••••••"}
+            </code>
+            <Tooltip content="Toggle visibility">
               <Button
                 variant="ghost"
                 size="icon"
@@ -162,6 +180,8 @@ export default function APIKeysPage() {
                   <Eye className="h-3 w-3" />
                 )}
               </Button>
+            </Tooltip>
+            <Tooltip content="Copy">
               <Button
                 variant="ghost"
                 size="icon"
@@ -169,10 +189,10 @@ export default function APIKeysPage() {
               >
                 <Copy className="h-3 w-3" />
               </Button>
-            </div>
+            </Tooltip>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {isPending ? (
         <LoadingState />
@@ -232,21 +252,45 @@ export default function APIKeysPage() {
                   <td className="px-3 py-2 text-text-dim">
                     {formatDateTime(key.created_at)}
                   </td>
-                  <td className="px-3 py-2 flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRotate(key.id)}
-                    >
-                      <RotateCw className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteTarget(key)}
-                    >
-                      <Trash2 className="h-3 w-3 text-error" />
-                    </Button>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-1">
+                      <Tooltip
+                        content={
+                          canManage
+                            ? "Rotate"
+                            : "Only owner and admins can rotate keys"
+                        }
+                      >
+                        <span tabIndex={canManage ? undefined : 0}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!canManage}
+                            onClick={() => handleRotate(key.id)}
+                          >
+                            <RotateCw className="h-3 w-3" />
+                          </Button>
+                        </span>
+                      </Tooltip>
+                      <Tooltip
+                        content={
+                          canManage
+                            ? "Revoke / Delete"
+                            : "Only owner and admins can revoke keys"
+                        }
+                      >
+                        <span tabIndex={canManage ? undefined : 0}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!canManage}
+                            onClick={() => openDelete(key)}
+                          >
+                            <Trash2 className="h-3 w-3 text-error" />
+                          </Button>
+                        </span>
+                      </Tooltip>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -255,15 +299,91 @@ export default function APIKeysPage() {
         </div>
       )}
 
-      <ConfirmDialog
+      <FormDialog
         open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete API key"
-        description={`Delete the API key "${deleteTarget?.name}"? Applications using this key will lose access.`}
-        confirmLabel="Delete"
-        onConfirm={handleDelete}
-        destructive
-      />
+        onOpenChange={(v) => {
+          if (!v) setDeleteTarget(null);
+        }}
+        variant="destructive"
+        title="Remove API Key"
+        titleIcon={<Trash2 className="h-4 w-4" />}
+        description={
+          <>
+            You are about to remove the API key{" "}
+            <strong className="text-text">{deleteTarget?.name}</strong>.
+            Applications using this key will lose access.
+          </>
+        }
+        submitLabel={
+          deleteMode === "permanent" ? "Permanently Delete" : "Revoke Key"
+        }
+        submitDisabled={false}
+        onSubmit={handleDelete}
+      >
+        <div className="space-y-2">
+          <label className="text-xs font-mono text-text-muted block">
+            Choose an action
+          </label>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setDeleteMode("revoke")}
+              className={`flex items-center gap-2.5 w-full text-left px-3 py-2 border transition-colors ${
+                deleteMode === "revoke"
+                  ? "border-error/40 bg-error/5"
+                  : "border-border bg-surface hover:bg-surface-hi"
+              }`}
+            >
+              <span
+                className={`flex-shrink-0 h-3.5 w-3.5 border flex items-center justify-center ${
+                  deleteMode === "revoke"
+                    ? "border-text-muted bg-surface-hi"
+                    : "border-border bg-surface"
+                }`}
+              >
+                {deleteMode === "revoke" && (
+                  <Check className="h-2.5 w-2.5 text-text-muted" />
+                )}
+              </span>
+              <div>
+                <span className="text-xs font-mono text-text">Revoke</span>
+                <p className="text-xs text-text-dim">
+                  Deactivate the key. The record is kept for audit purposes.
+                </p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteMode("permanent")}
+              className={`flex items-center gap-2.5 w-full text-left px-3 py-2 border transition-colors ${
+                deleteMode === "permanent"
+                  ? "border-error/40 bg-error/5"
+                  : "border-border bg-surface hover:bg-surface-hi"
+              }`}
+            >
+              <span
+                className={`flex-shrink-0 h-3.5 w-3.5 border flex items-center justify-center ${
+                  deleteMode === "permanent"
+                    ? "border-text-muted bg-surface-hi"
+                    : "border-border bg-surface"
+                }`}
+              >
+                {deleteMode === "permanent" && (
+                  <Check className="h-2.5 w-2.5 text-text-muted" />
+                )}
+              </span>
+              <div>
+                <span className="text-xs font-mono text-primary">
+                  Permanently delete
+                </span>
+                <p className="text-xs text-text-dim">
+                  Remove the key record entirely. This cannot be undone.
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </FormDialog>
     </div>
   );
 }

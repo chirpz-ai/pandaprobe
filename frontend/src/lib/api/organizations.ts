@@ -23,8 +23,10 @@ export async function listOrganizations(): Promise<MyOrganizationResponse[]> {
 
 export async function getOrganization(
   orgId: string,
-): Promise<OrganizationResponse> {
-  const res = await client.get<OrganizationResponse>(`/organizations/${orgId}`);
+): Promise<MyOrganizationResponse> {
+  const res = await client.get<MyOrganizationResponse>(
+    `/organizations/${orgId}`,
+  );
   return res.data;
 }
 

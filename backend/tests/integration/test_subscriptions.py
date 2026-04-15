@@ -54,6 +54,30 @@ def _jwt_user_context(test_org, test_project):
     yield
 
 
+@pytest.fixture
+async def seed_api_user(db_session):
+    """Seed the JWT user + OWNER membership so org-scoped HTTP endpoints pass require_membership."""
+    now = datetime.now(timezone.utc)
+    db_session.add(
+        UserModel(
+            id=TEST_USER_ID,
+            external_id="test-sub-ext",
+            email="sub-test@example.com",
+            display_name="Sub Test",
+            created_at=now,
+        )
+    )
+    db_session.add(
+        MembershipModel(
+            user_id=TEST_USER_ID,
+            org_id=TEST_ORG_ID,
+            role=MembershipRole.OWNER,
+            created_at=now,
+        )
+    )
+    await db_session.commit()
+
+
 async def test_billing_repository_create_subscription_hobby(db_session, billing_isolated_org):
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(billing_isolated_org)
@@ -212,16 +236,16 @@ async def test_billing_repository_count_org_members(db_session):
     assert await repo.count_org_members(TEST_ORG_ID) == 2
 
 
-async def test_get_subscription_returns_subscription_when_present(client: AsyncClient):
-    resp = await client.get("/subscriptions")
+async def test_get_subscription_returns_subscription_when_present(client: AsyncClient, seed_api_user):
+    resp = await client.get(f"/organizations/{TEST_ORG_ID}/subscriptions")
     assert resp.status_code == 200
     data = resp.json()
     assert data["org_id"] == str(TEST_ORG_ID)
     assert data["plan"] == "PRO"
 
 
-async def test_get_subscription_usage_returns_usage_snapshot(client: AsyncClient):
-    resp = await client.get("/subscriptions/usage")
+async def test_get_subscription_usage_returns_usage_snapshot(client: AsyncClient, seed_api_user):
+    resp = await client.get(f"/organizations/{TEST_ORG_ID}/subscriptions/usage")
     assert resp.status_code == 200
     data = resp.json()
     assert data["plan"] == "PRO"
@@ -229,11 +253,11 @@ async def test_get_subscription_usage_returns_usage_snapshot(client: AsyncClient
     assert data["limits"]["max_members"] == 2
 
 
-async def test_get_subscription_returns_404_without_subscription(client: AsyncClient, db_session):
+async def test_get_subscription_returns_404_without_subscription(client: AsyncClient, db_session, seed_api_user):
     await db_session.execute(delete(UsageRecordModel).where(UsageRecordModel.org_id == TEST_ORG_ID))
     await db_session.execute(delete(SubscriptionModel).where(SubscriptionModel.org_id == TEST_ORG_ID))
     await db_session.commit()
-    resp = await client.get("/subscriptions")
+    resp = await client.get(f"/organizations/{TEST_ORG_ID}/subscriptions")
     assert resp.status_code == 404
 
 
