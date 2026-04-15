@@ -35,6 +35,7 @@ import { createOrganization } from "@/lib/api/organizations";
 import { extractErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/providers/ToastProvider";
 import { FormDialog } from "@/components/common/FormDialog";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -455,31 +456,33 @@ export function Sidebar() {
         </nav>
 
         {/* ── Settings / Back button (above divider) ──────────────── */}
-        <div className="px-2 pb-2">
+        <div className="pb-2">
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
               {settingsView ? (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={exitSettings}
                   className={cn(
-                    "flex items-center gap-3 w-full px-3 py-2 text-sm font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                    "w-full justify-start gap-3 px-3 py-2",
                     collapsed && "justify-center px-2",
                   )}
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  {!collapsed && <span>Back to Projects</span>}
-                </button>
+                  {!collapsed && <span>Back to Home</span>}
+                </Button>
               ) : (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={openSettings}
                   className={cn(
-                    "flex items-center gap-3 w-full px-3 py-2 text-sm font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                    "w-full justify-start gap-3 px-3 py-2",
                     collapsed && "justify-center px-2",
                   )}
                 >
                   <Settings className="h-4 w-4" />
                   {!collapsed && <span>Settings</span>}
-                </button>
+                </Button>
               )}
             </Tooltip.Trigger>
             {collapsed && (
@@ -489,7 +492,7 @@ export function Sidebar() {
                   sideOffset={8}
                   className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
                 >
-                  {settingsView ? "Back to Projects" : "Settings"}
+                  {settingsView ? "Back to Home" : "Settings"}
                 </Tooltip.Content>
               </Tooltip.Portal>
             )}
@@ -497,14 +500,14 @@ export function Sidebar() {
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────── */}
-        <div className="border-t border-border p-2">
+        <div className="border-t border-border py-2">
           {/* User menu */}
           {authEnabled && user ? (
             <DropdownMenu.Root>
               <DropdownMenu.Trigger
                 className={cn(
-                  "flex items-center gap-2 w-full px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
-                  collapsed && "justify-center",
+                  "flex items-center gap-2 w-full px-3 py-2 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                  collapsed && "justify-center px-2",
                 )}
               >
                 <CircleUser className="h-4 w-4 flex-shrink-0" />
@@ -513,9 +516,9 @@ export function Sidebar() {
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
                   side="top"
-                  align="start"
-                  sideOffset={4}
-                  className="z-50 min-w-[200px] bg-surface border border-border p-1 shadow-lg"
+                  align="center"
+                  sideOffset={8}
+                  className="z-50 w-[calc(14rem-16px)] bg-surface border border-border p-1 shadow-lg"
                 >
                   <div className="px-2 py-2 border-b border-border mb-1">
                     <p className="text-xs font-mono text-text truncate">
@@ -557,8 +560,8 @@ export function Sidebar() {
           ) : !authEnabled ? (
             <div
               className={cn(
-                "flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-muted",
-                collapsed && "justify-center",
+                "flex items-center gap-2 px-3 py-2 text-xs font-mono text-text-muted",
+                collapsed && "justify-center px-2",
               )}
             >
               <CircleUser className="h-4 w-4 flex-shrink-0" />
