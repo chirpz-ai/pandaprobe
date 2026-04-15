@@ -83,7 +83,7 @@ export default function ProjectsPage() {
     try {
       await updateProject(currentOrg.id, editTarget.id, {
         name: editName.trim(),
-        description: editDesc.trim() || undefined,
+        description: editDesc.trim(),
       });
       toast({ title: "Project updated", variant: "success" });
       setEditTarget(null);

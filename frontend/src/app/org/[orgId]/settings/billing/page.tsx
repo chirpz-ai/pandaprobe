@@ -100,11 +100,13 @@ export default function BillingPage() {
     subQuery.isPending ||
     usageQuery.isPending ||
     billingQuery.isPending ||
+    invoicesQuery.isPending ||
     plansQuery.isPending;
   const error =
     subQuery.error ||
     usageQuery.error ||
     billingQuery.error ||
+    invoicesQuery.error ||
     plansQuery.error;
 
   async function handleCheckout(plan: string) {
