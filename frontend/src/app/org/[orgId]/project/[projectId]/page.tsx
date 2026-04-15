@@ -40,8 +40,8 @@ export default function ProjectHomePage() {
   });
 
   const usageQuery = useQuery({
-    queryKey: queryKeys.subscriptions.usage,
-    queryFn: getUsage,
+    queryKey: queryKeys.subscriptions.usage(orgId as string),
+    queryFn: () => getUsage(orgId as string),
   });
 
   const hasData = tracesQuery.data || sessionsQuery.data || monitorsQuery.data;
