@@ -36,21 +36,13 @@ interface PlanMeta {
 
 const PLAN_META: Record<string, PlanMeta> = {
   HOBBY: {
-    features: [
-      "Human annotation",
-      "Community support via GitHub",
-    ],
+    features: ["Human annotation", "Community support via GitHub"],
   },
   PRO: {
-    features: [
-      "Email support",
-    ],
+    features: ["Email support"],
   },
   STARTUP: {
-    features: [
-      "High rate limits",
-      "Private Slack channel",
-    ],
+    features: ["High rate limits", "Private Slack channel"],
   },
   ENTERPRISE: {
     isEnterprise: true,
@@ -320,9 +312,7 @@ function InvoicesTable({
       {loading ? (
         <p className="text-xs text-text-dim font-mono">Loading…</p>
       ) : invoices.length === 0 ? (
-        <p className="text-xs text-text-dim font-mono">
-          No usage history yet.
-        </p>
+        <p className="text-xs text-text-dim font-mono">No usage history yet.</p>
       ) : (
         <>
           <div className="overflow-x-auto">
