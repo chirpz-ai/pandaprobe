@@ -112,6 +112,7 @@ export default function APIKeysPage() {
       invalidate();
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
+      throw err;
     }
   }
 
