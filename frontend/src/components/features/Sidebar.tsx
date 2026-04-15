@@ -591,9 +591,6 @@ export function Sidebar() {
             value={newOrgName}
             onChange={(e) => setNewOrgName(e.target.value)}
             placeholder="My Organization"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newOrgName.trim()) handleCreateOrg();
-            }}
             autoFocus
           />
         </div>
