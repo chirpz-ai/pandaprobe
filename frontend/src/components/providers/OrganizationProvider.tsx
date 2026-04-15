@@ -63,12 +63,13 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (
       orgsQuery.isSuccess &&
+      !orgsQuery.isFetching &&
       orgId &&
       !organizations.some((o) => o.id === orgId)
     ) {
       router.replace("/");
     }
-  }, [orgsQuery.isSuccess, orgId, organizations, router]);
+  }, [orgsQuery.isSuccess, orgsQuery.isFetching, orgId, organizations, router]);
 
   function refetchOrgs() {
     queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
