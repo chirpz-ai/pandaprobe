@@ -34,8 +34,8 @@ describe("queryKeys", () => {
     ]);
   });
 
-  it("subscriptions keys are stable", () => {
-    expect(queryKeys.subscriptions.current).toEqual(["subscription"]);
-    expect(queryKeys.subscriptions.usage).toEqual(["subscription", "usage"]);
+  it("subscriptions keys include orgId", () => {
+    expect(queryKeys.subscriptions.current("org-1")).toEqual(["subscription", "org-1"]);
+    expect(queryKeys.subscriptions.usage("org-1")).toEqual(["subscription", "org-1", "usage"]);
   });
 });
