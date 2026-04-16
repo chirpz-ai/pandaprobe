@@ -24,7 +24,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { DateTimePicker } from "@/components/common/DateTimePicker";
 import { extractErrorMessage } from "@/lib/api/client";
 
 function BarChart({
@@ -151,12 +151,22 @@ export default function AnalyticsPage() {
             ))}
           </SelectContent>
         </Select>
-        <DateRangePicker
-          startDate={startDate}
-          endDate={endDate}
-          onStartChange={setStartDate}
-          onEndChange={setEndDate}
-        />
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-text-muted font-mono">From</span>
+          <DateTimePicker
+            value={startDate}
+            onChange={setStartDate}
+            placeholder="From"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-text-muted font-mono">To</span>
+          <DateTimePicker
+            value={endDate}
+            onChange={setEndDate}
+            placeholder="To"
+          />
+        </div>
       </div>
 
       {analyticsQuery.isPending ? (
