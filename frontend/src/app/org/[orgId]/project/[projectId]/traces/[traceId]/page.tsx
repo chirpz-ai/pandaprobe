@@ -7,7 +7,7 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import { getTrace, deleteTrace } from "@/lib/api/traces";
 import { getTraceScoresByTraceId } from "@/lib/api/evaluations";
 import { queryKeys } from "@/lib/query/keys";
-import { SpanTreeView } from "@/components/features/SpanTreeView";
+import { SpanWaterfall } from "@/components/features/SpanWaterfall";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -150,32 +150,6 @@ export default function TraceDetailPage({
         </div>
       </div>
 
-      {trace.input != null && (
-        <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-2">
-            Input
-          </h2>
-          <pre className="text-xs text-text-dim overflow-auto max-h-48 bg-bg p-3 border border-border">
-            {typeof trace.input === "string"
-              ? trace.input
-              : JSON.stringify(trace.input, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      {trace.output != null && (
-        <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-2">
-            Output
-          </h2>
-          <pre className="text-xs text-text-dim overflow-auto max-h-48 bg-bg p-3 border border-border">
-            {typeof trace.output === "string"
-              ? trace.output
-              : JSON.stringify(trace.output, null, 2)}
-          </pre>
-        </div>
-      )}
-
       {scores.length > 0 && (
         <div className="border-engraved bg-surface p-4">
           <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
@@ -197,12 +171,7 @@ export default function TraceDetailPage({
         </div>
       )}
 
-      <div>
-        <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-          Span Tree ({trace.spans.length} spans)
-        </h2>
-        <SpanTreeView spans={trace.spans} />
-      </div>
+      <SpanWaterfall trace={trace} />
 
       <ConfirmDialog
         open={confirmDelete}
