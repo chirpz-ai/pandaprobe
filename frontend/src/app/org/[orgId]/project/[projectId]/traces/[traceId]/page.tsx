@@ -15,7 +15,12 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
-import { formatDateTime, formatDuration } from "@/lib/utils/format";
+import {
+  formatDateTime,
+  formatDuration,
+  formatCost,
+  formatTokens,
+} from "@/lib/utils/format";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useProjectPath, useProjectId } from "@/hooks/useNavigation";
 import { extractErrorMessage } from "@/lib/api/client";
@@ -108,6 +113,16 @@ export default function TraceDetailPage({
             <span className="text-text">{formatDuration(latencyMs)}</span>
           </div>
           <div>
+            <span className="text-text-muted block">Total Tokens</span>
+            <span className="text-text">
+              {formatTokens(trace.total_tokens)}
+            </span>
+          </div>
+          <div>
+            <span className="text-text-muted block">Total Cost</span>
+            <span className="text-text">{formatCost(trace.total_cost)}</span>
+          </div>
+          <div>
             <span className="text-text-muted block">Started</span>
             <span className="text-text">
               {formatDateTime(trace.started_at)}
@@ -117,27 +132,25 @@ export default function TraceDetailPage({
             <span className="text-text-muted block">Ended</span>
             <span className="text-text">{formatDateTime(trace.ended_at)}</span>
           </div>
-          {trace.session_id && (
-            <div>
-              <span className="text-text-muted block">Session</span>
-              <span className="text-text">{trace.session_id}</span>
-            </div>
-          )}
-          {trace.user_id && (
-            <div>
-              <span className="text-text-muted block">User</span>
-              <span className="text-text">{trace.user_id}</span>
-            </div>
-          )}
-          {trace.environment && (
-            <div>
-              <span className="text-text-muted block">Environment</span>
-              <span className="text-text">{trace.environment}</span>
-            </div>
-          )}
-          {trace.tags.length > 0 && (
-            <div className="col-span-2">
-              <span className="text-text-muted block mb-1">Tags</span>
+          <div>
+            <span className="text-text-muted block">Session</span>
+            <span className="text-text">{trace.session_id ?? "—"}</span>
+          </div>
+          <div>
+            <span className="text-text-muted block">User</span>
+            <span className="text-text">{trace.user_id ?? "—"}</span>
+          </div>
+          <div>
+            <span className="text-text-muted block">Environment</span>
+            <span className="text-text">{trace.environment ?? "—"}</span>
+          </div>
+          <div>
+            <span className="text-text-muted block">Release</span>
+            <span className="text-text">{trace.release ?? "—"}</span>
+          </div>
+          <div className="col-span-2">
+            <span className="text-text-muted block mb-1">Tags</span>
+            {trace.tags.length > 0 ? (
               <div className="flex gap-1 flex-wrap">
                 {trace.tags.map((tag) => (
                   <Badge key={tag} variant="default">
@@ -145,8 +158,10 @@ export default function TraceDetailPage({
                   </Badge>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <span className="text-text">—</span>
+            )}
+          </div>
         </div>
       </div>
 
