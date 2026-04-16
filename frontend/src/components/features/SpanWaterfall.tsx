@@ -37,9 +37,9 @@ export function SpanWaterfall({ trace }: SpanWaterfallProps) {
   }
 
   return (
-    <div className="border border-border flex flex-col md:flex-row min-h-[400px] max-h-[calc(100vh-420px)]">
+    <div className="border border-border flex flex-col md:flex-row min-h-[400px] max-h-[calc(100vh-380px)]">
       {/* Left panel — waterfall tree */}
-      <div className="md:w-[38%] w-full overflow-y-auto overflow-x-hidden border-b md:border-b-0 md:border-r border-border flex-shrink-0">
+      <div className="md:w-[38%] w-full max-h-[50vh] md:max-h-none overflow-y-auto overflow-x-hidden border-b md:border-b-0 md:border-r border-border flex-shrink-0">
         <div className="sticky top-0 z-10 bg-surface px-3 py-1.5 border-b border-border">
           <span className="text-[10px] font-mono text-text-muted uppercase tracking-wider">
             Spans · {trace.spans.length}
