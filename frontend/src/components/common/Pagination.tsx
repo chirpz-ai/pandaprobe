@@ -30,6 +30,7 @@ export function Pagination({
       <div className="flex items-center gap-3">
         {limit != null && onLimitChange && (
           <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-text-muted font-mono">Rows</span>
             <div className="flex items-center gap-0.5">
               {LIMIT_OPTIONS.map((opt) => (
                 <button
