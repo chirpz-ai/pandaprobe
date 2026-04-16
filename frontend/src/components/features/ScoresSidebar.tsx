@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, MessageSquareText, Clock, RefreshCw, FlaskConical } from "lucide-react";
 import type { TraceScoreResponse } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
@@ -25,12 +25,12 @@ export function ScoresSidebar({ scores, open, onClose }: ScoresSidebarProps) {
       )}
       <div
         className={cn(
-          "fixed top-0 right-0 z-50 h-full w-[380px] max-w-[90vw] bg-surface border-l border-border",
+          "fixed top-0 right-0 z-50 h-full w-[450px] max-w-[90vw] bg-surface border-l border-border",
           "flex flex-col transition-transform duration-200 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-between h-12 px-4 border-b border-border flex-shrink-0">
           <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider">
             Scores · {scores.length}
           </h2>
@@ -60,34 +60,44 @@ export function ScoresSidebar({ scores, open, onClose }: ScoresSidebarProps) {
 function ScoreRow({ score }: { score: TraceScoreResponse }) {
   return (
     <div className="px-4 py-3 hover:bg-surface-hi transition-colors">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-mono text-text font-medium">
-          {score.name}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-mono text-text">
+          <span className="text-primary">{score.name}</span>
+          <span className="text-primary mx-1.5">=</span>
+          <span className="text-primary font-medium">
+            {score.value ?? "—"}
+          </span>
         </span>
         <StatusBadge status={score.status} />
       </div>
 
-      <div className="flex items-baseline gap-3 mb-2">
-        <span className="text-lg font-mono text-primary">
-          {score.value ?? "—"}
-        </span>
-        <Badge variant="default">{score.data_type}</Badge>
+      <div className="flex items-center gap-1.5 mb-2">
         <Badge variant="default">{score.source}</Badge>
       </div>
 
       {score.reason && (
-        <p className="text-xs font-mono text-text-dim mb-2 whitespace-pre-wrap">
-          {score.reason}
-        </p>
+        <div className="flex items-start gap-1 mb-2">
+          <MessageSquareText className="h-3 w-3 text-text-muted mt-0.5 flex-shrink-0" />
+          <p className="text-xs font-mono text-text-dim whitespace-pre-wrap">
+            <span className="text-text-muted">Reasoning:</span> {score.reason}
+          </p>
+        </div>
       )}
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] font-mono text-text-muted">
-        <span>Created {formatDateTime(score.created_at)}</span>
-        <span>Updated {formatDateTime(score.updated_at)}</span>
+      <div className="space-y-0.5 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-1.5">
+          <Clock className="h-2.5 w-2.5" />
+          <span>Created {formatDateTime(score.created_at)}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <RefreshCw className="h-2.5 w-2.5" />
+          <span>Updated {formatDateTime(score.updated_at)}</span>
+        </div>
         {score.eval_run_id && (
-          <span className="truncate col-span-2">
-            Eval run: {score.eval_run_id}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <FlaskConical className="h-2.5 w-2.5" />
+            <span className="truncate">Eval run: {score.eval_run_id}</span>
+          </div>
         )}
       </div>
     </div>
