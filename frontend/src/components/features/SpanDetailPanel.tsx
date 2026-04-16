@@ -6,7 +6,12 @@ import type { SpanResponse, TraceResponse } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
 import { JsonViewer } from "@/components/common/JsonViewer";
-import { formatDateTime, formatDuration, formatCost } from "@/lib/utils/format";
+import {
+  formatDateTime,
+  formatDuration,
+  formatCost,
+  formatTokens,
+} from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 
 interface SpanDetailPanelProps {
@@ -43,8 +48,16 @@ function TraceDetail({ trace }: { trace: TraceResponse }) {
         </span>
       </div>
 
+      <DetailSection title="Summary">
+        <div className="grid grid-cols-3 gap-x-6 gap-y-2">
+          <KV label="Total tokens" value={formatTokens(trace.total_tokens)} />
+          <KV label="Total cost" value={formatCost(trace.total_cost)} />
+          <KV label="Spans" value={String(trace.spans.length)} />
+        </div>
+      </DetailSection>
+
       {trace.input != null && (
-        <DetailSection title="Input" defaultOpen>
+        <DetailSection title="Input">
           <div className="pl-1">
             <JsonViewer data={trace.input} />
           </div>
@@ -52,7 +65,7 @@ function TraceDetail({ trace }: { trace: TraceResponse }) {
       )}
 
       {trace.output != null && (
-        <DetailSection title="Output" defaultOpen>
+        <DetailSection title="Output">
           <div className="pl-1">
             <JsonViewer data={trace.output} />
           </div>
@@ -93,8 +106,12 @@ function SpanDetail({ span }: { span: SpanResponse }) {
       </div>
 
       {/* Info grid */}
-      <DetailSection title="Info" defaultOpen>
+      <DetailSection title="Info">
         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+          <KV label="Span ID" value={span.span_id} copyable />
+          {span.parent_span_id && (
+            <KV label="Parent span" value={span.parent_span_id} copyable />
+          )}
           <KV label="Latency" value={formatDuration(span.latency_ms)} />
           <KV
             label="Time to first token"
@@ -115,7 +132,6 @@ function SpanDetail({ span }: { span: SpanResponse }) {
       {span.error && (
         <DetailSection
           title="Error"
-          defaultOpen
           titleClassName="text-error"
           icon={<AlertTriangle className="h-3 w-3 text-error" />}
         >
@@ -127,7 +143,7 @@ function SpanDetail({ span }: { span: SpanResponse }) {
 
       {/* Input */}
       {span.input != null && (
-        <DetailSection title="Input" defaultOpen>
+        <DetailSection title="Input">
           <div className="pl-1">
             <JsonViewer data={span.input} />
           </div>
@@ -136,7 +152,7 @@ function SpanDetail({ span }: { span: SpanResponse }) {
 
       {/* Output */}
       {span.output != null && (
-        <DetailSection title="Output" defaultOpen>
+        <DetailSection title="Output">
           <div className="pl-1">
             <JsonViewer data={span.output} />
           </div>
@@ -189,7 +205,7 @@ function SpanDetail({ span }: { span: SpanResponse }) {
 function DetailSection({
   title,
   children,
-  defaultOpen = false,
+  defaultOpen = true,
   titleClassName,
   icon,
 }: {
@@ -228,13 +244,32 @@ function DetailSection({
   );
 }
 
-function KV({ label, value }: { label: string; value: string }) {
+function KV({
+  label,
+  value,
+  copyable,
+}: {
+  label: string;
+  value: string;
+  copyable?: boolean;
+}) {
   return (
-    <div>
+    <div className="min-w-0">
       <span className="text-[10px] font-mono text-text-muted block">
         {label}
       </span>
-      <span className="text-xs font-mono text-text">{value}</span>
+      {copyable ? (
+        <button
+          type="button"
+          onClick={() => navigator.clipboard.writeText(value)}
+          className="text-xs font-mono text-text truncate block max-w-full hover:text-primary transition-colors text-left"
+          title={value}
+        >
+          {value}
+        </button>
+      ) : (
+        <span className="text-xs font-mono text-text">{value}</span>
+      )}
     </div>
   );
 }
