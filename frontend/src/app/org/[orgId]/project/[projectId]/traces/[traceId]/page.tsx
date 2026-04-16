@@ -3,14 +3,16 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, Copy, Check, BarChart3 } from "lucide-react";
 import { getTrace, deleteTrace } from "@/lib/api/traces";
 import { getTraceScoresByTraceId } from "@/lib/api/evaluations";
 import { queryKeys } from "@/lib/query/keys";
 import { SpanWaterfall } from "@/components/features/SpanWaterfall";
+import { ScoresSidebar } from "@/components/features/ScoresSidebar";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -40,6 +42,8 @@ export default function TraceDetailPage({
   useDocumentTitle("Trace Detail");
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+  const [scoresOpen, setScoresOpen] = useState(false);
 
   const traceQuery = useQuery({
     queryKey: queryKeys.traces.detail(traceId),
@@ -64,6 +68,12 @@ export default function TraceDetailPage({
     }
   }
 
+  function handleCopyId() {
+    navigator.clipboard.writeText(trace!.trace_id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  }
+
   if (traceQuery.isPending) return <LoadingState />;
   if (traceQuery.error)
     return <ErrorState message={extractErrorMessage(traceQuery.error)} />;
@@ -86,20 +96,48 @@ export default function TraceDetailPage({
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-lg font-mono text-primary">{trace.name}</h1>
+          <h1 className="text-lg font-mono text-primary">{trace.name}</h1>
+          <div className="flex items-center gap-1.5">
             <span className="text-xs text-text-muted font-mono">
               {trace.trace_id}
             </span>
+            <Tooltip content={copiedId ? "Copied!" : "Copy trace ID"}>
+              <button
+                className="text-text-muted hover:text-text transition-colors"
+                onClick={handleCopyId}
+              >
+                {copiedId ? (
+                  <Check className="h-3 w-3 text-success" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+              </button>
+            </Tooltip>
           </div>
         </div>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => setConfirmDelete(true)}
-        >
-          <Trash2 className="h-3 w-3" /> Delete
-        </Button>
+        <div className="flex items-center gap-2">
+          {scores.length > 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setScoresOpen((v) => !v)}
+              className="text-info border-info/30 hover:bg-info/10"
+            >
+              <BarChart3 className="h-3 w-3" />
+              Scores
+              <Badge variant="info" className="ml-0.5 px-1.5 py-0">
+                {scores.length}
+              </Badge>
+            </Button>
+          )}
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="h-3 w-3" /> Delete
+          </Button>
+        </div>
       </div>
 
       <div className="border-engraved bg-surface p-4">
@@ -130,7 +168,9 @@ export default function TraceDetailPage({
           </div>
           <div>
             <span className="text-text-muted block">Ended</span>
-            <span className="text-text">{formatDateTime(trace.ended_at)}</span>
+            <span className="text-text">
+              {formatDateTime(trace.ended_at)}
+            </span>
           </div>
           <div>
             <span className="text-text-muted block">Session</span>
@@ -165,28 +205,13 @@ export default function TraceDetailPage({
         </div>
       </div>
 
-      {scores.length > 0 && (
-        <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-            Scores
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {scores.map((score) => (
-              <div key={score.id} className="border border-border p-2">
-                <span className="text-xs text-text-muted block">
-                  {score.name}
-                </span>
-                <span className="text-sm font-mono text-text">
-                  {score.value ?? "—"}
-                </span>
-                <StatusBadge status={score.status} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <SpanWaterfall trace={trace} />
+
+      <ScoresSidebar
+        scores={scores}
+        open={scoresOpen}
+        onClose={() => setScoresOpen(false)}
+      />
 
       <ConfirmDialog
         open={confirmDelete}
