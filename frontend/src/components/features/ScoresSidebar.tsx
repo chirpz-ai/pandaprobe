@@ -75,9 +75,9 @@ function ScoreRow({ score }: { score: ScoreItem }) {
     <div className="px-4 py-3 hover:bg-surface-hi transition-colors">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-mono text-text">
-          <span className="text-primary">{score.name}</span>
-          <span className="text-primary mx-1.5">=</span>
-          <span className="text-primary font-medium">
+          <span className="text-warning font-medium">{score.name}</span>
+          <span className="text-text-muted mx-1.5">=</span>
+          <span className="text-warning font-semibold">
             {score.value ?? "—"}
           </span>
         </span>
@@ -222,28 +222,15 @@ function MetadataValue({
       return <span className="text-text-muted text-[11px] font-mono">{"{}"}</span>;
     }
 
-    const allLeaf = entries.every(
-      ([, v]) => v === null || typeof v !== "object",
-    );
-
-    if (allLeaf && depth > 0) {
-      return <FlatKVTable entries={entries} />;
-    }
+    const leafEntries = entries.filter(([, v]) => v === null || typeof v !== "object");
+    const nestedEntries = entries.filter(([, v]) => v !== null && typeof v === "object");
 
     return (
-      <div className={cn("space-y-1", depth > 0 && "pl-2 border-l border-border/50")}>
-        {entries.map(([key, val]) => {
-          const isComplex = val !== null && typeof val === "object";
-          if (isComplex) {
-            return <NestedSection key={key} label={key} value={val} depth={depth} />;
-          }
-          return (
-            <div key={key} className="flex items-baseline gap-1.5 text-[11px] font-mono">
-              <span className="text-text-muted flex-shrink-0">{key}:</span>
-              <PrimitiveValue value={val} />
-            </div>
-          );
-        })}
+      <div className={cn("space-y-1.5", depth > 0 && "pl-2 border-l border-border/50")}>
+        {leafEntries.length > 0 && <FlatKVTable entries={leafEntries} />}
+        {nestedEntries.map(([key, val]) => (
+          <NestedSection key={key} label={key} value={val} depth={depth} />
+        ))}
       </div>
     );
   }
@@ -271,16 +258,22 @@ function PrimitiveValue({ value }: { value: unknown }) {
 
 function FlatKVTable({ entries }: { entries: [string, unknown][] }) {
   return (
-    <table className="text-[11px] font-mono w-full">
-      <tbody>
-        {entries.map(([key, val]) => (
-          <tr key={key}>
-            <td className="text-text-muted pr-3 py-px whitespace-nowrap align-top">{key}</td>
-            <td className="text-text py-px"><PrimitiveValue value={val} /></td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="overflow-x-auto border border-border/40">
+      <table className="text-[11px] font-mono w-full border-collapse">
+        <tbody>
+          {entries.map(([key, val]) => (
+            <tr key={key} className="border-b border-border/40 last:border-0">
+              <td className="text-text-muted px-2 py-0.5 whitespace-nowrap align-top border-r border-border/40">
+                {key}
+              </td>
+              <td className="text-text px-2 py-0.5">
+                <PrimitiveValue value={val} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -308,12 +301,12 @@ function ObjectArrayTable({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto border border-border/40">
       <table className="text-[11px] font-mono w-full border-collapse">
         <thead>
-          <tr className="border-b border-border">
+          <tr className="border-b border-border/40 bg-surface-hi/30">
             {allKeys.map((k) => (
-              <th key={k} className="text-text-muted text-left pr-3 py-0.5 font-normal whitespace-nowrap">
+              <th key={k} className="text-text-muted text-left px-2 py-0.5 font-normal whitespace-nowrap">
                 {k}
               </th>
             ))}
@@ -321,9 +314,9 @@ function ObjectArrayTable({
         </thead>
         <tbody>
           {items.map((item, i) => (
-            <tr key={i} className="border-b border-border/30 last:border-0">
+            <tr key={i} className="border-b border-border/20 last:border-0">
               {allKeys.map((k) => (
-                <td key={k} className="pr-3 py-0.5 whitespace-nowrap">
+                <td key={k} className="px-2 py-0.5 whitespace-nowrap">
                   <PrimitiveValue value={item[k]} />
                 </td>
               ))}
@@ -352,13 +345,13 @@ function NestedSection({
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-text transition-colors"
+        className="flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-text transition-colors py-0.5"
       >
         {open ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
-        {label}
+        <span className="font-medium">{label}</span>
       </button>
       {open && (
-        <div className="mt-0.5">
+        <div className="mt-0.5 ml-1">
           <MetadataValue data={value} depth={depth + 1} />
         </div>
       )}
