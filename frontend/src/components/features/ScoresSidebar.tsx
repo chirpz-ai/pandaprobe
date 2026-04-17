@@ -1,6 +1,12 @@
 "use client";
 
-import { X, MessageSquareText, Clock, RefreshCw, FlaskConical } from "lucide-react";
+import {
+  X,
+  MessageSquareText,
+  Clock,
+  RefreshCw,
+  FlaskConical,
+} from "lucide-react";
 import type { TraceScoreResponse } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
@@ -18,10 +24,7 @@ export function ScoresSidebar({ scores, open, onClose }: ScoresSidebarProps) {
   return (
     <>
       {open && (
-        <div
-          className="fixed inset-0 z-40 bg-bg/50"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 z-40 bg-bg/50" onClick={onClose} />
       )}
       <div
         className={cn(
@@ -64,9 +67,7 @@ function ScoreRow({ score }: { score: TraceScoreResponse }) {
         <span className="text-xs font-mono text-text">
           <span className="text-primary">{score.name}</span>
           <span className="text-primary mx-1.5">=</span>
-          <span className="text-primary font-medium">
-            {score.value ?? "—"}
-          </span>
+          <span className="text-primary font-medium">{score.value ?? "—"}</span>
         </span>
         <StatusBadge status={score.status} />
       </div>

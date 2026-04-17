@@ -109,9 +109,18 @@ export function TimeInput({ value, onChange, className }: TimeInputProps) {
         inputMode="numeric"
         maxLength={2}
         value={hourText}
-        onChange={(e) => setHourText(e.target.value.replace(/\D/g, "").slice(0, 2))}
-        onFocus={(e) => { setHourDraft(pad(h12)); setHourFocused(true); e.target.select(); }}
-        onBlur={() => { commitHour(hourDraft); setHourFocused(false); }}
+        onChange={(e) =>
+          setHourText(e.target.value.replace(/\D/g, "").slice(0, 2))
+        }
+        onFocus={(e) => {
+          setHourDraft(pad(h12));
+          setHourFocused(true);
+          e.target.select();
+        }}
+        onBlur={() => {
+          commitHour(hourDraft);
+          setHourFocused(false);
+        }}
         onKeyDown={handleHourKeyDown}
         className={segmentClasses}
       />
@@ -124,9 +133,18 @@ export function TimeInput({ value, onChange, className }: TimeInputProps) {
         inputMode="numeric"
         maxLength={2}
         value={minuteText}
-        onChange={(e) => setMinuteText(e.target.value.replace(/\D/g, "").slice(0, 2))}
-        onFocus={(e) => { setMinuteDraft(pad(minutes)); setMinuteFocused(true); e.target.select(); }}
-        onBlur={() => { commitMinute(minuteDraft); setMinuteFocused(false); }}
+        onChange={(e) =>
+          setMinuteText(e.target.value.replace(/\D/g, "").slice(0, 2))
+        }
+        onFocus={(e) => {
+          setMinuteDraft(pad(minutes));
+          setMinuteFocused(true);
+          e.target.select();
+        }}
+        onBlur={() => {
+          commitMinute(minuteDraft);
+          setMinuteFocused(false);
+        }}
         onKeyDown={handleMinuteKeyDown}
         className={segmentClasses}
       />

@@ -171,9 +171,7 @@ const SpanWaterfallNode = memo(function SpanWaterfallNode({
         className={cn(
           "w-full flex items-center gap-1.5 py-1.5 pr-3 text-left transition-colors duration-100",
           "hover:bg-surface-hi group",
-          isSelected
-            ? "bg-surface-hi"
-            : "",
+          isSelected ? "bg-surface-hi" : "",
         )}
         style={{
           paddingLeft: `${(depth + 1) * INDENT_PX + 12}px`,

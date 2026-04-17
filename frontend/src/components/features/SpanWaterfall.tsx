@@ -25,8 +25,9 @@ export function SpanWaterfall({ trace }: SpanWaterfallProps) {
     setSelectedId(id);
   }, []);
 
-  const selectedSpan = selectedId === "trace" ? null : (spanMap.get(selectedId) ?? null);
-  const mode = selectedId === "trace" ? "trace" as const : "span" as const;
+  const selectedSpan =
+    selectedId === "trace" ? null : (spanMap.get(selectedId) ?? null);
+  const mode = selectedId === "trace" ? ("trace" as const) : ("span" as const);
 
   if (trace.spans.length === 0) {
     return (
@@ -55,11 +56,7 @@ export function SpanWaterfall({ trace }: SpanWaterfallProps) {
 
       {/* Right panel — detail view */}
       <div className="flex-1 min-w-0 overflow-y-auto bg-surface">
-        <SpanDetailPanel
-          trace={trace}
-          span={selectedSpan}
-          mode={mode}
-        />
+        <SpanDetailPanel trace={trace} span={selectedSpan} mode={mode} />
       </div>
     </div>
   );

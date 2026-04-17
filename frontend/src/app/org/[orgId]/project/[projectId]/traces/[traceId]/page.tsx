@@ -168,9 +168,7 @@ export default function TraceDetailPage({
           </div>
           <div>
             <span className="text-text-muted block">Ended</span>
-            <span className="text-text">
-              {formatDateTime(trace.ended_at)}
-            </span>
+            <span className="text-text">{formatDateTime(trace.ended_at)}</span>
           </div>
           <div>
             <span className="text-text-muted block">Session</span>

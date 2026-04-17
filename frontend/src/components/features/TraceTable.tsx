@@ -59,97 +59,97 @@ export function TraceTable({
 
   return (
     <div className="border border-border">
-    <table className="w-full text-xs font-mono">
-      <thead className="sticky top-0 z-10 bg-surface-hi">
-        <tr className="border-b border-border">
-          {selectable && (
-            <th className="w-8 px-3 py-2">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={(el) => {
-                  if (el) el.indeterminate = !!someSelected;
-                }}
-                onChange={toggleAll}
-              />
-            </th>
-          )}
-          <th className="text-left px-3 py-2 text-text-muted font-normal">
-            Name
-          </th>
-          <th className="text-left px-3 py-2 text-text-muted font-normal">
-            Status
-          </th>
-          <th className="text-left px-3 py-2 text-text-muted font-normal">
-            Latency
-          </th>
-          <th className="text-left px-3 py-2 text-text-muted font-normal">
-            Tokens
-          </th>
-          <th className="text-left px-3 py-2 text-text-muted font-normal">
-            Cost
-          </th>
-          <th className="text-left px-3 py-2 text-text-muted font-normal">
-            Spans
-          </th>
-          <th className="text-left px-3 py-2 text-text-muted font-normal">
-            Started
-          </th>
-          <th className="text-left px-3 py-2 text-text-muted font-normal">
-            Tags
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {traces.map((trace) => (
-          <tr
-            key={trace.trace_id}
-            className="border-b border-border hover:bg-surface-hi transition-colors"
-          >
+      <table className="w-full text-xs font-mono">
+        <thead className="sticky top-0 z-10 bg-surface-hi">
+          <tr className="border-b border-border">
             {selectable && (
-              <td className="w-8 px-3 py-2">
+              <th className="w-8 px-3 py-2">
                 <input
                   type="checkbox"
-                  checked={selected.has(trace.trace_id)}
-                  onChange={() => toggleOne(trace.trace_id)}
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !!someSelected;
+                  }}
+                  onChange={toggleAll}
                 />
-              </td>
+              </th>
             )}
-            <td className="px-3 py-2 max-w-[200px] truncate">
-              <Link
-                href={`${basePath}/${trace.trace_id}`}
-                className="text-text hover:text-primary transition-colors"
-              >
-                {trace.name}
-              </Link>
-            </td>
-            <td className="px-3 py-2">
-              <StatusBadge status={trace.status} />
-            </td>
-            <td className="px-3 py-2 text-text-dim">
-              {formatDuration(trace.latency_ms)}
-            </td>
-            <td className="px-3 py-2 text-text-dim">{trace.total_tokens}</td>
-            <td className="px-3 py-2 text-text-dim">
-              {formatCost(trace.total_cost)}
-            </td>
-            <td className="px-3 py-2 text-text-dim">{trace.span_count}</td>
-            <td className="px-3 py-2 text-text-dim">
-              {formatRelativeTime(trace.started_at)}
-            </td>
-            <td className="px-3 py-2">
-              <div className="flex gap-1 flex-wrap">
-                {trace.tags.slice(0, 3).map((tag) => (
-                  <Badge key={tag} variant="default">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </td>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Name
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Status
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Latency
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Tokens
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Cost
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Spans
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Started
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Tags
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {traces.map((trace) => (
+            <tr
+              key={trace.trace_id}
+              className="border-b border-border hover:bg-surface-hi transition-colors"
+            >
+              {selectable && (
+                <td className="w-8 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(trace.trace_id)}
+                    onChange={() => toggleOne(trace.trace_id)}
+                  />
+                </td>
+              )}
+              <td className="px-3 py-2 max-w-[200px] truncate">
+                <Link
+                  href={`${basePath}/${trace.trace_id}`}
+                  className="text-text hover:text-primary transition-colors"
+                >
+                  {trace.name}
+                </Link>
+              </td>
+              <td className="px-3 py-2">
+                <StatusBadge status={trace.status} />
+              </td>
+              <td className="px-3 py-2 text-text-dim">
+                {formatDuration(trace.latency_ms)}
+              </td>
+              <td className="px-3 py-2 text-text-dim">{trace.total_tokens}</td>
+              <td className="px-3 py-2 text-text-dim">
+                {formatCost(trace.total_cost)}
+              </td>
+              <td className="px-3 py-2 text-text-dim">{trace.span_count}</td>
+              <td className="px-3 py-2 text-text-dim">
+                {formatRelativeTime(trace.started_at)}
+              </td>
+              <td className="px-3 py-2">
+                <div className="flex gap-1 flex-wrap">
+                  {trace.tags.slice(0, 3).map((tag) => (
+                    <Badge key={tag} variant="default">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

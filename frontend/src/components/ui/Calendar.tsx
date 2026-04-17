@@ -22,14 +22,12 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
           "absolute right-1 top-3 h-7 w-7 inline-flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
         month_grid: "border-collapse",
         weekdays: "flex",
-        weekday:
-          "w-8 text-[10px] font-mono text-text-muted text-center",
+        weekday: "w-8 text-[10px] font-mono text-text-muted text-center",
         week: "flex mt-0.5",
         day: "relative p-0 text-center",
         day_button:
           "h-8 w-8 text-xs font-mono text-text-dim hover:bg-surface-hi hover:text-text transition-colors inline-flex items-center justify-center",
-        selected:
-          "!bg-primary !text-bg hover:!bg-accent",
+        selected: "!bg-primary !text-bg hover:!bg-accent",
         today: "text-accent font-bold",
         outside: "text-text-muted/40",
         disabled: "text-text-muted/30 pointer-events-none",

@@ -108,16 +108,15 @@ export default function TracesPage() {
     values.started_before,
   ]);
 
-  const { data, isPending, isPlaceholderData, error, refetch } =
-    useQuery({
-      queryKey: queryKeys.traces.list(
-        projectId,
-        params as unknown as Record<string, unknown>,
-      ),
-      queryFn: () => listTraces(params),
-      enabled: !!currentProject,
-      placeholderData: keepPreviousData,
-    });
+  const { data, isPending, isPlaceholderData, error, refetch } = useQuery({
+    queryKey: queryKeys.traces.list(
+      projectId,
+      params as unknown as Record<string, unknown>,
+    ),
+    queryFn: () => listTraces(params),
+    enabled: !!currentProject,
+    placeholderData: keepPreviousData,
+  });
 
   async function handleBatchDelete() {
     if (selected.size === 0) return;
@@ -356,9 +355,7 @@ export default function TracesPage() {
               onPageChange={setPage}
               total={data.total}
               limit={limit}
-              onLimitChange={(n) =>
-                set({ limit: String(n), page: "1" })
-              }
+              onLimitChange={(n) => set({ limit: String(n), page: "1" })}
             />
           </>
         )}

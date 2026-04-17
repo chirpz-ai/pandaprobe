@@ -18,9 +18,7 @@ export function JsonViewer({
   maxInitialDepth = 3,
 }: JsonViewerProps) {
   if (data == null) {
-    return (
-      <span className="token-keyword text-xs font-mono">null</span>
-    );
+    return <span className="token-keyword text-xs font-mono">null</span>;
   }
 
   if (typeof data === "string") {
@@ -38,7 +36,12 @@ export function JsonViewer({
 
   return (
     <div className={cn("text-xs font-mono", className)}>
-      <JsonNode value={data} depth={0} maxDepth={maxInitialDepth} defaultExpanded={defaultExpanded} />
+      <JsonNode
+        value={data}
+        depth={0}
+        maxDepth={maxInitialDepth}
+        defaultExpanded={defaultExpanded}
+      />
     </div>
   );
 }
@@ -55,7 +58,8 @@ function JsonNode({
   defaultExpanded: boolean;
 }) {
   if (value === null) return <span className="token-keyword">null</span>;
-  if (value === undefined) return <span className="token-keyword">undefined</span>;
+  if (value === undefined)
+    return <span className="token-keyword">undefined</span>;
 
   switch (typeof value) {
     case "string":
@@ -115,9 +119,7 @@ function JsonObject({
   defaultExpanded: boolean;
 }) {
   const keys = Object.keys(obj);
-  const [expanded, setExpanded] = useState(
-    defaultExpanded && depth < maxDepth,
-  );
+  const [expanded, setExpanded] = useState(defaultExpanded && depth < maxDepth);
   const toggle = useCallback(() => setExpanded((e) => !e), []);
 
   if (keys.length === 0) {
@@ -172,9 +174,7 @@ function JsonArray({
   maxDepth: number;
   defaultExpanded: boolean;
 }) {
-  const [expanded, setExpanded] = useState(
-    defaultExpanded && depth < maxDepth,
-  );
+  const [expanded, setExpanded] = useState(defaultExpanded && depth < maxDepth);
   const toggle = useCallback(() => setExpanded((e) => !e), []);
 
   if (items.length === 0) {
