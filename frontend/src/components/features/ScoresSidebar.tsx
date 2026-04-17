@@ -115,7 +115,7 @@ function ScoreRow({
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-mono text-text">
           <span className="text-warning font-medium">{score.name}</span>
-          <span className="text-text-muted mx-1.5">=</span>
+          <span className="text-warning mx-1.5">=</span>
           <span className="text-warning font-semibold">
             {score.value ?? "—"}
           </span>
@@ -139,7 +139,7 @@ function ScoreRow({
 
       <div className="flex items-center gap-1.5 mb-2">
         <Badge variant="default">{score.data_type}</Badge>
-        <Badge variant="default">{score.source}</Badge>
+        <Badge variant="info">{score.source}</Badge>
       </div>
 
       {score.reason && (
@@ -300,7 +300,7 @@ function EditableTraceScoreRow({
 
       <div className="flex items-center gap-1.5 mb-2">
         <Badge variant="default">{score.data_type}</Badge>
-        <Badge variant="default">{score.source}</Badge>
+        <Badge variant="info">{score.source}</Badge>
       </div>
 
       <div className="mb-2">
