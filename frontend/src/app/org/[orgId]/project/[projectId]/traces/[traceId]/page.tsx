@@ -215,6 +215,11 @@ export default function TraceDetailPage({
         scores={scores}
         open={scoresOpen}
         onClose={() => setScoresOpen(false)}
+        onScoreUpdated={() =>
+          queryClient.invalidateQueries({
+            queryKey: [...queryKeys.traces.detail(traceId), "scores"],
+          })
+        }
       />
 
       <ConfirmDialog
