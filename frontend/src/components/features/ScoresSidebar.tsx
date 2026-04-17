@@ -16,16 +16,22 @@ import {
   Save,
   XCircle,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import type { TraceScoreResponse, SessionScoreResponse } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { formatDateTime } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-import { updateTraceScore } from "@/lib/api/evaluations";
+import {
+  updateTraceScore,
+  deleteTraceScore,
+  deleteSessionScore,
+} from "@/lib/api/evaluations";
 import { extractErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/providers/ToastProvider";
 
@@ -36,6 +42,7 @@ interface ScoresSidebarProps {
   open: boolean;
   onClose: () => void;
   onScoreUpdated?: () => void;
+  onScoreDeleted?: () => void;
 }
 
 export function ScoresSidebar({
@@ -43,6 +50,7 @@ export function ScoresSidebar({
   open,
   onClose,
   onScoreUpdated,
+  onScoreDeleted,
 }: ScoresSidebarProps) {
   return (
     <>
@@ -77,6 +85,7 @@ export function ScoresSidebar({
                   key={score.id}
                   score={score}
                   onScoreUpdated={onScoreUpdated}
+                  onScoreDeleted={onScoreDeleted}
                 />
               ))}
             </div>
@@ -90,12 +99,30 @@ export function ScoresSidebar({
 function ScoreRow({
   score,
   onScoreUpdated,
+  onScoreDeleted,
 }: {
   score: ScoreItem;
   onScoreUpdated?: () => void;
+  onScoreDeleted?: () => void;
 }) {
+  const { toast } = useToast();
   const traceScore = "trace_id" in score ? (score as TraceScoreResponse) : null;
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function handleDelete() {
+    try {
+      if (traceScore) {
+        await deleteTraceScore(score.id);
+      } else {
+        await deleteSessionScore(score.id);
+      }
+      toast({ title: "Score deleted", variant: "success" });
+      onScoreDeleted?.();
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
+    }
+  }
 
   if (editing && traceScore) {
     return (
@@ -112,16 +139,15 @@ function ScoreRow({
 
   return (
     <div className="px-4 py-3 hover:bg-surface-hi transition-colors">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-mono text-text">
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <span className="text-xs font-mono text-text min-w-0 truncate">
           <span className="text-warning font-medium">{score.name}</span>
           <span className="text-warning mx-1.5">=</span>
           <span className="text-warning font-semibold">
             {score.value ?? "—"}
           </span>
         </span>
-        <div className="flex items-center gap-1.5">
-          <StatusBadge status={score.status} />
+        <div className="flex items-center gap-1 flex-shrink-0">
           {traceScore && (
             <Button
               variant="ghost"
@@ -134,12 +160,23 @@ function ScoreRow({
               annotate
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 gap-1 text-text-muted hover:text-error"
+            onClick={() => setConfirmDelete(true)}
+            aria-label="Delete score"
+          >
+            <Trash2 className="h-3 w-3" />
+            delete
+          </Button>
         </div>
       </div>
 
       <div className="flex items-center gap-1.5 mb-2">
         <Badge variant="default">{score.data_type}</Badge>
         <Badge variant="info">{score.source}</Badge>
+        <StatusBadge status={score.status} />
       </div>
 
       {score.reason && (
@@ -189,6 +226,16 @@ function ScoreRow({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Delete score"
+        description={`Delete score "${score.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        destructive
+      />
     </div>
   );
 }
@@ -301,6 +348,7 @@ function EditableTraceScoreRow({
       <div className="flex items-center gap-1.5 mb-2">
         <Badge variant="default">{score.data_type}</Badge>
         <Badge variant="info">{score.source}</Badge>
+        <StatusBadge status={score.status} />
       </div>
 
       <div className="mb-2">
