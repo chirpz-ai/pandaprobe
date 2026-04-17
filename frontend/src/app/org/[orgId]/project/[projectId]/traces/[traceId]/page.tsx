@@ -220,6 +220,11 @@ export default function TraceDetailPage({
             queryKey: [...queryKeys.traces.detail(traceId), "scores"],
           })
         }
+        onScoreDeleted={() =>
+          queryClient.invalidateQueries({
+            queryKey: [...queryKeys.traces.detail(traceId), "scores"],
+          })
+        }
       />
 
       <ConfirmDialog
