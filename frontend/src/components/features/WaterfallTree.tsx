@@ -197,20 +197,28 @@ const SpanWaterfallNode = memo(function SpanWaterfallNode({
             />
           )}
           {hasChildren ? (
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation();
                 setExpanded((v) => !v);
               }}
-              className="relative z-10 text-text-muted hover:text-text transition-colors"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setExpanded((v) => !v);
+                }
+              }}
+              className="relative z-10 text-text-muted hover:text-text transition-colors cursor-pointer"
             >
               {expanded ? (
                 <ChevronDown className="h-3 w-3" />
               ) : (
                 <ChevronRight className="h-3 w-3" />
               )}
-            </button>
+            </span>
           ) : (
             <div
               className="h-1 w-1 flex-shrink-0"
