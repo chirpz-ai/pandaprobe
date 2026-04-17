@@ -262,6 +262,11 @@ export default function SessionDetailPage({
         scores={scores}
         open={scoresOpen}
         onClose={() => setScoresOpen(false)}
+        onScoreDeleted={() =>
+          queryClient.invalidateQueries({
+            queryKey: [...queryKeys.sessions.detail(sessionId), "scores"],
+          })
+        }
       />
 
       <ConfirmDialog
