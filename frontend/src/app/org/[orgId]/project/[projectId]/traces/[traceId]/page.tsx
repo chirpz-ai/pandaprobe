@@ -26,6 +26,7 @@ import {
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useProjectPath, useProjectId } from "@/hooks/useNavigation";
 import { extractErrorMessage } from "@/lib/api/client";
+import { cn } from "@/lib/utils/cn";
 
 export default function TraceDetailPage({
   params,
@@ -116,20 +117,25 @@ export default function TraceDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {scores.length > 0 && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setScoresOpen((v) => !v)}
-              className="text-info border-info/30 hover:bg-info/10"
-            >
-              <BarChart3 className="h-3 w-3" />
-              Scores
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setScoresOpen((v) => !v)}
+            disabled={scores.length === 0}
+            className={cn(
+              scores.length > 0
+                ? "text-info border-info/30 hover:bg-info/10"
+                : "text-text-muted border-border opacity-50 cursor-not-allowed",
+            )}
+          >
+            <BarChart3 className="h-3 w-3" />
+            Scores
+            {scores.length > 0 && (
               <Badge variant="info" className="ml-0.5 px-1.5 py-0">
                 {scores.length}
               </Badge>
-            </Button>
-          )}
+            )}
+          </Button>
           <Button
             variant="destructive"
             size="sm"
