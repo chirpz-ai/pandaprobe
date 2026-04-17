@@ -108,7 +108,7 @@ export default function TracesPage() {
     values.started_before,
   ]);
 
-  const { data, isPending, isFetching, isPlaceholderData, error, refetch } =
+  const { data, isPending, isPlaceholderData, error, refetch } =
     useQuery({
       queryKey: queryKeys.traces.list(
         projectId,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, type KeyboardEvent } from "react";
+import { useState, useRef, type KeyboardEvent } from "react";
 import { cn } from "@/lib/utils/cn";
 
 interface TimeInputProps {
@@ -34,19 +34,18 @@ export function TimeInput({ value, onChange, className }: TimeInputProps) {
   const [hours24, minutes] = parseSegments(value);
   const { h12, period } = to12(hours24);
 
-  const [hourText, setHourText] = useState(pad(h12));
-  const [minuteText, setMinuteText] = useState(pad(minutes));
+  const [hourFocused, setHourFocused] = useState(false);
+  const [minuteFocused, setMinuteFocused] = useState(false);
+  const [hourDraft, setHourDraft] = useState(pad(h12));
+  const [minuteDraft, setMinuteDraft] = useState(pad(minutes));
+
+  const hourText = hourFocused ? hourDraft : pad(h12);
+  const minuteText = minuteFocused ? minuteDraft : pad(minutes);
+  const setHourText = setHourDraft;
+  const setMinuteText = setMinuteDraft;
 
   const hourRef = useRef<HTMLInputElement>(null);
   const minuteRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (document.activeElement !== hourRef.current) setHourText(pad(h12));
-  }, [h12]);
-
-  useEffect(() => {
-    if (document.activeElement !== minuteRef.current) setMinuteText(pad(minutes));
-  }, [minutes]);
 
   function emit(h24: number, m: number) {
     onChange(`${pad(h24)}:${pad(m)}`);
@@ -111,9 +110,9 @@ export function TimeInput({ value, onChange, className }: TimeInputProps) {
         maxLength={2}
         value={hourText}
         onChange={(e) => setHourText(e.target.value.replace(/\D/g, "").slice(0, 2))}
-        onBlur={() => commitHour(hourText)}
+        onFocus={(e) => { setHourDraft(pad(h12)); setHourFocused(true); e.target.select(); }}
+        onBlur={() => { commitHour(hourDraft); setHourFocused(false); }}
         onKeyDown={handleHourKeyDown}
-        onFocus={(e) => e.target.select()}
         className={segmentClasses}
       />
 
@@ -126,9 +125,9 @@ export function TimeInput({ value, onChange, className }: TimeInputProps) {
         maxLength={2}
         value={minuteText}
         onChange={(e) => setMinuteText(e.target.value.replace(/\D/g, "").slice(0, 2))}
-        onBlur={() => commitMinute(minuteText)}
+        onFocus={(e) => { setMinuteDraft(pad(minutes)); setMinuteFocused(true); e.target.select(); }}
+        onBlur={() => { commitMinute(minuteDraft); setMinuteFocused(false); }}
         onKeyDown={handleMinuteKeyDown}
-        onFocus={(e) => e.target.select()}
         className={segmentClasses}
       />
 
