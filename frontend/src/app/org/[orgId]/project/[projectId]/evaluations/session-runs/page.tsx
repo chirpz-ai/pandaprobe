@@ -11,7 +11,10 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { usePagination } from "@/hooks/usePagination";
 import { queryKeys } from "@/lib/query/keys";
+import { EvaluationStatus } from "@/lib/api/enums";
 import { extractErrorMessage } from "@/lib/api/client";
+
+const LIST_POLL_INTERVAL_MS = 5000;
 
 export default function SessionRunsPage() {
   const { currentProject } = useProject();
@@ -28,6 +31,16 @@ export default function SessionRunsPage() {
     queryFn: () =>
       listSessionRuns({ limit: pagination.limit, offset: pagination.offset }),
     enabled: !!currentProject,
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      const anyPending = items.some(
+        (r) =>
+          r.status === EvaluationStatus.PENDING ||
+          r.status === EvaluationStatus.RUNNING,
+      );
+      return anyPending ? LIST_POLL_INTERVAL_MS : false;
+    },
+    refetchIntervalInBackground: false,
   });
 
   if (!currentProject) {
