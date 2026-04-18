@@ -284,6 +284,12 @@ export default function SessionDetailPage({
             queryKey: [...queryKeys.sessions.detail(sessionId), "scores"],
           })
         }
+        onRefresh={() =>
+          queryClient.invalidateQueries({
+            queryKey: [...queryKeys.sessions.detail(sessionId), "scores"],
+          })
+        }
+        isRefreshing={scoresQuery.isFetching}
       />
 
       <RunEvalSidebar
