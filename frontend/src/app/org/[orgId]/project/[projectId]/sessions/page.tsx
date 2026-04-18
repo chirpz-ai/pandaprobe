@@ -152,7 +152,7 @@ export default function SessionsPage() {
               disabled={selected.size === 0}
             >
               <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
-              Evaluation
+              Evaluate
             </Button>
           </div>
         </div>

@@ -210,7 +210,7 @@ export default function TracesPage() {
               disabled={selected.size === 0}
             >
               <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
-              Evaluation
+              Evaluate
             </Button>
             <Button
               variant="secondary"

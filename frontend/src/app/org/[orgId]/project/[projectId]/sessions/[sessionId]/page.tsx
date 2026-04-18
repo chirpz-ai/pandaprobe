@@ -157,7 +157,7 @@ export default function SessionDetailPage({
               onClick={() => setRunEvalOpen(true)}
             >
               <FlaskConical className="h-3 w-3" />
-              Evaluation
+              Evaluate
             </Button>
             <Button
               variant="secondary"
