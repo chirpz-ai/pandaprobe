@@ -24,7 +24,10 @@ import { formatDateTime } from "@/lib/utils/format";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, RotateCw, Trash2 } from "lucide-react";
 import { queryKeys } from "@/lib/query/keys";
+import { EvaluationStatus } from "@/lib/api/enums";
 import { extractErrorMessage } from "@/lib/api/client";
+
+const LIST_POLL_INTERVAL_MS = 5000;
 
 export default function TraceRunsPage() {
   const { currentProject } = useProject();
@@ -45,6 +48,16 @@ export default function TraceRunsPage() {
     queryFn: () =>
       listTraceRuns({ limit: pagination.limit, offset: pagination.offset }),
     enabled: !!currentProject,
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      const anyPending = items.some(
+        (r) =>
+          r.status === EvaluationStatus.PENDING ||
+          r.status === EvaluationStatus.RUNNING,
+      );
+      return anyPending ? LIST_POLL_INTERVAL_MS : false;
+    },
+    refetchIntervalInBackground: false,
   });
 
   async function handleRetry(runId: string) {
