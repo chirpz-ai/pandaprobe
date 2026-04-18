@@ -242,6 +242,12 @@ export default function TraceDetailPage({
             queryKey: [...queryKeys.traces.detail(traceId), "scores"],
           })
         }
+        onRefresh={() =>
+          queryClient.invalidateQueries({
+            queryKey: [...queryKeys.traces.detail(traceId), "scores"],
+          })
+        }
+        isRefreshing={scoresQuery.isFetching}
       />
 
       <RunEvalSidebar
