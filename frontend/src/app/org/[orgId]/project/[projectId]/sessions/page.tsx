@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import {
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { listSessions, type ListSessionsParams } from "@/lib/api/sessions";
 import { queryKeys } from "@/lib/query/keys";
 import { SessionTable } from "@/components/features/SessionTable";
+import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { DebouncedInput } from "@/components/common/DebouncedInput";
@@ -21,7 +26,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { X } from "lucide-react";
+import { X, FlaskConical } from "lucide-react";
 import { SessionSortBy, SortOrder } from "@/lib/api/enums";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useUrlState } from "@/hooks/useUrlState";
@@ -43,12 +48,16 @@ const URL_CONFIG = {
 
 export default function SessionsPage() {
   const { currentProject } = useProject();
+  const queryClient = useQueryClient();
   const projectId = currentProject?.id ?? "";
 
   const { values, set, page, limit, offset, setPage, totalPages } =
     useUrlState(URL_CONFIG);
 
   useDocumentTitle("Sessions");
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [runEvalOpen, setRunEvalOpen] = useState(false);
 
   const params = useMemo<ListSessionsParams>(() => {
     const p: ListSessionsParams = {
@@ -128,7 +137,25 @@ export default function SessionsPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-96px)] animate-fade-in">
       <div className="flex-shrink-0 space-y-3 pb-3">
-        <h1 className="text-lg font-mono text-primary">Sessions</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-mono text-primary">Sessions</h1>
+          <div className="flex items-center gap-2">
+            {selected.size > 0 && (
+              <span className="text-xs font-mono text-text-dim">
+                {selected.size} selected
+              </span>
+            )}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setRunEvalOpen(true)}
+              disabled={selected.size === 0}
+            >
+              <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
+              Evaluation
+            </Button>
+          </div>
+        </div>
 
         <div className="flex items-center gap-2 overflow-x-auto">
           <SearchBar
@@ -242,7 +269,11 @@ export default function SessionsPage() {
                 isPlaceholderData && "opacity-60",
               )}
             >
-              <SessionTable sessions={data.items} />
+              <SessionTable
+                sessions={data.items}
+                selected={selected}
+                onSelectionChange={setSelected}
+              />
             </div>
             <Pagination
               page={page}
@@ -255,6 +286,19 @@ export default function SessionsPage() {
           </>
         )}
       </div>
+
+      <RunEvalSidebar
+        mode="session"
+        open={runEvalOpen}
+        onClose={() => setRunEvalOpen(false)}
+        targetIds={Array.from(selected)}
+        onSubmitted={() =>
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.evaluations.sessionRuns.all(projectId),
+          })
+        }
+        onClearSelection={() => setSelected(new Set())}
+      />
     </div>
   );
 }
