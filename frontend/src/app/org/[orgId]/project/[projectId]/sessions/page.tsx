@@ -10,7 +10,7 @@ import { useProject } from "@/components/providers/ProjectProvider";
 import { listSessions, type ListSessionsParams } from "@/lib/api/sessions";
 import { queryKeys } from "@/lib/query/keys";
 import { SessionTable } from "@/components/features/SessionTable";
-import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
+import { EvaluationSidebar } from "@/components/features/EvaluationSidebar";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { DebouncedInput } from "@/components/common/DebouncedInput";
@@ -287,7 +287,7 @@ export default function SessionsPage() {
         )}
       </div>
 
-      <RunEvalSidebar
+      <EvaluationSidebar
         mode="session"
         open={runEvalOpen}
         onClose={() => setRunEvalOpen(false)}

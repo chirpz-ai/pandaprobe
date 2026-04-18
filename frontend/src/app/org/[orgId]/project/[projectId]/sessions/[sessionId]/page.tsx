@@ -17,7 +17,7 @@ import { getSessionScoresBySessionId } from "@/lib/api/evaluations";
 import { queryKeys } from "@/lib/query/keys";
 import { TraceTable } from "@/components/features/TraceTable";
 import { ScoresSidebar } from "@/components/features/ScoresSidebar";
-import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
+import { EvaluationSidebar } from "@/components/features/EvaluationSidebar";
 import { useHasPendingEvalForTarget } from "@/components/providers/EvalRunTrackerProvider";
 import { Pagination } from "@/components/common/Pagination";
 import { Badge } from "@/components/ui/Badge";
@@ -299,7 +299,7 @@ export default function SessionDetailPage({
         isRefreshing={scoresQuery.isFetching}
       />
 
-      <RunEvalSidebar
+      <EvaluationSidebar
         mode="session"
         open={runEvalOpen}
         onClose={() => setRunEvalOpen(false)}

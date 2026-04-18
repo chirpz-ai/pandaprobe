@@ -17,7 +17,7 @@ import { getTraceScoresByTraceId } from "@/lib/api/evaluations";
 import { queryKeys } from "@/lib/query/keys";
 import { SpanWaterfall } from "@/components/features/SpanWaterfall";
 import { ScoresSidebar } from "@/components/features/ScoresSidebar";
-import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
+import { EvaluationSidebar } from "@/components/features/EvaluationSidebar";
 import { useHasPendingEvalForTarget } from "@/components/providers/EvalRunTrackerProvider";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
@@ -257,7 +257,7 @@ export default function TraceDetailPage({
         isRefreshing={scoresQuery.isFetching}
       />
 
-      <RunEvalSidebar
+      <EvaluationSidebar
         mode="trace"
         open={runEvalOpen}
         onClose={() => setRunEvalOpen(false)}

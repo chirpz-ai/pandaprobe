@@ -14,7 +14,7 @@ import {
   type ListTracesParams,
 } from "@/lib/api/traces";
 import { TraceTable } from "@/components/features/TraceTable";
-import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
+import { EvaluationSidebar } from "@/components/features/EvaluationSidebar";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -437,7 +437,7 @@ export default function TracesPage() {
         </Dialog.Portal>
       </Dialog.Root>
 
-      <RunEvalSidebar
+      <EvaluationSidebar
         mode="trace"
         open={runEvalOpen}
         onClose={() => setRunEvalOpen(false)}
