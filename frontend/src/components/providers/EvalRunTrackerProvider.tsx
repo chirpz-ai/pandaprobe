@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { getTraceRun, getSessionRun } from "@/lib/api/evaluations";
@@ -17,7 +18,10 @@ import { EvaluationStatus } from "@/lib/api/enums";
 import type { EvalRunResponse } from "@/lib/api/types";
 import { queryKeys } from "@/lib/query/keys";
 import { useProjectId } from "@/hooks/useNavigation";
-import { useToast } from "@/components/providers/ToastProvider";
+import {
+  CORNER_STACK_SLOT_ID,
+  useToast,
+} from "@/components/providers/ToastProvider";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils/cn";
 
@@ -89,21 +93,10 @@ export function EvalRunTrackerProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * Returns the tracker context, or null if not mounted inside the provider.
- * Callers should no-op gracefully when null so the feature degrades rather
- * than crashing in surfaces that live outside the project layout.
- */
 export function useEvalRunTracker(): EvalRunTrackerContextValue | null {
   return useContext(EvalRunTrackerContext);
 }
 
-/**
- * Returns true when at least one pending eval run in the tracker is targeting
- * the given trace or session. Detail pages use this to surface an in-flight
- * indicator (e.g. a spinner on the Scores button) while background scoring is
- * still in progress for the currently-viewed resource.
- */
 export function useHasPendingEvalForTarget(
   mode: EvalMode,
   targetId: string | null | undefined,
@@ -255,6 +248,12 @@ function PendingRunsPill({
   pending: PendingRun[];
   results: PollResult[];
 }) {
+
+  const [portalTarget] = useState<HTMLElement | null>(() => {
+    if (typeof document === "undefined") return null;
+    return document.getElementById(CORNER_STACK_SLOT_ID);
+  });
+
   const items = pending.map((p, idx) => ({
     pending: p,
     data: results[idx]?.data,
@@ -266,22 +265,23 @@ function PendingRunsPill({
     ? formatSingleSummary(single)
     : `Running ${items.length} evaluations`;
 
-  return (
-    <div className="fixed bottom-4 right-4 z-50 pointer-events-none">
-      <Tooltip content={<PendingTooltipContent items={items} />} side="top">
-        <div
-          className={cn(
-            "pointer-events-auto inline-flex items-center gap-2",
-            "border border-info/40 bg-surface/95 px-3 py-2",
-            "shadow-lg shadow-black/20 backdrop-blur-sm",
-            "text-xs font-mono text-text",
-          )}
-        >
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-info" />
-          <span className="truncate max-w-[280px]">{summary}</span>
-        </div>
-      </Tooltip>
-    </div>
+  if (!portalTarget) return null;
+
+  return createPortal(
+    <Tooltip content={<PendingTooltipContent items={items} />} side="top">
+      <div
+        className={cn(
+          "inline-flex items-center gap-2",
+          "border border-info/40 bg-surface/95 px-3 py-2",
+          "shadow-lg shadow-black/20 backdrop-blur-sm",
+          "text-xs font-mono text-text",
+        )}
+      >
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-info" />
+        <span className="truncate max-w-[280px]">{summary}</span>
+      </div>
+    </Tooltip>,
+    portalTarget,
   );
 }
 
