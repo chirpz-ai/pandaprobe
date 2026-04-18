@@ -11,10 +11,15 @@ import {
   type ReactNode,
 } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { getTraceRun, getSessionRun } from "@/lib/api/evaluations";
 import { EvaluationStatus } from "@/lib/api/enums";
+import type { EvalRunResponse } from "@/lib/api/types";
 import { queryKeys } from "@/lib/query/keys";
 import { useProjectId } from "@/hooks/useNavigation";
+import { useToast } from "@/components/providers/ToastProvider";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { cn } from "@/lib/utils/cn";
 
 /**
  * Global registry of in-flight evaluation runs for the current project,
@@ -93,9 +98,30 @@ export function useEvalRunTracker(): EvalRunTrackerContextValue | null {
   return useContext(EvalRunTrackerContext);
 }
 
+/**
+ * Returns true when at least one pending eval run in the tracker is targeting
+ * the given trace or session. Detail pages use this to surface an in-flight
+ * indicator (e.g. a spinner on the Scores button) while background scoring is
+ * still in progress for the currently-viewed resource.
+ */
+export function useHasPendingEvalForTarget(
+  mode: EvalMode,
+  targetId: string | null | undefined,
+): boolean {
+  const tracker = useContext(EvalRunTrackerContext);
+  const pending = tracker?.pending;
+  return useMemo(() => {
+    if (!targetId || !pending) return false;
+    return pending.some(
+      (p) => p.mode === mode && p.targetIds.includes(targetId),
+    );
+  }, [pending, mode, targetId]);
+}
+
 function EvalRunPoller() {
   const tracker = useContext(EvalRunTrackerContext);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const projectId = useProjectId() ?? "";
   const lastStatusRef = useRef<Record<string, string>>({});
 
@@ -172,10 +198,145 @@ function EvalRunPoller() {
         queryClient.invalidateQueries({ queryKey: runsKey });
       }
 
+      showCompletionToast(toast, r.data as EvalRunResponse);
+
       delete lastStatusRef.current[p.runId];
       unregister(p.runId);
     });
-  }, [results, pending, queryClient, unregister, projectId]);
+  }, [results, pending, queryClient, unregister, projectId, toast]);
 
-  return null;
+  if (pending.length === 0) return null;
+
+  return <PendingRunsPill pending={pending} results={results} />;
+}
+
+function showCompletionToast(
+  toast: ReturnType<typeof useToast>["toast"],
+  run: EvalRunResponse,
+) {
+  const runLabel = run.name ? `'${run.name}'` : null;
+
+  if (run.status === EvaluationStatus.FAILED) {
+    const desc = [runLabel, run.error_message ?? "Something went wrong"]
+      .filter(Boolean)
+      .join(" · ");
+    toast({
+      title: "Evaluation failed",
+      description: desc || undefined,
+      variant: "error",
+    });
+    return;
+  }
+
+  if (run.status === EvaluationStatus.COMPLETED) {
+    const parts: string[] = [];
+    if (runLabel) parts.push(runLabel);
+    const scoreWord = run.evaluated_count === 1 ? "score" : "scores";
+    parts.push(`${run.evaluated_count} ${scoreWord} added`);
+    if (run.failed_count > 0) parts.push(`${run.failed_count} failed`);
+    toast({
+      title: "Evaluation complete",
+      description: parts.join(" · "),
+      variant: "success",
+    });
+  }
+}
+
+type PollResult = {
+  data?: EvalRunResponse;
+  error: unknown;
+  isPending?: boolean;
+};
+
+function PendingRunsPill({
+  pending,
+  results,
+}: {
+  pending: PendingRun[];
+  results: PollResult[];
+}) {
+  const items = pending.map((p, idx) => ({
+    pending: p,
+    data: results[idx]?.data,
+  }));
+
+  const single = items.length === 1 ? items[0] : null;
+
+  const summary = single
+    ? formatSingleSummary(single)
+    : `Running ${items.length} evaluations`;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 pointer-events-none">
+      <Tooltip content={<PendingTooltipContent items={items} />} side="top">
+        <div
+          className={cn(
+            "pointer-events-auto inline-flex items-center gap-2",
+            "border border-info/40 bg-surface/95 px-3 py-2",
+            "shadow-lg shadow-black/20 backdrop-blur-sm",
+            "text-xs font-mono text-text",
+          )}
+        >
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-info" />
+          <span className="truncate max-w-[280px]">{summary}</span>
+        </div>
+      </Tooltip>
+    </div>
+  );
+}
+
+function formatSingleSummary(item: {
+  pending: PendingRun;
+  data?: EvalRunResponse;
+}): string {
+  const name = item.data?.name ?? null;
+  const prefix = name ? `Running '${truncate(name, 28)}'` : "Running evaluation";
+  const progress = formatProgress(item.data);
+  return progress ? `${prefix} · ${progress}` : prefix;
+}
+
+function formatProgress(run: EvalRunResponse | undefined): string | null {
+  if (!run) return null;
+  const total = run.total_targets ?? 0;
+  if (total <= 0) return null;
+  const done = (run.evaluated_count ?? 0) + (run.failed_count ?? 0);
+  return `${done}/${total}`;
+}
+
+function PendingTooltipContent({
+  items,
+}: {
+  items: { pending: PendingRun; data?: EvalRunResponse }[];
+}) {
+  return (
+    <div className="space-y-1.5 min-w-[220px] max-w-[320px] max-h-[240px] overflow-y-auto py-0.5">
+      {items.map((item) => {
+        const name = item.data?.name ?? null;
+        const progress = formatProgress(item.data);
+        const status = item.data?.status ?? "Queued";
+        return (
+          <div key={item.pending.runId} className="text-[11px] font-mono">
+            <div className="text-text truncate">
+              {name ?? `${item.pending.mode} evaluation`}
+            </div>
+            <div className="text-text-muted">
+              <span className="capitalize">{status.toLowerCase()}</span>
+              {progress && <span> · {progress}</span>}
+              {item.data && item.data.failed_count > 0 && (
+                <span className="text-error">
+                  {" "}
+                  · {item.data.failed_count} failed
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return `${s.slice(0, max - 1)}…`;
 }
