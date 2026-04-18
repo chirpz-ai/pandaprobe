@@ -3,12 +3,20 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2, Copy, Check, BarChart3 } from "lucide-react";
+import {
+  ArrowLeft,
+  Trash2,
+  Copy,
+  Check,
+  BarChart3,
+  FlaskConical,
+} from "lucide-react";
 import { getSession, deleteSession } from "@/lib/api/sessions";
 import { getSessionScoresBySessionId } from "@/lib/api/evaluations";
 import { queryKeys } from "@/lib/query/keys";
 import { TraceTable } from "@/components/features/TraceTable";
 import { ScoresSidebar } from "@/components/features/ScoresSidebar";
+import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
 import { Pagination } from "@/components/common/Pagination";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -51,6 +59,7 @@ export default function SessionDetailPage({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
+  const [runEvalOpen, setRunEvalOpen] = useState(false);
 
   const { page, limit, offset, setPage, totalPages, set } =
     useUrlState(URL_CONFIG);
@@ -142,6 +151,14 @@ export default function SessionDetailPage({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setRunEvalOpen(true)}
+            >
+              <FlaskConical className="h-3 w-3" />
+              Evaluation
+            </Button>
             <Button
               variant="secondary"
               size="sm"
@@ -265,6 +282,18 @@ export default function SessionDetailPage({
         onScoreDeleted={() =>
           queryClient.invalidateQueries({
             queryKey: [...queryKeys.sessions.detail(sessionId), "scores"],
+          })
+        }
+      />
+
+      <RunEvalSidebar
+        mode="session"
+        open={runEvalOpen}
+        onClose={() => setRunEvalOpen(false)}
+        targetIds={[sessionId]}
+        onSubmitted={() =>
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.evaluations.sessionRuns.all(projectId),
           })
         }
       />
