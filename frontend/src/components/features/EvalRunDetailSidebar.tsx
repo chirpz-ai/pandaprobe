@@ -406,7 +406,7 @@ export function EvalRunDetailSidebar({
                   aria-expanded={scoresOpen}
                   className="w-full flex items-center justify-between h-10 px-4 border-b border-border hover:bg-surface-hi transition-colors focus:outline-none focus-visible:bg-surface-hi"
                 >
-                  <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-info uppercase tracking-wider flex items-center gap-1.5">
                     {scoresOpen ? (
                       <ChevronDown className="h-3 w-3" />
                     ) : (
@@ -414,7 +414,7 @@ export function EvalRunDetailSidebar({
                     )}
                     Scores
                     {hasFetchedScores && (
-                      <span className="text-text-dim normal-case tracking-normal">
+                      <span className="text-info normal-case tracking-normal">
                         · {scores.length}
                       </span>
                     )}
