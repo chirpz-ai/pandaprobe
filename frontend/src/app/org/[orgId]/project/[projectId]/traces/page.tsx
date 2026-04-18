@@ -14,6 +14,7 @@ import {
   type ListTracesParams,
 } from "@/lib/api/traces";
 import { TraceTable } from "@/components/features/TraceTable";
+import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
 import { Pagination } from "@/components/common/Pagination";
 import { SearchBar } from "@/components/common/SearchBar";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -33,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Trash2, Tag, X } from "lucide-react";
+import { Trash2, Tag, X, FlaskConical } from "lucide-react";
 import { TraceStatus, TraceSortBy, SortOrder } from "@/lib/api/enums";
 import { queryKeys } from "@/lib/query/keys";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -70,6 +71,7 @@ export default function TracesPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [runEvalOpen, setRunEvalOpen] = useState(false);
   const params = useMemo<ListTracesParams>(() => {
     const p: ListTracesParams = {
       limit,
@@ -195,29 +197,40 @@ export default function TracesPage() {
       <div className="flex-shrink-0 space-y-3 pb-3">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-mono text-primary">Traces</h1>
-          {selected.size > 0 && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {selected.size > 0 && (
               <span className="text-xs font-mono text-text-dim">
                 {selected.size} selected
               </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowTagDialog(true)}
-              >
-                <Tag className="h-3.5 w-3.5 mr-1.5" />
-                Tag
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmDelete(true)}
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                Delete
-              </Button>
-            </div>
-          )}
+            )}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setRunEvalOpen(true)}
+              disabled={selected.size === 0}
+            >
+              <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
+              Evaluation
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowTagDialog(true)}
+              disabled={selected.size === 0}
+            >
+              <Tag className="h-3.5 w-3.5 mr-1.5" />
+              Tag
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setConfirmDelete(true)}
+              disabled={selected.size === 0}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete
+            </Button>
+          </div>
         </div>
 
         {/* Filter bar */}
@@ -423,6 +436,19 @@ export default function TracesPage() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <RunEvalSidebar
+        mode="trace"
+        open={runEvalOpen}
+        onClose={() => setRunEvalOpen(false)}
+        targetIds={Array.from(selected)}
+        onSubmitted={() =>
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.evaluations.traceRuns.all(projectId),
+          })
+        }
+        onClearSelection={() => setSelected(new Set())}
+      />
     </div>
   );
 }
