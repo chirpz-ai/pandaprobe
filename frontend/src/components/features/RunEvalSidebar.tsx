@@ -19,6 +19,7 @@ import {
 import type {
   CreateBatchEvalRunRequest,
   CreateBatchSessionEvalRunRequest,
+  EvalRunResponse,
   ProviderInfo,
   MetricSummary,
 } from "@/lib/api/types";
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/providers/ToastProvider";
+import { useEvalRunTracker } from "@/components/providers/EvalRunTrackerProvider";
 import { extractErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -65,6 +67,7 @@ export function RunEvalSidebar({
   onClearSelection,
 }: RunEvalSidebarProps) {
   const { toast } = useToast();
+  const tracker = useEvalRunTracker();
 
   const [name, setName] = useState("");
   const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(
@@ -139,6 +142,7 @@ export function RunEvalSidebar({
 
     setSubmitting(true);
     try {
+      let response: EvalRunResponse;
       if (mode === "trace") {
         const body: CreateBatchEvalRunRequest = {
           trace_ids: targetIds,
@@ -146,7 +150,7 @@ export function RunEvalSidebar({
           name: name.trim(),
           ...(modelId ? { model: modelId } : {}),
         };
-        await createBatchTraceRun(body);
+        response = await createBatchTraceRun(body);
       } else {
         const body: CreateBatchSessionEvalRunRequest = {
           session_ids: targetIds,
@@ -155,8 +159,13 @@ export function RunEvalSidebar({
           ...(modelId ? { model: modelId } : {}),
           ...(customizeWeights ? { signal_weights: weights } : {}),
         };
-        await createBatchSessionRun(body);
+        response = await createBatchSessionRun(body);
       }
+      tracker?.register({
+        runId: response.id,
+        mode,
+        targetIds: [...targetIds],
+      });
       toast({ title: "Evaluation run queued", variant: "success" });
       onSubmitted?.();
       onClearSelection?.();
