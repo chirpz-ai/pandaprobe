@@ -26,6 +26,8 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+export const CORNER_STACK_SLOT_ID = "pandaprobe-corner-stack-slot";
+
 let toastId = 0;
 
 const variantStyles: Record<ToastVariant, string> = {
@@ -78,7 +80,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </div>
           </ToastPrimitive.Root>
         ))}
-        <ToastPrimitive.Viewport className="fixed bottom-4 right-4 z-[100] flex max-w-sm flex-col gap-2" />
+        <div
+          className={cn(
+            "fixed bottom-4 right-4 z-[100]",
+            "flex max-w-sm flex-col items-end",
+            "pointer-events-none",
+          )}
+        >
+          <ToastPrimitive.Viewport className="flex w-full flex-col gap-2 pointer-events-auto outline-none" />
+          <div
+            id={CORNER_STACK_SLOT_ID}
+            className="pointer-events-auto mt-2 empty:mt-0"
+          />
+        </div>
       </ToastPrimitive.Provider>
     </ToastContext.Provider>
   );
