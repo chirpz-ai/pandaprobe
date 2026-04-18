@@ -10,6 +10,7 @@ import {
   Check,
   BarChart3,
   FlaskConical,
+  Loader2,
 } from "lucide-react";
 import { getSession, deleteSession } from "@/lib/api/sessions";
 import { getSessionScoresBySessionId } from "@/lib/api/evaluations";
@@ -17,6 +18,7 @@ import { queryKeys } from "@/lib/query/keys";
 import { TraceTable } from "@/components/features/TraceTable";
 import { ScoresSidebar } from "@/components/features/ScoresSidebar";
 import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
+import { useHasPendingEvalForTarget } from "@/components/providers/EvalRunTrackerProvider";
 import { Pagination } from "@/components/common/Pagination";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -60,6 +62,8 @@ export default function SessionDetailPage({
   const [copiedId, setCopiedId] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
   const [runEvalOpen, setRunEvalOpen] = useState(false);
+
+  const hasPendingEval = useHasPendingEvalForTarget("session", sessionId);
 
   const { page, limit, offset, setPage, totalPages, set } =
     useUrlState(URL_CONFIG);
@@ -163,9 +167,9 @@ export default function SessionDetailPage({
               variant="secondary"
               size="sm"
               onClick={() => setScoresOpen((v) => !v)}
-              disabled={scores.length === 0}
+              disabled={scores.length === 0 && !hasPendingEval}
               className={cn(
-                scores.length > 0
+                scores.length > 0 || hasPendingEval
                   ? "text-info border-info/30 hover:bg-info/10"
                   : "text-text-muted border-border opacity-50 cursor-not-allowed",
               )}
@@ -176,6 +180,9 @@ export default function SessionDetailPage({
                 <Badge variant="info" className="ml-0.5 px-1.5 py-0">
                   {scores.length}
                 </Badge>
+              )}
+              {hasPendingEval && (
+                <Loader2 className="h-3 w-3 animate-spin text-info" />
               )}
             </Button>
             <Button

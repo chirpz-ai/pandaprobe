@@ -10,6 +10,7 @@ import {
   Check,
   BarChart3,
   FlaskConical,
+  Loader2,
 } from "lucide-react";
 import { getTrace, deleteTrace } from "@/lib/api/traces";
 import { getTraceScoresByTraceId } from "@/lib/api/evaluations";
@@ -17,6 +18,7 @@ import { queryKeys } from "@/lib/query/keys";
 import { SpanWaterfall } from "@/components/features/SpanWaterfall";
 import { ScoresSidebar } from "@/components/features/ScoresSidebar";
 import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
+import { useHasPendingEvalForTarget } from "@/components/providers/EvalRunTrackerProvider";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -54,6 +56,8 @@ export default function TraceDetailPage({
   const [copiedId, setCopiedId] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
   const [runEvalOpen, setRunEvalOpen] = useState(false);
+
+  const hasPendingEval = useHasPendingEvalForTarget("trace", traceId);
 
   const traceQuery = useQuery({
     queryKey: queryKeys.traces.detail(traceId),
@@ -138,9 +142,9 @@ export default function TraceDetailPage({
             variant="secondary"
             size="sm"
             onClick={() => setScoresOpen((v) => !v)}
-            disabled={scores.length === 0}
+            disabled={scores.length === 0 && !hasPendingEval}
             className={cn(
-              scores.length > 0
+              scores.length > 0 || hasPendingEval
                 ? "text-info border-info/30 hover:bg-info/10"
                 : "text-text-muted border-border opacity-50 cursor-not-allowed",
             )}
@@ -151,6 +155,9 @@ export default function TraceDetailPage({
               <Badge variant="info" className="ml-0.5 px-1.5 py-0">
                 {scores.length}
               </Badge>
+            )}
+            {hasPendingEval && (
+              <Loader2 className="h-3 w-3 animate-spin text-info" />
             )}
           </Button>
           <Button
