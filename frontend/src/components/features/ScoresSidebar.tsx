@@ -43,6 +43,8 @@ interface ScoresSidebarProps {
   onClose: () => void;
   onScoreUpdated?: () => void;
   onScoreDeleted?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export function ScoresSidebar({
@@ -51,6 +53,8 @@ export function ScoresSidebar({
   onClose,
   onScoreUpdated,
   onScoreDeleted,
+  onRefresh,
+  isRefreshing = false,
 }: ScoresSidebarProps) {
   return (
     <>
@@ -68,9 +72,28 @@ export function ScoresSidebar({
           <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider">
             Scores · {scores.length}
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {onRefresh && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                aria-label="Refresh scores"
+                title="Refresh scores"
+              >
+                <RefreshCw
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    isRefreshing && "animate-spin",
+                  )}
+                />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
