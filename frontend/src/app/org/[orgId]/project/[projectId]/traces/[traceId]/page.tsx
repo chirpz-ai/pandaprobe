@@ -3,12 +3,20 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2, Copy, Check, BarChart3 } from "lucide-react";
+import {
+  ArrowLeft,
+  Trash2,
+  Copy,
+  Check,
+  BarChart3,
+  FlaskConical,
+} from "lucide-react";
 import { getTrace, deleteTrace } from "@/lib/api/traces";
 import { getTraceScoresByTraceId } from "@/lib/api/evaluations";
 import { queryKeys } from "@/lib/query/keys";
 import { SpanWaterfall } from "@/components/features/SpanWaterfall";
 import { ScoresSidebar } from "@/components/features/ScoresSidebar";
+import { RunEvalSidebar } from "@/components/features/RunEvalSidebar";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -45,6 +53,7 @@ export default function TraceDetailPage({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
+  const [runEvalOpen, setRunEvalOpen] = useState(false);
 
   const traceQuery = useQuery({
     queryKey: queryKeys.traces.detail(traceId),
@@ -117,6 +126,14 @@ export default function TraceDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setRunEvalOpen(true)}
+          >
+            <FlaskConical className="h-3 w-3" />
+            Evaluation
+          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -223,6 +240,18 @@ export default function TraceDetailPage({
         onScoreDeleted={() =>
           queryClient.invalidateQueries({
             queryKey: [...queryKeys.traces.detail(traceId), "scores"],
+          })
+        }
+      />
+
+      <RunEvalSidebar
+        mode="trace"
+        open={runEvalOpen}
+        onClose={() => setRunEvalOpen(false)}
+        targetIds={[traceId]}
+        onSubmitted={() =>
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.evaluations.traceRuns.all(projectId),
           })
         }
       />
