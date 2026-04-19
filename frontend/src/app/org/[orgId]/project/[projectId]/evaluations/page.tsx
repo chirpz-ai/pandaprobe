@@ -24,6 +24,12 @@ export default function EvaluationsPage() {
       icon: <Layers className="h-5 w-5" />,
     },
     {
+      title: "Monitors",
+      description: "Automated evaluation schedules that run periodically",
+      href: basePath + "/evaluations/monitors",
+      icon: <Radio className="h-5 w-5" />,
+    },
+    {
       title: "Trace Scores",
       description:
         "Browse and filter every score produced for traces across runs, metrics, and environments",
@@ -37,18 +43,12 @@ export default function EvaluationsPage() {
       href: basePath + "/evaluations/session-scores",
       icon: <Gauge className="h-5 w-5" />,
     },
-    {
-      title: "Monitors",
-      description: "Automated evaluation schedules that run periodically",
-      href: basePath + "/evaluations/monitors",
-      icon: <Radio className="h-5 w-5" />,
-    },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-lg font-mono text-primary">Evaluations</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {sections.map((s) => (
           <Link
             key={s.href}
