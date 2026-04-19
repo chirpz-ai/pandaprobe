@@ -41,8 +41,9 @@ export function DateTimePicker({
     (day: Date | undefined) => {
       if (!day) return;
       const existing = selected ?? new Date();
-      day.setHours(existing.getHours(), existing.getMinutes(), 0, 0);
-      onChange(toDatetimeLocal(day));
+      const merged = new Date(day);
+      merged.setHours(existing.getHours(), existing.getMinutes(), 0, 0);
+      onChange(toDatetimeLocal(merged));
     },
     [selected, onChange],
   );
