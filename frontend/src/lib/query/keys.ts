@@ -42,6 +42,10 @@ export const queryKeys = {
       all: (projectId: string) => ["monitors", projectId] as const,
       list: (projectId: string, params: Record<string, unknown>) =>
         ["monitors", projectId, params] as const,
+      detail: (monitorId: string) =>
+        ["monitors", "detail", monitorId] as const,
+      runs: (monitorId: string, params: Record<string, unknown>) =>
+        ["monitors", "runs", monitorId, params] as const,
     },
   },
   analytics: {
