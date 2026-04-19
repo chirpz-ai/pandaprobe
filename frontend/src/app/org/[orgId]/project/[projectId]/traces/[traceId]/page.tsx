@@ -83,7 +83,7 @@ export default function TraceDetailPage({
   }
 
   function handleCopyId() {
-    navigator.clipboard.writeText(trace!.trace_id);
+    navigator.clipboard.writeText(traceId);
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
   }
