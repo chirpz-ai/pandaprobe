@@ -74,7 +74,8 @@ export function EvaluationSidebar({
   const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(
     new Set(),
   );
-  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_VALUE);
+  const [selectedModel, setSelectedModel] =
+    useState<string>(DEFAULT_MODEL_VALUE);
   const [customizeWeights, setCustomizeWeights] = useState(false);
   const [weights, setWeights] = useState<Record<string, number>>({
     ...DEFAULT_SIGNAL_WEIGHTS,

@@ -123,7 +123,8 @@ export function MonitorFormSidebar({
   const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(
     new Set(),
   );
-  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_VALUE);
+  const [selectedModel, setSelectedModel] =
+    useState<string>(DEFAULT_MODEL_VALUE);
   const [samplingRate, setSamplingRate] = useState<number>(1);
   const [traceFilters, setTraceFilters] =
     useState<TraceFilterState>(EMPTY_TRACE_FILTERS);
