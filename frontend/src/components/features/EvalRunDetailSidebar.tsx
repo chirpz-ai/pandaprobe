@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   useQuery,
   useQueryClient,
@@ -19,7 +20,9 @@ import {
   ChevronRight,
   Copy,
   Check,
+  ArrowRight,
 } from "lucide-react";
+import { useProjectPath } from "@/hooks/useNavigation";
 import {
   getTraceRun,
   getSessionRun,
@@ -79,6 +82,7 @@ export function EvalRunDetailSidebar({
   const { toast } = useToast();
   const tracker = useEvalRunTracker();
   const queryClient = useQueryClient();
+  const basePath = useProjectPath();
 
   const [actionPending, setActionPending] = useState<"retry" | "delete" | null>(
     null,
@@ -452,33 +456,46 @@ export function EvalRunDetailSidebar({
                     <Loader2 className="h-3 w-3 animate-spin text-text-muted" />
                   )}
                 </button>
-                {scoresOpen &&
-                  (scoresQuery.error ? (
-                    <div className="p-4 text-xs font-mono text-error">
-                      {extractErrorMessage(scoresQuery.error)}
-                    </div>
-                  ) : !hasFetchedScores ? (
-                    <div className="p-4 text-xs font-mono text-text-muted">
-                      Loading scores…
-                    </div>
-                  ) : scores.length === 0 ? (
-                    <div className="p-4 text-xs font-mono text-text-muted">
-                      {TERMINAL_STATES.has(run.status)
-                        ? "This run produced no scores."
-                        : "Scores will appear here as they are produced."}
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-border">
-                      {scores.map((score) => (
-                        <ScoreRow
-                          key={score.id}
-                          score={score}
-                          onScoreUpdated={() => scoresQuery.refetch()}
-                          onScoreDeleted={() => scoresQuery.refetch()}
-                        />
-                      ))}
-                    </div>
-                  ))}
+                {scoresOpen && (
+                  <>
+                    {scoresQuery.error ? (
+                      <div className="p-4 text-xs font-mono text-error">
+                        {extractErrorMessage(scoresQuery.error)}
+                      </div>
+                    ) : !hasFetchedScores ? (
+                      <div className="p-4 text-xs font-mono text-text-muted">
+                        Loading scores…
+                      </div>
+                    ) : scores.length === 0 ? (
+                      <div className="p-4 text-xs font-mono text-text-muted">
+                        {TERMINAL_STATES.has(run.status)
+                          ? "This run produced no scores."
+                          : "Scores will appear here as they are produced."}
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {scores.map((score) => (
+                          <ScoreRow
+                            key={score.id}
+                            score={score}
+                            onScoreUpdated={() => scoresQuery.refetch()}
+                            onScoreDeleted={() => scoresQuery.refetch()}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <Link
+                      href={`${basePath}/evaluations/${mode}-scores?eval_run_id=${run.id}`}
+                      onClick={onClose}
+                      className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors"
+                    >
+                      <span>
+                        View full scores list for this run
+                      </span>
+                      <ArrowRight className="h-3 w-3 flex-shrink-0" />
+                    </Link>
+                  </>
+                )}
               </div>
             </>
           )}
