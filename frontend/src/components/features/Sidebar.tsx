@@ -14,6 +14,7 @@ import {
   Users,
   FolderKanban,
   KeyRound,
+  Sparkles,
   CreditCard,
   ChevronLeft,
   ChevronRight,
@@ -273,6 +274,11 @@ export function Sidebar() {
         label: "API Keys",
         href: `${orgBase}/settings/api-keys`,
         icon: <KeyRound className="h-4 w-4" />,
+      },
+      {
+        label: "Plans",
+        href: `${orgBase}/settings/plans`,
+        icon: <Sparkles className="h-4 w-4" />,
       },
       {
         label: "Billing",
