@@ -16,6 +16,10 @@ import {
   XCircle,
   Loader2,
   Trash2,
+  Copy,
+  Check,
+  ListTree,
+  Layers,
 } from "lucide-react";
 import type { TraceScoreResponse, SessionScoreResponse } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -24,6 +28,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { formatDateTime } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -56,6 +61,19 @@ export function ScoreRow({
   const traceScore = "trace_id" in score ? (score as TraceScoreResponse) : null;
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [copiedTarget, setCopiedTarget] = useState(false);
+
+  const targetKind = traceScore ? "trace" : "session";
+  const targetId = traceScore
+    ? traceScore.trace_id
+    : (score as SessionScoreResponse).session_id;
+  const TargetIcon = traceScore ? ListTree : Layers;
+
+  function handleCopyTarget() {
+    navigator.clipboard.writeText(targetId);
+    setCopiedTarget(true);
+    setTimeout(() => setCopiedTarget(false), 2000);
+  }
 
   async function handleDelete() {
     try {
@@ -134,6 +152,34 @@ export function ScoreRow({
           </p>
         </div>
       )}
+
+      <div className="flex items-center gap-1.5 mb-2 min-w-0">
+        <TargetIcon className="h-3 w-3 text-text-muted flex-shrink-0" />
+        <span className="text-xs font-mono text-text-muted flex-shrink-0">
+          {traceScore ? "Trace ID:" : "Session ID:"}
+        </span>
+        <span
+          className="text-xs font-mono text-text-dim truncate min-w-0"
+          title={targetId}
+        >
+          {targetId}
+        </span>
+        <Tooltip
+          content={copiedTarget ? "Copied!" : `Copy ${targetKind} ID`}
+        >
+          <button
+            className="text-text-muted hover:text-text transition-colors flex-shrink-0"
+            onClick={handleCopyTarget}
+            aria-label={`Copy ${targetKind} ID`}
+          >
+            {copiedTarget ? (
+              <Check className="h-3 w-3 text-success" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+          </button>
+        </Tooltip>
+      </div>
 
       {score.metadata && Object.keys(score.metadata).length > 0 && (
         <MetadataSection data={score.metadata} />
