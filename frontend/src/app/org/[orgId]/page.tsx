@@ -16,23 +16,17 @@ export default function OrgPage() {
 
   useDocumentTitle("Welcome");
 
+  const resolvedId = projectId ?? (projects.length > 0 ? projects[0].id : null);
+
   useEffect(() => {
     if (loading) return;
 
-    if (projectId) {
-      router.replace(`/org/${orgId}/project/${projectId}`);
+    if (resolvedId) {
+      router.replace(`/org/${orgId}/project/${resolvedId}`);
     }
-  }, [orgId, projectId, loading, router]);
+  }, [orgId, resolvedId, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
-  if (projects.length > 0) {
+  if (loading || resolvedId) {
     return (
       <div className="flex h-full items-center justify-center">
         <Spinner size="lg" />
