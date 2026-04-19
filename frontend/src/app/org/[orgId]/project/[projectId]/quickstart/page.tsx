@@ -122,10 +122,7 @@ export default function QuickstartPage() {
         title="Set environment variables"
         description="Point the SDK at your project and authenticate it with an API key."
       >
-        <CodeBlock
-          code={envSnippet(projectName, API_URL)}
-          language="bash"
-        />
+        <CodeBlock code={envSnippet(projectName, API_URL)} language="bash" />
         <InlineApiKeyHint basePath={basePath} />
       </StepSection>
 
@@ -244,7 +241,10 @@ function ProviderTabs({
 
 function InlineApiKeyHint({ basePath }: { basePath: string }) {
   // /org/{orgId}/settings/api-keys — strip the /project/{projectId} segment
-  const apiKeysHref = basePath.replace(/\/project\/[^/]+$/, "/settings/api-keys");
+  const apiKeysHref = basePath.replace(
+    /\/project\/[^/]+$/,
+    "/settings/api-keys",
+  );
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 border border-border bg-surface text-xs font-mono text-text-dim">
@@ -294,9 +294,7 @@ function TraceDetector({ basePath }: { basePath: string }) {
           <LiveDot />
         )}
         <span className="text-xs font-mono text-text">
-          {hasTrace
-            ? "First trace received."
-            : "Waiting for your first trace"}
+          {hasTrace ? "First trace received." : "Waiting for your first trace"}
         </span>
       </div>
       <Link

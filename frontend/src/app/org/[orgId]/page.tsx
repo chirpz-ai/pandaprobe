@@ -43,10 +43,12 @@ export default function OrgPage() {
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-lg font-mono text-primary">Welcome to PandaProbe</h1>
+        <h1 className="text-lg font-mono text-primary">
+          Welcome to PandaProbe
+        </h1>
         <p className="text-sm font-mono text-text-dim mt-1">
-          Before you can send traces, you&apos;ll need a project and an API
-          key. Let&apos;s get you set up.
+          Before you can send traces, you&apos;ll need a project and an API key.
+          Let&apos;s get you set up.
         </p>
       </div>
 

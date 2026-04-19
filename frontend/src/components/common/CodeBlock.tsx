@@ -38,10 +38,7 @@ export function CodeBlock({
 
   return (
     <div
-      className={cn(
-        "relative border border-border bg-surface-hi",
-        className,
-      )}
+      className={cn("relative border border-border bg-surface-hi", className)}
     >
       {caption && (
         <div className="flex items-center justify-between px-3 h-7 border-b border-border bg-surface">
