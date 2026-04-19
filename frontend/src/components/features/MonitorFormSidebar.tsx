@@ -264,9 +264,6 @@ export function MonitorFormSidebar({
         ? buildTraceFilters(traceFilters)
         : buildSessionFilters(sessionFilters);
 
-    // The API types filters as a free-form Record, but our helpers return
-    // the precise trace/session filter shapes; widen via a cast so we can
-    // still pre-validate the payload locally.
     const filtersBody = filters as Record<string, unknown> | null;
 
     setSubmitting(true);
