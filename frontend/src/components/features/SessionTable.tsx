@@ -59,10 +59,10 @@ export function SessionTable({
   );
 
   return (
-    <div className="border border-border overflow-x-auto">
+    <div className="border border-border">
       <table className="w-full text-xs font-mono">
-        <thead>
-          <tr className="border-b border-border bg-surface-hi">
+        <thead className="sticky top-0 z-10 bg-surface-hi">
+          <tr className="border-b border-border">
             {selectable && (
               <th className="w-8 px-3 py-2">
                 <input
