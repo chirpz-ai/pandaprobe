@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { AUTH_ENABLED } from "@/lib/auth/firebase";
@@ -7,20 +8,28 @@ import { AUTH_ENABLED } from "@/lib/auth/firebase";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function getBreadcrumbs(pathname: string): string[] {
+interface Crumb {
+  label: string;
+  href: string;
+}
+
+function getBreadcrumbs(pathname: string): Crumb[] {
   const segments = pathname.split("/").filter(Boolean);
 
-  const meaningful: string[] = [];
+  const crumbs: Crumb[] = [];
+  let accumulated = "";
   for (const seg of segments) {
+    accumulated += "/" + seg;
     if (seg === "org" || seg === "project") continue;
     if (UUID_RE.test(seg)) continue;
-    meaningful.push(
-      seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-    );
+    crumbs.push({
+      label: seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      href: accumulated,
+    });
   }
 
-  if (meaningful.length === 0) return ["Home"];
-  return meaningful;
+  if (crumbs.length === 0) return [{ label: "Home", href: "/" }];
+  return crumbs;
 }
 
 export function TopBar() {
@@ -30,18 +39,24 @@ export function TopBar() {
   return (
     <header className="flex items-center justify-between h-12 px-4 border-b border-border bg-surface">
       <nav className="flex items-center gap-1 text-xs font-mono">
-        {crumbs.map((crumb, i) => (
-          <span key={i} className="flex items-center gap-1">
-            {i > 0 && <ChevronRight className="h-3 w-3 text-text-muted" />}
-            <span
-              className={
-                i === crumbs.length - 1 ? "text-text" : "text-text-dim"
-              }
-            >
-              {crumb}
+        {crumbs.map((crumb, i) => {
+          const isLast = i === crumbs.length - 1;
+          return (
+            <span key={crumb.href} className="flex items-center gap-1">
+              {i > 0 && <ChevronRight className="h-3 w-3 text-text-muted" />}
+              {isLast ? (
+                <span className="text-text">{crumb.label}</span>
+              ) : (
+                <Link
+                  href={crumb.href}
+                  className="text-text-dim hover:text-text transition-colors"
+                >
+                  {crumb.label}
+                </Link>
+              )}
             </span>
-          </span>
-        ))}
+          );
+        })}
       </nav>
 
       {!AUTH_ENABLED && (
