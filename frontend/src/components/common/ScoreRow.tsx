@@ -422,7 +422,7 @@ function EditableTraceScoreRow({
   );
 }
 
-function MetadataSection({ data }: { data: Record<string, unknown> }) {
+export function MetadataSection({ data }: { data: Record<string, unknown> }) {
   const [expanded, setExpanded] = useState(true);
   const toggle = useCallback(() => setExpanded((e) => !e), []);
 
