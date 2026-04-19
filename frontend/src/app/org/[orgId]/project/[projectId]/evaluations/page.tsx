@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ListTree, Layers, Radio } from "lucide-react";
+import { ListTree, Layers, Radio, Gauge } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useProjectPath } from "@/hooks/useNavigation";
 
@@ -28,6 +28,20 @@ export default function EvaluationsPage() {
       description: "Automated evaluation schedules that run periodically",
       href: basePath + "/evaluations/monitors",
       icon: <Radio className="h-5 w-5" />,
+    },
+    {
+      title: "Trace Scores",
+      description:
+        "Browse and filter every score produced for traces across runs, metrics, and environments",
+      href: basePath + "/evaluations/trace-scores",
+      icon: <Gauge className="h-5 w-5" />,
+    },
+    {
+      title: "Session Scores",
+      description:
+        "Browse and filter every score produced for sessions across runs and metrics",
+      href: basePath + "/evaluations/session-scores",
+      icon: <Gauge className="h-5 w-5" />,
     },
   ];
 

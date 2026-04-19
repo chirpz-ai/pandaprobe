@@ -21,7 +21,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { FormDialog } from "@/components/common/FormDialog";
 import { useToast } from "@/components/providers/ToastProvider";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, Check } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { formatDateTime } from "@/lib/utils/format";
 
@@ -39,6 +39,7 @@ export default function ProjectsPage() {
   const [deleteTarget, setDeleteTarget] = useState<ProjectResponse | null>(
     null,
   );
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useDocumentTitle("Projects");
 
@@ -177,7 +178,27 @@ export default function ProjectsPage() {
                   key={p.id}
                   className="border-b border-border hover:bg-surface-hi"
                 >
-                  <td className="px-3 py-2 text-text">{p.name}</td>
+                  <td className="px-3 py-2 text-text">
+                    <div className="flex items-center gap-2">
+                      <span>{p.name}</span>
+                      <Tooltip content="Copy name">
+                        <button
+                          className="flex-shrink-0 text-text-muted hover:text-text transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(p.name);
+                            setCopiedId(p.id);
+                            setTimeout(() => setCopiedId(null), 2000);
+                          }}
+                        >
+                          {copiedId === p.id ? (
+                            <Check className="h-3 w-3 text-success" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </td>
                   <td className="px-3 py-2 text-text-dim max-w-[300px] truncate">
                     {p.description || "—"}
                   </td>

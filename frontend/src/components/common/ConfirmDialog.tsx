@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -9,7 +9,7 @@ interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description: string;
+  description: ReactNode;
   confirmLabel?: string;
   onConfirm: () => Promise<void>;
   destructive?: boolean;
@@ -57,8 +57,8 @@ export function ConfirmDialog({
               <X className="h-4 w-4" />
             </Dialog.Close>
           </div>
-          <Dialog.Description className="text-xs text-text-dim mb-6">
-            {description}
+          <Dialog.Description asChild>
+            <div className="text-xs text-text-dim mb-6">{description}</div>
           </Dialog.Description>
           <div className="flex justify-end gap-2">
             <Button

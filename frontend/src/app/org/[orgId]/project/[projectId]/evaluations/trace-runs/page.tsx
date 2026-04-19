@@ -1,75 +1,90 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import {
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import {
-  listTraceRuns,
-  deleteTraceRun,
-  retryTraceRun,
-} from "@/lib/api/evaluations";
-import type { EvalRunResponse } from "@/lib/api/types";
+import { useUrlState } from "@/hooks/useUrlState";
+import { listTraceRuns } from "@/lib/api/evaluations";
 import { EvalRunTable } from "@/components/features/EvalRunTable";
+import { EvalRunDetailSidebar } from "@/components/features/EvalRunDetailSidebar";
+import { EvalRunCreateSidebar } from "@/components/features/EvalRunCreateSidebar";
 import { Pagination } from "@/components/common/Pagination";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
-import { usePagination } from "@/hooks/usePagination";
-import { useToast } from "@/components/providers/ToastProvider";
 import { Button } from "@/components/ui/Button";
-import { StatusBadge } from "@/components/common/StatusBadge";
-import { Badge } from "@/components/ui/Badge";
-import { formatDateTime } from "@/lib/utils/format";
-import * as Dialog from "@radix-ui/react-dialog";
-import { X, RotateCw, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/Select";
+import { FlaskConical, X } from "lucide-react";
 import { queryKeys } from "@/lib/query/keys";
+import { EvaluationStatus } from "@/lib/api/enums";
 import { extractErrorMessage } from "@/lib/api/client";
+import { cn } from "@/lib/utils/cn";
+
+const LIST_POLL_INTERVAL_MS = 5000;
+const STATUS_ALL = "all";
+
+const URL_CONFIG = {
+  page: { default: "1" },
+  limit: { default: "50" },
+  status: { default: STATUS_ALL },
+} as const;
 
 export default function TraceRunsPage() {
   const { currentProject } = useProject();
-  const { toast } = useToast();
-  const pagination = usePagination();
   const queryClient = useQueryClient();
   const projectId = currentProject?.id ?? "";
 
+  const { values, set, page, limit, offset, setPage, totalPages } =
+    useUrlState(URL_CONFIG);
+
   useDocumentTitle("Trace Runs");
 
-  const [selected, setSelected] = useState<EvalRunResponse | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  const { data, isPending, error, refetch } = useQuery({
-    queryKey: queryKeys.evaluations.traceRuns.list(projectId, {
-      limit: pagination.limit,
-      offset: pagination.offset,
-    }),
-    queryFn: () =>
-      listTraceRuns({ limit: pagination.limit, offset: pagination.offset }),
+  const params = useMemo(() => {
+    const p: Parameters<typeof listTraceRuns>[0] = { limit, offset };
+    if (values.status !== STATUS_ALL) {
+      p.status = values.status as EvaluationStatus;
+    }
+    return p;
+  }, [limit, offset, values.status]);
+
+  const { data, isPending, isPlaceholderData, error, refetch } = useQuery({
+    queryKey: queryKeys.evaluations.traceRuns.list(
+      projectId,
+      params as unknown as Record<string, unknown>,
+    ),
+    queryFn: () => listTraceRuns(params),
     enabled: !!currentProject,
+    placeholderData: keepPreviousData,
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      const anyPending = items.some(
+        (r) =>
+          r.status === EvaluationStatus.PENDING ||
+          r.status === EvaluationStatus.RUNNING,
+      );
+      return anyPending ? LIST_POLL_INTERVAL_MS : false;
+    },
+    refetchIntervalInBackground: false,
   });
 
-  async function handleRetry(runId: string) {
-    try {
-      await retryTraceRun(runId);
-      toast({ title: "Run retried", variant: "success" });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.evaluations.traceRuns.all(projectId),
-      });
-    } catch (err) {
-      toast({ title: extractErrorMessage(err), variant: "error" });
-    }
-  }
+  const hasActiveFilters = values.status !== STATUS_ALL;
 
-  async function handleDelete(runId: string) {
-    try {
-      await deleteTraceRun(runId, false);
-      toast({ title: "Run deleted", variant: "success" });
-      setSelected(null);
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.evaluations.traceRuns.all(projectId),
-      });
-    } catch (err) {
-      toast({ title: extractErrorMessage(err), variant: "error" });
-    }
+  function clearAllFilters() {
+    set({ status: STATUS_ALL, page: "1" });
   }
 
   if (!currentProject) {
@@ -82,120 +97,117 @@ export default function TraceRunsPage() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <h1 className="text-lg font-mono text-primary">Trace Evaluation Runs</h1>
+    <div className="flex flex-col h-[calc(100vh-96px)] animate-fade-in">
+      <div className="flex-shrink-0 space-y-3 pb-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-mono text-primary">
+            Trace Evaluation Runs
+          </h1>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+          >
+            <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
+            Create Evaluation
+          </Button>
+        </div>
 
-      {isPending ? (
-        <LoadingState />
-      ) : error ? (
-        <ErrorState
-          message={extractErrorMessage(error)}
-          onRetry={() => refetch()}
-        />
-      ) : !data || data.items.length === 0 ? (
-        <EmptyState
-          title="No evaluation runs"
-          description="Create an evaluation run to get started."
-        />
-      ) : (
-        <>
-          <EvalRunTable runs={data.items} onSelect={setSelected} />
-          <Pagination
-            page={pagination.page}
-            totalPages={pagination.totalPages(data.total)}
-            onPageChange={pagination.setPage}
-            total={data.total}
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <Select
+            value={values.status}
+            onValueChange={(v) => set({ status: v, page: "1" })}
+          >
+            <SelectTrigger className="w-36 h-9 text-xs flex-shrink-0">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={STATUS_ALL}>All statuses</SelectItem>
+              {Object.values(EvaluationStatus).map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => clearAllFilters()}
+              className="text-xs text-warning hover:text-warning gap-1 flex-shrink-0"
+            >
+              <X className="h-3 w-3" />
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 flex flex-col">
+        {isPending && !data ? (
+          <LoadingState />
+        ) : error && !data ? (
+          <ErrorState
+            message={extractErrorMessage(error)}
+            onRetry={() => refetch()}
           />
-        </>
-      )}
+        ) : !data || data.items.length === 0 ? (
+          <EmptyState
+            title="No evaluation runs"
+            description={
+              hasActiveFilters
+                ? "Try adjusting your filters."
+                : "Create an evaluation run to get started."
+            }
+          />
+        ) : (
+          <>
+            <div
+              className={cn(
+                "flex-1 min-h-0 overflow-y-auto transition-opacity duration-200",
+                isPlaceholderData && "opacity-60",
+              )}
+            >
+              <EvalRunTable
+                runs={data.items}
+                onSelect={(run) => setSelectedRunId(run.id)}
+              />
+            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages(data.total)}
+              onPageChange={setPage}
+              total={data.total}
+              limit={limit}
+              onLimitChange={(n) => set({ limit: String(n), page: "1" })}
+            />
+          </>
+        )}
+      </div>
 
-      <Dialog.Root
-        open={!!selected}
-        onOpenChange={(open) => !open && setSelected(null)}
-      >
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 border border-border bg-surface p-6 animate-fade-in">
-            {selected && (
-              <>
-                <div className="flex items-start justify-between mb-4">
-                  <Dialog.Title className="text-sm font-mono text-primary">
-                    {selected.name || `Run ${selected.id.slice(0, 8)}`}
-                  </Dialog.Title>
-                  <Dialog.Close className="text-text-muted hover:text-text">
-                    <X className="h-4 w-4" />
-                  </Dialog.Close>
-                </div>
-                <div className="space-y-3 text-xs font-mono">
-                  <div className="flex gap-2">
-                    <StatusBadge status={selected.status} />
-                    <Badge variant="default">{selected.target_type}</Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-text-muted block">Progress</span>
-                      <span className="text-text">
-                        {selected.evaluated_count}/{selected.total_targets}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-text-muted block">Failed</span>
-                      <span className="text-error">
-                        {selected.failed_count}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-text-muted block">Created</span>
-                      <span className="text-text">
-                        {formatDateTime(selected.created_at)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-text-muted block">Completed</span>
-                      <span className="text-text">
-                        {formatDateTime(selected.completed_at)}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-text-muted block mb-1">Metrics</span>
-                    <div className="flex gap-1 flex-wrap">
-                      {selected.metric_names.map((m) => (
-                        <Badge key={m} variant="info">
-                          {m}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  {selected.error_message && (
-                    <div className="bg-error/5 border border-error/20 p-2">
-                      <span className="text-error">
-                        {selected.error_message}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleRetry(selected.id)}
-                    >
-                      <RotateCw className="h-3 w-3" /> Retry
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(selected.id)}
-                    >
-                      <Trash2 className="h-3 w-3" /> Delete
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <EvalRunDetailSidebar
+        mode="trace"
+        open={selectedRunId !== null}
+        runId={selectedRunId}
+        onClose={() => setSelectedRunId(null)}
+        onChanged={() =>
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.evaluations.traceRuns.all(projectId),
+          })
+        }
+      />
+
+      <EvalRunCreateSidebar
+        mode="trace"
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSubmitted={() =>
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.evaluations.traceRuns.all(projectId),
+          })
+        }
+      />
     </div>
   );
 }

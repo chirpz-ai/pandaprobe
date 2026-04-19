@@ -12,10 +12,10 @@ interface EvalRunTableProps {
 
 export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
   return (
-    <div className="border border-border overflow-x-auto">
+    <div className="border border-border">
       <table className="w-full text-xs font-mono">
-        <thead>
-          <tr className="border-b border-border bg-surface-hi">
+        <thead className="sticky top-0 z-10 bg-surface-hi">
+          <tr className="border-b border-border">
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Name / ID
             </th>
@@ -32,7 +32,16 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
               Target
             </th>
             <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Sampling
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Model
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
               Created
+            </th>
+            <th className="text-left px-3 py-2 text-text-muted font-normal">
+              Completed
             </th>
           </tr>
         </thead>
@@ -43,8 +52,13 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
               className="border-b border-border hover:bg-surface-hi transition-colors cursor-pointer"
               onClick={() => onSelect?.(run)}
             >
-              <td className="px-3 py-2 max-w-[200px] truncate text-text">
+              <td className="px-3 py-2 max-w-[220px] truncate text-text">
                 {run.name || run.id.slice(0, 8)}
+                {run.monitor_id && (
+                  <span className="ml-2 text-[10px] text-text-muted">
+                    · monitor
+                  </span>
+                )}
               </td>
               <td className="px-3 py-2">
                 <StatusBadge status={run.status} />
@@ -56,6 +70,11 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
                       {m}
                     </Badge>
                   ))}
+                  {run.metric_names.length > 3 && (
+                    <span className="text-[10px] text-text-muted self-center">
+                      +{run.metric_names.length - 3}
+                    </span>
+                  )}
                 </div>
               </td>
               <td className="px-3 py-2 text-text-dim">
@@ -68,7 +87,20 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
               </td>
               <td className="px-3 py-2 text-text-dim">{run.target_type}</td>
               <td className="px-3 py-2 text-text-dim">
+                {formatSamplingRate(run.sampling_rate)}
+              </td>
+              <td className="px-3 py-2 text-text-dim max-w-[160px] truncate">
+                {run.model ?? <span className="text-text-muted">default</span>}
+              </td>
+              <td className="px-3 py-2 text-text-dim">
                 {formatRelativeTime(run.created_at)}
+              </td>
+              <td className="px-3 py-2 text-text-dim">
+                {run.completed_at ? (
+                  formatRelativeTime(run.completed_at)
+                ) : (
+                  <span className="text-text-muted">—</span>
+                )}
               </td>
             </tr>
           ))}
@@ -76,4 +108,10 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
       </table>
     </div>
   );
+}
+
+function formatSamplingRate(rate: number): string {
+  if (rate == null || Number.isNaN(rate)) return "—";
+  if (rate >= 1) return "100%";
+  return `${Math.round(rate * 100)}%`;
 }

@@ -3,22 +3,40 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Trash2,
+  Copy,
+  Check,
+  BarChart3,
+  FlaskConical,
+  Loader2,
+} from "lucide-react";
 import { getTrace, deleteTrace } from "@/lib/api/traces";
 import { getTraceScoresByTraceId } from "@/lib/api/evaluations";
 import { queryKeys } from "@/lib/query/keys";
-import { SpanTreeView } from "@/components/features/SpanTreeView";
+import { SpanWaterfall } from "@/components/features/SpanWaterfall";
+import { ScoresSidebar } from "@/components/features/ScoresSidebar";
+import { EvaluationSidebar } from "@/components/features/EvaluationSidebar";
+import { useHasPendingEvalForTarget } from "@/components/providers/EvalRunTrackerProvider";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
-import { formatDateTime, formatDuration } from "@/lib/utils/format";
+import {
+  formatDateTime,
+  formatDuration,
+  formatCost,
+  formatTokens,
+} from "@/lib/utils/format";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useProjectPath, useProjectId } from "@/hooks/useNavigation";
 import { extractErrorMessage } from "@/lib/api/client";
+import { cn } from "@/lib/utils/cn";
 
 export default function TraceDetailPage({
   params,
@@ -35,6 +53,11 @@ export default function TraceDetailPage({
   useDocumentTitle("Trace Detail");
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
+  const [scoresOpen, setScoresOpen] = useState(false);
+  const [runEvalOpen, setRunEvalOpen] = useState(false);
+
+  const hasPendingEval = useHasPendingEvalForTarget("trace", traceId);
 
   const traceQuery = useQuery({
     queryKey: queryKeys.traces.detail(traceId),
@@ -59,6 +82,12 @@ export default function TraceDetailPage({
     }
   }
 
+  function handleCopyId() {
+    navigator.clipboard.writeText(traceId);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  }
+
   if (traceQuery.isPending) return <LoadingState />;
   if (traceQuery.error)
     return <ErrorState message={extractErrorMessage(traceQuery.error)} />;
@@ -81,20 +110,64 @@ export default function TraceDetailPage({
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-lg font-mono text-primary">{trace.name}</h1>
+          <h1 className="text-lg font-mono text-primary">{trace.name}</h1>
+          <div className="flex items-center gap-1.5">
             <span className="text-xs text-text-muted font-mono">
               {trace.trace_id}
             </span>
+            <Tooltip content={copiedId ? "Copied!" : "Copy trace ID"}>
+              <button
+                className="text-text-muted hover:text-text transition-colors"
+                onClick={handleCopyId}
+              >
+                {copiedId ? (
+                  <Check className="h-3 w-3 text-success" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+              </button>
+            </Tooltip>
           </div>
         </div>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => setConfirmDelete(true)}
-        >
-          <Trash2 className="h-3 w-3" /> Delete
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setRunEvalOpen(true)}
+          >
+            <FlaskConical className="h-3 w-3" />
+            Evaluate
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setScoresOpen((v) => !v)}
+            disabled={scores.length === 0 && !hasPendingEval}
+            className={cn(
+              scores.length > 0 || hasPendingEval
+                ? "text-info border-info/30 hover:bg-info/10"
+                : "text-text-muted border-border opacity-50 cursor-not-allowed",
+            )}
+          >
+            <BarChart3 className="h-3 w-3" />
+            Scores
+            {scores.length > 0 && (
+              <Badge variant="info" className="ml-0.5 px-1.5 py-0">
+                {scores.length}
+              </Badge>
+            )}
+            {hasPendingEval && (
+              <Loader2 className="h-3 w-3 animate-spin text-info" />
+            )}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="h-3 w-3" /> Delete
+          </Button>
+        </div>
       </div>
 
       <div className="border-engraved bg-surface p-4">
@@ -108,6 +181,16 @@ export default function TraceDetailPage({
             <span className="text-text">{formatDuration(latencyMs)}</span>
           </div>
           <div>
+            <span className="text-text-muted block">Total Tokens</span>
+            <span className="text-text">
+              {formatTokens(trace.total_tokens)}
+            </span>
+          </div>
+          <div>
+            <span className="text-text-muted block">Total Cost</span>
+            <span className="text-text">{formatCost(trace.total_cost)}</span>
+          </div>
+          <div>
             <span className="text-text-muted block">Started</span>
             <span className="text-text">
               {formatDateTime(trace.started_at)}
@@ -117,27 +200,25 @@ export default function TraceDetailPage({
             <span className="text-text-muted block">Ended</span>
             <span className="text-text">{formatDateTime(trace.ended_at)}</span>
           </div>
-          {trace.session_id && (
-            <div>
-              <span className="text-text-muted block">Session</span>
-              <span className="text-text">{trace.session_id}</span>
-            </div>
-          )}
-          {trace.user_id && (
-            <div>
-              <span className="text-text-muted block">User</span>
-              <span className="text-text">{trace.user_id}</span>
-            </div>
-          )}
-          {trace.environment && (
-            <div>
-              <span className="text-text-muted block">Environment</span>
-              <span className="text-text">{trace.environment}</span>
-            </div>
-          )}
-          {trace.tags.length > 0 && (
-            <div className="col-span-2">
-              <span className="text-text-muted block mb-1">Tags</span>
+          <div>
+            <span className="text-text-muted block">Session</span>
+            <span className="text-text">{trace.session_id ?? "—"}</span>
+          </div>
+          <div>
+            <span className="text-text-muted block">User</span>
+            <span className="text-text">{trace.user_id ?? "—"}</span>
+          </div>
+          <div>
+            <span className="text-text-muted block">Environment</span>
+            <span className="text-text">{trace.environment ?? "—"}</span>
+          </div>
+          <div>
+            <span className="text-text-muted block">Release</span>
+            <span className="text-text">{trace.release ?? "—"}</span>
+          </div>
+          <div className="col-span-2">
+            <span className="text-text-muted block mb-1">Tags</span>
+            {trace.tags.length > 0 ? (
               <div className="flex gap-1 flex-wrap">
                 {trace.tags.map((tag) => (
                   <Badge key={tag} variant="default">
@@ -145,64 +226,48 @@ export default function TraceDetailPage({
                   </Badge>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {trace.input != null && (
-        <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-2">
-            Input
-          </h2>
-          <pre className="text-xs text-text-dim overflow-auto max-h-48 bg-bg p-3 border border-border">
-            {typeof trace.input === "string"
-              ? trace.input
-              : JSON.stringify(trace.input, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      {trace.output != null && (
-        <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-2">
-            Output
-          </h2>
-          <pre className="text-xs text-text-dim overflow-auto max-h-48 bg-bg p-3 border border-border">
-            {typeof trace.output === "string"
-              ? trace.output
-              : JSON.stringify(trace.output, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      {scores.length > 0 && (
-        <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-            Scores
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {scores.map((score) => (
-              <div key={score.id} className="border border-border p-2">
-                <span className="text-xs text-text-muted block">
-                  {score.name}
-                </span>
-                <span className="text-sm font-mono text-text">
-                  {score.value ?? "—"}
-                </span>
-                <StatusBadge status={score.status} />
-              </div>
-            ))}
+            ) : (
+              <span className="text-text">—</span>
+            )}
           </div>
         </div>
-      )}
-
-      <div>
-        <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-          Span Tree ({trace.spans.length} spans)
-        </h2>
-        <SpanTreeView spans={trace.spans} />
       </div>
+
+      <SpanWaterfall trace={trace} />
+
+      <ScoresSidebar
+        scores={scores}
+        open={scoresOpen}
+        onClose={() => setScoresOpen(false)}
+        onScoreUpdated={() =>
+          queryClient.invalidateQueries({
+            queryKey: [...queryKeys.traces.detail(traceId), "scores"],
+          })
+        }
+        onScoreDeleted={() =>
+          queryClient.invalidateQueries({
+            queryKey: [...queryKeys.traces.detail(traceId), "scores"],
+          })
+        }
+        onRefresh={() =>
+          queryClient.invalidateQueries({
+            queryKey: [...queryKeys.traces.detail(traceId), "scores"],
+          })
+        }
+        isRefreshing={scoresQuery.isFetching}
+      />
+
+      <EvaluationSidebar
+        mode="trace"
+        open={runEvalOpen}
+        onClose={() => setRunEvalOpen(false)}
+        targetIds={[traceId]}
+        onSubmitted={() =>
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.evaluations.traceRuns.all(projectId),
+          })
+        }
+      />
 
       <ConfirmDialog
         open={confirmDelete}

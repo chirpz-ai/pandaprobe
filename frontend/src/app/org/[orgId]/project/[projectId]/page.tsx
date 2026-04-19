@@ -12,6 +12,7 @@ import { getUsage } from "@/lib/api/subscriptions";
 import { queryKeys } from "@/lib/query/keys";
 import { formatNumber } from "@/lib/utils/format";
 import { LoadingState } from "@/components/common/LoadingState";
+import { OnboardingChecklist } from "@/components/features/OnboardingChecklist";
 
 export default function ProjectHomePage() {
   const { orgId, projectId } = useParams();
@@ -88,6 +89,8 @@ export default function ProjectHomePage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-lg font-mono text-primary">Home</h1>
+
+      <OnboardingChecklist />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card) => (

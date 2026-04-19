@@ -47,6 +47,7 @@ export default function APIKeysPage() {
   const [deleteMode, setDeleteMode] = useState<"revoke" | "permanent">(
     "revoke",
   );
+  const [copied, setCopied] = useState(false);
 
   useDocumentTitle("API Keys");
 
@@ -119,6 +120,8 @@ export default function APIKeysPage() {
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
     toast({ title: "Copied to clipboard", variant: "success" });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   if (!currentOrg) return <EmptyState title="No organization selected" />;
@@ -181,13 +184,17 @@ export default function APIKeysPage() {
                 )}
               </Button>
             </Tooltip>
-            <Tooltip content="Copy">
+            <Tooltip content={copied ? "Copied!" : "Copy"}>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => copyToClipboard(newRawKey)}
               >
-                <Copy className="h-3 w-3" />
+                {copied ? (
+                  <Check className="h-3 w-3 text-success" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
               </Button>
             </Tooltip>
           </div>

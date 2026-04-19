@@ -27,6 +27,9 @@ export function configureAuth(opts: {
 const client: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
+  paramsSerializer: {
+    indexes: null,
+  },
 });
 
 client.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {

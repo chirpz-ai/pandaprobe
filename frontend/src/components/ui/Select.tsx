@@ -63,6 +63,23 @@ const SelectContent = forwardRef<
 ));
 SelectContent.displayName = "SelectContent";
 
+const SelectLabel = forwardRef<
+  HTMLDivElement,
+  SelectPrimitive.SelectLabelProps & { className?: string }
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Label
+    ref={ref}
+    className={cn(
+      "px-2 pt-2 pb-1 text-[11px] font-mono text-text-muted uppercase tracking-wider",
+      className,
+    )}
+    {...props}
+  >
+    {children}
+  </SelectPrimitive.Label>
+));
+SelectLabel.displayName = "SelectLabel";
+
 const SelectItem = forwardRef<
   HTMLDivElement,
   SelectPrimitive.SelectItemProps & { className?: string }
@@ -70,7 +87,7 @@ const SelectItem = forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-pointer select-none items-center py-1.5 pl-8 pr-2 text-sm font-mono text-text",
+      "relative flex w-full cursor-pointer select-none items-center py-1.5 pl-8 pr-2 text-[11px] font-mono text-text",
       "outline-none focus:bg-surface-hi",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
@@ -93,5 +110,6 @@ export {
   SelectValue,
   SelectTrigger,
   SelectContent,
+  SelectLabel,
   SelectItem,
 };

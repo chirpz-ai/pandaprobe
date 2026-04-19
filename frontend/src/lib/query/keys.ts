@@ -42,7 +42,23 @@ export const queryKeys = {
       all: (projectId: string) => ["monitors", projectId] as const,
       list: (projectId: string, params: Record<string, unknown>) =>
         ["monitors", projectId, params] as const,
+      detail: (monitorId: string) => ["monitors", "detail", monitorId] as const,
+      runs: (monitorId: string, params: Record<string, unknown>) =>
+        ["monitors", "runs", monitorId, params] as const,
     },
+    traceScores: {
+      all: (projectId: string) => ["traceScores", projectId] as const,
+      list: (projectId: string, params: Record<string, unknown>) =>
+        ["traceScores", projectId, params] as const,
+    },
+    sessionScores: {
+      all: (projectId: string) => ["sessionScores", projectId] as const,
+      list: (projectId: string, params: Record<string, unknown>) =>
+        ["sessionScores", projectId, params] as const,
+    },
+    traceMetrics: (projectId: string) => ["traceMetrics", projectId] as const,
+    sessionMetrics: (projectId: string) =>
+      ["sessionMetrics", projectId] as const,
   },
   analytics: {
     traces: (projectId: string, params: Record<string, unknown>) =>
