@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useOrgId, useResolvedProjectId } from "@/hooks/useNavigation";
+import { DOCS_URL } from "@/lib/utils/constants";
 import { createOrganization } from "@/lib/api/organizations";
 import { extractErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/providers/ToastProvider";
@@ -536,9 +537,7 @@ export function Sidebar() {
                   </div>
                   <DropdownMenu.Item
                     className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
-                    onSelect={() =>
-                      window.open("https://docs.pandaprobe.com", "_blank")
-                    }
+                    onSelect={() => window.open(DOCS_URL, "_blank")}
                   >
                     <Book className="h-3.5 w-3.5" />
                     Documentation
