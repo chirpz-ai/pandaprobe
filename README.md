@@ -20,12 +20,16 @@
 </p>
 
 <p align="center">
+  <a href="https://pypi.org/project/pandaprobe/" alt="PyPI Downloads"><img src="https://static.pepy.tech/badge/pandaprobe" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+  <a href="https://www.pandaprobe.com/" alt="Website"><img src="https://img.shields.io/badge/made by-Chirpz AI-blue" /></a>
+  <a href="https://discord.gg/A2VfrRhx"><img src="https://img.shields.io/discord/1323415085011701870?label=Discord&logo=discord&logoColor=white&style=flat-square" alt="Discord"></a>
+  <br/>
   <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/build.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/build.yml/badge.svg" alt="Build"></a>
   <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/lint.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/lint.yml/badge.svg" alt="Lint"></a>
   <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/test-unit.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/test-unit.yml/badge.svg" alt="Unit Tests"></a>
   <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/test-integration.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/test-integration.yml/badge.svg" alt="Integration Tests"></a>
   <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/codeql.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
 </p>
 
 ---
@@ -36,28 +40,19 @@ PandaProbe is an open source agent engineering platform. It helps teams collabor
 ### Documentation
 Visit our client [docs](https://docs.pandaprobe.com/get-started/welcome) or jump to a quickstart [Python](https://docs.pandaprobe.com/get-started/quickstart)
 
-## Quick Start
+## Self-hosted
 
 > **Prerequisites:** [Docker](https://docs.docker.com/get-docker/) must be installed and running.
 
 ```bash
+git clone https://github.com/chirpz-ai/pandaprobe.git
+cd pandaprobe
 ./start.sh
 ```
 
 Once running, open:
 - **Dashboard** — http://localhost:3000
 - **API reference** — http://localhost:8000/scalar
-
-### Managing services
-
-```bash
-./start.sh status     # Show service health
-./start.sh logs       # Tail all logs (or: ./start.sh logs app)
-./start.sh restart    # Restart all services
-./start.sh stop       # Stop all services
-./start.sh upgrade    # Pull latest images and restart
-./start.sh help       # Show all available commands
-```
 
 ## Architecture
 
@@ -122,62 +117,9 @@ sequenceDiagram
 | **postgres** | PostgreSQL 16 | 5432 |
 | **redis** | Redis 7 (broker + cache) | 6379 |
 
-## Development (Contributing)
-
-For contributors who want to build from source with hot reload:
-
-```bash
-# ── Setup ────────────────────────────────────────────────
-make install              # Install all deps (backend + frontend)
-cp backend/.env.example backend/.env.development
-cp frontend/.env.example frontend/.env.development
-
-# ── Build from source (hot reload) ───────────────────────
-make up                   # Build & start all services via Docker Compose
-make down                 # Stop all services
-make restart              # Restart all services
-
-# ── Run locally (outside Docker) ─────────────────────────
-make dev                  # Run backend API + frontend dev server
-make worker               # Run Celery worker
-
-# ── Code quality ─────────────────────────────────────────
-make lint                 # Run all linters (backend + frontend)
-make format               # Auto-format all code
-make typecheck            # Run TypeScript type checking
-
-# ── Testing ──────────────────────────────────────────────
-make test-unit            # Run all unit tests (backend + frontend)
-make test-integration     # Run backend integration tests (spins up test DB)
-make test-all             # Run everything (unit + integration + E2E)
-
-# ── Database ─────────────────────────────────────────────
-make migration msg=""     # Generate Alembic migration
-make migrate              # Apply migrations
-
-# ── Logs ─────────────────────────────────────────────────
-make logs                 # Tail all service logs
-make logs-app             # Tail backend logs
-make logs-frontend        # Tail frontend logs
-
-make help                 # Show all available commands
-```
-
-> [!NOTE]
-> **Database migrations** are auto-applied on `make up` via the Docker entrypoint.
-> 
-> To generate a new migration after model changes:
-> ```bash
-> make migration msg="describe change"
-> ```
-> To manually apply migrations:
-> ```bash
-> make migrate
-> ```
-
 ## Contributing
 
-We welcome contributions! Please read the [Contributing Guide](CONTRIBUTING.md) for details on how to set up your environment, run tests, and submit pull requests.
+We welcome contributions! Please read the [Contributing Guide](CONTRIBUTING.md) for instructions on setting up your development environment, building from source, running tests, and submitting pull requests.
 
 ## Authors
 
