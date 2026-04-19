@@ -64,8 +64,9 @@ export default function TraceScoresPage() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
   const metricsQuery = useQuery({
-    queryKey: ["trace-metrics"],
+    queryKey: queryKeys.evaluations.traceMetrics(projectId),
     queryFn: getTraceMetrics,
+    enabled: !!currentProject,
     staleTime: 5 * 60_000,
   });
 

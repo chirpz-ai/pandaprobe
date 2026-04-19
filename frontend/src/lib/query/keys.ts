@@ -56,6 +56,10 @@ export const queryKeys = {
       list: (projectId: string, params: Record<string, unknown>) =>
         ["sessionScores", projectId, params] as const,
     },
+    traceMetrics: (projectId: string) =>
+      ["traceMetrics", projectId] as const,
+    sessionMetrics: (projectId: string) =>
+      ["sessionMetrics", projectId] as const,
   },
   analytics: {
     traces: (projectId: string, params: Record<string, unknown>) =>

@@ -62,8 +62,9 @@ export default function SessionScoresPage() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
   const metricsQuery = useQuery({
-    queryKey: ["session-metrics"],
+    queryKey: queryKeys.evaluations.sessionMetrics(projectId),
     queryFn: getSessionMetrics,
+    enabled: !!currentProject,
     staleTime: 5 * 60_000,
   });
 
