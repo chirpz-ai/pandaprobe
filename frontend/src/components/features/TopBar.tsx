@@ -16,6 +16,19 @@ interface Crumb {
 function getBreadcrumbs(pathname: string): Crumb[] {
   const segments = pathname.split("/").filter(Boolean);
 
+  let projectRoot: string | null = null;
+  for (let i = 0; i + 3 < segments.length; i++) {
+    if (
+      segments[i] === "org" &&
+      UUID_RE.test(segments[i + 1]) &&
+      segments[i + 2] === "project" &&
+      UUID_RE.test(segments[i + 3])
+    ) {
+      projectRoot = "/" + segments.slice(0, i + 4).join("/");
+      break;
+    }
+  }
+
   const crumbs: Crumb[] = [];
   let accumulated = "";
   for (const seg of segments) {
@@ -26,6 +39,13 @@ function getBreadcrumbs(pathname: string): Crumb[] {
       label: seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
       href: accumulated,
     });
+  }
+
+  if (projectRoot) {
+    if (crumbs.length === 0) {
+      return [{ label: "Home", href: projectRoot }];
+    }
+    return [{ label: "Home", href: projectRoot }, ...crumbs];
   }
 
   if (crumbs.length === 0) return [{ label: "Home", href: "/" }];
