@@ -62,16 +62,9 @@ interface EvalRunDetailSidebarProps {
   runId: string | null;
   open: boolean;
   onClose: () => void;
-  /** Called after a successful retry or delete so the caller can invalidate its own queries. */
   onChanged?: () => void;
 }
 
-/**
- * Sidebar surface for drilling into a single trace or session evaluation
- * run. Fetches run metadata and scores (polling while still in-flight),
- * exposes retry/delete actions, and renders the scores using the same
- * rich `ScoreRow` component the trace/session detail sidebars use.
- */
 export function EvalRunDetailSidebar({
   mode,
   runId,
