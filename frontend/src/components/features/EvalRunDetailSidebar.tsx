@@ -17,6 +17,8 @@ import {
   Radio,
   ChevronDown,
   ChevronRight,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   getTraceRun,
@@ -38,6 +40,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { formatDateTime, formatRelativeTime } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import { useToast } from "@/components/providers/ToastProvider";
@@ -84,6 +87,7 @@ export function EvalRunDetailSidebar({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteScoresToo, setDeleteScoresToo] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
 
   const enabled = open && !!runId;
 
@@ -91,6 +95,7 @@ export function EvalRunDetailSidebar({
   // the sidebar closes, so each run starts with the clean summary view.
   useEffect(() => {
     setScoresOpen(false);
+    setCopiedId(false);
   }, [runId]);
 
   const runQuery = useQuery<EvalRunResponse>({
@@ -139,6 +144,13 @@ export function EvalRunDetailSidebar({
     // Only refetch scores if the user has actually opened the section; we
     // don't want the header's Refresh button to trigger a hidden fetch.
     if (scoresOpen) scoresQuery.refetch();
+  }
+
+  function handleCopyId() {
+    if (!run) return;
+    navigator.clipboard.writeText(run.id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
   }
 
   async function handleRetry() {
@@ -283,13 +295,30 @@ export function EvalRunDetailSidebar({
                       )}
                     </span>
                   </KVRow>
-                  <KVRow label="Run ID">
-                    <span
-                      className="text-text-dim truncate"
-                      title={run.id}
-                    >
-                      {run.id.slice(0, 8)}…
-                    </span>
+                  <KVRow label="Run ID" truncate={false}>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="text-text-dim truncate min-w-0"
+                        title={run.id}
+                      >
+                        {run.id}
+                      </span>
+                      <Tooltip
+                        content={copiedId ? "Copied!" : "Copy run ID"}
+                      >
+                        <button
+                          className="text-text-muted hover:text-text transition-colors flex-shrink-0"
+                          onClick={handleCopyId}
+                          aria-label="Copy run ID"
+                        >
+                          {copiedId ? (
+                            <Check className="h-3 w-3 text-success" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </button>
+                      </Tooltip>
+                    </div>
                   </KVRow>
                   <KVRow label="Created">
                     <span className="text-text flex items-center gap-1">
@@ -502,16 +531,23 @@ export function EvalRunDetailSidebar({
 function KVRow({
   label,
   children,
+  truncate = true,
 }: {
   label: string;
   children: React.ReactNode;
+  /**
+   * When true (default), the value container applies `truncate` so long
+   * content renders on one line with an ellipsis. Set to false when the
+   * caller needs a flex/multi-element layout (e.g. value + icon button).
+   */
+  truncate?: boolean;
 }) {
   return (
     <div className="min-w-0">
       <span className="text-[10px] text-text-muted uppercase tracking-wider block">
         {label}
       </span>
-      <div className="truncate">{children}</div>
+      <div className={truncate ? "truncate" : "min-w-0"}>{children}</div>
     </div>
   );
 }
