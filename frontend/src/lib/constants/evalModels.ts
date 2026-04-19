@@ -1,8 +1,8 @@
-export const PROVIDER_MODELS: Record<string, string> = {
-  vertex_ai: "vertex_ai/gemini-3.1-flash-lite-preview",
-  google_genai: "gemini/gemini-3.1-flash-lite-preview",
-  openai: "gpt-5-mini",
-  anthropic: "claude-sonnet-4-6",
+export const PROVIDER_MODELS: Record<string, string[]> = {
+  vertex_ai: ["vertex_ai/gemini-3.1-flash-lite-preview", "vertex_ai/gemini-3-flash-preview"],
+  google_genai: ["gemini/gemini-3.1-flash-lite-preview"],
+  openai: ["gpt-5-mini"],
+  anthropic: ["claude-sonnet-4-6"],
 };
 
 export const DEFAULT_SIGNAL_WEIGHTS: Record<string, number> = {
