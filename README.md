@@ -23,7 +23,7 @@
   <a href="https://pypi.org/project/pandaprobe/" alt="PyPI Downloads"><img src="https://static.pepy.tech/badge/pandaprobe" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
   <a href="https://www.pandaprobe.com/" alt="Website"><img src="https://img.shields.io/badge/made by-Chirpz AI-blue" /></a>
-  <a href="https://discord.gg/A2VfrRhx"><img src="https://img.shields.io/discord/1323415085011701870?label=Discord&logo=discord&logoColor=white&style=flat-square" alt="Discord"></a>
+  <a href="https://discord.gg/A2VfrRhx"><img src="https://img.shields.io/discord/1486405147893436426?label=Discord&logo=discord&logoColor=white&style=flat-square" alt="Discord"></a>
   <br/>
   <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/build.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/build.yml/badge.svg" alt="Build"></a>
   <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/lint.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/lint.yml/badge.svg" alt="Lint"></a>
@@ -34,10 +34,10 @@
 
 ---
 
-### What is PandaProbe?
+## What is PandaProbe?
 PandaProbe is an open source agent engineering platform. It helps teams collaboratively trace, evaluate, monitor, and debug AI agents. You can use PandaProbe cloud or self host the service.
 
-### Documentation
+## Documentation
 Visit our client [docs](https://docs.pandaprobe.com/get-started/welcome) or jump to a quickstart [Python](https://docs.pandaprobe.com/get-started/quickstart)
 
 ## Self-hosted
