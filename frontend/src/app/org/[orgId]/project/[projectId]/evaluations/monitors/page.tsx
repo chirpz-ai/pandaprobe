@@ -7,10 +7,12 @@ import {
   keepPreviousData,
 } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useProject } from "@/components/providers/ProjectProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useUrlState } from "@/hooks/useUrlState";
 import { listMonitors } from "@/lib/api/evaluations";
+import { getSubscription } from "@/lib/api/subscriptions";
 import type { MonitorResponse } from "@/lib/api/types";
 import { MonitorTable } from "@/components/features/MonitorTable";
 import { MonitorDetailSidebar } from "@/components/features/MonitorDetailSidebar";
@@ -27,9 +29,9 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { Radio, X } from "lucide-react";
+import { Radio, Sparkles, X } from "lucide-react";
 import { queryKeys } from "@/lib/query/keys";
-import { MonitorStatus } from "@/lib/api/enums";
+import { MonitorStatus, SubscriptionPlan } from "@/lib/api/enums";
 import { extractErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -93,6 +95,18 @@ export default function MonitorsPage() {
     refetchIntervalInBackground: false,
   });
 
+  // Monitors are gated to paid plans. If the org is on HOBBY we render an
+  // upgrade CTA so users discover the path to unlock the feature without
+  // hitting the backend error first.
+  const subscriptionQuery = useQuery({
+    queryKey: queryKeys.subscriptions.current(orgId),
+    queryFn: () => getSubscription(orgId),
+    enabled: !!orgId,
+    staleTime: 60_000,
+  });
+  const isHobby = subscriptionQuery.data?.plan === SubscriptionPlan.HOBBY;
+  const plansHref = `/org/${orgId}/settings/plans`;
+
   const hasActiveFilters = values.status !== STATUS_ALL;
 
   function clearAllFilters() {
@@ -135,10 +149,24 @@ export default function MonitorsPage() {
       <div className="flex-shrink-0 space-y-3 pb-3">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-mono text-primary">Monitors</h1>
-          <Button variant="primary" size="sm" onClick={handleOpenCreate}>
-            <Radio className="h-3.5 w-3.5 mr-1.5" />
-            Create Monitor
-          </Button>
+          <div className="flex items-center gap-2">
+            {isHobby && (
+              <Button
+                asChild
+                size="sm"
+                className="bg-warning/10 text-warning border border-warning/30 hover:bg-warning/20"
+              >
+                <Link href={plansHref}>
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                  Upgrade to unlock monitors
+                </Link>
+              </Button>
+            )}
+            <Button variant="primary" size="sm" onClick={handleOpenCreate}>
+              <Radio className="h-3.5 w-3.5 mr-1.5" />
+              Create Monitor
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto">
