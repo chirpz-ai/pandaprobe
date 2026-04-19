@@ -33,16 +33,17 @@ import {
   Select,
   SelectTrigger,
   SelectContent,
+  SelectGroup,
+  SelectLabel,
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/providers/ToastProvider";
 import { useEvalRunTracker } from "@/components/providers/EvalRunTrackerProvider";
 import { extractErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils/cn";
 
-const DEFAULT_PROVIDER_VALUE = "__default__";
+const DEFAULT_MODEL_VALUE = "__default__";
 
 type SignalWeightKey = keyof typeof DEFAULT_SIGNAL_WEIGHTS;
 const SIGNAL_WEIGHT_KEYS = Object.keys(
@@ -73,7 +74,7 @@ export function EvaluationSidebar({
   const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(
     new Set(),
   );
-  const [provider, setProvider] = useState<string>(DEFAULT_PROVIDER_VALUE);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_VALUE);
   const [customizeWeights, setCustomizeWeights] = useState(false);
   const [weights, setWeights] = useState<Record<string, number>>({
     ...DEFAULT_SIGNAL_WEIGHTS,
@@ -85,7 +86,7 @@ export function EvaluationSidebar({
     if (open) {
       setName("");
       setSelectedMetrics(new Set());
-      setProvider(DEFAULT_PROVIDER_VALUE);
+      setSelectedModel(DEFAULT_MODEL_VALUE);
       setCustomizeWeights(false);
       setWeights({ ...DEFAULT_SIGNAL_WEIGHTS });
       setSubmitting(false);
@@ -135,9 +136,7 @@ export function EvaluationSidebar({
 
     const metricList = Array.from(selectedMetrics);
     const modelId =
-      provider !== DEFAULT_PROVIDER_VALUE
-        ? PROVIDER_MODELS[provider]
-        : undefined;
+      selectedModel !== DEFAULT_MODEL_VALUE ? selectedModel : undefined;
 
     setSubmitting(true);
     try {
@@ -308,39 +307,29 @@ export function EvaluationSidebar({
               Model
             </label>
             <Select
-              value={provider}
-              onValueChange={setProvider}
+              value={selectedModel}
+              onValueChange={setSelectedModel}
               disabled={submitting || providersQuery.isPending}
             >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Default" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={DEFAULT_PROVIDER_VALUE}>Default</SelectItem>
-                {providers.map((p) => {
-                  const item = (
-                    <SelectItem
-                      key={p.key}
-                      value={p.key}
-                      disabled={!p.available}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span>{p.name}</span>
-                        <span className="text-text-muted text-[11px]">
-                          {PROVIDER_MODELS[p.key]}
-                        </span>
-                      </span>
-                    </SelectItem>
-                  );
-                  if (!p.available && p.message) {
-                    return (
-                      <Tooltip key={p.key} content={p.message} side="left">
-                        <div>{item}</div>
-                      </Tooltip>
-                    );
-                  }
-                  return item;
-                })}
+                <SelectItem value={DEFAULT_MODEL_VALUE}>Default</SelectItem>
+                {providers.map((p) => (
+                  <SelectGroup key={p.key}>
+                    <SelectLabel>{p.name}</SelectLabel>
+                    {PROVIDER_MODELS[p.key].map((modelId) => (
+                      <SelectItem
+                        key={modelId}
+                        value={modelId}
+                        disabled={!p.available}
+                      >
+                        {modelId}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
               </SelectContent>
             </Select>
             {providersQuery.error && (

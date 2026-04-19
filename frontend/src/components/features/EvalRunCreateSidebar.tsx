@@ -30,17 +30,18 @@ import {
   Select,
   SelectTrigger,
   SelectContent,
+  SelectGroup,
+  SelectLabel,
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { DateTimePicker } from "@/components/common/DateTimePicker";
 import { useToast } from "@/components/providers/ToastProvider";
 import { useEvalRunTracker } from "@/components/providers/EvalRunTrackerProvider";
 import { extractErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils/cn";
 
-const DEFAULT_PROVIDER_VALUE = "__default__";
+const DEFAULT_MODEL_VALUE = "__default__";
 const ANY_STATUS_VALUE = "__any__";
 const ANY_HAS_ERROR_VALUE = "__any__";
 
@@ -116,7 +117,7 @@ export function EvalRunCreateSidebar({
   const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(
     new Set(),
   );
-  const [provider, setProvider] = useState<string>(DEFAULT_PROVIDER_VALUE);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_VALUE);
   const [samplingRate, setSamplingRate] = useState<number>(1);
   const [traceFilters, setTraceFilters] =
     useState<TraceFilterState>(EMPTY_TRACE_FILTERS);
@@ -133,7 +134,7 @@ export function EvalRunCreateSidebar({
     if (open) {
       setName("");
       setSelectedMetrics(new Set());
-      setProvider(DEFAULT_PROVIDER_VALUE);
+      setSelectedModel(DEFAULT_MODEL_VALUE);
       setSamplingRate(1);
       setTraceFilters(EMPTY_TRACE_FILTERS);
       setSessionFilters(EMPTY_SESSION_FILTERS);
@@ -192,9 +193,7 @@ export function EvalRunCreateSidebar({
 
     const metricList = Array.from(selectedMetrics);
     const modelId =
-      provider !== DEFAULT_PROVIDER_VALUE
-        ? PROVIDER_MODELS[provider]
-        : undefined;
+      selectedModel !== DEFAULT_MODEL_VALUE ? selectedModel : undefined;
     const trimmedName = name.trim();
 
     setSubmitting(true);
@@ -384,39 +383,29 @@ export function EvalRunCreateSidebar({
               Model
             </label>
             <Select
-              value={provider}
-              onValueChange={setProvider}
+              value={selectedModel}
+              onValueChange={setSelectedModel}
               disabled={submitting || providersQuery.isPending}
             >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Default" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={DEFAULT_PROVIDER_VALUE}>Default</SelectItem>
-                {providers.map((p) => {
-                  const item = (
-                    <SelectItem
-                      key={p.key}
-                      value={p.key}
-                      disabled={!p.available}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span>{p.name}</span>
-                        <span className="text-text-muted text-[11px]">
-                          {PROVIDER_MODELS[p.key]}
-                        </span>
-                      </span>
-                    </SelectItem>
-                  );
-                  if (!p.available && p.message) {
-                    return (
-                      <Tooltip key={p.key} content={p.message} side="left">
-                        <div>{item}</div>
-                      </Tooltip>
-                    );
-                  }
-                  return item;
-                })}
+                <SelectItem value={DEFAULT_MODEL_VALUE}>Default</SelectItem>
+                {providers.map((p) => (
+                  <SelectGroup key={p.key}>
+                    <SelectLabel>{p.name}</SelectLabel>
+                    {PROVIDER_MODELS[p.key].map((modelId) => (
+                      <SelectItem
+                        key={modelId}
+                        value={modelId}
+                        disabled={!p.available}
+                      >
+                        {modelId}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
               </SelectContent>
             </Select>
             {providersQuery.error && (

@@ -30,17 +30,18 @@ import {
   Select,
   SelectTrigger,
   SelectContent,
+  SelectGroup,
+  SelectLabel,
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { DateTimePicker } from "@/components/common/DateTimePicker";
 import { useToast } from "@/components/providers/ToastProvider";
 import { extractErrorMessage } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query/keys";
 import { cn } from "@/lib/utils/cn";
 
-const DEFAULT_PROVIDER_VALUE = "__default__";
+const DEFAULT_MODEL_VALUE = "__default__";
 const ANY_STATUS_VALUE = "__any__";
 const ANY_HAS_ERROR_VALUE = "__any__";
 
@@ -122,7 +123,7 @@ export function MonitorFormSidebar({
   const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(
     new Set(),
   );
-  const [provider, setProvider] = useState<string>(DEFAULT_PROVIDER_VALUE);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_VALUE);
   const [samplingRate, setSamplingRate] = useState<number>(1);
   const [traceFilters, setTraceFilters] =
     useState<TraceFilterState>(EMPTY_TRACE_FILTERS);
@@ -146,8 +147,13 @@ export function MonitorFormSidebar({
       setName(monitor.name ?? "");
       setSelectedMetrics(new Set(monitor.metric_names ?? []));
       setSamplingRate(monitor.sampling_rate ?? 1);
-      const providerKey = findProviderKeyForModel(monitor.model);
-      setProvider(providerKey ?? DEFAULT_PROVIDER_VALUE);
+      const knownModels = Object.values(PROVIDER_MODELS).flat();
+      const monitorModel = monitor.model;
+      setSelectedModel(
+        monitorModel != null && knownModels.includes(monitorModel)
+          ? monitorModel
+          : DEFAULT_MODEL_VALUE,
+      );
       if (monitor.cadence?.startsWith("cron:")) {
         setCadenceKind("custom");
         setCronExpr(monitor.cadence.slice("cron:".length).trim());
@@ -178,7 +184,7 @@ export function MonitorFormSidebar({
       setTargetType("TRACE");
       setName("");
       setSelectedMetrics(new Set());
-      setProvider(DEFAULT_PROVIDER_VALUE);
+      setSelectedModel(DEFAULT_MODEL_VALUE);
       setSamplingRate(1);
       setTraceFilters(EMPTY_TRACE_FILTERS);
       setSessionFilters(EMPTY_SESSION_FILTERS);
@@ -254,9 +260,7 @@ export function MonitorFormSidebar({
 
     const metricList = Array.from(selectedMetrics);
     const modelId =
-      provider !== DEFAULT_PROVIDER_VALUE
-        ? PROVIDER_MODELS[provider]
-        : undefined;
+      selectedModel !== DEFAULT_MODEL_VALUE ? selectedModel : undefined;
     const cadence =
       cadenceKind === "custom" ? `cron:${cronExpr.trim()}` : cadenceKind;
     const filters =
@@ -553,39 +557,29 @@ export function MonitorFormSidebar({
               Model
             </label>
             <Select
-              value={provider}
-              onValueChange={setProvider}
+              value={selectedModel}
+              onValueChange={setSelectedModel}
               disabled={submitting || providersQuery.isPending}
             >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Default" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={DEFAULT_PROVIDER_VALUE}>Default</SelectItem>
-                {providers.map((p) => {
-                  const item = (
-                    <SelectItem
-                      key={p.key}
-                      value={p.key}
-                      disabled={!p.available}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span>{p.name}</span>
-                        <span className="text-text-muted text-[11px]">
-                          {PROVIDER_MODELS[p.key]}
-                        </span>
-                      </span>
-                    </SelectItem>
-                  );
-                  if (!p.available && p.message) {
-                    return (
-                      <Tooltip key={p.key} content={p.message} side="left">
-                        <div>{item}</div>
-                      </Tooltip>
-                    );
-                  }
-                  return item;
-                })}
+                <SelectItem value={DEFAULT_MODEL_VALUE}>Default</SelectItem>
+                {providers.map((p) => (
+                  <SelectGroup key={p.key}>
+                    <SelectLabel>{p.name}</SelectLabel>
+                    {PROVIDER_MODELS[p.key].map((modelId) => (
+                      <SelectItem
+                        key={modelId}
+                        value={modelId}
+                        disabled={!p.available}
+                      >
+                        {modelId}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -891,14 +885,6 @@ function FieldLabel({
 function formatSamplingRate(rate: number): string {
   if (rate >= 1) return "100%";
   return `${Math.round(rate * 100)}%`;
-}
-
-function findProviderKeyForModel(model: string | null): string | undefined {
-  if (!model) return undefined;
-  for (const [key, m] of Object.entries(PROVIDER_MODELS)) {
-    if (m === model) return key;
-  }
-  return undefined;
 }
 
 function buildTraceFilters(state: TraceFilterState): EvalRunFilters | null {
