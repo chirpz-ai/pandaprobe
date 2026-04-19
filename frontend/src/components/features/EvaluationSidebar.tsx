@@ -109,8 +109,7 @@ export function EvaluationSidebar({
   });
 
   const providers: ProviderInfo[] = useMemo(
-    () =>
-      (providersQuery.data ?? []).filter((p) => p.key in PROVIDER_MODELS),
+    () => (providersQuery.data ?? []).filter((p) => p.key in PROVIDER_MODELS),
     [providersQuery.data],
   );
 
@@ -317,9 +316,7 @@ export function EvaluationSidebar({
                 <SelectValue placeholder="Default" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={DEFAULT_PROVIDER_VALUE}>
-                  Default
-                </SelectItem>
+                <SelectItem value={DEFAULT_PROVIDER_VALUE}>Default</SelectItem>
                 {providers.map((p) => {
                   const item = (
                     <SelectItem

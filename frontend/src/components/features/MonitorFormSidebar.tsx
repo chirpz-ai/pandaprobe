@@ -124,9 +124,8 @@ export function MonitorFormSidebar({
   );
   const [provider, setProvider] = useState<string>(DEFAULT_PROVIDER_VALUE);
   const [samplingRate, setSamplingRate] = useState<number>(1);
-  const [traceFilters, setTraceFilters] = useState<TraceFilterState>(
-    EMPTY_TRACE_FILTERS,
-  );
+  const [traceFilters, setTraceFilters] =
+    useState<TraceFilterState>(EMPTY_TRACE_FILTERS);
   const [sessionFilters, setSessionFilters] = useState<SessionFilterState>(
     EMPTY_SESSION_FILTERS,
   );
@@ -210,14 +209,12 @@ export function MonitorFormSidebar({
       "evaluations",
       targetType === "TRACE" ? "trace-metrics" : "session-metrics",
     ],
-    queryFn:
-      targetType === "TRACE" ? getTraceMetrics : getSessionMetrics,
+    queryFn: targetType === "TRACE" ? getTraceMetrics : getSessionMetrics,
     enabled: open,
   });
 
   const providers: ProviderInfo[] = useMemo(
-    () =>
-      (providersQuery.data ?? []).filter((p) => p.key in PROVIDER_MODELS),
+    () => (providersQuery.data ?? []).filter((p) => p.key in PROVIDER_MODELS),
     [providersQuery.data],
   );
 
@@ -548,8 +545,9 @@ export function MonitorFormSidebar({
               className="w-full accent-primary"
             />
             <p className="mt-1 text-[10px] font-mono text-text-muted">
-              Fraction of matching {targetType === "TRACE" ? "traces" : "sessions"}{" "}
-              to evaluate on each run.
+              Fraction of matching{" "}
+              {targetType === "TRACE" ? "traces" : "sessions"} to evaluate on
+              each run.
             </p>
           </div>
 
@@ -697,9 +695,7 @@ export function MonitorFormSidebar({
 }
 
 function RequiredDot() {
-  return (
-    <span className="text-error">*</span>
-  );
+  return <span className="text-error">*</span>;
 }
 
 function TraceFilterFields({
@@ -998,7 +994,9 @@ function hydrateTraceFilters(
   if (typeof raw.user_id === "string") s.user_id = raw.user_id;
   if (typeof raw.name === "string") s.name = raw.name;
   if (Array.isArray(raw.tags)) {
-    s.tags = (raw.tags as unknown[]).filter((x) => typeof x === "string").join(", ");
+    s.tags = (raw.tags as unknown[])
+      .filter((x) => typeof x === "string")
+      .join(", ");
   }
   return s;
 }
@@ -1015,7 +1013,9 @@ function hydrateSessionFilters(
     s.has_error = raw.has_error ? "true" : "false";
   }
   if (Array.isArray(raw.tags)) {
-    s.tags = (raw.tags as unknown[]).filter((x) => typeof x === "string").join(", ");
+    s.tags = (raw.tags as unknown[])
+      .filter((x) => typeof x === "string")
+      .join(", ");
   }
   if (typeof raw.min_trace_count === "number") {
     s.min_trace_count = String(raw.min_trace_count);

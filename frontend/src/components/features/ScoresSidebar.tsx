@@ -51,10 +51,7 @@ export function ScoresSidebar({
                 title="Refresh scores"
               >
                 <RefreshCw
-                  className={cn(
-                    "h-3.5 w-3.5",
-                    isRefreshing && "animate-spin",
-                  )}
+                  className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
                 />
               </Button>
             )}

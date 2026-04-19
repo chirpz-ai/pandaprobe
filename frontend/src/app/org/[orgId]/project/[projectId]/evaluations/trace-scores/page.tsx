@@ -78,7 +78,8 @@ export default function TraceScoresPage() {
     if (values.environment) p.environment = values.environment;
     if (values.trace_id) p.trace_id = values.trace_id;
     if (values.eval_run_id) p.eval_run_id = values.eval_run_id;
-    if (values.date_from) p.date_from = new Date(values.date_from).toISOString();
+    if (values.date_from)
+      p.date_from = new Date(values.date_from).toISOString();
     if (values.date_to) p.date_to = new Date(values.date_to).toISOString();
     return p;
   }, [

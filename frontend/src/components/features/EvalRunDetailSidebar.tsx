@@ -119,7 +119,9 @@ export function EvalRunDetailSidebar({
   const scoresQuery = useQuery<TraceScoreResponse[] | SessionScoreResponse[]>({
     queryKey: ["evalRunScores", mode, runId],
     queryFn: () =>
-      mode === "trace" ? getTraceRunScores(runId!) : getSessionRunScores(runId!),
+      mode === "trace"
+        ? getTraceRunScores(runId!)
+        : getSessionRunScores(runId!),
     // Defer the fetch until the user expands the scores section, then keep
     // polling only while the section stays open and the run is still in-flight.
     enabled: enabled && scoresOpen,
@@ -239,10 +241,7 @@ export function EvalRunDetailSidebar({
               title="Refresh"
             >
               <RefreshCw
-                className={cn(
-                  "h-3.5 w-3.5",
-                  isRefreshing && "animate-spin",
-                )}
+                className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
               />
             </Button>
             <Button variant="ghost" size="icon" onClick={onClose}>
@@ -307,9 +306,7 @@ export function EvalRunDetailSidebar({
                       >
                         {run.id}
                       </span>
-                      <Tooltip
-                        content={copiedId ? "Copied!" : "Copy run ID"}
-                      >
+                      <Tooltip content={copiedId ? "Copied!" : "Copy run ID"}>
                         <button
                           className="text-text-muted hover:text-text transition-colors flex-shrink-0"
                           onClick={handleCopyId}
@@ -489,9 +486,7 @@ export function EvalRunDetailSidebar({
                       onClick={onClose}
                       className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors"
                     >
-                      <span>
-                        View full scores list for this run
-                      </span>
+                      <span>View full scores list for this run</span>
                       <ArrowRight className="h-3 w-3 flex-shrink-0" />
                     </Link>
                   </>
@@ -524,9 +519,7 @@ export function EvalRunDetailSidebar({
         title="Delete run"
         description={
           <div className="space-y-3">
-            <p>
-              Delete this evaluation run? This action cannot be undone.
-            </p>
+            <p>Delete this evaluation run? This action cannot be undone.</p>
             <label className="flex items-center gap-2 text-xs font-mono text-text-muted cursor-pointer">
               <input
                 type="checkbox"

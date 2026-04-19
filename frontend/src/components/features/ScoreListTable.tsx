@@ -14,10 +14,7 @@ import {
   Settings,
   RefreshCw,
 } from "lucide-react";
-import type {
-  TraceScoreResponse,
-  SessionScoreResponse,
-} from "@/lib/api/types";
+import type { TraceScoreResponse, SessionScoreResponse } from "@/lib/api/types";
 import { ScoreSource } from "@/lib/api/enums";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { MetadataSection } from "@/components/common/ScoreRow";
@@ -235,7 +232,9 @@ function ScoreListRow({
             </button>
             <Tooltip
               content={
-                copiedTarget ? "Copied!" : `Copy ${targetLabel.toLowerCase()} ID`
+                copiedTarget
+                  ? "Copied!"
+                  : `Copy ${targetLabel.toLowerCase()} ID`
               }
             >
               <button
@@ -318,8 +317,7 @@ function ExpandedRowDetails({
   onCopyScoreId: (e: React.MouseEvent) => void;
 }) {
   const traceScore = "trace_id" in score ? (score as TraceScoreResponse) : null;
-  const hasMetadata =
-    score.metadata && Object.keys(score.metadata).length > 0;
+  const hasMetadata = score.metadata && Object.keys(score.metadata).length > 0;
 
   return (
     <div className="space-y-3 max-w-full">

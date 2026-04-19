@@ -78,7 +78,8 @@ export default function MonitorDetailPage() {
   const projectId = currentProject?.id ?? projectIdFromUrl ?? "";
   const monitorsListHref = `/org/${orgId}/project/${projectId}/evaluations/monitors`;
 
-  const { page, limit, offset, setPage, set, totalPages } = useUrlState(URL_CONFIG);
+  const { page, limit, offset, setPage, set, totalPages } =
+    useUrlState(URL_CONFIG);
 
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -367,7 +368,10 @@ export default function MonitorDetailPage() {
           </div>
 
           <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-xs font-mono">
-            <SummaryCell label="Cadence" value={formatCadence(monitor.cadence)} />
+            <SummaryCell
+              label="Cadence"
+              value={formatCadence(monitor.cadence)}
+            />
             <SummaryCell
               label="Sampling"
               value={formatSamplingRate(monitor.sampling_rate)}
@@ -384,14 +388,18 @@ export default function MonitorDetailPage() {
             <SummaryCell
               label="Last run"
               value={
-                monitor.last_run_at ? formatRelativeTime(monitor.last_run_at) : "—"
+                monitor.last_run_at
+                  ? formatRelativeTime(monitor.last_run_at)
+                  : "—"
               }
               icon={<Clock className="h-2.5 w-2.5" />}
             />
             <SummaryCell
               label="Next run"
               value={
-                monitor.next_run_at ? formatRelativeTime(monitor.next_run_at) : "—"
+                monitor.next_run_at
+                  ? formatRelativeTime(monitor.next_run_at)
+                  : "—"
               }
               icon={<Clock className="h-2.5 w-2.5" />}
             />

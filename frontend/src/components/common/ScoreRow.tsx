@@ -164,9 +164,7 @@ export function ScoreRow({
         >
           {targetId}
         </span>
-        <Tooltip
-          content={copiedTarget ? "Copied!" : `Copy ${targetKind} ID`}
-        >
+        <Tooltip content={copiedTarget ? "Copied!" : `Copy ${targetKind} ID`}>
           <button
             className="text-text-muted hover:text-text transition-colors flex-shrink-0"
             onClick={handleCopyTarget}
@@ -559,10 +557,7 @@ function PrimitiveValue({ value }: { value: unknown }) {
   if (typeof value === "number") {
     const formatted = Number.isInteger(value)
       ? String(value)
-      : value
-          .toFixed(4)
-          .replace(/0+$/, "")
-          .replace(/\.$/, "");
+      : value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
     return <span className="text-info text-[11px] font-mono">{formatted}</span>;
   }
   return (

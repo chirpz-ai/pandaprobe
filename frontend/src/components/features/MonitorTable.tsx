@@ -51,10 +51,7 @@ export function MonitorTable({ monitors, onSelect }: MonitorTableProps) {
             >
               <td className="px-3 py-2 max-w-[220px] truncate text-text">
                 {m.name || m.id.slice(0, 8)}
-                <span
-                  className="ml-2 text-[10px] text-text-muted"
-                  title={m.id}
-                >
+                <span className="ml-2 text-[10px] text-text-muted" title={m.id}>
                   {m.id.slice(0, 8)}
                 </span>
               </td>

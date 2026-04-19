@@ -74,7 +74,8 @@ export default function SessionScoresPage() {
     if (values.source !== ALL) p.source = values.source;
     if (values.session_id) p.session_id = values.session_id;
     if (values.eval_run_id) p.eval_run_id = values.eval_run_id;
-    if (values.date_from) p.date_from = new Date(values.date_from).toISOString();
+    if (values.date_from)
+      p.date_from = new Date(values.date_from).toISOString();
     if (values.date_to) p.date_to = new Date(values.date_to).toISOString();
     return p;
   }, [

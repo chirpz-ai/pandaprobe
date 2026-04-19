@@ -118,9 +118,8 @@ export function EvalRunCreateSidebar({
   );
   const [provider, setProvider] = useState<string>(DEFAULT_PROVIDER_VALUE);
   const [samplingRate, setSamplingRate] = useState<number>(1);
-  const [traceFilters, setTraceFilters] = useState<TraceFilterState>(
-    EMPTY_TRACE_FILTERS,
-  );
+  const [traceFilters, setTraceFilters] =
+    useState<TraceFilterState>(EMPTY_TRACE_FILTERS);
   const [sessionFilters, setSessionFilters] = useState<SessionFilterState>(
     EMPTY_SESSION_FILTERS,
   );
@@ -160,8 +159,7 @@ export function EvalRunCreateSidebar({
   });
 
   const providers: ProviderInfo[] = useMemo(
-    () =>
-      (providersQuery.data ?? []).filter((p) => p.key in PROVIDER_MODELS),
+    () => (providersQuery.data ?? []).filter((p) => p.key in PROVIDER_MODELS),
     [providersQuery.data],
   );
 

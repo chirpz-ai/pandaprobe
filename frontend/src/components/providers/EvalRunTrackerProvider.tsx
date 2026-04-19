@@ -248,7 +248,6 @@ function PendingRunsPill({
   pending: PendingRun[];
   results: PollResult[];
 }) {
-
   const [portalTarget] = useState<HTMLElement | null>(() => {
     if (typeof document === "undefined") return null;
     return document.getElementById(CORNER_STACK_SLOT_ID);
@@ -290,7 +289,9 @@ function formatSingleSummary(item: {
   data?: EvalRunResponse;
 }): string {
   const name = item.data?.name ?? null;
-  const prefix = name ? `Running '${truncate(name, 28)}'` : "Running evaluation";
+  const prefix = name
+    ? `Running '${truncate(name, 28)}'`
+    : "Running evaluation";
   const progress = formatProgress(item.data);
   return progress ? `${prefix} · ${progress}` : prefix;
 }

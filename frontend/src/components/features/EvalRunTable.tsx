@@ -90,9 +90,7 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
                 {formatSamplingRate(run.sampling_rate)}
               </td>
               <td className="px-3 py-2 text-text-dim max-w-[160px] truncate">
-                {run.model ?? (
-                  <span className="text-text-muted">default</span>
-                )}
+                {run.model ?? <span className="text-text-muted">default</span>}
               </td>
               <td className="px-3 py-2 text-text-dim">
                 {formatRelativeTime(run.created_at)}

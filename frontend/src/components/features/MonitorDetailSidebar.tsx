@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import {
   X,
   RefreshCw,
@@ -218,13 +222,17 @@ export function MonitorDetailSidebar({
     }
   }
 
-  const title = monitor?.name || (monitor ? `Monitor ${monitor.id.slice(0, 8)}` : "Monitor");
+  const title =
+    monitor?.name ||
+    (monitor ? `Monitor ${monitor.id.slice(0, 8)}` : "Monitor");
   const isRefreshing = monitorQuery.isFetching;
   const isActive = monitor?.status === MonitorStatus.ACTIVE;
   const targetMode: "trace" | "session" =
     monitor?.target_type === "SESSION" ? "session" : "trace";
 
-  const lastRunSidebarRunId = lastRunSidebarOpen ? monitor?.last_run_id ?? null : null;
+  const lastRunSidebarRunId = lastRunSidebarOpen
+    ? (monitor?.last_run_id ?? null)
+    : null;
 
   return (
     <>
@@ -340,7 +348,9 @@ export function MonitorDetailSidebar({
                       >
                         {monitor.id}
                       </span>
-                      <Tooltip content={copiedId ? "Copied!" : "Copy monitor ID"}>
+                      <Tooltip
+                        content={copiedId ? "Copied!" : "Copy monitor ID"}
+                      >
                         <button
                           className="text-text-muted hover:text-text transition-colors flex-shrink-0"
                           onClick={handleCopyId}
@@ -484,9 +494,7 @@ export function MonitorDetailSidebar({
                   }}
                   className="w-full justify-between"
                 >
-                  <span className="flex items-center gap-1.5">
-                    View runs
-                  </span>
+                  <span className="flex items-center gap-1.5">View runs</span>
                   <ArrowRight className="h-3 w-3" />
                 </Button>
                 {monitor.last_run_id && (
