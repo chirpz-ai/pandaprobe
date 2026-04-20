@@ -232,6 +232,7 @@ jobs:
   trigger-deploy:
     needs: release
     runs-on: ubuntu-latest
+    permissions: {}
 
     steps:
       - name: Dispatch to private deployment repo
