@@ -21,7 +21,9 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { useToast } from "@/components/providers/ToastProvider";
 import { formatNumber, formatDate } from "@/lib/utils/format";
 import { extractErrorMessage } from "@/lib/api/client";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { SubscriptionPlan } from "@/lib/api/enums";
 import type { UsageHistoryItem } from "@/lib/api/types";
 
 export default function BillingPage() {
@@ -127,9 +129,20 @@ export default function BillingPage() {
             </div>
           </div>
           <div className="mt-4">
-            <Button variant="secondary" size="sm" onClick={handlePortal}>
-              <ExternalLink className="h-3 w-3" /> Manage Billing
-            </Button>
+            {subscription.plan === SubscriptionPlan.HOBBY ||
+            subscription.plan === SubscriptionPlan.DEVELOPMENT ? (
+              <Tooltip content="Upgrade to a paid plan to manage billing">
+                <span className="inline-block">
+                  <Button variant="secondary" size="sm" disabled>
+                    <ExternalLink className="h-3 w-3" /> Manage Billing
+                  </Button>
+                </span>
+              </Tooltip>
+            ) : (
+              <Button variant="secondary" size="sm" onClick={handlePortal}>
+                <ExternalLink className="h-3 w-3" /> Manage Billing
+              </Button>
+            )}
           </div>
         </div>
       )}
