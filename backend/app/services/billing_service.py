@@ -156,8 +156,7 @@ class BillingService:
         sub = await self._repo.get_subscription_by_org(org_id)
         if sub is None or sub.stripe_customer_id is None:
             raise ValidationError(
-                "No billing account exists for this organization. "
-                "Upgrade to a paid plan to access billing management."
+                "No billing account exists for this organization. Upgrade to a paid plan to access billing management."
             )
 
         session = stripe.billing_portal.Session.create(
