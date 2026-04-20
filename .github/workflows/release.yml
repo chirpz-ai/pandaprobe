@@ -227,3 +227,21 @@ jobs:
         with:
           generate_release_notes: true
           files: sboms/*.json
+
+  # ── Trigger private deployment pipeline ──────────────────────────────────
+  trigger-deploy:
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Dispatch to private deployment repo
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.DEPLOY_REPO_PAT }}
+          repository: ${{ secrets.DEPLOY_REPO_NAME }}
+          event-type: release
+          client-payload: >-
+            {
+              "version": "${{ github.ref_name }}",
+              "sha": "${{ github.sha }}"
+            }
