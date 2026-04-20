@@ -49,6 +49,20 @@ def _resolve_plan_from_price_id(price_id: str) -> SubscriptionPlan | None:
     return mapping.get(price_id)
 
 
+def _get_sub_period(stripe_sub: object) -> tuple[datetime, datetime]:
+    """Extract billing period timestamps from a Stripe Subscription object.
+
+    In API versions >= 2025-07-30.basil the top-level
+    ``current_period_start``/``current_period_end`` fields were removed.
+    The period now lives on each subscription *item*.
+    """
+    item = stripe_sub.items.data[0]  # type: ignore[attr-defined]
+    return (
+        datetime.fromtimestamp(item.current_period_start, tz=timezone.utc),
+        datetime.fromtimestamp(item.current_period_end, tz=timezone.utc),
+    )
+
+
 class BillingService:
     """Orchestrates Stripe billing operations and overage calculations."""
 
@@ -126,6 +140,7 @@ class BillingService:
             "line_items": [{"price": price_id, "quantity": 1}],
             "success_url": success_url,
             "cancel_url": cancel_url,
+            "automatic_tax": {"enabled": True},
             "metadata": {"org_id": str(org_id), "plan": plan.value},
         }
         if sub and sub.stripe_customer_id:
@@ -136,9 +151,14 @@ class BillingService:
 
     async def create_portal_session(self, org_id: UUID, *, return_url: str) -> str:
         """Create a Stripe Customer Portal session for self-service management."""
+        from app.registry.exceptions import ValidationError
+
         sub = await self._repo.get_subscription_by_org(org_id)
         if sub is None or sub.stripe_customer_id is None:
-            raise ValueError("No Stripe customer found for this organization.")
+            raise ValidationError(
+                "No billing account exists for this organization. "
+                "Upgrade to a paid plan to access billing management."
+            )
 
         session = stripe.billing_portal.Session.create(
             customer=sub.stripe_customer_id,
@@ -278,14 +298,13 @@ class BillingService:
     async def handle_checkout_completed(self, event_data: dict) -> None:
         """Process ``checkout.session.completed`` -- activate a paid subscription."""
         obj = event_data["object"]
-        org_id = UUID(obj["metadata"]["org_id"])
-        plan = SubscriptionPlan(obj["metadata"]["plan"])
-        customer_id = obj["customer"]
-        subscription_id = obj["subscription"]
+        org_id = UUID(obj.metadata["org_id"])
+        plan = SubscriptionPlan(obj.metadata["plan"])
+        customer_id = obj.customer
+        subscription_id = obj.subscription
 
         stripe_sub = stripe.Subscription.retrieve(subscription_id)
-        period_start = datetime.fromtimestamp(stripe_sub["current_period_start"], tz=timezone.utc)
-        period_end = datetime.fromtimestamp(stripe_sub["current_period_end"], tz=timezone.utc)
+        period_start, period_end = _get_sub_period(stripe_sub)
 
         existing = await self._repo.get_subscription_by_org(org_id)
         if existing:
@@ -322,7 +341,7 @@ class BillingService:
         the next billing period.
         """
         obj = event_data["object"]
-        subscription_id = obj.get("subscription")
+        subscription_id = getattr(obj, "subscription", None)
         if not subscription_id:
             return
 
@@ -355,8 +374,8 @@ class BillingService:
     async def handle_invoice_paid(self, event_data: dict) -> None:
         """Process ``invoice.paid`` -- final overage report, then advance billing period."""
         obj = event_data["object"]
-        subscription_id = obj.get("subscription")
-        invoice_id = obj["id"]
+        subscription_id = getattr(obj, "subscription", None)
+        invoice_id = obj.id
 
         if not subscription_id:
             return
@@ -389,8 +408,7 @@ class BillingService:
 
         # Advance to the new billing period
         stripe_sub = stripe.Subscription.retrieve(subscription_id)
-        new_start = datetime.fromtimestamp(stripe_sub["current_period_start"], tz=timezone.utc)
-        new_end = datetime.fromtimestamp(stripe_sub["current_period_end"], tz=timezone.utc)
+        new_start, new_end = _get_sub_period(stripe_sub)
 
         await self._repo.advance_period(sub.org_id, new_start, new_end)
         await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
@@ -402,7 +420,7 @@ class BillingService:
     async def handle_invoice_payment_failed(self, event_data: dict) -> None:
         """Process ``invoice.payment_failed`` -- mark subscription past due."""
         obj = event_data["object"]
-        subscription_id = obj.get("subscription")
+        subscription_id = getattr(obj, "subscription", None)
         if not subscription_id:
             return
 
@@ -418,12 +436,12 @@ class BillingService:
     async def handle_subscription_updated(self, event_data: dict) -> None:
         """Process ``customer.subscription.updated`` -- plan/status changes."""
         obj = event_data["object"]
-        subscription_id = obj["id"]
+        subscription_id = obj.id
         sub = await self._repo.get_subscription_by_stripe_subscription(subscription_id)
         if sub is None:
             return
 
-        new_status = obj.get("status", "active")
+        new_status = getattr(obj, "status", "active")
         status_map = {
             "active": SubscriptionStatus.ACTIVE,
             "past_due": SubscriptionStatus.PAST_DUE,
@@ -434,9 +452,11 @@ class BillingService:
 
         updates: dict = {"status": mapped_status.value}
 
-        items = obj.get("items", {}).get("data", [])
+        items_obj = getattr(obj, "items", None)
+        items = items_obj.data if items_obj else []
         if items:
-            price_id = items[0].get("price", {}).get("id")
+            price = getattr(items[0], "price", None)
+            price_id = price.id if price else None
             if price_id:
                 resolved_plan = _resolve_plan_from_price_id(price_id)
                 if resolved_plan:
@@ -448,17 +468,19 @@ class BillingService:
                         price_id=price_id,
                     )
 
-        stripe_canceled_at = obj.get("canceled_at")
+        stripe_canceled_at = getattr(obj, "canceled_at", None)
         updates["canceled_at"] = (
             datetime.fromtimestamp(stripe_canceled_at, tz=timezone.utc) if stripe_canceled_at else None
         )
 
-        period_start = obj.get("current_period_start")
-        period_end = obj.get("current_period_end")
-        if period_start:
-            updates["current_period_start"] = datetime.fromtimestamp(period_start, tz=timezone.utc)
-        if period_end:
-            updates["current_period_end"] = datetime.fromtimestamp(period_end, tz=timezone.utc)
+        if items:
+            first_item = items[0]
+            period_start = getattr(first_item, "current_period_start", None)
+            period_end = getattr(first_item, "current_period_end", None)
+            if period_start:
+                updates["current_period_start"] = datetime.fromtimestamp(period_start, tz=timezone.utc)
+            if period_end:
+                updates["current_period_end"] = datetime.fromtimestamp(period_end, tz=timezone.utc)
 
         await self._repo.update_subscription(sub.org_id, **updates)
         await self._session.commit()
@@ -475,7 +497,7 @@ class BillingService:
     async def handle_subscription_deleted(self, event_data: dict) -> None:
         """Process ``customer.subscription.deleted`` -- finalize overages, then downgrade to HOBBY."""
         obj = event_data["object"]
-        subscription_id = obj["id"]
+        subscription_id = obj.id
         sub = await self._repo.get_subscription_by_stripe_subscription(subscription_id)
         if sub is None:
             return
