@@ -183,7 +183,7 @@ jobs:
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Attest SBOM
-        uses: actions/attest-sbom@v2
+        uses: actions/attest-sbom@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}
           subject-digest: ${{ steps.digest.outputs.digest }}
