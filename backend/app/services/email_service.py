@@ -37,6 +37,8 @@ class EmailService:
 
     def send_welcome_email(self, *, to: str) -> None:
         """Schedule a welcome email ~20 minutes after signup."""
+        if not self.is_configured():
+            return
         scheduled_at = (datetime.now(timezone.utc) + _WELCOME_DELAY).isoformat()
 
         params: resend.Emails.SendParams = {
@@ -53,6 +55,8 @@ class EmailService:
 
     def send_followup_email(self, *, to: str) -> None:
         """Schedule a follow-up email 7 days after signup."""
+        if not self.is_configured():
+            return
         scheduled_at = (datetime.now(timezone.utc) + _FOLLOWUP_DELAY).isoformat()
 
         params: resend.Emails.SendParams = {
