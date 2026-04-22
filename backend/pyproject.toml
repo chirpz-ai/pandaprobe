@@ -27,7 +27,7 @@ dependencies = [
     "supabase>=2.0.0",
     "scalar-fastapi>=1.6.2",
     "croniter>=6.0.0",
-    "celery-redbeat>=2.2.0",
+    "celery-redbeat>=2.3.3",
     "stripe>=15.0.0",
     "resend>=2.28.0",
 ]
