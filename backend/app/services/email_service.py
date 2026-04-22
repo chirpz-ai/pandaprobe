@@ -65,7 +65,9 @@ class EmailService:
         }
 
         resp = resend.Emails.send(params)
-        logger.info("followup_email_scheduled", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp))
+        logger.info(
+            "followup_email_scheduled", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp)
+        )
 
     # ------------------------------------------------------------------
     # HTML templates
