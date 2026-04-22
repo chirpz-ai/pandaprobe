@@ -5,7 +5,7 @@ description = "Open-source agent tracing and evaluation service"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115.0",
+    "fastapi>=0.136.0",
     "uvicorn>=0.34.0",
     "uvloop>=0.21.0",
     "pydantic>=2.10.0",
