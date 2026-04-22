@@ -31,6 +31,7 @@ from app.registry.constants import validate_resource_name
 from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 from app.registry.settings import settings
+from app.services.email_service import EmailService
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 _api_key_scheme = APIKeyHeader(name="X-API-Key", scheme_name="ApiKey", auto_error=False)
@@ -166,6 +167,11 @@ async def _resolve_jwt(
             period_start=sub.current_period_start,
             period_end=sub.current_period_end,
         )
+
+        if EmailService.is_configured():
+            from app.infrastructure.queue.tasks import send_welcome_sequence
+
+            send_welcome_sequence.delay(user.email)
 
         memberships = await identity_repo.list_user_orgs(user.id)
 
