@@ -1,0 +1,139 @@
+"""Transactional email service powered by Resend.
+
+Encapsulates all Resend-specific logic: API configuration, HTML template
+rendering, and scheduled sending.  Designed to be called from Celery
+tasks so that email dispatch never blocks the request thread.
+
+When ``RESEND_API_KEY`` is empty (the default for self-hosted
+deployments), every public method is a silent no-op.
+"""
+
+from datetime import datetime, timedelta, timezone
+
+import resend
+
+from app.logging import logger
+from app.registry.settings import settings
+
+_WELCOME_DELAY = timedelta(minutes=20)
+_FOLLOWUP_DELAY = timedelta(days=7)
+
+
+class EmailService:
+    """Stateless adapter around the Resend Emails API."""
+
+    def __init__(self) -> None:
+        if self.is_configured():
+            resend.api_key = settings.RESEND_API_KEY
+
+    @staticmethod
+    def is_configured() -> bool:
+        """Return *True* when the Resend API key is present."""
+        return bool(settings.RESEND_API_KEY)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def send_welcome_email(self, *, to: str) -> None:
+        """Schedule a welcome email ~20 minutes after signup."""
+        scheduled_at = (datetime.now(timezone.utc) + _WELCOME_DELAY).isoformat()
+
+        params: resend.Emails.SendParams = {
+            "from": settings.RESEND_FROM,
+            "to": [to],
+            "reply_to": settings.RESEND_REPLY_TO,
+            "subject": "Welcome to PandaProbe",
+            "html": self._welcome_html(),
+            "scheduled_at": scheduled_at,
+        }
+
+        resp = resend.Emails.send(params)
+        logger.info("welcome_email_scheduled", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp))
+
+    def send_followup_email(self, *, to: str) -> None:
+        """Schedule a follow-up email 7 days after signup."""
+        scheduled_at = (datetime.now(timezone.utc) + _FOLLOWUP_DELAY).isoformat()
+
+        params: resend.Emails.SendParams = {
+            "from": settings.RESEND_FROM,
+            "to": [to],
+            "reply_to": settings.RESEND_REPLY_TO,
+            "subject": "how's your PandaProbe setup going?",
+            "html": self._followup_html(),
+            "scheduled_at": scheduled_at,
+        }
+
+        resp = resend.Emails.send(params)
+        logger.info("followup_email_scheduled", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp))
+
+    # ------------------------------------------------------------------
+    # HTML templates
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _welcome_html() -> str:
+        return """\
+<div style="font-family: Arial, sans-serif; font-size: 10pt;">
+    <p style="margin: 0 0 15px 0;">
+        Hey,
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        Thanks for signing up, this is Sina (founder at PandaProbe).
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        Here's some useful resources to get you started:
+    </p>
+
+    <p style="margin: 0 0 8px 0;">
+        &bull; Our docs: <a href="https://docs.pandaprobe.com"
+          style="color: #0000EE; text-decoration: underline;">https://docs.pandaprobe.com</a>
+    </p>
+    <p style="margin: 0 0 8px 0;">
+        &bull; Our repo: <a href="https://github.com/chirpz-ai/pandaprobe"
+          style="color: #0000EE; text-decoration: underline;">https://github.com/chirpz-ai/pandaprobe</a>
+    </p>
+    <p style="margin: 0 0 15px 0;">
+        &bull; Our discord: <a href="https://discord.gg/A2VfrRhx"
+          style="color: #0000EE; text-decoration: underline;">https://discord.gg/A2VfrRhx</a>
+    </p>
+
+    <p style="margin: 15px 0;">
+        Let me know if you need anything or want to chat about the agentic systems you're building.
+    </p>
+
+    <p style="margin: 15px 0 0 0;">
+        If you'd like to hop on a quick call, feel free to book some time here:
+        <a href="https://www.pandaprobe.com/contact"
+          style="color: #0000EE; text-decoration: underline;">https://www.pandaprobe.com/contact</a>
+    </p>
+
+    <p style="margin: 15px 0 0 0;">
+        Sina<br>
+    </p>
+</div>"""
+
+    @staticmethod
+    def _followup_html() -> str:
+        return """\
+<div style="font-family: Arial, sans-serif; font-size: 10pt;">
+    <p style="margin: 0 0 15px 0;">
+        Hey, just checking in.
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        Saw you signed up last week and wanted to see how things are going
+        with PandaProbe. Have you had the chance to trace and evaluate an agent yet?
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        Would love to hear what you're building, and let me know if there's
+        anything I can do to help.
+    </p>
+
+    <p style="margin: 15px 0 0 0;">
+        Sina (founder at PandaProbe)
+    </p>
+</div>"""
