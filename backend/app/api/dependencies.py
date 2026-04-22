@@ -168,13 +168,10 @@ async def _resolve_jwt(
             period_end=sub.current_period_end,
         )
 
-        if EmailService.is_configured():
-            from app.infrastructure.queue.tasks import send_followup_email_task, send_welcome_email_task
-
-            send_welcome_email_task.delay(user.email)
-            send_followup_email_task.delay(user.email)
-
         memberships = await identity_repo.list_user_orgs(user.id)
+        is_new_user = True
+    else:
+        is_new_user = False
 
     org_id_header = request.headers.get("X-Organization-ID")
     if org_id_header:
@@ -209,6 +206,12 @@ async def _resolve_jwt(
         org_id=str(organization.id),
         **({"project_id": str(project.id)} if project else {}),
     )
+
+    if is_new_user and EmailService.is_configured():
+        from app.infrastructure.queue.tasks import send_followup_email_task, send_welcome_email_task
+
+        send_welcome_email_task.delay(user.email)
+        send_followup_email_task.delay(user.email)
 
     return ApiContext(
         request_id=request_id,
