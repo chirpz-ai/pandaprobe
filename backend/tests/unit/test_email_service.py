@@ -140,7 +140,7 @@ def test_send_welcome_email_propagates_resend_error(
 
 @patch("app.services.email_service.resend")
 @patch("app.services.email_service.settings")
-def test_celery_task_sends_both_emails(
+def test_welcome_task_sends_email(
     mock_settings: MagicMock,
     mock_resend: MagicMock,
 ) -> None:
@@ -149,21 +149,52 @@ def test_celery_task_sends_both_emails(
     mock_settings.RESEND_REPLY_TO = "reply@example.com"
     mock_resend.Emails.send.return_value = {"id": "ok"}
 
-    from app.infrastructure.queue.tasks import send_welcome_sequence
+    from app.infrastructure.queue.tasks import send_welcome_email_task
 
-    result = send_welcome_sequence("user@example.com")
+    result = send_welcome_email_task("user@example.com")
 
     assert result["status"] == "sent"
-    assert mock_resend.Emails.send.call_count == 2
+    mock_resend.Emails.send.assert_called_once()
+
+
+@patch("app.services.email_service.resend")
+@patch("app.services.email_service.settings")
+def test_followup_task_sends_email(
+    mock_settings: MagicMock,
+    mock_resend: MagicMock,
+) -> None:
+    mock_settings.RESEND_API_KEY = "re_test_key"
+    mock_settings.RESEND_FROM = "Test <test@example.com>"
+    mock_settings.RESEND_REPLY_TO = "reply@example.com"
+    mock_resend.Emails.send.return_value = {"id": "ok"}
+
+    from app.infrastructure.queue.tasks import send_followup_email_task
+
+    result = send_followup_email_task("user@example.com")
+
+    assert result["status"] == "sent"
+    mock_resend.Emails.send.assert_called_once()
 
 
 @patch("app.services.email_service.settings")
-def test_celery_task_skips_when_unconfigured(mock_settings: MagicMock) -> None:
+def test_welcome_task_skips_when_unconfigured(mock_settings: MagicMock) -> None:
     mock_settings.RESEND_API_KEY = ""
 
-    from app.infrastructure.queue.tasks import send_welcome_sequence
+    from app.infrastructure.queue.tasks import send_welcome_email_task
 
-    result = send_welcome_sequence("user@example.com")
+    result = send_welcome_email_task("user@example.com")
+
+    assert result["status"] == "skipped"
+    assert result["reason"] == "resend_not_configured"
+
+
+@patch("app.services.email_service.settings")
+def test_followup_task_skips_when_unconfigured(mock_settings: MagicMock) -> None:
+    mock_settings.RESEND_API_KEY = ""
+
+    from app.infrastructure.queue.tasks import send_followup_email_task
+
+    result = send_followup_email_task("user@example.com")
 
     assert result["status"] == "skipped"
     assert result["reason"] == "resend_not_configured"

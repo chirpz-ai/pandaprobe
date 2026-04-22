@@ -169,9 +169,10 @@ async def _resolve_jwt(
         )
 
         if EmailService.is_configured():
-            from app.infrastructure.queue.tasks import send_welcome_sequence
+            from app.infrastructure.queue.tasks import send_followup_email_task, send_welcome_email_task
 
-            send_welcome_sequence.delay(user.email)
+            send_welcome_email_task.delay(user.email)
+            send_followup_email_task.delay(user.email)
 
         memberships = await identity_repo.list_user_orgs(user.id)
 
