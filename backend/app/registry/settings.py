@@ -133,6 +133,11 @@ class Settings(BaseSettings):
     STRIPE_PRO_PRICE_ID: str = ""
     STRIPE_STARTUP_PRICE_ID: str = ""
 
+    # -- Email / Resend -------------------------------------------------------
+    RESEND_API_KEY: str = ""
+    RESEND_FROM: str = ""
+    RESEND_REPLY_TO: str = ""
+
     # -- Rate limiting --------------------------------------------------------
     RATE_LIMIT_DEFAULT: str = "200/minute"
 

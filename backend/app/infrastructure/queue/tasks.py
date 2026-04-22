@@ -963,3 +963,42 @@ async def _reset_single_hobby_org(org_id_str: str) -> dict[str, str]:
             await redis_client.aclose()
 
     return {"org_id": org_id_str, "status": "reset"}
+
+
+# ---------------------------------------------------------------------------
+# Email – welcome sequence
+# ---------------------------------------------------------------------------
+
+_email_task_opts = dict(
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=600,
+    max_retries=3,
+    rate_limit="2/s",
+)
+
+
+@celery.task(name="send_welcome_email", **_email_task_opts)
+def send_welcome_email_task(email: str) -> dict[str, str]:
+    """Schedule a welcome email via Resend for a new signup."""
+    from app.services.email_service import EmailService
+
+    svc = EmailService()
+    if not svc.is_configured():
+        return {"status": "skipped", "reason": "resend_not_configured"}
+
+    svc.send_welcome_email(to=email)
+    return {"status": "sent", "email": email}
+
+
+@celery.task(name="send_followup_email", **_email_task_opts)
+def send_followup_email_task(email: str) -> dict[str, str]:
+    """Schedule a follow-up email via Resend for a new signup."""
+    from app.services.email_service import EmailService
+
+    svc = EmailService()
+    if not svc.is_configured():
+        return {"status": "skipped", "reason": "resend_not_configured"}
+
+    svc.send_followup_email(to=email)
+    return {"status": "sent", "email": email}

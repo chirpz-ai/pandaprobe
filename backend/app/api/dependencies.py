@@ -31,6 +31,7 @@ from app.registry.constants import validate_resource_name
 from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 from app.registry.settings import settings
+from app.services.email_service import EmailService
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 _api_key_scheme = APIKeyHeader(name="X-API-Key", scheme_name="ApiKey", auto_error=False)
@@ -168,6 +169,9 @@ async def _resolve_jwt(
         )
 
         memberships = await identity_repo.list_user_orgs(user.id)
+        is_new_user = True
+    else:
+        is_new_user = False
 
     org_id_header = request.headers.get("X-Organization-ID")
     if org_id_header:
@@ -202,6 +206,12 @@ async def _resolve_jwt(
         org_id=str(organization.id),
         **({"project_id": str(project.id)} if project else {}),
     )
+
+    if is_new_user and EmailService.is_configured():
+        from app.infrastructure.queue.tasks import send_followup_email_task, send_welcome_email_task
+
+        send_welcome_email_task.delay(user.email)
+        send_followup_email_task.delay(user.email)
 
     return ApiContext(
         request_id=request_id,
