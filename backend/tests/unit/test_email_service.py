@@ -100,8 +100,8 @@ def test_send_followup_email_calls_resend_with_correct_params(
 def test_welcome_html_contains_key_links() -> None:
     html = EmailService._welcome_html()
     assert "docs.pandaprobe.com" in html
-    assert "github.com/PandaProbe/pandaprobe" in html
-    assert "discord.gg/pandaprobe" in html
+    assert "github.com/chirpz-ai/pandaprobe" in html
+    assert "discord.gg/A2VfrRhx" in html
     assert "Hey," in html
 
 
