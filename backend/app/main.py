@@ -19,6 +19,7 @@ from app.infrastructure.redis.client import close_redis_pool
 from app.logging import logger
 from app.registry.exceptions import PandaProbeError
 from app.registry.settings import Environment, settings
+from app.services.analytics_service import AnalyticsService
 
 
 def _validate_stripe_settings() -> None:
@@ -46,6 +47,7 @@ async def lifespan(app: FastAPI):
     """Handle startup and shutdown lifecycle events."""
     _validate_stripe_settings()
     _warn_auth_disabled()
+    AnalyticsService.initialize()
     logger.info(
         "application_startup",
         project=settings.PROJECT_NAME,
@@ -53,6 +55,7 @@ async def lifespan(app: FastAPI):
         environment=settings.APP_ENV.value,
     )
     yield
+    AnalyticsService.shutdown()
     await close_redis_pool()
     logger.info("application_shutdown")
 
