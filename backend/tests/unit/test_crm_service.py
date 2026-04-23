@@ -125,9 +125,7 @@ def test_sync_contact_raises_on_assert_failure(
     mock_settings.ATTIO_LIST_ID = "list-uuid"
 
     put_resp = MagicMock()
-    put_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
-        "422", request=MagicMock(), response=MagicMock()
-    )
+    put_resp.raise_for_status.side_effect = httpx.HTTPStatusError("422", request=MagicMock(), response=MagicMock())
     mock_httpx.put.return_value = put_resp
 
     svc = CrmService()
@@ -151,9 +149,7 @@ def test_sync_contact_raises_on_list_entry_failure(
     mock_httpx.put.return_value = put_resp
 
     post_resp = MagicMock()
-    post_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
-        "500", request=MagicMock(), response=MagicMock()
-    )
+    post_resp.raise_for_status.side_effect = httpx.HTTPStatusError("500", request=MagicMock(), response=MagicMock())
     mock_httpx.post.return_value = post_resp
 
     svc = CrmService()
