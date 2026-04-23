@@ -138,6 +138,10 @@ class Settings(BaseSettings):
     RESEND_FROM: str = ""
     RESEND_REPLY_TO: str = ""
 
+    # -- CRM / Attio ----------------------------------------------------------
+    ATTIO_API_KEY: str = ""
+    ATTIO_LIST_ID: str = ""
+
     # -- Rate limiting --------------------------------------------------------
     RATE_LIMIT_DEFAULT: str = "200/minute"
 
