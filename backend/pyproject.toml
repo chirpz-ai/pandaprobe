@@ -30,6 +30,7 @@ dependencies = [
     "celery-redbeat>=2.2.0",
     "stripe>=15.0.0",
     "resend>=2.28.0",
+    "httpx>=0.28.0",
 ]
 
 [dependency-groups]
