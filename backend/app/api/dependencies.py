@@ -31,6 +31,7 @@ from app.registry.constants import validate_resource_name
 from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 from app.registry.settings import settings
+from app.services.crm_service import CrmService
 from app.services.email_service import EmailService
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -207,11 +208,19 @@ async def _resolve_jwt(
         **({"project_id": str(project.id)} if project else {}),
     )
 
-    if is_new_user and EmailService.is_configured():
-        from app.infrastructure.queue.tasks import send_followup_email_task, send_welcome_email_task
+    if is_new_user:
+        from app.infrastructure.queue.tasks import (
+            send_followup_email_task,
+            send_welcome_email_task,
+            sync_new_user_to_crm,
+        )
 
-        send_welcome_email_task.delay(user.email)
-        send_followup_email_task.delay(user.email)
+        if EmailService.is_configured():
+            send_welcome_email_task.delay(user.email)
+            send_followup_email_task.delay(user.email)
+
+        if CrmService.is_configured():
+            sync_new_user_to_crm.delay(user.email)
 
     return ApiContext(
         request_id=request_id,

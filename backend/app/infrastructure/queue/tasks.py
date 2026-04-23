@@ -1002,3 +1002,29 @@ def send_followup_email_task(email: str) -> dict[str, str]:
 
     svc.send_followup_email(to=email)
     return {"status": "sent", "email": email}
+
+
+# ---------------------------------------------------------------------------
+# CRM – Attio contact sync
+# ---------------------------------------------------------------------------
+
+
+@celery.task(
+    name="sync_new_user_to_crm",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=600,
+    max_retries=3,
+    rate_limit="2/s",
+)
+def sync_new_user_to_crm(email: str) -> dict[str, str]:
+    """Assert a person record in Attio and add them to the signups list."""
+    from app.services.crm_service import CrmService
+
+    svc = CrmService()
+    if not svc.is_configured():
+        logger.debug("attio_skip_unconfigured", email=email)
+        return {"status": "skipped", "reason": "attio_not_configured"}
+
+    svc.sync_contact(email=email)
+    return {"status": "synced", "email": email}
