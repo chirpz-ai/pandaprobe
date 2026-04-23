@@ -22,6 +22,7 @@ from app.api.dependencies import get_api_context
 from app.core.identity.entities import APIKey
 from app.infrastructure.db.engine import get_db_session
 from app.registry.exceptions import AuthenticationError
+from app.services.analytics_service import AnalyticsService
 from app.services.identity_service import IdentityService
 
 router = APIRouter(tags=["api-keys"])
@@ -124,6 +125,7 @@ async def create_api_key(
         created_by=ctx.user.id,
         expiration=body.expiration.value,
     )
+    AnalyticsService().api_key_created(user_id=str(ctx.user.id), org_id=str(org_id))
     return _key_response(api_key, raw_key=raw_key)
 
 

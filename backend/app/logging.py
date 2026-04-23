@@ -112,7 +112,6 @@ def _setup() -> None:
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
         _inject_context,
     ]
@@ -128,9 +127,11 @@ def _setup() -> None:
             )
         )
 
-    renderer: Any = (
-        structlog.dev.ConsoleRenderer() if settings.LOG_FORMAT == "console" else structlog.processors.JSONRenderer()
-    )
+    if settings.LOG_FORMAT == "console":
+        renderer: Any = structlog.dev.ConsoleRenderer()
+    else:
+        shared_processors.append(structlog.processors.format_exc_info)
+        renderer = structlog.processors.JSONRenderer()
 
     structlog.configure(
         processors=[*shared_processors, renderer],

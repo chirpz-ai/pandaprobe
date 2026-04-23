@@ -31,6 +31,7 @@ from app.registry.constants import validate_resource_name
 from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 from app.registry.settings import settings
+from app.services.analytics_service import AnalyticsService
 from app.services.crm_service import CrmService
 from app.services.email_service import EmailService
 
@@ -208,6 +209,8 @@ async def _resolve_jwt(
         **({"project_id": str(project.id)} if project else {}),
     )
 
+    analytics = AnalyticsService()
+
     if is_new_user:
         from app.infrastructure.queue.tasks import (
             send_followup_email_task,
@@ -221,6 +224,23 @@ async def _resolve_jwt(
 
         if CrmService.is_configured():
             sync_new_user_to_crm.delay(user.email)
+
+        analytics.user_signed_up(
+            user_id=str(user.id),
+            email=user.email,
+            org_id=str(organization.id),
+        )
+
+    analytics.identify_user(
+        user_id=str(user.id),
+        email=user.email,
+        display_name=user.display_name,
+        org_id=str(organization.id),
+    )
+    analytics.user_authenticated(
+        user_id=str(user.id),
+        org_id=str(organization.id),
+    )
 
     return ApiContext(
         request_id=request_id,

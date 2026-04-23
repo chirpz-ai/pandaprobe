@@ -35,6 +35,7 @@ from app.registry.constants import (
     TraceStatus,
 )
 from app.registry.constants import UsageCategory
+from app.services.analytics_service import AnalyticsService
 from app.services.trace_service import TraceService
 from app.services.usage_service import UsageService
 
@@ -330,6 +331,16 @@ async def ingest_trace(
     except Exception:
         await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACES)
         raise
+
+    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
+    AnalyticsService().trace_ingested(
+        distinct_id=distinct_id,
+        project_id=str(ctx.project.id),
+        org_id=str(ctx.organization.id),
+        has_session=body.session_id is not None,
+        span_count=len(body.spans),
+    )
+
     return TraceAccepted(trace_id=trace.trace_id, task_id=task_id)
 
 

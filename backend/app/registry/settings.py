@@ -142,6 +142,10 @@ class Settings(BaseSettings):
     ATTIO_API_KEY: str = ""
     ATTIO_LIST_ID: str = ""
 
+    # -- PostHog / Product Analytics -------------------------------------------
+    POSTHOG_API_KEY: str = ""
+    POSTHOG_HOST: str = ""
+
     # -- Rate limiting --------------------------------------------------------
     RATE_LIMIT_DEFAULT: str = "200/minute"
 

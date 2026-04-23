@@ -41,6 +41,7 @@ from app.registry.constants import (
     TraceStatus,
     UsageCategory,
 )
+from app.services.analytics_service import AnalyticsService
 from app.services.eval_service import EvalService
 from app.services.usage_service import UsageService
 
@@ -500,6 +501,17 @@ async def create_eval_run(
     except Exception:
         await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
         raise
+
+    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
+    AnalyticsService().eval_run_created(
+        distinct_id=distinct_id,
+        project_id=str(ctx.project.id),
+        org_id=str(ctx.organization.id),
+        metric_names=body.metrics,
+        target_count=prepared.run.total_targets,
+        model=body.model,
+    )
+
     return _run_to_detail(run)
 
 
@@ -538,6 +550,17 @@ async def create_batch_eval_run(
     except Exception:
         await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
         raise
+
+    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
+    AnalyticsService().eval_run_created(
+        distinct_id=distinct_id,
+        project_id=str(ctx.project.id),
+        org_id=str(ctx.organization.id),
+        metric_names=body.metrics,
+        target_count=prepared.run.total_targets,
+        model=body.model,
+    )
+
     return _run_to_detail(run)
 
 
@@ -1011,6 +1034,17 @@ async def create_session_eval_run(
     except Exception:
         await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
         raise
+
+    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
+    AnalyticsService().session_eval_run_created(
+        distinct_id=distinct_id,
+        project_id=str(ctx.project.id),
+        org_id=str(ctx.organization.id),
+        metric_names=body.metrics,
+        session_count=prepared.run.total_targets,
+        model=body.model,
+    )
+
     return _run_to_detail(run)
 
 
@@ -1046,6 +1080,17 @@ async def create_batch_session_eval_run(
     except Exception:
         await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
         raise
+
+    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
+    AnalyticsService().session_eval_run_created(
+        distinct_id=distinct_id,
+        project_id=str(ctx.project.id),
+        org_id=str(ctx.organization.id),
+        metric_names=body.metrics,
+        session_count=prepared.run.total_targets,
+        model=body.model,
+    )
+
     return _run_to_detail(run)
 
 
@@ -1552,6 +1597,17 @@ async def create_monitor(
         only_if_changed=body.only_if_changed,
         signal_weights=body.signal_weights,
     )
+
+    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
+    AnalyticsService().eval_monitor_created(
+        distinct_id=distinct_id,
+        project_id=str(ctx.project.id),
+        org_id=str(ctx.organization.id),
+        target_type=body.target_type,
+        cadence=body.cadence,
+        metric_names=body.metrics,
+    )
+
     return _monitor_to_response(monitor)
 
 
