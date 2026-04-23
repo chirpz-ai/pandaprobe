@@ -184,7 +184,7 @@ def test_capture_swallows_sdk_exceptions(mock_settings: MagicMock) -> None:
 def test_identify_swallows_sdk_exceptions(mock_settings: MagicMock) -> None:
     mock_settings.POSTHOG_API_KEY = "phc_test_key"
     mock_client = _setup_client()
-    mock_client.identify.side_effect = RuntimeError("network failure")
+    mock_client.set.side_effect = RuntimeError("network failure")
 
     try:
         svc = AnalyticsService()
@@ -382,8 +382,8 @@ def test_identify_user_sets_person_properties(mock_settings: MagicMock) -> None:
             org_id="org-8",
         )
 
-        mock_client.identify.assert_called_once()
-        kw = mock_client.identify.call_args[1]
+        mock_client.set.assert_called_once()
+        kw = mock_client.set.call_args[1]
         assert kw["distinct_id"] == "user-8"
         assert kw["properties"]["product_name"] == "pandaprobe"
         assert kw["properties"]["email"] == "test@example.com"

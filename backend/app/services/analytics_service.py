@@ -91,7 +91,7 @@ class AnalyticsService:
             return
         try:
             props = {_PRODUCT_NAME_KEY: _PRODUCT_NAME, **(properties or {})}
-            _client.identify(distinct_id=distinct_id, properties=props)
+            _client.set(distinct_id=distinct_id, properties=props)
         except Exception:
             logger.exception("posthog_identify_error", distinct_id=distinct_id)
 
