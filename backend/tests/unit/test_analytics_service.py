@@ -96,7 +96,7 @@ def test_shutdown_noop_when_no_client() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _capture internals -- product_name injection & groups
+# _capture internals -- project_name injection & groups
 # ---------------------------------------------------------------------------
 
 
@@ -108,7 +108,7 @@ def _setup_client() -> MagicMock:
 
 
 @patch("app.services.analytics_service.settings")
-def test_capture_injects_product_name_automatically(mock_settings: MagicMock) -> None:
+def test_capture_injects_project_name_automatically(mock_settings: MagicMock) -> None:
     mock_settings.POSTHOG_API_KEY = "phc_test_key"
     mock_client = _setup_client()
     try:
@@ -116,7 +116,7 @@ def test_capture_injects_product_name_automatically(mock_settings: MagicMock) ->
         svc.user_authenticated(user_id="u1", org_id="org1")
 
         call_kwargs = mock_client.capture.call_args[1]
-        assert call_kwargs["properties"]["product_name"] == "pandaprobe"
+        assert call_kwargs["properties"]["project_name"] == "pandaprobe_app"
     finally:
         analytics_module._client = None
 
@@ -214,7 +214,7 @@ def test_user_signed_up_captures_correct_event(mock_settings: MagicMock) -> None
         kw = mock_client.capture.call_args[1]
         assert kw["distinct_id"] == "user-1"
         assert kw["event"] == "user_signed_up"
-        assert kw["properties"]["product_name"] == "pandaprobe"
+        assert kw["properties"]["project_name"] == "pandaprobe_app"
         assert kw["properties"]["email"] == "user@example.com"
         assert kw["properties"]["org_id"] == "org-1"
         assert kw["groups"] == {"organization": "org-1"}
@@ -385,7 +385,7 @@ def test_identify_user_sets_person_properties(mock_settings: MagicMock) -> None:
         mock_client.set.assert_called_once()
         kw = mock_client.set.call_args[1]
         assert kw["distinct_id"] == "user-8"
-        assert kw["properties"]["product_name"] == "pandaprobe"
+        assert kw["properties"]["project_name"] == "pandaprobe_app"
         assert kw["properties"]["email"] == "test@example.com"
         assert kw["properties"]["display_name"] == "Test User"
         assert kw["properties"]["org_id"] == "org-8"
