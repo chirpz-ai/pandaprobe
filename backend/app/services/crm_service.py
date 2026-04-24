@@ -79,6 +79,7 @@ class CrmService:
             "data": {
                 "parent_object": "people",
                 "parent_record_id": record_id,
+                "entry_values": {},
             },
         }
 
