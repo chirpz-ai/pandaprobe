@@ -107,11 +107,8 @@ class EmailService:
     </p>
 
     <p style="margin: 15px 0;">
-        Let me know if you need anything or want to chat about the agentic systems you're building.
-    </p>
-
-    <p style="margin: 15px 0 0 0;">
-        If you'd like to hop on a quick call, feel free to book some time here:
+        Btw, if you want to see PandaProbe in action or just chat about what you're building,
+        feel free to book some time with me here:
         <a href="https://www.pandaprobe.com/contact"
           style="color: #0000EE; text-decoration: underline;">https://www.pandaprobe.com/contact</a>
     </p>
