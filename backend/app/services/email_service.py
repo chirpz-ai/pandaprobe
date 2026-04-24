@@ -73,6 +73,34 @@ class EmailService:
             "followup_email_scheduled", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp)
         )
 
+    def send_invitation_email(
+        self,
+        *,
+        to: str,
+        org_name: str,
+        inviter_name: str,
+        role: str,
+        app_url: str,
+    ) -> None:
+        """Send an invitation notification email immediately."""
+        if not self.is_configured():
+            return
+
+        params: resend.Emails.SendParams = {
+            "from": settings.RESEND_FROM_INFO,
+            "to": [to],
+            "subject": f"You've been invited to join {org_name} on PandaProbe",
+            "html": self._invitation_html(
+                org_name=org_name,
+                inviter_name=inviter_name,
+                role=role,
+                app_url=app_url,
+            ),
+        }
+
+        resp = resend.Emails.send(params)
+        logger.info("invitation_email_sent", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp))
+
     # ------------------------------------------------------------------
     # HTML templates
     # ------------------------------------------------------------------
@@ -138,5 +166,38 @@ class EmailService:
 
     <p style="margin: 15px 0 0 0;">
         Sina (founder at PandaProbe)
+    </p>
+</div>"""
+
+    @staticmethod
+    def _invitation_html(*, org_name: str, inviter_name: str, role: str, app_url: str) -> str:
+        inviter = inviter_name or "A team member"
+        return f"""\
+<div style="font-family: Arial, sans-serif; font-size: 10pt;">
+    <p style="margin: 0 0 15px 0;">
+        Hey,
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        {inviter} has invited you to join <strong>{org_name}</strong> on PandaProbe
+        as a <strong>{role}</strong>.
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        To accept the invitation, visit your PandaProbe dashboard:
+        <a href="{app_url}" style="color: #0000EE; text-decoration: underline;">{app_url}</a>
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        If you don't have a PandaProbe account yet, sign up with this email
+        address and the invitation will be waiting for you.
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        This invitation expires in 7 days.
+    </p>
+
+    <p style="margin: 15px 0 0 0;">
+        &mdash; The PandaProbe Team
     </p>
 </div>"""
