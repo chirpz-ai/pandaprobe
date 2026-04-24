@@ -50,7 +50,8 @@ class InvitationRepository:
         return self._to_entity(row) if row else None
 
     async def get_pending_invitation(self, org_id: UUID, email: str) -> Invitation | None:
-        """Find an existing PENDING invitation for the given org + email pair."""
+        """Find an existing PENDING and non-expired invitation for the given org + email pair."""
+        now = datetime.now(timezone.utc)
         stmt = (
             select(InvitationModel)
             .options(joinedload(InvitationModel.organization), joinedload(InvitationModel.inviter))
@@ -58,6 +59,7 @@ class InvitationRepository:
                 InvitationModel.org_id == org_id,
                 InvitationModel.email == email,
                 InvitationModel.status == InvitationStatus.PENDING,
+                InvitationModel.expires_at > now,
             )
         )
         row = (await self._session.execute(stmt)).unique().scalar_one_or_none()
