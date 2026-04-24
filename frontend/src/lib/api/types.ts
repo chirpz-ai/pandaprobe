@@ -7,6 +7,7 @@ import type {
   ScoreStatus,
   ScoreDataType,
   MembershipRole,
+  InvitationStatus,
   SubscriptionPlan,
   SubscriptionStatus,
   MonitorStatus,
@@ -62,13 +63,29 @@ export interface MembershipResponse {
   created_at: string;
 }
 
-export interface AddMemberRequest {
-  user_id: string;
+export interface UpdateMemberRoleRequest {
+  role: MembershipRole;
+}
+
+/* ─── Invitations ──────────────────────────────────────────────────────────── */
+
+export interface CreateInvitationRequest {
+  email: string;
   role?: MembershipRole;
 }
 
-export interface UpdateMemberRoleRequest {
+export interface InvitationResponse {
+  id: string;
+  org_id: string;
+  org_name: string;
+  email: string;
   role: MembershipRole;
+  status: InvitationStatus;
+  invited_by: string;
+  inviter_display_name: string;
+  inviter_email: string;
+  created_at: string;
+  expires_at: string;
 }
 
 /* ─── Projects ─────────────────────────────────────────────────────────────── */
