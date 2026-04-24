@@ -26,6 +26,7 @@ class InvitationRepository:
         invited_by: UUID,
         expires_at: datetime,
     ) -> Invitation:
+        """Persist a new invitation and return the domain entity."""
         row = InvitationModel(
             org_id=org_id,
             email=email,
@@ -39,6 +40,7 @@ class InvitationRepository:
         return self._to_entity(row)
 
     async def get_invitation(self, invitation_id: UUID) -> Invitation | None:
+        """Fetch a single invitation by ID, or None."""
         stmt = (
             select(InvitationModel)
             .options(joinedload(InvitationModel.organization), joinedload(InvitationModel.inviter))
@@ -48,6 +50,7 @@ class InvitationRepository:
         return self._to_entity(row) if row else None
 
     async def get_pending_invitation(self, org_id: UUID, email: str) -> Invitation | None:
+        """Find an existing PENDING invitation for the given org + email pair."""
         stmt = (
             select(InvitationModel)
             .options(joinedload(InvitationModel.organization), joinedload(InvitationModel.inviter))
@@ -61,6 +64,7 @@ class InvitationRepository:
         return self._to_entity(row) if row else None
 
     async def list_org_invitations(self, org_id: UUID, status: InvitationStatus | None = None) -> list[Invitation]:
+        """Return all invitations for an org, optionally filtered by status."""
         stmt = (
             select(InvitationModel)
             .options(joinedload(InvitationModel.organization), joinedload(InvitationModel.inviter))
@@ -73,6 +77,7 @@ class InvitationRepository:
         return [self._to_entity(r) for r in rows]
 
     async def list_pending_for_email(self, email: str) -> list[Invitation]:
+        """Return all non-expired PENDING invitations addressed to *email*."""
         now = datetime.now(timezone.utc)
         stmt = (
             select(InvitationModel)
@@ -88,6 +93,7 @@ class InvitationRepository:
         return [self._to_entity(r) for r in rows]
 
     async def update_status(self, invitation_id: UUID, new_status: InvitationStatus) -> Invitation | None:
+        """Transition an invitation to a new status."""
         stmt = (
             select(InvitationModel)
             .options(joinedload(InvitationModel.organization), joinedload(InvitationModel.inviter))
@@ -101,6 +107,7 @@ class InvitationRepository:
         return self._to_entity(row)
 
     async def count_pending_for_org(self, org_id: UUID) -> int:
+        """Count PENDING invitations for quota enforcement."""
         stmt = select(func.count()).select_from(InvitationModel).where(
             InvitationModel.org_id == org_id,
             InvitationModel.status == InvitationStatus.PENDING,

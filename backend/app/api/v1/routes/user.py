@@ -41,6 +41,8 @@ class UserProfileResponse(BaseModel):
 
 
 class InvitationResponse(BaseModel):
+    """Invitation details returned to the invitee."""
+
     id: UUID
     org_id: UUID
     org_name: str
@@ -55,6 +57,8 @@ class InvitationResponse(BaseModel):
 
 
 class MembershipResponse(BaseModel):
+    """Membership created after accepting an invitation."""
+
     id: UUID
     user_id: UUID
     org_id: UUID
