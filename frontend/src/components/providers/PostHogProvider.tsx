@@ -51,6 +51,7 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
       capture_pageleave: true,
       persistence: "localStorage+cookie",
       autocapture: false,
+      disable_session_recording: true,
       session_recording: {
         maskTextSelector: "input, textarea",
         maskAllInputs: true,
