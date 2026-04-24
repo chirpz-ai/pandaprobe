@@ -21,16 +21,17 @@ export function isPostHogEnabled(authEnabled: boolean): boolean {
 function PageviewTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { authEnabled } = useAuth();
 
   useEffect(() => {
-    if (!pathname) return;
+    if (!isPostHogEnabled(authEnabled) || !pathname) return;
 
     const url = searchParams.toString()
       ? `${pathname}?${searchParams.toString()}`
       : pathname;
 
     posthog.capture("$pageview", { $current_url: url });
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, authEnabled]);
 
   return null;
 }
@@ -88,11 +89,9 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {initialized.current && (
-        <Suspense fallback={null}>
-          <PageviewTracker />
-        </Suspense>
-      )}
+      <Suspense fallback={null}>
+        <PageviewTracker />
+      </Suspense>
       {children}
     </>
   );
