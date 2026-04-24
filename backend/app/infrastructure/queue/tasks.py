@@ -1004,6 +1004,23 @@ def send_followup_email_task(email: str) -> dict[str, str]:
     return {"status": "sent", "email": email}
 
 
+@celery.task(name="send_invitation_email", **_email_task_opts)
+def send_invitation_email_task(
+    to: str, org_name: str, inviter_name: str, role: str, app_url: str
+) -> dict[str, str]:
+    """Send an invitation notification email via Resend."""
+    from app.services.email_service import EmailService
+
+    svc = EmailService()
+    if not svc.is_configured():
+        return {"status": "skipped", "reason": "resend_not_configured"}
+
+    svc.send_invitation_email(
+        to=to, org_name=org_name, inviter_name=inviter_name, role=role, app_url=app_url
+    )
+    return {"status": "sent", "email": to}
+
+
 # ---------------------------------------------------------------------------
 # CRM – Attio contact sync
 # ---------------------------------------------------------------------------
