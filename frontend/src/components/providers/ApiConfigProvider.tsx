@@ -1,16 +1,28 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./AuthProvider";
 import { configureAuth } from "@/lib/api/client";
 import { getCurrentToken } from "@/lib/auth/auth-service";
 
 export function ApiConfigProvider({ children }: { children: ReactNode }) {
-  const { authEnabled } = useAuth();
+  const { user, authEnabled } = useAuth();
+  const queryClient = useQueryClient();
   const params = useParams();
   const orgId = params.orgId as string | undefined;
   const projectId = params.projectId as string | undefined;
+
+  const uid = user?.uid ?? null;
+  const prevUidRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (prevUidRef.current !== null && prevUidRef.current !== uid) {
+      queryClient.clear();
+    }
+    prevUidRef.current = uid;
+  }, [uid, queryClient]);
 
   useEffect(() => {
     configureAuth({

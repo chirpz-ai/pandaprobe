@@ -527,10 +527,7 @@ export function Sidebar() {
                   sideOffset={8}
                   className="z-50 w-[calc(14rem-16px)] bg-surface border border-border p-1 shadow-lg"
                 >
-                  <div
-                    className="px-2 py-2 border-b border-border mb-1"
-                    data-ph-no-capture
-                  >
+                  <div className="px-2 py-2 border-b border-border mb-1 ph-no-capture">
                     <p className="text-xs font-mono text-text truncate">
                       {displayName}
                     </p>
