@@ -24,8 +24,6 @@ export async function acceptInvitation(
   return res.data;
 }
 
-export async function declineInvitation(
-  invitationId: string,
-): Promise<void> {
+export async function declineInvitation(invitationId: string): Promise<void> {
   await client.post(`/me/invitations/${invitationId}/decline`);
 }

@@ -208,15 +208,15 @@ export function Sidebar() {
     return organizations[0]?.id ?? "";
   }, [rawOrgId, organizations]);
   const resolvedProjectId = useResolvedProjectId(projects);
-  const activeOrg = currentOrg ?? organizations.find((o) => o.id === orgId) ?? null;
+  const activeOrg =
+    currentOrg ?? organizations.find((o) => o.id === orgId) ?? null;
 
   const [collapsed, setCollapsed] = useState(false);
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
 
   const inAccountRoute = pathname.startsWith("/settings");
-  const inOrgSettingsRoute =
-    !inAccountRoute && pathname.includes("/settings");
+  const inOrgSettingsRoute = !inAccountRoute && pathname.includes("/settings");
   const [settingsView, setSettingsView] = useState(inOrgSettingsRoute);
 
   useEffect(() => {

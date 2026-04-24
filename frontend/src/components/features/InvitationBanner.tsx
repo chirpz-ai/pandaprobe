@@ -2,7 +2,11 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
-import { listMyInvitations, acceptInvitation, declineInvitation } from "@/lib/api/user";
+import {
+  listMyInvitations,
+  acceptInvitation,
+  declineInvitation,
+} from "@/lib/api/user";
 import { extractErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/providers/ToastProvider";
 import { useAuth } from "@/components/providers/AuthProvider";

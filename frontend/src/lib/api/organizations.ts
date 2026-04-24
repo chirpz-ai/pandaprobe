@@ -98,7 +98,5 @@ export async function revokeInvitation(
   orgId: string,
   invitationId: string,
 ): Promise<void> {
-  await client.delete(
-    `/organizations/${orgId}/invitations/${invitationId}`,
-  );
+  await client.delete(`/organizations/${orgId}/invitations/${invitationId}`);
 }
