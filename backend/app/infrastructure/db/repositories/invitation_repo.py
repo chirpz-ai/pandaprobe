@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import func, inspect as sa_inspect, select
+from sqlalchemy import func, inspect as sa_inspect, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -109,17 +109,33 @@ class InvitationRepository:
         return self._to_entity(row)
 
     async def count_pending_for_org(self, org_id: UUID) -> int:
-        """Count PENDING invitations for quota enforcement."""
+        """Count non-expired PENDING invitations for quota enforcement."""
+        now = datetime.now(timezone.utc)
         stmt = (
             select(func.count())
             .select_from(InvitationModel)
             .where(
                 InvitationModel.org_id == org_id,
                 InvitationModel.status == InvitationStatus.PENDING,
+                InvitationModel.expires_at > now,
             )
         )
         result = await self._session.execute(stmt)
         return result.scalar_one()
+
+    async def expire_stale_invitations(self) -> int:
+        """Bulk-transition PENDING invitations past their expiry to EXPIRED."""
+        now = datetime.now(timezone.utc)
+        stmt = (
+            update(InvitationModel)
+            .where(
+                InvitationModel.status == InvitationStatus.PENDING,
+                InvitationModel.expires_at <= now,
+            )
+            .values(status=InvitationStatus.EXPIRED.value)
+        )
+        result = await self._session.execute(stmt)
+        return result.rowcount
 
     @staticmethod
     def _to_entity(row: InvitationModel) -> Invitation:
