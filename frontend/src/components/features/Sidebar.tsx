@@ -527,7 +527,10 @@ export function Sidebar() {
                   sideOffset={8}
                   className="z-50 w-[calc(14rem-16px)] bg-surface border border-border p-1 shadow-lg"
                 >
-                  <div className="px-2 py-2 border-b border-border mb-1">
+                  <div
+                    className="px-2 py-2 border-b border-border mb-1"
+                    data-ph-no-capture
+                  >
                     <p className="text-xs font-mono text-text truncate">
                       {displayName}
                     </p>
@@ -545,7 +548,7 @@ export function Sidebar() {
                   <DropdownMenu.Item
                     className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
                     onSelect={() =>
-                      window.open("mailto:support@chirpz.ai", "_blank")
+                      window.open("mailto:support@pandaprobe.com", "_blank")
                     }
                   >
                     <Bug className="h-3.5 w-3.5" />

@@ -25,7 +25,7 @@ export function JsonViewer({
     return (
       <pre
         className={cn(
-          "text-xs font-mono text-text-dim whitespace-pre-wrap break-words",
+          "ph-no-capture text-xs font-mono text-text-dim whitespace-pre-wrap break-words",
           className,
         )}
       >
@@ -35,7 +35,7 @@ export function JsonViewer({
   }
 
   return (
-    <div className={cn("text-xs font-mono", className)}>
+    <div className={cn("ph-no-capture text-xs font-mono", className)}>
       <JsonNode
         value={data}
         depth={0}

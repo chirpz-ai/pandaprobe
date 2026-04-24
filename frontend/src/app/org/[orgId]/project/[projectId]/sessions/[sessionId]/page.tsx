@@ -243,7 +243,9 @@ export default function SessionDetailPage({
             </div>
             <div>
               <span className="text-text-muted block">User</span>
-              <span className="text-text">{session.user_id ?? "—"}</span>
+              <span className="ph-no-capture text-text">
+                {session.user_id ?? "—"}
+              </span>
             </div>
             <div className="col-span-2">
               <span className="text-text-muted block mb-1">Tags</span>

@@ -21,8 +21,8 @@ import posthog
 from app.logging import logger
 from app.registry.settings import settings
 
-_PRODUCT_NAME = "pandaprobe"
-_PRODUCT_NAME_KEY = "product_name"
+_PROJECT_NAME = "pandaprobe_app"
+_PROJECT_NAME_KEY = "project_name"
 
 _client: posthog.Client | None = None
 
@@ -76,7 +76,7 @@ class AnalyticsService:
         if _client is None:
             return
         try:
-            props = {_PRODUCT_NAME_KEY: _PRODUCT_NAME, **(properties or {})}
+            props = {_PROJECT_NAME_KEY: _PROJECT_NAME, **(properties or {})}
             groups = {"organization": org_id} if org_id else None
             _client.capture(distinct_id=distinct_id, event=event, properties=props, groups=groups)
         except Exception:
@@ -90,7 +90,7 @@ class AnalyticsService:
         if _client is None:
             return
         try:
-            props = {_PRODUCT_NAME_KEY: _PRODUCT_NAME, **(properties or {})}
+            props = {_PROJECT_NAME_KEY: _PROJECT_NAME, **(properties or {})}
             _client.set(distinct_id=distinct_id, properties=props)
         except Exception:
             logger.exception("posthog_identify_error", distinct_id=distinct_id)
