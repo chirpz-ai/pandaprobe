@@ -9,6 +9,7 @@ deployments), every public method is a silent no-op.
 """
 
 from datetime import datetime, timedelta, timezone
+from html import escape as html_escape
 
 import resend
 
@@ -171,7 +172,10 @@ class EmailService:
 
     @staticmethod
     def _invitation_html(*, org_name: str, inviter_name: str, role: str, app_url: str) -> str:
-        inviter = inviter_name or "A team member"
+        inviter = html_escape(inviter_name) if inviter_name else "A team member"
+        safe_org = html_escape(org_name)
+        safe_role = html_escape(role)
+        safe_url = html_escape(app_url, quote=True)
         return f"""\
 <div style="font-family: Arial, sans-serif; font-size: 10pt;">
     <p style="margin: 0 0 15px 0;">
@@ -179,13 +183,13 @@ class EmailService:
     </p>
 
     <p style="margin: 0 0 15px 0;">
-        {inviter} has invited you to join <strong>{org_name}</strong> on PandaProbe
-        as a <strong>{role}</strong>.
+        {inviter} has invited you to join <strong>{safe_org}</strong> on PandaProbe
+        as a <strong>{safe_role}</strong>.
     </p>
 
     <p style="margin: 0 0 15px 0;">
         To accept the invitation, visit your PandaProbe dashboard:
-        <a href="{app_url}" style="color: #0000EE; text-decoration: underline;">{app_url}</a>
+        <a href="{safe_url}" style="color: #0000EE; text-decoration: underline;">{safe_url}</a>
     </p>
 
     <p style="margin: 0 0 15px 0;">
