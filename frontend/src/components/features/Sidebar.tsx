@@ -548,7 +548,7 @@ export function Sidebar() {
                   <DropdownMenu.Item
                     className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
                     onSelect={() =>
-                      window.open("mailto:support@chirpz.ai", "_blank")
+                      window.open("mailto:support@pandaprobe.com", "_blank")
                     }
                   >
                     <Bug className="h-3.5 w-3.5" />
