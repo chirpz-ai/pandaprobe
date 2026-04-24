@@ -1040,7 +1040,7 @@ def expire_stale_invitations_task(self: Any) -> dict[str, Any]:
         return asyncio.run(_expire_stale_invitations())
     except Exception as exc:
         logger.error("expire_stale_invitations_failed", error=str(exc))
-        raise self.retry(exc=exc)
+        return {"error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
