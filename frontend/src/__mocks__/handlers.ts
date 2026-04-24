@@ -11,7 +11,7 @@ export const handlers = [
     }),
   ),
 
-  http.get(`${API}/user`, () =>
+  http.get(`${API}/me`, () =>
     HttpResponse.json({
       id: "u-dev-001",
       email: "dev@pandaprobe.io",
