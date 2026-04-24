@@ -206,7 +206,9 @@ export default function TraceDetailPage({
           </div>
           <div>
             <span className="text-text-muted block">User</span>
-            <span className="text-text">{trace.user_id ?? "—"}</span>
+            <span className="ph-no-capture text-text">
+              {trace.user_id ?? "—"}
+            </span>
           </div>
           <div>
             <span className="text-text-muted block">Environment</span>
