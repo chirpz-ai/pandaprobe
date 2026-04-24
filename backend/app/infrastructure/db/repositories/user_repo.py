@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity.entities import User
@@ -51,8 +51,8 @@ class UserRepository:
         return self._to_entity(row) if row else None
 
     async def get_user_by_email(self, email: str) -> User | None:
-        """Fetch a user by email address."""
-        stmt = select(UserModel).where(UserModel.email == email)
+        """Fetch a user by email address (case-insensitive)."""
+        stmt = select(UserModel).where(func.lower(UserModel.email) == email.lower())
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         return self._to_entity(row) if row else None
 
