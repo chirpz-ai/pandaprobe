@@ -10,7 +10,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.registry.constants import MembershipRole
+from app.registry.constants import InvitationStatus, MembershipRole
 
 
 class User(BaseModel):
@@ -52,6 +52,22 @@ class Project(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str = ""
     created_at: datetime
+
+
+class Invitation(BaseModel):
+    """An email-based invitation to join an organization."""
+
+    id: UUID
+    org_id: UUID
+    email: str
+    role: MembershipRole
+    invited_by: UUID
+    status: InvitationStatus
+    created_at: datetime
+    expires_at: datetime
+    org_name: str = ""
+    inviter_display_name: str = ""
+    inviter_email: str = ""
 
 
 class APIKey(BaseModel):
