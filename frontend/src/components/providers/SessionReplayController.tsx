@@ -16,7 +16,7 @@ const BLOCKED_SUFFIXES = [
   "/settings/members",
 ];
 
-function isBlockedRoute(pathname: string): boolean {
+export function isBlockedRoute(pathname: string): boolean {
   return BLOCKED_SUFFIXES.some((suffix) => pathname.includes(suffix));
 }
 
