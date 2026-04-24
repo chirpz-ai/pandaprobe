@@ -10,11 +10,13 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.billing.plans import MAX_OWNED_ORGS, get_plan_config
-from app.core.identity.entities import APIKey, Membership, Organization, Project
+from app.core.identity.entities import APIKey, Invitation, Membership, Organization, Project
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
+from app.infrastructure.db.repositories.invitation_repo import InvitationRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
-from app.registry.constants import MembershipRole, SubscriptionPlan, sanitize_text, validate_resource_name
+from app.infrastructure.db.repositories.user_repo import UserRepository
+from app.registry.constants import InvitationStatus, MembershipRole, SubscriptionPlan, sanitize_text, validate_resource_name
 from app.registry.exceptions import (
     AuthorizationError,
     ConflictError,
@@ -24,6 +26,7 @@ from app.registry.exceptions import (
     ValidationError,
 )
 from app.registry.security import generate_api_key, hash_api_key, key_prefix
+from app.registry.settings import settings
 
 
 class IdentityService:
@@ -35,6 +38,8 @@ class IdentityService:
         self._repo = IdentityRepository(session)
         self._project_repo = ProjectRepository(session)
         self._billing_repo = BillingRepository(session)
+        self._invitation_repo = InvitationRepository(session)
+        self._user_repo = UserRepository(session)
 
     # -- organization ---------------------------------------------------------
 
@@ -109,42 +114,157 @@ class IdentityService:
             raise AuthorizationError("Owner role required.")
         return m
 
-    async def add_member(
+    # -- Invitations ----------------------------------------------------------
+
+    _INVITATION_TTL = timedelta(days=7)
+
+    async def create_invitation(
         self,
         actor_id: UUID,
         org_id: UUID,
-        user_id: UUID,
+        email: str,
         role: MembershipRole = MembershipRole.MEMBER,
-    ) -> Membership:
-        """Add a user to an organization, respecting role hierarchy.
-
-        - OWNER can add with any role (OWNER, ADMIN, MEMBER).
-        - ADMIN can add with MEMBER role only.
-        - MEMBER cannot add anyone.
-        """
+    ) -> Invitation:
+        """Invite a user by email, respecting role hierarchy and plan quota."""
         actor = await self.require_membership(actor_id, org_id)
 
         if actor.role == MembershipRole.MEMBER:
-            raise AuthorizationError("Members cannot add users to the organization.")
+            raise AuthorizationError("Members cannot invite users to the organization.")
 
         if actor.role == MembershipRole.ADMIN and role != MembershipRole.MEMBER:
-            raise AuthorizationError("Admins can only add users with MEMBER role.")
+            raise AuthorizationError("Admins can only invite users with MEMBER role.")
 
-        existing = await self._repo.get_membership(user_id, org_id)
-        if existing:
-            raise ConflictError("User is already a member of this organization.")
+        if role == MembershipRole.OWNER:
+            raise AuthorizationError("Cannot invite a user as OWNER.")
+
+        email = email.strip().lower()
+
+        actor_user = await self._user_repo.get_user(actor_id)
+        if actor_user and actor_user.email.lower() == email:
+            raise ConflictError("You cannot invite yourself.")
+
+        existing_user = await self._user_repo.get_user_by_email(email)
+        if existing_user:
+            existing_membership = await self._repo.get_membership(existing_user.id, org_id)
+            if existing_membership:
+                raise ConflictError("User is already a member of this organization.")
+
+        existing_invitation = await self._invitation_repo.get_pending_invitation(org_id, email)
+        if existing_invitation:
+            raise ConflictError("An invitation for this email is already pending.")
 
         subscription = await self._billing_repo.get_subscription_by_org(org_id)
         if subscription:
             plan_cfg = get_plan_config(SubscriptionPlan(subscription.plan))
             if plan_cfg.max_members is not None:
-                current_count = await self._billing_repo.count_org_members(org_id)
-                if current_count >= plan_cfg.max_members:
+                member_count = await self._billing_repo.count_org_members(org_id)
+                pending_count = await self._invitation_repo.count_pending_for_org(org_id)
+                if member_count + pending_count >= plan_cfg.max_members:
                     raise QuotaExceededError(
-                        f"Your {subscription.plan} plan allows up to {plan_cfg.max_members} member(s). Please upgrade."
+                        f"Your {subscription.plan} plan allows up to {plan_cfg.max_members} member(s). "
+                        "Please upgrade to invite more."
                     )
 
-        return await self._repo.create_membership(user_id=user_id, org_id=org_id, role=role)
+        now = datetime.now(timezone.utc)
+        invitation = await self._invitation_repo.create_invitation(
+            org_id=org_id,
+            email=email,
+            role=role,
+            invited_by=actor_id,
+            expires_at=now + self._INVITATION_TTL,
+        )
+
+        if settings.RESEND_API_KEY and settings.APP_URL:
+            from app.infrastructure.queue.tasks import send_invitation_email_task
+
+            send_invitation_email_task.delay(
+                to=email,
+                org_name=invitation.org_name,
+                inviter_name=actor_user.display_name if actor_user else "",
+                role=role.value,
+                app_url=settings.APP_URL,
+            )
+
+        return invitation
+
+    async def accept_invitation(self, user_id: UUID, invitation_id: UUID) -> Membership:
+        """Accept a pending invitation, creating a membership."""
+        invitation = await self._invitation_repo.get_invitation(invitation_id)
+        if invitation is None:
+            raise NotFoundError("Invitation not found.")
+
+        user = await self._user_repo.get_user(user_id)
+        if user is None:
+            raise NotFoundError("User not found.")
+        if user.email.lower() != invitation.email.lower():
+            raise AuthorizationError("This invitation was sent to a different email address.")
+
+        if invitation.status != InvitationStatus.PENDING:
+            raise ConflictError("This invitation has already been processed.")
+
+        now = datetime.now(timezone.utc)
+        if invitation.expires_at < now:
+            await self._invitation_repo.update_status(invitation_id, InvitationStatus.EXPIRED)
+            raise ConflictError("This invitation has expired.")
+
+        existing = await self._repo.get_membership(user_id, invitation.org_id)
+        if existing:
+            raise ConflictError("You are already a member of this organization.")
+
+        membership = await self._repo.create_membership(
+            user_id=user_id,
+            org_id=invitation.org_id,
+            role=invitation.role,
+        )
+        await self._invitation_repo.update_status(invitation_id, InvitationStatus.ACCEPTED)
+        return membership
+
+    async def decline_invitation(self, user_id: UUID, invitation_id: UUID) -> None:
+        """Decline a pending invitation."""
+        invitation = await self._invitation_repo.get_invitation(invitation_id)
+        if invitation is None:
+            raise NotFoundError("Invitation not found.")
+
+        user = await self._user_repo.get_user(user_id)
+        if user is None:
+            raise NotFoundError("User not found.")
+        if user.email.lower() != invitation.email.lower():
+            raise AuthorizationError("This invitation was sent to a different email address.")
+
+        if invitation.status != InvitationStatus.PENDING:
+            raise ConflictError("This invitation has already been processed.")
+
+        now = datetime.now(timezone.utc)
+        if invitation.expires_at < now:
+            await self._invitation_repo.update_status(invitation_id, InvitationStatus.EXPIRED)
+            raise ConflictError("This invitation has expired.")
+
+        await self._invitation_repo.update_status(invitation_id, InvitationStatus.DECLINED)
+
+    async def revoke_invitation(self, actor_id: UUID, org_id: UUID, invitation_id: UUID) -> None:
+        """Revoke a pending invitation (admin/owner only)."""
+        invitation = await self._invitation_repo.get_invitation(invitation_id)
+        if invitation is None:
+            raise NotFoundError("Invitation not found.")
+        if invitation.org_id != org_id:
+            raise NotFoundError("Invitation not found.")
+
+        await self.require_admin(actor_id, org_id)
+
+        if invitation.status != InvitationStatus.PENDING:
+            raise ConflictError("Only pending invitations can be revoked.")
+
+        await self._invitation_repo.update_status(invitation_id, InvitationStatus.REVOKED)
+
+    async def list_org_invitations(self, org_id: UUID) -> list[Invitation]:
+        """Return all invitations for an organization."""
+        return await self._invitation_repo.list_org_invitations(org_id)
+
+    async def list_my_invitations(self, user_email: str) -> list[Invitation]:
+        """Return all pending non-expired invitations for the given email."""
+        return await self._invitation_repo.list_pending_for_email(user_email.lower())
+
+    # -- Membership role & removal --------------------------------------------
 
     async def update_member_role(
         self, actor_id: UUID, org_id: UUID, target_user_id: UUID, new_role: MembershipRole
