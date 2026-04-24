@@ -18,6 +18,7 @@ from app.registry.settings import settings
 
 _WELCOME_DELAY = timedelta(minutes=20)
 _FOLLOWUP_DELAY = timedelta(days=7)
+_INVITATION_DELAY = timedelta(minutes=2)
 
 
 class EmailService:
@@ -83,9 +84,11 @@ class EmailService:
         role: str,
         app_url: str,
     ) -> None:
-        """Send an invitation notification email immediately."""
+        """Schedule an invitation notification email with a short delay."""
         if not self.is_configured():
             return
+
+        scheduled_at = (datetime.now(timezone.utc) + _INVITATION_DELAY).isoformat()
 
         params: resend.Emails.SendParams = {
             "from": settings.RESEND_FROM_INFO,
@@ -97,10 +100,13 @@ class EmailService:
                 role=role,
                 app_url=app_url,
             ),
+            "scheduled_at": scheduled_at,
         }
 
         resp = resend.Emails.send(params)
-        logger.info("invitation_email_sent", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp))
+        logger.info(
+            "invitation_email_scheduled", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp)
+        )
 
     # ------------------------------------------------------------------
     # HTML templates
