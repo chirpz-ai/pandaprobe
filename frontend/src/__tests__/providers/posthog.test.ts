@@ -33,41 +33,36 @@ describe("isPostHogEnabled", () => {
 
   it("returns true when auth is enabled and key is set", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
-    const { isPostHogEnabled } = await import(
-      "@/components/providers/PostHogProvider"
-    );
+    const { isPostHogEnabled } =
+      await import("@/components/providers/PostHogProvider");
     expect(isPostHogEnabled(true)).toBe(true);
   });
 
   it("returns false when auth is disabled", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
-    const { isPostHogEnabled } = await import(
-      "@/components/providers/PostHogProvider"
-    );
+    const { isPostHogEnabled } =
+      await import("@/components/providers/PostHogProvider");
     expect(isPostHogEnabled(false)).toBe(false);
   });
 
   it("returns false when key is empty", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_KEY = "";
-    const { isPostHogEnabled } = await import(
-      "@/components/providers/PostHogProvider"
-    );
+    const { isPostHogEnabled } =
+      await import("@/components/providers/PostHogProvider");
     expect(isPostHogEnabled(true)).toBe(false);
   });
 
   it("returns false when key is not set", async () => {
     delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    const { isPostHogEnabled } = await import(
-      "@/components/providers/PostHogProvider"
-    );
+    const { isPostHogEnabled } =
+      await import("@/components/providers/PostHogProvider");
     expect(isPostHogEnabled(true)).toBe(false);
   });
 
   it("returns false when both auth is disabled and key is missing", async () => {
     delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    const { isPostHogEnabled } = await import(
-      "@/components/providers/PostHogProvider"
-    );
+    const { isPostHogEnabled } =
+      await import("@/components/providers/PostHogProvider");
     expect(isPostHogEnabled(false)).toBe(false);
   });
 });
