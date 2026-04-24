@@ -1018,6 +1018,32 @@ def send_invitation_email_task(to: str, org_name: str, inviter_name: str, role: 
 
 
 # ---------------------------------------------------------------------------
+# Invitation housekeeping
+# ---------------------------------------------------------------------------
+
+
+async def _expire_stale_invitations() -> dict[str, Any]:
+    from app.infrastructure.db.repositories.invitation_repo import InvitationRepository
+
+    async with _worker_session() as session:
+        count = await InvitationRepository(session).expire_stale_invitations()
+        await session.commit()
+
+    logger.info("expire_stale_invitations_done", expired=count)
+    return {"status": "done", "expired": count}
+
+
+@celery.task(name="expire_stale_invitations", bind=True, max_retries=0)
+def expire_stale_invitations_task(self: Any) -> dict[str, Any]:
+    """Periodic: transition PENDING invitations past their expiry to EXPIRED."""
+    try:
+        return asyncio.run(_expire_stale_invitations())
+    except Exception as exc:
+        logger.error("expire_stale_invitations_failed", error=str(exc))
+        raise self.retry(exc=exc)
+
+
+# ---------------------------------------------------------------------------
 # CRM – Attio contact sync
 # ---------------------------------------------------------------------------
 
