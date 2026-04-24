@@ -322,9 +322,7 @@ async def test_accept_invitation_already_a_member() -> None:
 
     svc._invitation_repo.get_invitation = AsyncMock(return_value=inv)
     svc._user_repo.get_user = AsyncMock(return_value=user)
-    svc._repo.get_membership = AsyncMock(
-        return_value=_make_membership(user_id=user_id, org_id=org_id)
-    )
+    svc._repo.get_membership = AsyncMock(return_value=_make_membership(user_id=user_id, org_id=org_id))
 
     with pytest.raises(ConflictError, match="already a member"):
         await svc.accept_invitation(user_id=user_id, invitation_id=inv.id)

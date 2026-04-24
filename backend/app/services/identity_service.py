@@ -16,7 +16,13 @@ from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.invitation_repo import InvitationRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
 from app.infrastructure.db.repositories.user_repo import UserRepository
-from app.registry.constants import InvitationStatus, MembershipRole, SubscriptionPlan, sanitize_text, validate_resource_name
+from app.registry.constants import (
+    InvitationStatus,
+    MembershipRole,
+    SubscriptionPlan,
+    sanitize_text,
+    validate_resource_name,
+)
 from app.registry.exceptions import (
     AuthorizationError,
     ConflictError,

@@ -108,9 +108,13 @@ class InvitationRepository:
 
     async def count_pending_for_org(self, org_id: UUID) -> int:
         """Count PENDING invitations for quota enforcement."""
-        stmt = select(func.count()).select_from(InvitationModel).where(
-            InvitationModel.org_id == org_id,
-            InvitationModel.status == InvitationStatus.PENDING,
+        stmt = (
+            select(func.count())
+            .select_from(InvitationModel)
+            .where(
+                InvitationModel.org_id == org_id,
+                InvitationModel.status == InvitationStatus.PENDING,
+            )
         )
         result = await self._session.execute(stmt)
         return result.scalar_one()

@@ -66,7 +66,9 @@ class UserModel(Base):
     last_sign_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     memberships: Mapped[list["MembershipModel"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    sent_invitations: Mapped[list["InvitationModel"]] = relationship(back_populates="inviter", cascade="all, delete-orphan")
+    sent_invitations: Mapped[list["InvitationModel"]] = relationship(
+        back_populates="inviter", cascade="all, delete-orphan"
+    )
 
 
 class OrganizationModel(Base):
@@ -140,9 +142,7 @@ class InvitationModel(Base):
     organization: Mapped["OrganizationModel"] = relationship(back_populates="invitations")
     inviter: Mapped["UserModel"] = relationship(back_populates="sent_invitations")
 
-    __table_args__ = (
-        Index("ix_invitation_org_email", "org_id", "email"),
-    )
+    __table_args__ = (Index("ix_invitation_org_email", "org_id", "email"),)
 
 
 class ProjectModel(Base):
