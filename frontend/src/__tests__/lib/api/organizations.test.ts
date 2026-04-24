@@ -6,9 +6,11 @@ import {
   updateOrganization,
   deleteOrganization,
   listMembers,
-  addMember,
   updateMemberRole,
   removeMember,
+  createInvitation,
+  listInvitations,
+  revokeInvitation,
 } from "@/lib/api/organizations";
 
 jest.mock("axios", () => {
@@ -77,13 +79,32 @@ describe("organizations API", () => {
     expect(mockClient.get).toHaveBeenCalledWith("/organizations/o1/members");
   });
 
-  it("addMember posts to /organizations/:id/members", async () => {
-    mockClient.post.mockResolvedValue({ data: { id: "m1" } });
-    await addMember("o1", { user_id: "u1", role: "MEMBER" });
-    expect(mockClient.post).toHaveBeenCalledWith("/organizations/o1/members", {
-      user_id: "u1",
-      role: "MEMBER",
-    });
+  it("createInvitation posts to /organizations/:id/invitations", async () => {
+    mockClient.post.mockResolvedValue({ data: { id: "inv1" } });
+    await createInvitation("o1", { email: "test@example.com", role: "MEMBER" });
+    expect(mockClient.post).toHaveBeenCalledWith(
+      "/organizations/o1/invitations",
+      {
+        email: "test@example.com",
+        role: "MEMBER",
+      },
+    );
+  });
+
+  it("listInvitations gets /organizations/:id/invitations", async () => {
+    mockClient.get.mockResolvedValue({ data: [] });
+    await listInvitations("o1");
+    expect(mockClient.get).toHaveBeenCalledWith(
+      "/organizations/o1/invitations",
+    );
+  });
+
+  it("revokeInvitation deletes /organizations/:id/invitations/:invId", async () => {
+    mockClient.delete.mockResolvedValue({});
+    await revokeInvitation("o1", "inv1");
+    expect(mockClient.delete).toHaveBeenCalledWith(
+      "/organizations/o1/invitations/inv1",
+    );
   });
 
   it("updateMemberRole patches /organizations/:id/members/:userId", async () => {

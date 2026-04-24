@@ -83,6 +83,16 @@ class MembershipRole(StrEnum):
     MEMBER = "MEMBER"
 
 
+class InvitationStatus(StrEnum):
+    """Lifecycle status of an organization invitation."""
+
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    DECLINED = "DECLINED"
+    REVOKED = "REVOKED"
+    EXPIRED = "EXPIRED"
+
+
 class TraceSortBy(StrEnum):
     """Columns available for sorting trace list results."""
 

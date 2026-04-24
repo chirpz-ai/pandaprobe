@@ -1,4 +1,4 @@
-"""Routes for managing organizations and memberships.
+"""Routes for managing organizations, memberships, and invitations.
 
 All endpoints require a valid external IdP JWT via the
 ``Authorization: Bearer`` header.  Organization mutations are
@@ -10,11 +10,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import Request
 
 from app.api.context import ApiContext
 from app.api.dependencies import get_api_context
+from app.api.rate_limit import limiter
 from app.infrastructure.db.engine import get_db_session
-from app.registry.constants import MembershipRole
+from app.registry.constants import InvitationStatus, MembershipRole
 from app.registry.exceptions import AuthenticationError
 from app.services.identity_service import IdentityService
 
@@ -69,17 +71,33 @@ class MembershipResponse(BaseModel):
     created_at: str
 
 
-class AddMemberRequest(BaseModel):
-    """Payload for inviting a user to an org."""
-
-    user_id: UUID
-    role: MembershipRole = MembershipRole.MEMBER
-
-
 class UpdateMemberRoleRequest(BaseModel):
     """Payload for changing a member's role."""
 
     role: MembershipRole
+
+
+class CreateInvitationRequest(BaseModel):
+    """Payload for inviting a user by email."""
+
+    email: str = Field(min_length=3, max_length=320)
+    role: MembershipRole = MembershipRole.MEMBER
+
+
+class InvitationResponse(BaseModel):
+    """Public representation of an invitation."""
+
+    id: UUID
+    org_id: UUID
+    org_name: str
+    email: str
+    role: MembershipRole
+    status: InvitationStatus
+    invited_by: UUID
+    inviter_display_name: str
+    inviter_email: str
+    created_at: str
+    expires_at: str
 
 
 # ---------------------------------------------------------------------------
@@ -218,35 +236,6 @@ async def list_members(
     ]
 
 
-@router.post("/{org_id}/members", status_code=201, response_model=MembershipResponse)
-async def add_member(
-    org_id: UUID,
-    body: AddMemberRequest,
-    ctx: ApiContext = Depends(get_api_context),
-    session: AsyncSession = Depends(get_db_session),
-) -> MembershipResponse:
-    """Invite a user to an organization.
-
-    Auth: `Bearer` · hierarchy: `OWNER` > `ADMIN` > `MEMBER`
-
-    - **OWNER** can assign any role
-    - **ADMIN** can assign MEMBER only
-    - **MEMBER** cannot add anyone
-    """
-    _require_user(ctx)
-    svc = IdentityService(session)
-    m = await svc.add_member(actor_id=ctx.user.id, org_id=org_id, user_id=body.user_id, role=body.role)
-    return MembershipResponse(
-        id=m.id,
-        user_id=m.user_id,
-        org_id=m.org_id,
-        role=m.role,
-        display_name=m.display_name,
-        email=m.email,
-        created_at=m.created_at.isoformat(),
-    )
-
-
 @router.patch("/{org_id}/members/{user_id}", response_model=MembershipResponse)
 async def update_member_role(
     org_id: UUID,
@@ -301,3 +290,92 @@ async def remove_member(
     _require_user(ctx)
     svc = IdentityService(session)
     await svc.remove_member(actor_id=ctx.user.id, org_id=org_id, target_user_id=user_id)
+
+
+# ---------------------------------------------------------------------------
+# Invitations
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{org_id}/invitations", status_code=201, response_model=InvitationResponse)
+@limiter.limit("10/hour")
+async def create_invitation(
+    request: Request,
+    org_id: UUID,
+    body: CreateInvitationRequest,
+    ctx: ApiContext = Depends(get_api_context),
+    session: AsyncSession = Depends(get_db_session),
+) -> InvitationResponse:
+    """Invite a user to the organization by email.
+
+    Auth: `Bearer` · role: `ADMIN` or `OWNER`
+    """
+    _require_user(ctx)
+    svc = IdentityService(session)
+    inv = await svc.create_invitation(
+        actor_id=ctx.user.id,
+        org_id=org_id,
+        email=body.email,
+        role=body.role,
+    )
+    return InvitationResponse(
+        id=inv.id,
+        org_id=inv.org_id,
+        org_name=inv.org_name,
+        email=inv.email,
+        role=inv.role,
+        status=inv.status,
+        invited_by=inv.invited_by,
+        inviter_display_name=inv.inviter_display_name,
+        inviter_email=inv.inviter_email,
+        created_at=inv.created_at.isoformat(),
+        expires_at=inv.expires_at.isoformat(),
+    )
+
+
+@router.get("/{org_id}/invitations", response_model=list[InvitationResponse])
+async def list_invitations(
+    org_id: UUID,
+    ctx: ApiContext = Depends(get_api_context),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[InvitationResponse]:
+    """List all invitations for the organization.
+
+    Auth: `Bearer` · role: any member
+    """
+    _require_user(ctx)
+    svc = IdentityService(session)
+    await svc.require_membership(ctx.user.id, org_id)
+    invitations = await svc.list_org_invitations(org_id)
+    return [
+        InvitationResponse(
+            id=inv.id,
+            org_id=inv.org_id,
+            org_name=inv.org_name,
+            email=inv.email,
+            role=inv.role,
+            status=inv.status,
+            invited_by=inv.invited_by,
+            inviter_display_name=inv.inviter_display_name,
+            inviter_email=inv.inviter_email,
+            created_at=inv.created_at.isoformat(),
+            expires_at=inv.expires_at.isoformat(),
+        )
+        for inv in invitations
+    ]
+
+
+@router.delete("/{org_id}/invitations/{invitation_id}", status_code=204)
+async def revoke_invitation(
+    org_id: UUID,
+    invitation_id: UUID,
+    ctx: ApiContext = Depends(get_api_context),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Revoke a pending invitation.
+
+    Auth: `Bearer` · role: `ADMIN` or `OWNER`
+    """
+    _require_user(ctx)
+    svc = IdentityService(session)
+    await svc.revoke_invitation(actor_id=ctx.user.id, org_id=org_id, invitation_id=invitation_id)

@@ -44,6 +44,10 @@ celery.conf.beat_schedule = {
         "task": "dispatch_hobby_reset",
         "schedule": 21600.0,
     },
+    "expire-stale-invitations": {
+        "task": "expire_stale_invitations",
+        "schedule": 3600.0,
+    },
 }
 
 celery.autodiscover_tasks(["app.infrastructure.queue"])

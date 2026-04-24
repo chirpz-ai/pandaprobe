@@ -27,12 +27,13 @@ import {
   ChevronsUpDown,
   CircleUser,
   Plus,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useOrgId, useResolvedProjectId } from "@/hooks/useNavigation";
-import { DOCS_URL } from "@/lib/utils/constants";
+import { DOCS_URL, STORAGE_KEYS } from "@/lib/utils/constants";
 import { createOrganization } from "@/lib/api/organizations";
 import { extractErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/providers/ToastProvider";
@@ -196,19 +197,31 @@ export function Sidebar() {
   const { organizations, currentOrg, projects, refetchOrgs } =
     useOrganization();
   const { toast } = useToast();
-  const orgId = useOrgId();
+  const rawOrgId = useOrgId();
+  // Fallback for pages outside /org/[orgId] (e.g. /settings/account)
+  const orgId = useMemo(() => {
+    if (rawOrgId) return rawOrgId;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(STORAGE_KEYS.orgId);
+      if (stored) return stored;
+    }
+    return organizations[0]?.id ?? "";
+  }, [rawOrgId, organizations]);
   const resolvedProjectId = useResolvedProjectId(projects);
+  const activeOrg =
+    currentOrg ?? organizations.find((o) => o.id === orgId) ?? null;
 
   const [collapsed, setCollapsed] = useState(false);
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
 
-  const inSettingsRoute = pathname.includes("/settings");
-  const [settingsView, setSettingsView] = useState(inSettingsRoute);
+  const inAccountRoute = pathname.startsWith("/settings");
+  const inOrgSettingsRoute = !inAccountRoute && pathname.includes("/settings");
+  const [settingsView, setSettingsView] = useState(inOrgSettingsRoute);
 
   useEffect(() => {
-    setSettingsView(inSettingsRoute);
-  }, [inSettingsRoute]);
+    setSettingsView(inOrgSettingsRoute);
+  }, [inOrgSettingsRoute]);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -254,7 +267,7 @@ export function Sidebar() {
     [orgBase, projectBase, projectHome],
   );
 
-  const settingsNav = useMemo<NavItem[]>(
+  const orgSettingsNav = useMemo<NavItem[]>(
     () => [
       {
         label: "Organization",
@@ -290,6 +303,22 @@ export function Sidebar() {
     [orgBase],
   );
 
+  const accountNav = useMemo<NavItem[]>(
+    () => [
+      {
+        label: "Account",
+        href: "/settings/account",
+        icon: <CircleUser className="h-4 w-4" />,
+      },
+      {
+        label: "Invitations",
+        href: "/settings/invitations",
+        icon: <Mail className="h-4 w-4" />,
+      },
+    ],
+    [],
+  );
+
   function isActive(item: NavItem): boolean {
     if (item.exact) return pathname === item.href;
     return (
@@ -313,6 +342,10 @@ export function Sidebar() {
   function exitSettings() {
     setSettingsView(false);
     router.push(projectHome);
+  }
+
+  function exitAccount() {
+    router.push(`${orgBase}/settings/organization`);
   }
 
   function switchOrg(newOrgId: string) {
@@ -359,9 +392,9 @@ export function Sidebar() {
       >
         {/* ── Header (h-12 to match TopBar) ──────────────────────── */}
         <div className="flex items-center justify-between px-3 h-12 border-b border-border">
-          {!collapsed && settingsView ? (
+          {!collapsed && (inAccountRoute || settingsView) ? (
             <button
-              onClick={exitSettings}
+              onClick={inAccountRoute ? exitAccount : exitSettings}
               className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight hover:text-text transition-colors"
             >
               <Image
@@ -402,14 +435,28 @@ export function Sidebar() {
 
         {/* ── Navigation ─────────────────────────────────────────── */}
         <nav className="flex-1 py-2 overflow-y-auto">
-          {settingsView ? (
+          {inAccountRoute ? (
+            <>
+              {/* Account view */}
+              <div className="space-y-0.5 mt-1">
+                {accountNav.map((item) => (
+                  <NavLink
+                    key={item.label}
+                    item={item}
+                    collapsed={collapsed}
+                    active={isActive(item)}
+                  />
+                ))}
+              </div>
+            </>
+          ) : settingsView ? (
             <>
               {/* Org switcher at top of settings view */}
               <SwitcherDropdown
-                label={currentOrg?.name ?? "Select org"}
+                label={activeOrg?.name ?? "Select org"}
                 icon={<Building2 className="h-4 w-4" />}
                 items={organizations.map((o) => ({ id: o.id, name: o.name }))}
-                activeId={currentOrg?.id ?? null}
+                activeId={activeOrg?.id ?? null}
                 onSelect={switchOrg}
                 collapsed={collapsed}
                 footerAction={{
@@ -420,7 +467,7 @@ export function Sidebar() {
               />
 
               <div className="space-y-0.5 mt-1">
-                {settingsNav.map((item) => (
+                {orgSettingsNav.map((item) => (
                   <NavLink
                     key={item.label}
                     item={item}
@@ -462,11 +509,23 @@ export function Sidebar() {
           )}
         </nav>
 
-        {/* ── Settings / Back button (above divider) ──────────────── */}
+        {/* ── Bottom action button ────────────────────────────────── */}
         <div className="pb-2">
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
-              {settingsView ? (
+              {inAccountRoute ? (
+                <Button
+                  variant="ghost"
+                  onClick={exitAccount}
+                  className={cn(
+                    "w-full justify-start gap-3 px-3 py-2",
+                    collapsed && "justify-center px-2",
+                  )}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  {!collapsed && <span>Back to Organization</span>}
+                </Button>
+              ) : settingsView ? (
                 <Button
                   variant="ghost"
                   onClick={exitSettings}
@@ -499,7 +558,11 @@ export function Sidebar() {
                   sideOffset={8}
                   className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
                 >
-                  {settingsView ? "Back to Home" : "Settings"}
+                  {inAccountRoute
+                    ? "Back to Organization"
+                    : settingsView
+                      ? "Back to Home"
+                      : "Settings"}
                 </Tooltip.Content>
               </Tooltip.Portal>
             )}
@@ -535,6 +598,13 @@ export function Sidebar() {
                       {displayEmail}
                     </p>
                   </div>
+                  <DropdownMenu.Item
+                    className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
+                    onSelect={() => router.push("/settings/account")}
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    Account & Invitations
+                  </DropdownMenu.Item>
                   <DropdownMenu.Item
                     className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
                     onSelect={() => window.open(DOCS_URL, "_blank")}

@@ -5,8 +5,9 @@ import type {
   OrganizationResponse,
   MyOrganizationResponse,
   MembershipResponse,
-  AddMemberRequest,
   UpdateMemberRoleRequest,
+  CreateInvitationRequest,
+  InvitationResponse,
 } from "./types";
 
 export async function createOrganization(
@@ -54,17 +55,6 @@ export async function listMembers(
   return res.data;
 }
 
-export async function addMember(
-  orgId: string,
-  data: AddMemberRequest,
-): Promise<MembershipResponse> {
-  const res = await client.post<MembershipResponse>(
-    `/organizations/${orgId}/members`,
-    data,
-  );
-  return res.data;
-}
-
 export async function updateMemberRole(
   orgId: string,
   userId: string,
@@ -82,4 +72,31 @@ export async function removeMember(
   userId: string,
 ): Promise<void> {
   await client.delete(`/organizations/${orgId}/members/${userId}`);
+}
+
+export async function createInvitation(
+  orgId: string,
+  data: CreateInvitationRequest,
+): Promise<InvitationResponse> {
+  const res = await client.post<InvitationResponse>(
+    `/organizations/${orgId}/invitations`,
+    data,
+  );
+  return res.data;
+}
+
+export async function listInvitations(
+  orgId: string,
+): Promise<InvitationResponse[]> {
+  const res = await client.get<InvitationResponse[]>(
+    `/organizations/${orgId}/invitations`,
+  );
+  return res.data;
+}
+
+export async function revokeInvitation(
+  orgId: string,
+  invitationId: string,
+): Promise<void> {
+  await client.delete(`/organizations/${orgId}/invitations/${invitationId}`);
 }

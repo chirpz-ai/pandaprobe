@@ -1004,6 +1004,45 @@ def send_followup_email_task(email: str) -> dict[str, str]:
     return {"status": "sent", "email": email}
 
 
+@celery.task(name="send_invitation_email", **_email_task_opts)
+def send_invitation_email_task(to: str, org_name: str, inviter_name: str, role: str, app_url: str) -> dict[str, str]:
+    """Send an invitation notification email via Resend."""
+    from app.services.email_service import EmailService
+
+    svc = EmailService()
+    if not svc.is_configured():
+        return {"status": "skipped", "reason": "resend_not_configured"}
+
+    svc.send_invitation_email(to=to, org_name=org_name, inviter_name=inviter_name, role=role, app_url=app_url)
+    return {"status": "sent", "email": to}
+
+
+# ---------------------------------------------------------------------------
+# Invitation housekeeping
+# ---------------------------------------------------------------------------
+
+
+async def _expire_stale_invitations() -> dict[str, Any]:
+    from app.infrastructure.db.repositories.invitation_repo import InvitationRepository
+
+    async with _worker_session() as session:
+        count = await InvitationRepository(session).expire_stale_invitations()
+        await session.commit()
+
+    logger.info("expire_stale_invitations_done", expired=count)
+    return {"status": "done", "expired": count}
+
+
+@celery.task(name="expire_stale_invitations", bind=True, max_retries=0)
+def expire_stale_invitations_task(self: Any) -> dict[str, Any]:
+    """Periodic: transition PENDING invitations past their expiry to EXPIRED."""
+    try:
+        return asyncio.run(_expire_stale_invitations())
+    except Exception as exc:
+        logger.error("expire_stale_invitations_failed", error=str(exc))
+        return {"error": str(exc)}
+
+
 # ---------------------------------------------------------------------------
 # CRM – Attio contact sync
 # ---------------------------------------------------------------------------

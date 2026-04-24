@@ -9,6 +9,7 @@ deployments), every public method is a silent no-op.
 """
 
 from datetime import datetime, timedelta, timezone
+from html import escape as html_escape
 
 import resend
 
@@ -17,6 +18,7 @@ from app.registry.settings import settings
 
 _WELCOME_DELAY = timedelta(minutes=20)
 _FOLLOWUP_DELAY = timedelta(days=7)
+_INVITATION_DELAY = timedelta(minutes=2)
 
 
 class EmailService:
@@ -71,6 +73,39 @@ class EmailService:
         resp = resend.Emails.send(params)
         logger.info(
             "followup_email_scheduled", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp)
+        )
+
+    def send_invitation_email(
+        self,
+        *,
+        to: str,
+        org_name: str,
+        inviter_name: str,
+        role: str,
+        app_url: str,
+    ) -> None:
+        """Schedule an invitation notification email with a short delay."""
+        if not self.is_configured():
+            return
+
+        scheduled_at = (datetime.now(timezone.utc) + _INVITATION_DELAY).isoformat()
+
+        params: resend.Emails.SendParams = {
+            "from": settings.RESEND_FROM_INFO,
+            "to": [to],
+            "subject": f"You've been invited to join {org_name} on PandaProbe",
+            "html": self._invitation_html(
+                org_name=org_name,
+                inviter_name=inviter_name,
+                role=role,
+                app_url=app_url,
+            ),
+            "scheduled_at": scheduled_at,
+        }
+
+        resp = resend.Emails.send(params)
+        logger.info(
+            "invitation_email_scheduled", to=to, email_id=resp.get("id") if isinstance(resp, dict) else str(resp)
         )
 
     # ------------------------------------------------------------------
@@ -138,5 +173,41 @@ class EmailService:
 
     <p style="margin: 15px 0 0 0;">
         Sina (founder at PandaProbe)
+    </p>
+</div>"""
+
+    @staticmethod
+    def _invitation_html(*, org_name: str, inviter_name: str, role: str, app_url: str) -> str:
+        inviter = html_escape(inviter_name) if inviter_name else "A team member"
+        safe_org = html_escape(org_name)
+        safe_role = html_escape(role)
+        safe_url = html_escape(app_url, quote=True)
+        return f"""\
+<div style="font-family: Arial, sans-serif; font-size: 10pt;">
+    <p style="margin: 0 0 15px 0;">
+        Hey,
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        {inviter} has invited you to join <strong>{safe_org}</strong> on PandaProbe
+        as a <strong>{safe_role}</strong>.
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        To accept the invitation, visit your PandaProbe dashboard:
+        <a href="{safe_url}" style="color: #0000EE; text-decoration: underline;">{safe_url}</a>
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        If you don't have a PandaProbe account yet, sign up with this email
+        address and the invitation will be waiting for you.
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        This invitation expires in 7 days.
+    </p>
+
+    <p style="margin: 15px 0 0 0;">
+        &mdash; The PandaProbe Team
     </p>
 </div>"""
