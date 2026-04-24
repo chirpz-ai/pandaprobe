@@ -24,6 +24,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from app.registry.constants import (
     EvaluationStatus,
+    InvitationStatus,
     MembershipRole,
     MonitorStatus,
     ScoreDataType,
@@ -65,6 +66,7 @@ class UserModel(Base):
     last_sign_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     memberships: Mapped[list["MembershipModel"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    sent_invitations: Mapped[list["InvitationModel"]] = relationship(back_populates="inviter", cascade="all, delete-orphan")
 
 
 class OrganizationModel(Base):
@@ -85,6 +87,9 @@ class OrganizationModel(Base):
         back_populates="organization", uselist=False, cascade="all, delete-orphan"
     )
     usage_records: Mapped[list["UsageRecordModel"]] = relationship(
+        back_populates="organization", cascade="all, delete-orphan"
+    )
+    invitations: Mapped[list["InvitationModel"]] = relationship(
         back_populates="organization", cascade="all, delete-orphan"
     )
 
@@ -108,6 +113,36 @@ class MembershipModel(Base):
     organization: Mapped["OrganizationModel"] = relationship(back_populates="memberships")
 
     __table_args__ = (UniqueConstraint("user_id", "org_id", name="uq_membership_user_org"),)
+
+
+class InvitationModel(Base):
+    """Email-based invitation to join an organization."""
+
+    __tablename__ = "invitations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    role: Mapped[str] = mapped_column(
+        SAEnum(MembershipRole, name="membership_role", create_constraint=False, native_enum=False, length=20),
+        default=MembershipRole.MEMBER,
+        nullable=False,
+    )
+    invited_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(
+        SAEnum(InvitationStatus, name="invitation_status", create_constraint=False, native_enum=False, length=20),
+        default=InvitationStatus.PENDING,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    organization: Mapped["OrganizationModel"] = relationship(back_populates="invitations")
+    inviter: Mapped["UserModel"] = relationship(back_populates="sent_invitations")
+
+    __table_args__ = (
+        Index("ix_invitation_org_email", "org_id", "email"),
+    )
 
 
 class ProjectModel(Base):
