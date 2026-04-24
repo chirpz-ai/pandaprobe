@@ -142,7 +142,7 @@ async def _resolve_jwt(
     user_repo = UserRepository(session)
     identity_repo = IdentityRepository(session)
 
-    user = await user_repo.upsert_user(
+    user, user_created = await user_repo.upsert_user(
         external_id=claims.sub,
         email=claims.email,
         display_name=claims.display_name,
@@ -171,9 +171,8 @@ async def _resolve_jwt(
         )
 
         memberships = await identity_repo.list_user_orgs(user.id)
-        is_new_user = True
-    else:
-        is_new_user = False
+
+    is_new_user = user_created
 
     org_id_header = request.headers.get("X-Organization-ID")
     if org_id_header:
