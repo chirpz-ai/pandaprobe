@@ -135,8 +135,9 @@ class Settings(BaseSettings):
 
     # -- Email / Resend -------------------------------------------------------
     RESEND_API_KEY: str = ""
-    RESEND_FROM: str = ""
-    RESEND_REPLY_TO: str = ""
+    RESEND_FROM: str = "Sina at PandaProbe <sina@mail.pandaprobe.com>"
+    RESEND_FROM_INFO: str = "PandaProbe <info@mail.pandaprobe.com>"
+    RESEND_REPLY_TO: str = "sina@pandaprobe.com"
 
     # -- CRM / Attio ----------------------------------------------------------
     ATTIO_API_KEY: str = ""
@@ -145,6 +146,9 @@ class Settings(BaseSettings):
     # -- PostHog / Product Analytics -------------------------------------------
     POSTHOG_API_KEY: str = ""
     POSTHOG_HOST: str = ""
+
+    # -- Application URLs -----------------------------------------------------
+    APP_URL: str = "https://app.pandaprobe.com"
 
     # -- Rate limiting --------------------------------------------------------
     RATE_LIMIT_DEFAULT: str = "200/minute"
