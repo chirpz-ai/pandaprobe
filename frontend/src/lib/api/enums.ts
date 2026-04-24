@@ -63,6 +63,16 @@ export const MembershipRole = {
 export type MembershipRole =
   (typeof MembershipRole)[keyof typeof MembershipRole];
 
+export const InvitationStatus = {
+  PENDING: "PENDING",
+  ACCEPTED: "ACCEPTED",
+  DECLINED: "DECLINED",
+  REVOKED: "REVOKED",
+  EXPIRED: "EXPIRED",
+} as const;
+export type InvitationStatus =
+  (typeof InvitationStatus)[keyof typeof InvitationStatus];
+
 export const TraceSortBy = {
   started_at: "started_at",
   ended_at: "ended_at",
