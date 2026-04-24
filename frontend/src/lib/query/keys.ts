@@ -12,6 +12,10 @@ export const queryKeys = {
   members: {
     list: (orgId: string) => ["members", orgId] as const,
   },
+  invitations: {
+    list: (orgId: string) => ["invitations", orgId] as const,
+    my: ["invitations", "mine"] as const,
+  },
   apiKeys: {
     list: (orgId: string) => ["apiKeys", orgId] as const,
   },
