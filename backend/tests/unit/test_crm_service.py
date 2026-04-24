@@ -123,6 +123,7 @@ def test_sync_contact_raises_on_assert_failure(
 ) -> None:
     mock_settings.ATTIO_API_KEY = "atk_test_key"
     mock_settings.ATTIO_LIST_ID = "list-uuid"
+    mock_httpx.HTTPStatusError = httpx.HTTPStatusError
 
     put_resp = MagicMock()
     put_resp.raise_for_status.side_effect = httpx.HTTPStatusError("422", request=MagicMock(), response=MagicMock())
@@ -143,6 +144,7 @@ def test_sync_contact_raises_on_list_entry_failure(
 ) -> None:
     mock_settings.ATTIO_API_KEY = "atk_test_key"
     mock_settings.ATTIO_LIST_ID = "list-uuid"
+    mock_httpx.HTTPStatusError = httpx.HTTPStatusError
 
     put_resp = MagicMock()
     put_resp.json.return_value = _ASSERT_RESPONSE
