@@ -135,9 +135,9 @@ class Settings(BaseSettings):
 
     # -- Email / Resend -------------------------------------------------------
     RESEND_API_KEY: str = ""
-    RESEND_FROM: str = "Sina at PandaProbe <sina@mail.pandaprobe.com>"
-    RESEND_FROM_INFO: str = "PandaProbe <info@mail.pandaprobe.com>"
-    RESEND_REPLY_TO: str = "sina@pandaprobe.com"
+    RESEND_FROM: str = ""
+    RESEND_FROM_INFO: str = ""
+    RESEND_REPLY_TO: str = ""
 
     # -- CRM / Attio ----------------------------------------------------------
     ATTIO_API_KEY: str = ""
