@@ -278,7 +278,7 @@ async def test_identity_hobby_blocks_adding_second_member(db_session):
     await db_session.commit()
     svc = IdentityService(db_session)
     with pytest.raises(QuotaExceededError):
-        await svc.add_member(TEST_USER_ID, TEST_ORG_ID, TEST_USER_B_ID, MembershipRole.MEMBER)
+        await svc.create_invitation(TEST_USER_ID, TEST_ORG_ID, "member@x.com", MembershipRole.MEMBER)
 
 
 async def test_identity_pro_allows_two_members_blocks_third(db_session):
@@ -293,7 +293,7 @@ async def test_identity_pro_allows_two_members_blocks_third(db_session):
     )
     await db_session.commit()
     svc = IdentityService(db_session)
-    await svc.add_member(TEST_USER_ID, TEST_ORG_ID, TEST_USER_B_ID, MembershipRole.MEMBER)
+    await svc.create_invitation(TEST_USER_ID, TEST_ORG_ID, "m1@x.com", MembershipRole.MEMBER)
     await db_session.commit()
     with pytest.raises(QuotaExceededError):
-        await svc.add_member(TEST_USER_ID, TEST_ORG_ID, TEST_USER_C_ID, MembershipRole.MEMBER)
+        await svc.create_invitation(TEST_USER_ID, TEST_ORG_ID, "m2@x.com", MembershipRole.MEMBER)
