@@ -55,7 +55,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component.name }}
 
       - name: Build and push (${{ matrix.component.name }}/${{ matrix.platform.suffix }})
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.component.context }}
           file: ${{ matrix.component.file }}
