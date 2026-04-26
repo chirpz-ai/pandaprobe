@@ -33,9 +33,9 @@ import { cn } from "@/lib/utils/cn";
 /* ── SDK snippets ─────────────────────────────────────────────────────── */
 
 const INSTALL_SNIPPETS = {
-  openai: "pip install pandaprobe[openai]",
-  anthropic: "pip install pandaprobe[anthropic]",
-  gemini: "pip install pandaprobe[google-genai]",
+  openai: 'pip install "pandaprobe[openai]"',
+  anthropic: 'pip install "pandaprobe[anthropic]"',
+  gemini: 'pip install "pandaprobe[google-genai]"',
 };
 
 function envSnippet(projectName: string, endpoint: string) {

@@ -76,8 +76,10 @@ export function OnboardingChecklist() {
           ? `${projectBase}/traces`
           : `${projectBase}/quickstart`,
       },
-      disabled: !projectBase,
-      disabledReason: "Create a project first",
+      disabled: !projectBase || !apiKeyCreated,
+      disabledReason: !projectCreated
+        ? "Create a project first"
+        : "Create an API key first",
     },
   ];
 
