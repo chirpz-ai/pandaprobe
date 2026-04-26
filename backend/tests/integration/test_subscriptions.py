@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 from uuid import UUID
 
 import pytest
@@ -266,7 +267,8 @@ def _seed_user(db_session, uid: UUID, email: str) -> None:
     db_session.add(UserModel(id=uid, external_id=f"ext-{uid}", email=email, display_name="U", created_at=now))
 
 
-async def test_identity_hobby_blocks_adding_second_member(db_session):
+@patch("resend.Emails.send", return_value={"id": "mock_email_id"})
+async def test_identity_hobby_blocks_adding_second_member(_mock_resend, db_session):
     repo = BillingRepository(db_session)
     await repo.update_subscription(TEST_ORG_ID, plan=SubscriptionPlan.HOBBY.value, stripe_subscription_id=None)
     now = datetime.now(timezone.utc)
@@ -281,7 +283,8 @@ async def test_identity_hobby_blocks_adding_second_member(db_session):
         await svc.create_invitation(TEST_USER_ID, TEST_ORG_ID, "member@x.com", MembershipRole.MEMBER)
 
 
-async def test_identity_pro_allows_two_members_blocks_third(db_session):
+@patch("resend.Emails.send", return_value={"id": "mock_email_id"})
+async def test_identity_pro_allows_two_members_blocks_third(_mock_resend, db_session):
     repo = BillingRepository(db_session)
     await repo.update_subscription(TEST_ORG_ID, plan=SubscriptionPlan.PRO.value, stripe_subscription_id="sub_x")
     now = datetime.now(timezone.utc)

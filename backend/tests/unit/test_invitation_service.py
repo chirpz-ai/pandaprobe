@@ -11,6 +11,13 @@ from app.registry.constants import InvitationStatus, MembershipRole
 from app.registry.exceptions import AuthorizationError, ConflictError, NotFoundError, QuotaExceededError
 
 
+@pytest.fixture(autouse=True)
+def _mock_resend():
+    """Let the full email code path execute but intercept the actual Resend API call."""
+    with patch("resend.Emails.send", return_value={"id": "mock_email_id"}):
+        yield
+
+
 def _make_user(*, email: str = "actor@example.com", user_id=None) -> User:
     return User(
         id=user_id or uuid4(),
