@@ -208,7 +208,9 @@ function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            autoComplete={view === "sign-up" ? "new-password" : "current-password"}
+            autoComplete={
+              view === "sign-up" ? "new-password" : "current-password"
+            }
             minLength={6}
           />
         </div>
@@ -244,9 +246,7 @@ function LoginForm() {
           : "Don't have an account?"}{" "}
         <button
           type="button"
-          onClick={() =>
-            switchView(view === "sign-up" ? "sign-in" : "sign-up")
-          }
+          onClick={() => switchView(view === "sign-up" ? "sign-in" : "sign-up")}
           className="text-text-dim hover:text-text underline underline-offset-4 transition-colors"
         >
           {view === "sign-up" ? "Sign in" : "Create one"}

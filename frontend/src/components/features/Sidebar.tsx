@@ -542,9 +542,7 @@ export function Sidebar() {
                   sideOffset={8}
                   className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
                 >
-                  {inAccountRoute || settingsView
-                    ? "Back to Home"
-                    : "Settings"}
+                  {inAccountRoute || settingsView ? "Back to Home" : "Settings"}
                 </Tooltip.Content>
               </Tooltip.Portal>
             )}
