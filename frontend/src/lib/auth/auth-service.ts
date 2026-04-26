@@ -3,6 +3,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   onIdTokenChanged as firebaseOnIdTokenChanged,
@@ -35,6 +36,11 @@ export async function signUpWithEmail(
   if (!auth) throw new Error("Auth is not enabled");
   const result = await createUserWithEmailAndPassword(auth, email, password);
   return result.user;
+}
+
+export async function resetPassword(email: string): Promise<void> {
+  if (!auth) throw new Error("Auth is not enabled");
+  await sendPasswordResetEmail(auth, email);
 }
 
 export async function signOut(): Promise<void> {

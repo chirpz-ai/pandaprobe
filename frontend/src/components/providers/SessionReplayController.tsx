@@ -14,6 +14,9 @@ const BLOCKED_SUFFIXES = [
   "/settings/billing",
   "/settings/plans",
   "/settings/members",
+  "/settings/organization",
+  "/settings/account",
+  "/settings/invitations",
 ];
 
 export function isBlockedRoute(pathname: string): boolean {

@@ -4,10 +4,13 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { extractErrorMessage } from "@/lib/api/client";
+import { resetPassword } from "@/lib/auth/auth-service";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
+
+type View = "sign-in" | "sign-up" | "forgot-password";
 
 function LoginForm() {
   const router = useRouter();
@@ -18,8 +21,9 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [view, setView] = useState<View>("sign-in");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -36,17 +40,38 @@ function LoginForm() {
     );
   }
 
+  function switchView(next: View) {
+    setView(next);
+    setError(null);
+    setSuccess(null);
+  }
+
   async function handleEmailSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      if (isSignUp) {
+      if (view === "sign-up") {
         await signUpWithEmail(email, password);
       } else {
         await signInWithEmail(email, password);
       }
       router.push(callbackUrl);
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResetPassword(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setSubmitting(true);
+    try {
+      await resetPassword(email);
+      setSuccess("Password reset email sent. Check your inbox.");
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -65,6 +90,53 @@ function LoginForm() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (view === "forgot-password") {
+    return (
+      <div className="relative z-10 w-full max-w-sm border-engraved bg-surface p-8 animate-fade-in">
+        <div className="mb-8 text-center">
+          <h1 className="text-xl font-mono text-primary tracking-tight">
+            PandaProbe
+          </h1>
+          <p className="mt-1 text-xs text-text-dim">Reset your password</p>
+        </div>
+
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div>
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              autoFocus
+            />
+          </div>
+
+          {error && <p className="text-xs text-error font-mono">{error}</p>}
+          {success && (
+            <p className="text-xs text-success font-mono">{success}</p>
+          )}
+
+          <Button type="submit" className="w-full" disabled={submitting}>
+            {submitting ? <Spinner size="sm" /> : "Send reset link"}
+          </Button>
+        </form>
+
+        <p className="mt-6 text-center text-xs text-text-muted">
+          Remember your password?{" "}
+          <button
+            type="button"
+            onClick={() => switchView("sign-in")}
+            className="text-text-dim hover:text-text underline underline-offset-4 transition-colors"
+          >
+            Back to sign in
+          </button>
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -136,17 +208,31 @@ function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            autoComplete={isSignUp ? "new-password" : "current-password"}
+            autoComplete={
+              view === "sign-up" ? "new-password" : "current-password"
+            }
             minLength={6}
           />
         </div>
+
+        {view === "sign-in" && (
+          <div className="flex justify-start">
+            <button
+              type="button"
+              onClick={() => switchView("forgot-password")}
+              className="text-xs text-text-muted hover:text-text underline underline-offset-4 transition-colors"
+            >
+              Forgot password?
+            </button>
+          </div>
+        )}
 
         {error && <p className="text-xs text-error font-mono">{error}</p>}
 
         <Button type="submit" className="w-full" disabled={submitting}>
           {submitting ? (
             <Spinner size="sm" />
-          ) : isSignUp ? (
+          ) : view === "sign-up" ? (
             "Create account"
           ) : (
             "Sign in"
@@ -155,16 +241,15 @@ function LoginForm() {
       </form>
 
       <p className="mt-6 text-center text-xs text-text-muted">
-        {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+        {view === "sign-up"
+          ? "Already have an account?"
+          : "Don't have an account?"}{" "}
         <button
           type="button"
-          onClick={() => {
-            setIsSignUp(!isSignUp);
-            setError(null);
-          }}
+          onClick={() => switchView(view === "sign-up" ? "sign-in" : "sign-up")}
           className="text-text-dim hover:text-text underline underline-offset-4 transition-colors"
         >
-          {isSignUp ? "Sign in" : "Create one"}
+          {view === "sign-up" ? "Sign in" : "Create one"}
         </button>
       </p>
     </div>

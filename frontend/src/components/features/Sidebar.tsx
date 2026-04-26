@@ -344,10 +344,6 @@ export function Sidebar() {
     router.push(projectHome);
   }
 
-  function exitAccount() {
-    router.push(`${orgBase}/settings/organization`);
-  }
-
   function switchOrg(newOrgId: string) {
     router.push(`/org/${newOrgId}/settings/organization`);
   }
@@ -394,7 +390,7 @@ export function Sidebar() {
         <div className="flex items-center justify-between px-3 h-12 border-b border-border">
           {!collapsed && (inAccountRoute || settingsView) ? (
             <button
-              onClick={inAccountRoute ? exitAccount : exitSettings}
+              onClick={exitSettings}
               className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight hover:text-text transition-colors"
             >
               <Image
@@ -513,19 +509,7 @@ export function Sidebar() {
         <div className="pb-2">
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
-              {inAccountRoute ? (
-                <Button
-                  variant="ghost"
-                  onClick={exitAccount}
-                  className={cn(
-                    "w-full justify-start gap-3 px-3 py-2",
-                    collapsed && "justify-center px-2",
-                  )}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  {!collapsed && <span>Back to Organization</span>}
-                </Button>
-              ) : settingsView ? (
+              {inAccountRoute || settingsView ? (
                 <Button
                   variant="ghost"
                   onClick={exitSettings}
@@ -558,11 +542,7 @@ export function Sidebar() {
                   sideOffset={8}
                   className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
                 >
-                  {inAccountRoute
-                    ? "Back to Organization"
-                    : settingsView
-                      ? "Back to Home"
-                      : "Settings"}
+                  {inAccountRoute || settingsView ? "Back to Home" : "Settings"}
                 </Tooltip.Content>
               </Tooltip.Portal>
             )}
