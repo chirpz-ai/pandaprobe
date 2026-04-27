@@ -1,14 +1,23 @@
 ---
 title: "Claude Agent SDK"
 description: "Trace Claude Agent SDK conversations with automatic tool and thinking capture"
-icon: "bot-message-square"
+icon: "/assets/providers/claude.svg"
 ---
 
 ### Installation
 
-```bash
-pip install pandaprobe[claude-agent-sdk]
-```
+<Tabs>
+  <Tab title="pip">
+    ```bash
+    pip install "pandaprobe[claude-agent-sdk]"
+    ```
+  </Tab>
+  <Tab title="uv">
+    ```bash
+    uv add "pandaprobe[claude-agent-sdk]"
+    ```
+  </Tab>
+</Tabs>
 
 ### Setup
 
@@ -22,6 +31,10 @@ adapter = ClaudeAgentSDKAdapter(
 )
 adapter.instrument()
 ```
+
+<Tip>
+  We recommend using UUIDs for `session_id` and `user_id` so traces can be grouped reliably across runs.
+</Tip>
 
 ### Usage
 
@@ -73,3 +86,99 @@ The adapter maintains conversation history across turns on the client instance (
 | `input_tokens` | `prompt_tokens` |
 | `output_tokens` | `completion_tokens` |
 | `cache_read_input_tokens` | `cache_read_tokens` |
+
+### Example with tools
+
+This example exposes two tools via an in-process MCP server and runs a query through `ClaudeSDKClient`. We trace the agent via `ClaudeAgentSDKAdapter`:
+
+```python
+import asyncio
+import uuid
+from typing import Any
+
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ClaudeSDKClient,
+    ResultMessage,
+    TextBlock,
+    create_sdk_mcp_server,
+    tool,
+)
+
+import pandaprobe
+from pandaprobe.integrations.claude_agent_sdk import ClaudeAgentSDKAdapter
+
+SESSION_ID = str(uuid.uuid4())
+USER_ID = "user_1"
+
+
+@tool("get_weather", "Get the current weather for a city", {"city": str})
+async def get_weather(args: dict[str, Any]) -> dict[str, Any]:
+    """Return mock weather data."""
+    weather_data = {
+        "london": {"condition": "Cloudy", "temp": "15°C", "humidity": "70%"},
+        "tokyo": {"condition": "Sunny", "temp": "28°C", "humidity": "45%"},
+        "paris": {"condition": "Rainy", "temp": "12°C", "humidity": "85%"},
+    }
+    city = args.get("city", "").lower()
+    data = weather_data.get(city, {"error": f"No data for {city}"})
+    return {"content": [{"type": "text", "text": str(data)}]}
+
+
+@tool("get_population", "Get the population of a city", {"city": str})
+async def get_population(args: dict[str, Any]) -> dict[str, Any]:
+    """Return mock population data."""
+    populations = {
+        "london": "8.8 million",
+        "tokyo": "13.9 million",
+        "paris": "2.2 million",
+    }
+    city = args.get("city", "").lower()
+    pop = populations.get(city, f"Unknown for {city}")
+    return {"content": [{"type": "text", "text": pop}]}
+
+
+async def main():
+    adapter = ClaudeAgentSDKAdapter(
+        session_id=SESSION_ID,
+        user_id=USER_ID,
+        tags=["tool-agent", "example"],
+    )
+    adapter.instrument()
+
+    server = create_sdk_mcp_server(
+        name="city_info",
+        tools=[get_weather, get_population],
+    )
+
+    options = ClaudeAgentOptions(
+        system_prompt="You are a helpful assistant with access to weather and population tools.",
+        model="claude-sonnet-4-20250514",
+        mcp_servers={"city_info": server},
+        allowed_tools=["mcp__city_info__get_weather", "mcp__city_info__get_population"],
+        permission_mode="bypassPermissions",
+    )
+
+    async with ClaudeSDKClient(options=options) as client:
+        await client.query("What's the weather in London and its population?")
+
+        async for message in client.receive_response():
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        print(f"Agent: {block.text}")
+            elif isinstance(message, ResultMessage):
+                if message.usage:
+                    print(f"\nTokens: {message.usage}")
+
+    pandaprobe.flush()
+    pandaprobe.shutdown()
+    print(f"\nTrace sent to PandaProbe backend (session={SESSION_ID}).")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+This produces a trace with: `CHAIN` (root) → `AGENT` → `LLM` (model call) → `TOOL` (`get_weather`) → `TOOL` (`get_population`) → `LLM` (final response).

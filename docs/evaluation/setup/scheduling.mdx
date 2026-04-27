@@ -4,9 +4,83 @@ description: "Set up automated recurring evaluation monitors with custom cadence
 icon: "clock"
 ---
 
-Evaluation **monitors** let you automate recurring evaluations. Instead of manually creating eval runs, a monitor persists your evaluation configuration and automatically spawns eval runs on a schedule.
+Evaluation **monitors** automate recurring evaluations. Instead of manually creating eval runs, a monitor saves your target type, metrics, filters, sampling rate, and cadence, then creates eval runs automatically in the background.
 
-## Creating a monitor
+Use monitors for recurring workflows such as:
+
+- Daily production trace quality checks
+- Weekly session reliability audits
+- Regression monitoring after releases
+- Continuous evaluation of high-value users, tags, or environments
+
+## Dashboard setup
+
+Create monitors from the **Evaluations** tab in the PandaProbe dashboard.
+
+<Steps>
+  <Step title="Open Evaluations">
+    Open the **Evaluations** tab from the dashboard navigation.
+  </Step>
+  <Step title="Open Monitors">
+    Select the **Monitors** card from the Evaluations landing page.
+  </Step>
+  <Step title="Click Create monitor">
+    Click **Create monitor** to open the monitor sidebar.
+  </Step>
+  <Step title="Configure the monitor">
+    Add a name, choose the target type (`TRACE` or `SESSION`), select metrics, and add filters that define the traces or sessions the monitor should evaluate.
+  </Step>
+  <Step title="Set the cadence">
+    Choose how often the monitor should create a new eval run. Cadence controls the recurring schedule.
+  </Step>
+  <Step title="Submit">
+    Click **Create monitor**. The monitor starts in the background and creates eval runs on its configured schedule.
+  </Step>
+</Steps>
+
+<video controls width="100%">
+  <source src="/assets/evals/monitor.mp4" type="video/mp4" />
+</video>
+
+### Monitor fields
+
+When creating a monitor from the dashboard, configure:
+
+- **Name**: a human-readable label for the monitor.
+- **Target type**: `TRACE` for trace evaluation or `SESSION` for session evaluation.
+- **Metrics**: the trace-level or session-level metrics to run.
+- **Filters**: the matching traces or sessions to evaluate.
+- **Sampling rate**: the portion of matching data to evaluate on each run.
+- **Cadence**: how often PandaProbe creates a new eval run.
+- **Model**: optional model selection for LLM-as-judge metrics.
+- **Customize signal weights**: optional for session monitors.
+
+### Filters
+
+<Tabs>
+  <Tab title="Trace monitors">
+    Trace monitors can filter by fields such as **Started after**, **Started before**, **Status**, **Trace ID**, **Session ID**, **User**, and **Tags**.
+  </Tab>
+  <Tab title="Session monitors">
+    Session monitors can filter by fields such as **Started after**, **Started before**, **Session ID**, **User**, **Tags**, error status, and minimum trace count.
+  </Tab>
+</Tabs>
+
+### Sampling rate
+
+Sampling rate controls what portion of matching data is evaluated each time the monitor runs. For example:
+
+- `1.0` evaluates all matching traces or sessions.
+- `0.5` evaluates 50% of matching traces or sessions.
+- `0.1` evaluates 10% of matching traces or sessions.
+
+Use sampling to control evaluation cost and volume for large projects.
+
+## API setup
+
+You can also create and manage monitors through the API.
+
+### Create a monitor
 
 ```bash
 POST /evaluations/monitors
@@ -32,243 +106,89 @@ POST /evaluations/monitors
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `name` | string | Yes | Human-readable label (e.g., "Daily prod eval") |
+| `name` | string | Yes | Human-readable label for the monitor |
 | `target_type` | string | Yes | `"TRACE"` or `"SESSION"` |
 | `metrics` | string[] | Yes | Metric names to run on each scheduled eval |
-| `filters` | object | No | Scope the data the monitor evaluates (default: `{}` matches everything) |
-| `cadence` | string | Yes | Firing schedule (see [Cadence options](#cadence-options) below) |
-| `sampling_rate` | float | No | Fraction of matching data to evaluate per run (default: 1.0) |
+| `filters` | object | No | Scope the data the monitor evaluates |
+| `cadence` | string | Yes | Firing schedule |
+| `sampling_rate` | float | No | Fraction of matching data to evaluate per run |
 | `model` | string | No | LLM model override for judge calls |
-| `only_if_changed` | boolean | No | Skip run if no new data since last run (default: `true`) |
-| `signal_weights` | object | No | Override signal weights (SESSION monitors only) |
+| `only_if_changed` | boolean | No | Skip the run if no new data has arrived since the previous run |
+| `signal_weights` | object | No | Override signal weights for session monitors |
 
-### Filters by target type
+### Session monitor example
 
-<Tabs>
-  <Tab title="TRACE monitors">
-    | Filter | Type | Description |
-    |---|---|---|
-    | `date_from` | ISO 8601 | Traces started on or after |
-    | `date_to` | ISO 8601 | Traces started before (exclusive) |
-    | `status` | string | `PENDING`, `RUNNING`, `COMPLETED`, or `ERROR` |
-    | `session_id` | string | Exact session ID |
-    | `user_id` | string | Exact user ID |
-    | `tags` | string[] | Traces matching ANY tag |
-    | `name` | string | Substring match (case-insensitive) |
-  </Tab>
-  <Tab title="SESSION monitors">
-    | Filter | Type | Description |
-    |---|---|---|
-    | `date_from` | ISO 8601 | Sessions from this time |
-    | `date_to` | ISO 8601 | Sessions before this time |
-    | `user_id` | string | Exact user ID |
-    | `has_error` | boolean | Only sessions with/without errors |
-    | `tags` | string[] | Traces matching ANY tag |
-    | `min_trace_count` | int | Minimum traces in session (≥1) |
-  </Tab>
-</Tabs>
+```json
+{
+  "name": "Weekly agent reliability audit",
+  "target_type": "SESSION",
+  "metrics": ["agent_reliability", "agent_consistency"],
+  "filters": {
+    "min_trace_count": 3,
+    "tags": ["production"]
+  },
+  "cadence": "weekly",
+  "sampling_rate": 1.0,
+  "signal_weights": {
+    "confidence": 1.0,
+    "loop_detection": 1.5,
+    "tool_correctness": 0.8,
+    "coherence": 1.0
+  },
+  "only_if_changed": true
+}
+```
 
 ## Cadence options
 
-Monitors support both predefined intervals and custom cron expressions.
-
-### Predefined intervals
+Monitors support predefined intervals and custom cron expressions.
 
 | Value | Schedule |
 |---|---|
 | `every_6h` | Every 6 hours |
 | `daily` | Once per day |
 | `weekly` | Once per week |
-
-### Custom cron
-
-Use `cron:<5-part expression>` for fine-grained control. The five parts follow standard cron syntax: `minute hour day-of-month month day-of-week`.
-
-| Example | Schedule |
-|---|---|
 | `cron:0 3 * * *` | Daily at 3:00 AM UTC |
 | `cron:0 6 * * 1-5` | Weekdays at 6:00 AM UTC |
 | `cron:0 */4 * * *` | Every 4 hours |
-| `cron:0 9 1 * *` | First of every month at 9:00 AM UTC |
-| `cron:30 2 * * 0` | Sundays at 2:30 AM UTC |
 
 ## The `only_if_changed` flag
 
-When `only_if_changed` is `true` (the default), the scheduled run is **skipped** if no new traces or sessions have arrived since the last run. This prevents wasting LLM costs on re-evaluating the same data.
+When `only_if_changed` is `true`, PandaProbe skips a scheduled run if no new traces or sessions have arrived since the previous run. This helps avoid re-evaluating the same data unnecessarily.
 
-Set to `false` if you want to run on schedule regardless — for example, if you've changed your LLM model or threshold and want to re-evaluate existing data.
+Set it to `false` when you want the monitor to run on every cadence tick, even if the underlying data has not changed.
 
-## Monitor lifecycle
+## Manage monitors
 
 Monitors have two states:
 
 | Status | Description |
 |---|---|
-| `ACTIVE` | Running on schedule, will spawn eval runs at each cadence tick |
-| `PAUSED` | Schedule is suspended, no new runs will be created |
+| `ACTIVE` | The monitor runs on schedule and creates eval runs at each cadence tick |
+| `PAUSED` | The schedule is suspended and no new runs are created |
 
-### Pause a monitor
-
-```bash
-POST /evaluations/monitors/{monitor_id}/pause
-```
-
-Idempotent — safe to call on an already-paused monitor.
-
-### Resume a monitor
+Common API operations:
 
 ```bash
-POST /evaluations/monitors/{monitor_id}/resume
-```
-
-Idempotent — safe to call on an already-active monitor.
-
-## Trigger a run manually
-
-Force an immediate eval run from a monitor, ignoring its cadence schedule:
-
-```bash
-POST /evaluations/monitors/{monitor_id}/trigger
-```
-
-This creates a new eval run using the monitor's saved configuration (metrics, filters, sampling rate, model) and returns the run details. Useful for testing a monitor's configuration or triggering an ad-hoc evaluation.
-
-**Rate limit:** 10/min
-
-## Managing monitors
-
-### List all monitors
-
-```bash
-GET /evaluations/monitors?status=ACTIVE&limit=50
-```
-
-| Parameter | Description |
-|---|---|
-| `status` | Filter by `ACTIVE` or `PAUSED` |
-| `limit` / `offset` | Pagination |
-
-### Get monitor details
-
-```bash
+GET /evaluations/monitors
 GET /evaluations/monitors/{monitor_id}
-```
-
-Returns full configuration including `last_run_at`, `last_run_id`, and `next_run_at`.
-
-**Response:**
-
-```json
-{
-  "id": "a1b2c3d4-...",
-  "project_id": "...",
-  "name": "Daily production trace eval",
-  "target_type": "TRACE",
-  "metric_names": ["task_completion", "tool_correctness", "confidence"],
-  "filters": {"status": "COMPLETED", "tags": ["production"]},
-  "sampling_rate": 0.3,
-  "model": "openai/gpt-5.4",
-  "cadence": "daily",
-  "only_if_changed": true,
-  "status": "ACTIVE",
-  "last_run_at": "2026-03-28T03:00:00Z",
-  "last_run_id": "e5f6g7h8-...",
-  "next_run_at": "2026-03-29T03:00:00Z",
-  "created_at": "2026-03-15T10:00:00Z",
-  "updated_at": "2026-03-28T03:00:00Z"
-}
-```
-
-### Update a monitor
-
-```bash
 PATCH /evaluations/monitors/{monitor_id}
-```
-
-Partial update — only provided fields are changed:
-
-```json
-{
-  "cadence": "cron:0 6 * * 1-5",
-  "sampling_rate": 0.5,
-  "metrics": ["task_completion", "tool_correctness", "confidence", "step_efficiency"]
-}
-```
-
-### Delete a monitor
-
-```bash
+POST /evaluations/monitors/{monitor_id}/pause
+POST /evaluations/monitors/{monitor_id}/resume
+POST /evaluations/monitors/{monitor_id}/trigger
 DELETE /evaluations/monitors/{monitor_id}
+GET /evaluations/monitors/{monitor_id}/runs
 ```
 
-Deletes the monitor configuration. Eval runs previously spawned by this monitor are preserved.
-
-### List runs spawned by a monitor
-
-```bash
-GET /evaluations/monitors/{monitor_id}/runs?limit=20
-```
-
-Returns the history of eval runs created by this monitor, ordered by creation time.
-
-## Example: complete monitoring setup
-
-Here's a typical setup for a production environment with both trace and session monitoring:
-
-### 1. Daily trace evaluation
-
-```bash
-curl -X POST https://api.pandaprobe.com/evaluations/monitors \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Project-ID: $PROJECT_ID" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Daily trace quality check",
-    "target_type": "TRACE",
-    "metrics": ["task_completion", "tool_correctness", "argument_correctness"],
-    "filters": {"status": "COMPLETED", "tags": ["production"]},
-    "cadence": "daily",
-    "sampling_rate": 0.2,
-    "only_if_changed": true
-  }'
-```
-
-### 2. Weekly session evaluation
-
-```bash
-curl -X POST https://api.pandaprobe.com/evaluations/monitors \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Project-ID: $PROJECT_ID" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Weekly agent reliability audit",
-    "target_type": "SESSION",
-    "metrics": ["agent_reliability", "agent_consistency"],
-    "filters": {"min_trace_count": 3},
-    "cadence": "weekly",
-    "sampling_rate": 1.0,
-    "signal_weights": {"confidence": 1.0, "loop_detection": 1.5},
-    "only_if_changed": true
-  }'
-```
-
-### 3. Monitor the monitors
-
-```bash
-curl https://api.pandaprobe.com/evaluations/monitors \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Project-ID: $PROJECT_ID"
-```
-
-Check `last_run_at` and `next_run_at` to verify monitors are firing as expected.
+Use `trigger` to create an immediate eval run from a monitor without waiting for the next scheduled cadence.
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Trace Metrics" icon="ruler" href="/evaluation/trace-evaluation/metrics">
-    Detailed reference for all trace-level metrics.
+  <Card title="Run Evaluations via UI" icon="layout-dashboard" href="/evaluation/setup/run-eval-ui">
+    Create one-off trace and session eval runs from the dashboard.
   </Card>
-  <Card title="Agent Metrics" icon="bot" href="/evaluation/agent-evaluation/metrics">
-    Detailed reference for session-level metrics.
+  <Card title="Run Evaluations via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+    Create and manage eval runs programmatically.
   </Card>
 </CardGroup>

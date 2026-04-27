@@ -13,28 +13,46 @@ icon: "download"
 
 Base install:
 
-```bash
-pip install pandaprobe
-```
+<Tabs>
+  <Tab title="pip">
+    ```bash
+    pip install pandaprobe
+    ```
+  </Tab>
+  <Tab title="uv">
+    ```bash
+    uv add pandaprobe
+    ```
+  </Tab>
+</Tabs>
 
 Optional extras:
 
 | Extra | Install Command | Description |
 | --- | --- | --- |
-| OpenAI | `pip install pandaprobe[openai]` | Traces Chat Completions and Responses API |
-| Anthropic | `pip install pandaprobe[anthropic]` | Traces Messages API |
-| Gemini | `pip install pandaprobe[gemini]` | Traces generate_content API |
-| LangGraph | `pip install pandaprobe[langgraph]` | LangGraph callback handler |
-| Google ADK | `pip install pandaprobe[google-adk]` | Google Agent Development Kit adapter |
-| Claude Agent SDK | `pip install pandaprobe[claude-agent-sdk]` | Claude Agent SDK adapter |
-| CrewAI | `pip install pandaprobe[crewai]` | CrewAI adapter |
-| OpenAI Agents | `pip install pandaprobe[openai-agents]` | OpenAI Agents SDK adapter |
+| OpenAI | `pip install "pandaprobe[openai]"` | Traces Chat Completions and Responses API |
+| Anthropic | `pip install "pandaprobe[anthropic]"` | Traces Messages API |
+| Gemini | `pip install "pandaprobe[gemini]"` | Traces generate_content API |
+| LangGraph | `pip install "pandaprobe[langgraph]"` | LangGraph callback handler |
+| Google ADK | `pip install "pandaprobe[google-adk]"` | Google Agent Development Kit adapter |
+| Claude Agent SDK | `pip install "pandaprobe[claude-agent-sdk]"` | Claude Agent SDK adapter |
+| CrewAI | `pip install "pandaprobe[crewai]"` | CrewAI adapter |
+| OpenAI Agents | `pip install "pandaprobe[openai-agents]"` | OpenAI Agents SDK adapter |
 
 Install multiple extras:
 
-```bash
-pip install pandaprobe[openai,anthropic,gemini]
-```
+<Tabs>
+  <Tab title="pip">
+    ```bash
+    pip install "pandaprobe[openai,anthropic,gemini]"
+    ```
+  </Tab>
+  <Tab title="uv">
+    ```bash
+    uv add "pandaprobe[openai,anthropic,gemini]"
+    ```
+  </Tab>
+</Tabs>
 
 ### Configure environment variables
 

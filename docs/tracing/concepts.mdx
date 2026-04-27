@@ -7,7 +7,7 @@ icon: "shapes"
 This page describes the tracing data model: what a trace and span contain, how status and kinds are interpreted, and how input/output are represented for LLM workloads.
 
 <Tip>
-  Think of a **trace** as the outer envelope for one logical run, and **spans** as the tree of steps inside it. Parent/child links preserve causality and nesting depth for UIs and exports.
+  Think of a **trace** as the outer envelope for one logical run, and **spans** as the tree of steps inside it. Parent/child links preserve causality and nesting depth.
 </Tip>
 
 ## Traces
@@ -75,7 +75,7 @@ On clean exit, spans auto-promote from `UNSET` to `OK`. On exception, status is 
 
 ## Input/Output convention
 
-LLM spans use a standard messages format:
+LLM spans use a standard `messages` format:
 
 ```python
 {

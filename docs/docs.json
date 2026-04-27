@@ -1,10 +1,10 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "almond",
+  "theme": "linden",
   "name": "PandaProbe",
   "logo": {
-    "light": "/assets/logo/android-chrome-512x512.png",
-    "dark": "/assets/logo/android-chrome-512x512.png"
+    "light": "/assets/logo/light.png",
+    "dark": "/assets/logo/dark.png"
   },
   "favicon": "/assets/logo/favicon.ico",
   "colors": {
@@ -48,7 +48,7 @@
       {
         "label": "GitHub",
         "icon": "github",
-        "href": "https://github.com/chirpz-ai"
+        "href": "https://github.com/chirpz-ai/pandaprobe"
       },
       {
         "label": "Discord",
@@ -59,12 +59,12 @@
     "primary": {
       "type": "button",
       "label": "Try PandaProbe",
-      "href": "https://www.pandaprobe.com/"
+      "href": "https://app.pandaprobe.com/"
     }
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/chirpz-ai",
+      "github": "https://github.com/chirpz-ai/pandaprobe",
       "x": "https://x.com/pandaprobe",
       "discord": "https://discord.gg/A2VfrRhx"
     }
@@ -119,7 +119,8 @@
                   "tracing/manual/low-level-client-api"
                 ]
               },
-              "tracing/sessions-and-users",
+              "tracing/sessions",
+              "tracing/users",
               "tracing/scoring",
               {
                 "group": "Configuration",

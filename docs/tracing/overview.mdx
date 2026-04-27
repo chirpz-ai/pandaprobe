@@ -4,7 +4,7 @@ description: "Understand how PandaProbe traces LLM applications across three lay
 icon: "gauge"
 ---
 
-PandaProbe captures the full execution flow of your LLM application as **traces** composed of **spans**. Each trace represents a single request or operation; spans represent individual steps within that trace. Together they give you a structured, queryable record of what ran, in what order, and with what inputs and outputs.
+PandaProbe captures the full execution flow of your LLM as **traces** composed of **spans**. Each trace represents a single request or operation; spans represent individual steps within that trace. Together they give you a structured, queryable record of what ran, in what order, and with what inputs and outputs.
 
 <Info>
   Traces and spans are persisted and indexed for search, filtering, and evaluation. Instrumentation is opt-in per deploy via environment configuration; when tracing is disabled, the SDK avoids network I/O and mutation.
@@ -14,7 +14,7 @@ Instrumentation is organized into three layers, ordered from the least invasive 
 
 ## Layer 1 — Wrappers (zero-code LLM tracing)
 
-Wrap an LLM provider client to automatically trace every API call. The wrapper returns the **same client type** as the underlying SDK—no refactors beyond the wrap call.
+Wrap an LLM client to automatically trace every API call. The wrapper returns the **same client type** as the underlying SDK—no refactors beyond the wrap call.
 
 - `wrap_openai(client)` — Chat Completions API and Responses API
 - `wrap_gemini(client)` — `generate_content` and `generate_content_stream`

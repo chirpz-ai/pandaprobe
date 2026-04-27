@@ -8,18 +8,18 @@ Wrappers provide the simplest way to add tracing to your LLM calls. Wrap your pr
 
 The wrapper returns the same client type with tracing injected. Your existing code continues to work identically.
 
-All wrappers automatically capture: input messages, output messages, model name, token usage (prompt, completion, reasoning, cache tokens where available), model parameters, streaming support, time-to-first-token for streaming, and error details.
+All wrappers automatically capture: input messages, output messages, model name, token usage, model parameters, streaming support, time-to-first-token for streaming, and error details.
 
 ## Comparison
 
 | Wrapper | Install Extra | Provider Methods Traced |
 | --- | --- | --- |
-| `wrap_openai` | `pandaprobe[openai]` | `chat.completions.create`, `responses.create` |
-| `wrap_anthropic` | `pandaprobe[anthropic]` | `messages.create`, `messages.stream` |
-| `wrap_gemini` | `pandaprobe[gemini]` | `models.generate_content`, `models.generate_content_stream` |
+| `wrap_openai` | `"pandaprobe[openai]"` | `chat.completions.create`, `responses.create` |
+| `wrap_anthropic` | `"pandaprobe[anthropic]"` | `messages.create`, `messages.stream` |
+| `wrap_gemini` | `"pandaprobe[gemini]"` | `models.generate_content`, `models.generate_content_stream` |
 
 <Tip>
-  Install only the provider extras you use so dependency resolution stays minimal in production images and lockfiles.
+  Install only the provider extras you use so dependency resolution stays minimal.
 </Tip>
 
 ## Quick example

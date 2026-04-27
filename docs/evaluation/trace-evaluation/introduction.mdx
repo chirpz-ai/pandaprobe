@@ -4,9 +4,9 @@ description: "Evaluate individual traces with LLM-as-judge metrics and embedding
 icon: "route"
 ---
 
-Trace evaluation scores a single agent execution — one trace with all its spans — to answer questions like "Did the agent complete the task?", "Were the right tools used?", and "Was the output coherent?"
+Trace evaluation scores a single agent execution: one trace with all of its spans, model calls, tool calls, inputs, outputs, and metadata. Use it to answer questions like "Did the agent complete the task?", "Were the right tools used?", and "Was the output coherent?"
 
-PandaProbe ships with **9 built-in trace-level metrics**. Most use a multi-stage LLM-as-judge approach where an LLM analyzes the trace and returns structured scores. Two metrics use embedding-based analysis instead, avoiding LLM calls entirely.
+PandaProbe ships with **9 built-in trace-level metrics**. Most use LLM-as-judge analysis, while coherence and loop detection use embedding or similarity-based methods.
 
 ## Available metrics
 
@@ -42,20 +42,25 @@ PandaProbe ships with **9 built-in trace-level metrics**. Most use a multi-stage
 
 ## How trace metrics work
 
-Each metric receives the full trace (including all nested spans) and produces a `MetricResult` with a score between 0 and 1, a human-readable reason, and structured metadata.
+Each metric receives the full trace and produces a score between 0 and 1, a human-readable reason, and structured metadata. Higher scores generally mean better behavior.
 
 ### LLM-as-judge metrics
 
-Most metrics follow a multi-stage pipeline:
+Most LLM-as-judge metrics separate context extraction from scoring:
 
-```
-Trace ──▶ Stage 1: Extract context ──▶ Stage 2: Score / Verdict ──▶ MetricResult
-          (parse trace into structured    (LLM judges quality on
-           inputs: task, outcome,          a 0-1 scale with
-           tool calls, plan, etc.)         structured reasoning)
-```
+<Steps>
+  <Step title="Extract trace context">
+    PandaProbe turns raw trace data into focused inputs for the metric, such as the user task, final outcome, tool calls, tool arguments, or declared plan.
+  </Step>
+  <Step title="Judge one quality dimension">
+    An LLM evaluates the extracted context for a specific metric, such as task completion, tool correctness, or plan quality.
+  </Step>
+  <Step title="Store a structured score">
+    The metric returns a numeric score, a reason, and metadata that explains the intermediate extraction or verdict.
+  </Step>
+</Steps>
 
-The multi-stage design separates **information extraction** from **judgment**. This improves reliability — the judge LLM receives clean, focused inputs rather than raw trace data.
+This multi-stage design improves reliability because the judge LLM receives clean, focused inputs rather than raw trace data.
 
 **Example: Task Completion (2-stage)**
 1. **Extract** — LLM identifies the user's task and the agent's factual outcome from the trace

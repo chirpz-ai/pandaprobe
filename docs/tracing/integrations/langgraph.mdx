@@ -1,14 +1,23 @@
 ---
 title: "LangGraph"
 description: "Trace LangGraph agent executions with automatic span capture"
-icon: "git-branch"
+icon: "/assets/providers/langgraph.svg"
 ---
 
 ### Installation
 
-```bash
-pip install pandaprobe[langgraph]
-```
+<Tabs>
+  <Tab title="pip">
+    ```bash
+    pip install "pandaprobe[langgraph]"
+    ```
+  </Tab>
+  <Tab title="uv">
+    ```bash
+    uv add "pandaprobe[langgraph]"
+    ```
+  </Tab>
+</Tabs>
 
 ### Setup
 
@@ -21,6 +30,10 @@ handler = LangGraphCallbackHandler(
     tags=["production"],
 )
 ```
+
+<Tip>
+  We recommend using UUIDs for `session_id` and `user_id` so traces can be grouped reliably across runs.
+</Tip>
 
 ### Usage
 
@@ -50,30 +63,95 @@ result = graph.invoke(
 | `on_tool_start` / `on_tool_end` | `TOOL` | Tool name, input, output |
 | `on_retriever_start` / `on_retriever_end` | `RETRIEVER` | Retrieval queries and results |
 
-### Example with tools
-
-```python
-from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
-from langchain_core.tools import tool
-
-@tool
-def get_weather(city: str) -> str:
-    """Get the weather for a city."""
-    return f"The weather in {city} is sunny, 72F."
-
-model = ChatOpenAI(model="gpt-5.4")
-agent = create_react_agent(model, [get_weather])
-
-handler = LangGraphCallbackHandler(session_id="s1")
-result = agent.invoke(
-    {"messages": [{"role": "user", "content": "What's the weather in Paris?"}]},
-    config={"callbacks": [handler]},
-)
-```
-
-This produces a trace with: `CHAIN` (root) → `LLM` (model call) → `TOOL` (`get_weather`) → `LLM` (final response).
-
 ### Token usage
 
 Token usage is extracted from LangChain's `usage_metadata` (primary) or legacy `llm_output.token_usage` (fallback). The mapping is: `input_tokens` → `prompt_tokens`, `output_tokens` → `completion_tokens`. Reasoning tokens are subtracted from `output_tokens` when present.
+
+
+### Example with tools
+
+This example builds a ReAct agent using LangGraph with two tools. We trace the agent via `LangGraphCallbackHandler`:
+
+```python
+from typing import Annotated
+
+from langchain_core.messages import SystemMessage
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode
+from typing_extensions import TypedDict
+
+import pandaprobe
+from pandaprobe.integrations.langgraph import LangGraphCallbackHandler
+
+
+@tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city."""
+    weather_data = {
+        "london": "Cloudy, 15°C, 70% humidity",
+        "tokyo": "Sunny, 28°C, 45% humidity",
+        "new york": "Partly cloudy, 22°C, 55% humidity",
+        "paris": "Rainy, 12°C, 85% humidity",
+    }
+    return weather_data.get(city.lower(), f"Weather data not available for {city}")
+
+
+@tool
+def get_population(city: str) -> str:
+    """Get the approximate population of a city."""
+    populations = {
+        "london": "8.8 million",
+        "tokyo": "13.9 million",
+        "new york": "8.3 million",
+        "paris": "2.2 million",
+    }
+    return populations.get(city.lower(), f"Population data not available for {city}")
+
+
+tools = [get_weather, get_population]
+llm = ChatOpenAI(model="gpt-5.4-nano").bind_tools(tools)
+
+
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]
+
+
+def agent_node(state: AgentState) -> dict:
+    system = SystemMessage(content="You are a helpful assistant with access to weather and population tools.")
+    messages = [system, *state["messages"]]
+    return {"messages": [llm.invoke(messages)]}
+
+
+def should_continue(state: AgentState) -> str:
+    last_message = state["messages"][-1]
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        return "tools"
+    return END
+
+
+graph = StateGraph(AgentState)
+graph.add_node("agent", agent_node)
+graph.add_node("tools", ToolNode(tools))
+graph.add_edge(START, "agent")
+graph.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
+graph.add_edge("tools", "agent")
+app = graph.compile()
+
+handler = LangGraphCallbackHandler(tags=["tool-agent", "example"])
+
+result = app.invoke(
+    {"messages": [("user", "What's the weather like in London and what's its population?")]},
+    config={"callbacks": [handler]},
+)
+
+final_message = result["messages"][-1]
+print(f"Agent: {final_message.content}")
+
+pandaprobe.flush()
+pandaprobe.shutdown()
+```
+
+This produces a trace with: `CHAIN` (root) → `LLM` (model call) → `TOOL` (`get_weather`) → `TOOL` (`get_population`) → `LLM` (final response).

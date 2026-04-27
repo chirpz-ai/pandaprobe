@@ -1,14 +1,23 @@
 ---
 title: "OpenAI Agents SDK"
 description: "Trace OpenAI Agents SDK runs with first-class callback integration"
-icon: "cpu"
+icon: "/assets/providers/openai.svg"
 ---
 
 ### Installation
 
-```bash
-pip install pandaprobe[openai-agents]
-```
+<Tabs>
+  <Tab title="pip">
+    ```bash
+    pip install "pandaprobe[openai-agents]"
+    ```
+  </Tab>
+  <Tab title="uv">
+    ```bash
+    uv add "pandaprobe[openai-agents]"
+    ```
+  </Tab>
+</Tabs>
 
 ### Setup
 
@@ -24,7 +33,7 @@ adapter.instrument()
 ```
 
 <Tip>
-  Unlike other integrations that use monkey-patching, the OpenAI Agents SDK integration registers a `TracingProcessor` via the SDK's first-class callback interface. This is the cleanest integration pattern.
+  We recommend using UUIDs for `session_id` and `user_id` so traces can be grouped reliably across runs.
 </Tip>
 
 ### Usage
@@ -62,28 +71,6 @@ The adapter automatically propagates input/output from LLM spans to their parent
 - Last LLM output becomes the agent span's output
 - Last user message becomes the trace input; last assistant message becomes the trace output
 
-### Example with tools
-
-```python
-from agents import Agent, Runner, function_tool
-
-@function_tool
-def get_weather(city: str) -> str:
-    """Get the weather for a city."""
-    return f"Sunny, 72F in {city}"
-
-agent = Agent(
-    name="weather-assistant",
-    instructions="Help users check the weather.",
-    model="gpt-5.4",
-    tools=[get_weather],
-)
-
-result = Runner.run_sync(agent, "What's the weather in Tokyo?")
-```
-
-This produces: `CHAIN` (root) → `AGENT` (`weather-assistant`) → `LLM` (`response`) → `TOOL` (`get_weather`) → `LLM` (final response).
-
 ### Token usage mapping
 
 | OpenAI Agents Field | PandaProbe Field |
@@ -93,3 +80,74 @@ This produces: `CHAIN` (root) → `AGENT` (`weather-assistant`) → `LLM` (`resp
 | `total_tokens` | `total_tokens` |
 | `input_tokens_details.cached_tokens` | `cache_read_tokens` |
 | `output_tokens_details.reasoning_tokens` | `reasoning_tokens` |
+
+### Example with tools
+
+```python
+import asyncio
+import uuid
+
+from agents import Agent, Runner, function_tool
+
+import pandaprobe
+from pandaprobe.integrations.openai_agents import OpenAIAgentsAdapter
+
+SESSION_ID = str(uuid.uuid4())
+USER_ID = "user_1"
+
+
+@function_tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a city."""
+    weather_data = {
+        "london": "Cloudy, 15°C, 70% humidity",
+        "tokyo": "Sunny, 28°C, 45% humidity",
+        "new york": "Partly cloudy, 22°C, 55% humidity",
+        "paris": "Rainy, 12°C, 85% humidity",
+    }
+    return weather_data.get(city.lower(), f"No weather data for {city}")
+
+
+@function_tool
+def get_population(city: str) -> str:
+    """Get the approximate population of a city."""
+    populations = {
+        "london": "8.8 million",
+        "tokyo": "13.9 million",
+        "new york": "8.3 million",
+        "paris": "2.2 million",
+    }
+    return populations.get(city.lower(), f"Unknown population for {city}")
+
+
+async def main():
+    adapter = OpenAIAgentsAdapter(
+        session_id=SESSION_ID,
+        user_id=USER_ID,
+        tags=["tool-agent", "example"],
+    )
+    adapter.instrument()
+
+    agent = Agent(
+        name="City Info Agent",
+        instructions=(
+            "You are a helpful assistant with access to weather and population tools. "
+            "Use the tools to answer questions about cities."
+        ),
+        model="gpt-5.4-nano",
+        tools=[get_weather, get_population],
+    )
+
+    result = await Runner.run(agent, "What's the weather in London and what's its population?")
+    print(f"Agent: {result.final_output}")
+
+    pandaprobe.flush()
+    pandaprobe.shutdown()
+    print(f"\nTrace sent to PandaProbe backend (session={SESSION_ID}).")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+This produces a trace with: `CHAIN` (root) → `AGENT` (`City Info Agent`) → `LLM` (model call) → `TOOL` (`get_weather`) → `TOOL` (`get_population`) → `LLM` (final response).

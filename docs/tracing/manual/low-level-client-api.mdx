@@ -6,6 +6,10 @@ icon: "settings"
 
 For advanced use cases, you can work directly with the `Client` class. This gives you full control over initialization, trace submission, scoring, and lifecycle management.
 
+<Warning>
+  We do not recommend using the low-level client API for normal tracing. You must manually construct traces and spans that match the standard PandaProbe schema, and the API endpoints expect that schema. Use wrappers, integrations, or decorators unless you have an advanced use case that needs direct client control.
+</Warning>
+
 ## Programmatic initialization
 
 ```python
@@ -13,8 +17,8 @@ import pandaprobe
 
 client = pandaprobe.init(
     api_key="your-api-key",
-    project_name="my-project",
-    endpoint="https://your-instance.com",
+    project_name="your-project-name",
+    endpoint="https://api.pandaprobe.com",
     environment="production",
     release="v1.2.3",
     enabled=True,
