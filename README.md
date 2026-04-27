@@ -40,7 +40,17 @@ PandaProbe is an open source agent engineering platform. It helps teams collabor
 ## Documentation
 Visit our client [docs](https://docs.pandaprobe.com/get-started/welcome) or jump to a quickstart [Python](https://docs.pandaprobe.com/get-started/quickstart)
 
-## Self-hosted
+## PandaProbe Cloud
+
+Managed deployment by the PandaProbe team, generous free-tier, no credit card required.
+
+<div align="center">
+    <a href="https://app.pandaprobe.com/" target="_blank">
+        <img alt="Static Badge" src="https://img.shields.io/badge/»%20Sign%20up%20for%PandaProbe%20Cloud-8A2BE2?&color=blue">
+    </a>
+</div>
+
+## Self-host PandaProbe
 
 > **Prerequisites:** [Docker](https://docs.docker.com/get-docker/) must be installed and running.
 
