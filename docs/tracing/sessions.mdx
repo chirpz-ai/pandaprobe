@@ -1,0 +1,145 @@
+---
+title: "Sessions"
+description: "Group related traces into agent sessions for lifecycle-level analysis and evaluation"
+icon: "fingerprint-pattern"
+---
+
+Sessions are one of the most important concepts in PandaProbe. A session groups multiple related traces under a shared `session_id`, so you can understand the full lifecycle of an agent instead of inspecting each trace in isolation.
+
+In PandaProbe, you can think of a session as the unit for an agent. In practice, it represents an agent run, conversation, workflow, or other multi-step interaction that may produce many traces over time.
+
+<Info>
+  Use a stable `session_id` for every trace that belongs to the same agent lifecycle. We recommend UUIDs so sessions are unique, safe to store, and easy to join back to your own systems.
+</Info>
+
+## Why sessions matter
+
+Individual traces show what happened during one operation. Sessions show how the agent behaved across the whole interaction.
+
+This matters because many agent failures are only visible across multiple steps:
+
+- A tool call succeeds, but the agent ignores the result later.
+- The agent recovers from an error after several retries.
+- Quality degrades across a long conversation.
+- A workflow completes successfully, but uses too many steps or tokens.
+
+PandaProbe uses recorded sessions for session-level evaluation. Unlike trace evaluation, which scores a single trace, session evaluation looks at the entire agent lifecycle and can capture patterns that are invisible at the trace level.
+
+## When to create a new session
+
+Create a new `session_id` whenever a new agent lifecycle begins. Common examples include:
+
+- A new chat conversation
+- A new agent task or workflow run
+- A new support ticket handled by an agent
+- A new autonomous background job
+
+Reuse the same `session_id` for every trace produced during that lifecycle.
+
+## Context managers (scoped)
+
+Prefer `pandaprobe.session()` when you can scope a session to a block of code. The session is applied to all traces created inside the block and is reset when the block exits.
+
+<CodeGroup>
+```python nested.py
+import pandaprobe
+
+with pandaprobe.session("conversation-123"):
+    # All traces created in this scope inherit session_id="conversation-123"
+    with pandaprobe.start_trace("my-agent", input={"messages": [...]}) as t:
+        ...
+```
+
+```python combined.py
+with pandaprobe.session("conversation-123"):
+    # traces here get session_id="conversation-123"
+    ...
+```
+</CodeGroup>
+
+## Imperative API (global)
+
+Use `set_session()` when a request or worker context needs to set the session once before calling into application code.
+
+```python
+pandaprobe.set_session("conversation-123")
+
+# All subsequent traces inherit this session_id
+```
+
+<Warning>
+  The imperative API sets the session globally for the current context. It does not automatically reset. Prefer the context manager API when possible.
+</Warning>
+
+## Explicit parameters (highest precedence)
+
+When using decorators or context managers, explicit parameters always take precedence over scoped or global values:
+
+```python
+@pandaprobe.trace(session_id="explicit-session")
+def my_agent(query: str):
+    ...
+
+with pandaprobe.start_trace("agent", session_id="explicit") as t:
+    ...
+```
+
+## Precedence rules
+
+1. Explicit parameters passed to `@trace`, `start_trace()`, or integration constructors
+2. Context manager scope (`pandaprobe.session()`)
+3. Imperative setting (`pandaprobe.set_session()`)
+
+## Works across all layers
+
+Session IDs propagate to wrappers, integrations, and manual instrumentation. Integration constructors also accept `session_id`:
+
+```python
+from pandaprobe.integrations.langgraph import LangGraphCallbackHandler
+
+handler = LangGraphCallbackHandler(session_id="conversation-123")
+```
+
+## Multi-turn session example
+
+```python
+import uuid
+
+import openai
+import pandaprobe
+from pandaprobe.wrappers import wrap_openai
+
+client = wrap_openai(openai.OpenAI())
+
+if __name__ == "__main__":
+    session_id = str(uuid.uuid4())
+    print(f"Session: {session_id}\n")
+
+    conversation = [{"role": "system", "content": "You are a concise geography assistant."}]
+
+    questions = [
+        "What is the capital of France?",
+        "What about Germany?",
+        "Which of those two cities has more people?",
+    ]
+
+    with pandaprobe.session(session_id):
+        for question in questions:
+            print(f"User: {question}")
+            conversation.append({"role": "user", "content": question})
+
+            response = client.chat.completions.create(
+                model="gpt-5.4-nano",
+                messages=conversation,
+                reasoning_effort="low",
+                max_completion_tokens=80,
+            )
+
+            reply = response.choices[0].message.content
+            conversation.append({"role": "assistant", "content": reply})
+            print(f"Bot:  {reply}\n")
+
+    pandaprobe.flush()
+    pandaprobe.shutdown()
+    print(f"All traces grouped under session_id={session_id}")
+```

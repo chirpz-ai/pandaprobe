@@ -119,7 +119,8 @@
                   "tracing/manual/low-level-client-api"
                 ]
               },
-              "tracing/sessions-and-users",
+              "tracing/sessions",
+              "tracing/users",
               "tracing/scoring",
               {
                 "group": "Configuration",

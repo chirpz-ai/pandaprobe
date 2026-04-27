@@ -1,0 +1,71 @@
+---
+title: "Users"
+description: "Associate traces and sessions with end users, accounts, or tenants"
+icon: "user-round"
+---
+
+Use `user_id` to associate traces and sessions with a specific end user, account, organization, or tenant in your application.
+
+Unlike `session_id`, which groups traces into an agent lifecycle, `user_id` identifies who the activity belongs to. This makes it easier to filter traces, compare user experiences, and join PandaProbe data back to your own identity system.
+
+<Info>
+  User identifiers are strings you control. Use the same stable identifier your application already uses for the user, account, or tenant.
+</Info>
+
+## Context managers (scoped)
+
+Prefer `pandaprobe.user()` when user attribution can be scoped to a block of code. The user is applied to all traces created inside the block and is reset when the block exits.
+
+```python
+import pandaprobe
+
+with pandaprobe.user("user-abc"):
+    with pandaprobe.start_trace("my-agent", input={"messages": [...]}) as t:
+        ...
+```
+
+You can combine user and session scopes when you want both lifecycle grouping and identity attribution:
+
+```python
+with pandaprobe.session("conversation-123"), pandaprobe.user("user-abc"):
+    # traces here get both session_id and user_id
+    ...
+```
+
+## Imperative API (global)
+
+Use `set_user()` when request middleware or worker setup needs to set the user once before calling into application code.
+
+```python
+pandaprobe.set_user("user-abc")
+
+# All subsequent traces inherit this user_id
+```
+
+<Warning>
+  The imperative API sets the user globally for the current context. It does not automatically reset. Prefer the context manager API when possible.
+</Warning>
+
+## Explicit parameters
+
+Explicit parameters take precedence over scoped or global values:
+
+```python
+@pandaprobe.trace(user_id="explicit-user")
+def my_agent(query: str):
+    ...
+
+with pandaprobe.start_trace("agent", user_id="explicit-user") as t:
+    ...
+```
+
+Integration constructors also accept `user_id`:
+
+```python
+from pandaprobe.integrations.langgraph import LangGraphCallbackHandler
+
+handler = LangGraphCallbackHandler(
+    session_id="conversation-123",
+    user_id="user-abc",
+)
+```
