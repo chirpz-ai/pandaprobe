@@ -43,7 +43,7 @@ Visit our client library documentation for quickstart and explore advance <a hre
 
 <p align="left">
   <a href="https://docs.pandaprobe.com/get-started/quickstart" target="_blank">
-    <img alt="Documentation" src="https://img.shields.io/badge/Docs%20Quickstart-0066FF" />
+    <img alt="Documentation" src="https://img.shields.io/badge/Docs%20Quickstart-orange" />
   </a>
 </p>
 
