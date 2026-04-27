@@ -1,33 +1,20 @@
 ---
 title: "Overview"
-description: "Automatic agent framework tracing for LangGraph, CrewAI, Google ADK, Claude Agent SDK, and OpenAI Agents"
+description: "Automatic agent tracing for major agent development frameworks."
 icon: "gauge"
 ---
 
 Integrations hook into agent frameworks to automatically trace the full agent lifecycle: LLM calls, tool invocations, sub-agent handoffs, guardrails, and related steps.
 
-All integrations except LangGraph follow the adapter pattern:
+Use the table below to choose the right package extra, then open the integration guide for framework-specific setup.
 
-```python
-adapter = SomeAdapter(session_id="...", user_id="...", tags=[...], metadata={...})
-adapter.instrument()  # patches framework globally, call once at startup
-# ... use the framework normally, all runs are traced ...
-```
-
-LangGraph uses a callback handler instead:
-
-```python
-handler = LangGraphCallbackHandler(session_id="...", tags=[...])
-result = graph.invoke(input, config={"callbacks": [handler]})
-```
-
-| Integration | Install Extra | Class | Mechanism |
+| Integration | Install Command | Class | Mechanism |
 | --- | --- | --- | --- |
-| LangGraph | `pandaprobe[langgraph]` | `LangGraphCallbackHandler` | LangChain callback handler |
-| Google ADK | `pandaprobe[google-adk]` | `GoogleADKAdapter` | `wrapt` monkey-patching |
-| Claude Agent SDK | `pandaprobe[claude-agent-sdk]` | `ClaudeAgentSDKAdapter` | `wrapt` monkey-patching + hook injection |
-| CrewAI | `pandaprobe[crewai]` | `CrewAIAdapter` | `wrapt` monkey-patching |
-| OpenAI Agents SDK | `pandaprobe[openai-agents]` | `OpenAIAgentsAdapter` | First-class `TracingProcessor` callback (no monkey-patching) |
+| LangGraph | `pip install "pandaprobe[langgraph]"` | `LangGraphCallbackHandler` | LangChain callback handler |
+| Google ADK | `pip install "pandaprobe[google-adk]"` | `GoogleADKAdapter` | `wrapt` monkey-patching |
+| Claude Agent SDK | `pip install "pandaprobe[claude-agent-sdk]"` | `ClaudeAgentSDKAdapter` | `wrapt` monkey-patching + hook injection |
+| CrewAI | `pip install "pandaprobe[crewai]"` | `CrewAIAdapter` | `wrapt` monkey-patching |
+| OpenAI Agents SDK | `pip install "pandaprobe[openai-agents]"` | `OpenAIAgentsAdapter` | First-class `TracingProcessor` callback |
 
 **Constructor parameters (shared across all)**
 
@@ -41,19 +28,19 @@ result = graph.invoke(input, config={"callbacks": [handler]})
 </Note>
 
 <CardGroup cols={2}>
-  <Card title="LangGraph" icon="git-branch" href="/tracing/integrations/langgraph">
+  <Card title="LangGraph" icon="/assets/providers/langgraph.svg" href="/tracing/integrations/langgraph">
     Callback handler for LangGraph / LangChain
   </Card>
-  <Card title="Google ADK" icon="bot" href="/tracing/integrations/google-adk">
+  <Card title="Google ADK" icon="/assets/providers/adk.svg" href="/tracing/integrations/google-adk">
     Monkey-patch instrumentation for ADK runners and tools
   </Card>
-  <Card title="Claude Agent SDK" icon="bot-message-square" href="/tracing/integrations/claude-agent-sdk">
+  <Card title="Claude Agent SDK" icon="/assets/providers/claude.svg" href="/tracing/integrations/claude-agent-sdk">
     Hooks and patches for Claude Agent SDK clients
   </Card>
-  <Card title="CrewAI" icon="users-round" href="/tracing/integrations/crewai">
+  <Card title="CrewAI" icon="/assets/providers/crewai-color.svg" href="/tracing/integrations/crewai">
     Crew kickoff, agents, LLM, and tool spans
   </Card>
-  <Card title="OpenAI Agents SDK" icon="cpu" href="/tracing/integrations/openai-agents-sdk">
+  <Card title="OpenAI Agents SDK" icon="/assets/providers/openai.svg" href="/tracing/integrations/openai-agents-sdk">
     First-class TracingProcessor integration
   </Card>
 </CardGroup>
