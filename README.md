@@ -38,7 +38,14 @@
 PandaProbe is an open source agent engineering platform. It helps teams collaboratively trace, evaluate, monitor, and debug AI agents. You can use PandaProbe cloud or self host the service.
 
 ## Documentation
-Visit our client [docs](https://docs.pandaprobe.com/get-started/welcome) or jump to a quickstart [Python](https://docs.pandaprobe.com/get-started/quickstart)
+
+Visit our client library documentation for quickstart and explore advance <a href="https://docs.pandaprobe.com/tracing/integrations/overview" target="_blank">integrations</a>.
+
+<p align="left">
+  <a href="https://docs.pandaprobe.com/get-started/quickstart" target="_blank">
+    <img alt="Documentation" src="https://img.shields.io/badge/Docs%20Quickstart-0066FF" />
+  </a>
+</p>
 
 ## PandaProbe Cloud
 
