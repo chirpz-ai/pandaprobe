@@ -63,6 +63,11 @@ result = graph.invoke(
 | `on_tool_start` / `on_tool_end` | `TOOL` | Tool name, input, output |
 | `on_retriever_start` / `on_retriever_end` | `RETRIEVER` | Retrieval queries and results |
 
+### Token usage
+
+Token usage is extracted from LangChain's `usage_metadata` (primary) or legacy `llm_output.token_usage` (fallback). The mapping is: `input_tokens` → `prompt_tokens`, `output_tokens` → `completion_tokens`. Reasoning tokens are subtracted from `output_tokens` when present.
+
+
 ### Example with tools
 
 This example builds a ReAct agent using LangGraph with two tools. We trace the agent via `LangGraphCallbackHandler`:
@@ -150,7 +155,3 @@ pandaprobe.shutdown()
 ```
 
 This produces a trace with: `CHAIN` (root) → `LLM` (model call) → `TOOL` (`get_weather`) → `TOOL` (`get_population`) → `LLM` (final response).
-
-### Token usage
-
-Token usage is extracted from LangChain's `usage_metadata` (primary) or legacy `llm_output.token_usage` (fallback). The mapping is: `input_tokens` → `prompt_tokens`, `output_tokens` → `completion_tokens`. Reasoning tokens are subtracted from `output_tokens` when present.

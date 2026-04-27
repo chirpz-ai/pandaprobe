@@ -1,16 +1,26 @@
 ---
 title: "CrewAI"
 description: "Trace CrewAI crew executions with automatic agent and task tracking"
-icon: "users-round"
+icon: "/assets/providers/crewai-color.svg"
 ---
 
 ### Installation
 
-```bash
-pip install pandaprobe[crewai]
-```
+<Tabs>
+  <Tab title="pip">
+    ```bash
+    pip install "pandaprobe[crewai]"
+    ```
+  </Tab>
+  <Tab title="uv">
+    ```bash
+    uv add "pandaprobe[crewai]"
+    ```
+  </Tab>
+</Tabs>
 
 ### Setup
+
 
 ```python
 from pandaprobe.integrations.crewai import CrewAIAdapter
@@ -22,6 +32,10 @@ adapter = CrewAIAdapter(
 )
 adapter.instrument()
 ```
+
+<Tip>
+  We recommend using UUIDs for `session_id` and `user_id` so traces can be grouped reliably across runs.
+</Tip>
 
 ### Usage
 
