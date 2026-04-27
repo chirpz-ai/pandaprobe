@@ -1,10 +1,10 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "almond",
+  "theme": "linden",
   "name": "PandaProbe",
   "logo": {
-    "light": "/assets/logo/android-chrome-512x512.png",
-    "dark": "/assets/logo/android-chrome-512x512.png"
+    "light": "/assets/logo/light.png",
+    "dark": "/assets/logo/dark.png"
   },
   "favicon": "/assets/logo/favicon.ico",
   "colors": {
