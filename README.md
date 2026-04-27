@@ -44,11 +44,11 @@ Visit our client [docs](https://docs.pandaprobe.com/get-started/welcome) or jump
 
 Managed deployment by the PandaProbe team, generous free-tier, no credit card required.
 
-<div align="left">
-    <a href="https://app.pandaprobe.com/" target="_blank">
-        <img alt="Static Badge" src="https://img.shields.io/badge/»%20Sign%20up%20for%PandaProbe%20Cloud-8A2BE2?&color=orange">
-    </a>
-</div>
+<p align="left">
+  <a href="https://app.pandaprobe.com/" target="_blank">
+    <img alt="Sign up for PandaProbe Cloud" src="https://img.shields.io/badge/%C2%BB%20Sign%20up%20for%20PandaProbe%20Cloud-orange" />
+  </a>
+</p>
 
 ## Self-host PandaProbe
 
