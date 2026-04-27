@@ -43,7 +43,7 @@ Visit our client library documentation for quickstart and explore advance <a hre
 
 <p align="left">
   <a href="https://docs.pandaprobe.com/get-started/quickstart" target="_blank">
-    <img alt="Documentation" src="https://img.shields.io/badge/Docs%20Quickstart-orange" />
+    <img alt="Documentation" src="https://img.shields.io/badge/Docs%20Quickstart-0066FF" />
   </a>
 </p>
 
@@ -53,7 +53,7 @@ Managed deployment by the PandaProbe team, generous free-tier, no credit card re
 
 <p align="left">
   <a href="https://app.pandaprobe.com/" target="_blank">
-    <img alt="Sign up for PandaProbe Cloud" src="https://img.shields.io/badge/%C2%BB%20Sign%20up%20for%20PandaProbe%20Cloud-orange" />
+    <img alt="Sign up for PandaProbe Cloud" src="https://img.shields.io/badge/%C2%BB%20Sign%20up%20for%20PandaProbe%20Cloud-0066FF" />
   </a>
 </p>
 
