@@ -4,34 +4,86 @@ description: "Trace your first LLM call in under 2 minutes"
 icon: "rocket"
 ---
 
+## Prerequisites
+
+Before you begin, make sure you have:
+
+- A PandaProbe account. Sign up at [app.pandaprobe.com](https://app.pandaprobe.com).
+- A PandaProbe API key + project name.
+- An API key for the LLM provider you want to trace: OpenAI, Gemini, or Anthropic.
+
 <Steps>
   <Step title="Install the SDK">
-    ```bash
-    pip install pandaprobe[openai]
-    ```
+    <Tabs>
+      <Tab title="pip">
+        ```bash
+        pip install "pandaprobe[openai,gemini,anthropic]"
+        ```
+      </Tab>
+      <Tab title="uv">
+        ```bash
+        uv add "pandaprobe[openai,gemini,anthropic]"
+        ```
+      </Tab>
+    </Tabs>
   </Step>
   <Step title="Set environment variables">
     ```bash
     export PANDAPROBE_API_KEY="your-api-key"
-    export PANDAPROBE_PROJECT_NAME="my-first-project"
-    export PANDAPROBE_ENDPOINT="https://your-pandaprobe-instance.com"
+    export PANDAPROBE_PROJECT_NAME="your-project-name"
+    export PANDAPROBE_ENDPOINT="https://api.pandaprobe.com/"
     ```
   </Step>
-  <Step title="Wrap your OpenAI client">
-    ```python
-    import pandaprobe
-    from pandaprobe.wrappers import wrap_openai
-    from openai import OpenAI
+  <Step title="Wrap your LLM client">
+    Choose the provider you want to trace. Make sure the matching provider API key is available in your environment.
 
-    client = wrap_openai(OpenAI())
+    <Tabs>
+      <Tab title="OpenAI">
+        ```python
+        from pandaprobe.wrappers import wrap_openai
+        from openai import OpenAI
 
-    response = client.chat.completions.create(
-        model="gpt-5.4",
-        messages=[{"role": "user", "content": "What is PandaProbe?"}],
-    )
+        client = wrap_openai(OpenAI())
 
-    print(response.choices[0].message.content)
-    ```
+        response = client.chat.completions.create(
+            model="gpt-5.4",
+            messages=[{"role": "user", "content": "What is PandaProbe?"}],
+        )
+
+        print(response.choices[0].message.content)
+        ```
+      </Tab>
+      <Tab title="Gemini">
+        ```python
+        from pandaprobe.wrappers import wrap_gemini
+        from google import genai
+
+        client = wrap_gemini(genai.Client())
+
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-preview",
+            contents="What is PandaProbe?",
+        )
+
+        print(response.text)
+        ```
+      </Tab>
+      <Tab title="Anthropic">
+        ```python
+        from pandaprobe.wrappers import wrap_anthropic
+        from anthropic import Anthropic
+
+        client = wrap_anthropic(Anthropic())
+
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            messages=[{"role": "user", "content": "What is PandaProbe?"}],
+        )
+
+        print(response.content[0].text)
+        ```
+      </Tab>
+    </Tabs>
   </Step>
   <Step title="View your trace">
     Open the PandaProbe dashboard. You should see a trace with an LLM span containing the input messages, output, model name, and token usage, all captured automatically.
@@ -42,10 +94,10 @@ icon: "rocket"
 
 <CardGroup cols={3}>
   <Card title="Wrappers" href="/tracing/wrappers/overview">
-    Auto-trace OpenAI, Anthropic, and Gemini
+    Wrappers for OpenAI, Anthropic, and Gemini
   </Card>
   <Card title="Integrations" href="/tracing/integrations/overview">
-    Trace LangGraph, CrewAI, and more
+    Integrations for LangGraph, CrewAI, and more
   </Card>
   <Card title="Manual Instrumentation" href="/tracing/manual/decorators">
     Full control with decorators and context managers
