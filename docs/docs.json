@@ -48,7 +48,7 @@
       {
         "label": "GitHub",
         "icon": "github",
-        "href": "https://github.com/chirpz-ai"
+        "href": "https://github.com/chirpz-ai/pandaprobe"
       },
       {
         "label": "Discord",
@@ -59,12 +59,12 @@
     "primary": {
       "type": "button",
       "label": "Try PandaProbe",
-      "href": "https://www.pandaprobe.com/"
+      "href": "https://app.pandaprobe.com/"
     }
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/chirpz-ai",
+      "github": "https://github.com/chirpz-ai/pandaprobe",
       "x": "https://x.com/pandaprobe",
       "discord": "https://discord.gg/A2VfrRhx"
     }
