@@ -8,13 +8,13 @@ Integrations hook into agent frameworks to automatically trace the full agent li
 
 Use the table below to choose the right package extra, then open the integration guide for framework-specific setup.
 
-| Integration | Install Command | Class | Mechanism |
+| Integration | Install Extra | Class | Mechanism |
 | --- | --- | --- | --- |
-| LangGraph | `pip install "pandaprobe[langgraph]"` | `LangGraphCallbackHandler` | LangChain callback handler |
-| Google ADK | `pip install "pandaprobe[google-adk]"` | `GoogleADKAdapter` | `wrapt` monkey-patching |
-| Claude Agent SDK | `pip install "pandaprobe[claude-agent-sdk]"` | `ClaudeAgentSDKAdapter` | `wrapt` monkey-patching + hook injection |
-| CrewAI | `pip install "pandaprobe[crewai]"` | `CrewAIAdapter` | `wrapt` monkey-patching |
-| OpenAI Agents SDK | `pip install "pandaprobe[openai-agents]"` | `OpenAIAgentsAdapter` | First-class `TracingProcessor` callback |
+| LangGraph | `"pandaprobe[langgraph]"` | `LangGraphCallbackHandler` | LangChain callback handler |
+| Google ADK | `"pandaprobe[google-adk]"` | `GoogleADKAdapter` | `wrapt` monkey-patching |
+| Claude Agent SDK | `"pandaprobe[claude-agent-sdk]"` | `ClaudeAgentSDKAdapter` | `wrapt` monkey-patching + hook injection |
+| CrewAI | `"pandaprobe[crewai]"` | `CrewAIAdapter` | `wrapt` monkey-patching |
+| OpenAI Agents SDK | `"pandaprobe[openai-agents]"` | `OpenAIAgentsAdapter` | First-class `TracingProcessor` callback |
 
 **Constructor parameters (shared across all)**
 
