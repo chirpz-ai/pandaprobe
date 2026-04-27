@@ -4,9 +4,9 @@ description: "Evaluate agent reliability and consistency across entire sessions.
 icon: "route"
 ---
 
-Agent evaluation operates at the **session level**. While trace evaluation scores individual requests in isolation, agent evaluation answers a broader question: *How reliable and consistent is this agent across a full conversation or workflow?*
+Agent evaluation operates at the **session level**. While trace evaluation scores one request at a time, agent evaluation answers a broader question: *How reliable and consistent is this agent across a full conversation or workflow?*
 
-In PandaProbe, a **session** represents a series of traces from a single user interaction with an agent — an entire conversation, a multi-step workflow, or an agent's lifetime. Agent evaluation aggregates per-trace signals into session-level scores that capture patterns only visible across multiple interactions.
+In PandaProbe, a **session** is the unit for an agent lifecycle. It can represent an entire conversation, a multi-step workflow, a support ticket, or an autonomous job. Agent evaluation aggregates trace-level signals into session-level scores that capture behavior only visible across multiple steps.
 
 ## Why session-level evaluation?
 
@@ -22,18 +22,17 @@ These patterns are invisible at the trace level. Session-level metrics surface t
 
 Session evaluation is a two-phase process:
 
-```
-Phase 1: Compute trace-level signals          Phase 2: Aggregate into session scores
-┌─────────┐                              ┌────────────────────┐
-│ Trace 1  │──▶ confidence, coherence,         │                              │
-├─────────┤    tool_correctness,              │  agent_reliability         │
-│ Trace 2  │──▶ loop_detection                 │  agent_consistency           │
-├─────────┤                          ──────▶  │                         │
-│ Trace 3  │──▶ (4 signals per trace)          │  (pure math, no              │
-├─────────┤                                   │   LLM calls)               │
-│  ...     │                                   └────────────────────┘
-└─────────┘
-```
+<Steps>
+  <Step title="Collect traces in the session">
+    PandaProbe starts with all traces that share the same `session_id`, preserving the sequence of interactions in the agent lifecycle.
+  </Step>
+  <Step title="Compute trace-level signals">
+    For each trace, PandaProbe computes signals such as `confidence`, `coherence`, `tool_correctness`, and `loop_detection`.
+  </Step>
+  <Step title="Aggregate session-level scores">
+    Session metrics combine those signals into `agent_reliability` and `agent_consistency`, using deterministic math instead of additional LLM calls.
+  </Step>
+</Steps>
 
 ### Phase 1: Trace-level signals
 
@@ -46,13 +45,12 @@ For each trace in the session, PandaProbe computes four signals using the trace-
 | `tool_correctness` | Tool Correctness metric (LLM judge) | Quality of tool selection |
 | `coherence` | Coherence metric (embedding distance) | Input-output alignment |
 
-These signals are precomputed and stored as a mapping: `{trace_id: {signal_name: score}}`.
 
 ### Phase 2: Session-level aggregation
 
-The two session metrics receive the precomputed signals and aggregate them using pure mathematical functions — **no additional LLM or embedding calls**. This makes the aggregation fast, deterministic, and cost-free.
+The two session metrics receive the precomputed signals and aggregate them using pure mathematical functions: **no additional LLM or embedding calls**. This makes the aggregation fast and deterministic.
 
-Each signal is converted to a **risk** value (`1 - signal_score`), then weighted and combined differently by each metric:
+Session evaluation scores are research driven and algorithmic, designed specifically for agents with long trajectory:
 
 - **Agent Reliability** focuses on the **worst moments** — a single catastrophic trace drags the score down
 - **Agent Consistency** focuses on **overall stability** — many moderate issues compound even if no single trace is terrible
