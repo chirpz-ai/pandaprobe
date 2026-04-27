@@ -4,17 +4,17 @@ description: "Set up and run evaluations via the PandaProbe dashboard or API."
 icon: "route"
 ---
 
-PandaProbe provides three ways to run evaluations:
+PandaProbe provides three setup paths for evaluation. Choose the one that matches how you want to operate: manually from the dashboard, programmatically through the API, or automatically on a schedule.
 
 <CardGroup cols={3}>
   <Card title="Dashboard UI" icon="layout-dashboard" href="/evaluation/setup/run-eval-ui">
-    Visual interface for creating eval runs, selecting metrics, and reviewing results.
+    Best for exploring metrics, creating one-off eval runs, and reviewing results visually.
   </Card>
   <Card title="API" icon="terminal" href="/evaluation/setup/run-eval-api">
-    Programmatic access for CI/CD pipelines, automated workflows, and custom tooling.
+    Best for CI/CD, internal tools, notebooks, and custom automation.
   </Card>
   <Card title="Scheduled Monitors" icon="clock" href="/evaluation/setup/scheduling">
-    Recurring evaluations that run automatically on a cadence.
+    Best for recurring production checks that evaluate new traces or sessions over time.
   </Card>
 </CardGroup>
 
@@ -22,25 +22,17 @@ PandaProbe provides three ways to run evaluations:
 
 Before running evaluations, make sure you have:
 
-<Steps>
-  <Step title="Traces or sessions to evaluate">
-    Evaluations run against data already captured by PandaProbe tracing. You need at least one trace in your project. For session-level evaluations, you need traces grouped by session ID.
-  </Step>
-  <Step title="An LLM provider configured">
-    Most trace-level metrics use an LLM-as-judge approach. PandaProbe needs access to at least one LLM provider (e.g., OpenAI, Anthropic) to run these metrics. Check available providers:
+- **Traces in your project**: evaluations run against data already captured by PandaProbe tracing.
+- **Sessions for agent evaluation**: session-level metrics require traces grouped with a `session_id`.
+- **Project access**: dashboard users need access to the project, and API users need valid authentication.
 
-    ```bash
-    curl -H "Authorization: Bearer $TOKEN" \
-         -H "X-Project-ID: $PROJECT_ID" \
-         https://api.pandaprobe.com/evaluations/providers
-    ```
-  </Step>
-  <Step title="Authentication">
-    All evaluation endpoints require authentication. You can use either:
-    - **Bearer JWT** with `X-Project-ID` header
-    - **API key** with `X-API-Key` and `X-Project-Name` headers
-  </Step>
-</Steps>
+<Info>
+  PandaProbe Cloud manages the evaluation LLM infrastructure for you. You do not need to bring your own LLM API key to run evaluations in PandaProbe Cloud.
+</Info>
+
+<Note>
+  Self-hosted deployments must configure their own LLM provider credentials for LLM-powered PandaProbe features, including LLM-as-judge evaluation.
+</Note>
 
 ## What you can evaluate
 
@@ -60,38 +52,48 @@ Run metrics against entire sessions to assess agent reliability and consistency.
 - **Explicit IDs** — provide a list of specific session ID strings
 - **Sampling** — evaluate a fraction of matching sessions
 
-## Understanding eval run results
+## Setup methods
 
-Every eval run produces **scores** attached to your traces or sessions. Each score includes:
+### Dashboard UI
 
-| Field | Description |
-|---|---|
-| `name` | The metric name (e.g., `task_completion`) |
-| `value` | Score as a string (e.g., `"0.85"`) |
-| `status` | `SUCCESS` or `FAILED` |
-| `reason` | LLM-generated explanation |
-| `metadata` | Structured data with threshold, intermediate results, and breakdowns |
+Use the dashboard when you want to create evaluations interactively and inspect results without writing code.
 
-You can query scores in aggregate (summaries, trends, distributions) or per trace/session to understand individual results.
+<Card title="Run Evaluations via UI" icon="layout-dashboard" href="/evaluation/setup/run-eval-ui">
+  Create eval runs and review scores from the PandaProbe dashboard.
+</Card>
 
-## Manual scores
+### API
 
-Beyond automated evaluations, you can create scores manually:
+Use the API when evaluations need to be part of an automated workflow, CI job, internal dashboard, or custom tool.
 
-- **Annotations** — human reviewers score traces in the dashboard
-- **Programmatic** — submit scores from your own evaluation pipelines via the API
+<Card title="Run Evaluations via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+  Create eval runs, poll run status, and query scores programmatically.
+</Card>
 
-Manual scores use the same schema as automated scores and appear alongside them in analytics.
+### Scheduled monitors
+
+Use monitors when you want PandaProbe to run evaluations repeatedly on a cadence, such as daily production checks or weekly quality reports.
+
+<Card title="Scheduling Evaluations" icon="clock" href="/evaluation/setup/scheduling">
+  Configure recurring evaluation monitors with filters, sampling, and cadence.
+</Card>
+
+## Results
+
+Every eval run produces **scores** attached to traces or sessions. Each score includes a metric name, value, status, reason, and metadata. You can review scores in the dashboard or query them through the API for analytics, reporting, and monitoring.
 
 ## Next steps
 
-Choose your preferred method to start evaluating:
+Start with the setup path that matches your workflow:
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="Run via Dashboard" icon="layout-dashboard" href="/evaluation/setup/run-eval-ui">
     Visual guide to creating eval runs in the dashboard.
   </Card>
   <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
     Complete API reference for evaluation endpoints.
+  </Card>
+  <Card title="Schedule Monitors" icon="clock" href="/evaluation/setup/scheduling">
+    Automate recurring evaluations for new traces or sessions.
   </Card>
 </CardGroup>
