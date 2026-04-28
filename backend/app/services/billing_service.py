@@ -141,6 +141,7 @@ class BillingService:
             "success_url": success_url,
             "cancel_url": cancel_url,
             "automatic_tax": {"enabled": True},
+            "allow_promotion_codes": True,
             "metadata": {"org_id": str(org_id), "plan": plan.value},
         }
         if sub and sub.stripe_customer_id:
