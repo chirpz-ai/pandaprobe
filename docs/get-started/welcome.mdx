@@ -14,11 +14,20 @@ PandaProbe is a unified platform for the full agent development lifecycle — fr
 
 PandaProbe provides:
 
-- **Tracing** for LLM providers, agent development frameworks, and any custom agent
-- **Session and user tracking** to follow work across turns and identities
-- **Evaluation** to measure quality and regressions
-- **Monitoring** for automated evaluation schedules that run periodically
-- **Environment-based configuration** so you can tune behavior per deploy without code changes
+<CardGroup cols={1}>
+  <Card title="Tracing" icon="route">
+    Capture LLM calls, MCP calls, tool usage, workflow steps, and custom agent logic as structured traces and spans.
+  </Card>
+  <Card title="Sessions" icon="fingerprint-pattern">
+    Aggregate related traces under a session to understand the full lifecycle of an agent.
+  </Card>
+  <Card title="Evaluation" icon="drafting-compass">
+    Score traces and sessions to measure quality, reliability, regressions, and agent behavior over time.
+  </Card>
+  <Card title="Monitoring" icon="clock">
+    Schedule recurring evaluations so new traces and sessions are checked automatically in production.
+  </Card>
+</CardGroup>
 
 
 ## Three layers of tracing
