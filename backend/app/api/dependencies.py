@@ -11,7 +11,7 @@ auto-creates it if it doesn't exist.
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import structlog
@@ -34,6 +34,8 @@ from app.registry.settings import settings
 from app.services.analytics_service import AnalyticsService
 from app.services.crm_service import CrmService
 from app.services.email_service import EmailService
+
+_SESSION_THRESHOLD = timedelta(minutes=30)
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 _api_key_scheme = APIKeyHeader(name="X-API-Key", scheme_name="ApiKey", auto_error=False)
@@ -142,7 +144,7 @@ async def _resolve_jwt(
     user_repo = UserRepository(session)
     identity_repo = IdentityRepository(session)
 
-    user, user_created = await user_repo.upsert_user(
+    user, user_created, prev_sign_in = await user_repo.upsert_user(
         external_id=claims.sub,
         email=claims.email,
         display_name=claims.display_name,
@@ -236,10 +238,13 @@ async def _resolve_jwt(
         display_name=user.display_name,
         org_id=str(organization.id),
     )
-    analytics.user_authenticated(
-        user_id=str(user.id),
-        org_id=str(organization.id),
-    )
+
+    now = datetime.now(timezone.utc)
+    if prev_sign_in is None or (now - prev_sign_in) > _SESSION_THRESHOLD:
+        analytics.user_authenticated(
+            user_id=str(user.id),
+            org_id=str(organization.id),
+        )
 
     return ApiContext(
         request_id=request_id,
