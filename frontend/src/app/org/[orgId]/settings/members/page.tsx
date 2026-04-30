@@ -242,8 +242,12 @@ export default function MembersPage() {
                   key={m.id}
                   className="border-b border-border hover:bg-surface-hi"
                 >
-                  <td className="ph-no-capture px-3 py-2 text-text">{m.display_name}</td>
-                  <td className="ph-no-capture px-3 py-2 text-text-dim">{m.email}</td>
+                  <td className="ph-no-capture px-3 py-2 text-text">
+                    {m.display_name}
+                  </td>
+                  <td className="ph-no-capture px-3 py-2 text-text-dim">
+                    {m.email}
+                  </td>
                   <td className="px-3 py-2">
                     {m.role === MembershipRole.OWNER || !isOwner ? (
                       <Badge variant={roleVariant[m.role]}>{m.role}</Badge>
@@ -322,7 +326,9 @@ export default function MembersPage() {
                     key={inv.id}
                     className="border-b border-border hover:bg-surface-hi"
                   >
-                    <td className="ph-no-capture px-3 py-2 text-text">{inv.email}</td>
+                    <td className="ph-no-capture px-3 py-2 text-text">
+                      {inv.email}
+                    </td>
                     <td className="px-3 py-2">
                       <Badge variant={roleVariant[inv.role]}>{inv.role}</Badge>
                     </td>
