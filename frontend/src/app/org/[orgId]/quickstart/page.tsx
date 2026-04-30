@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import {
   ArrowRight,
   BookOpen,
@@ -16,10 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { useProject } from "@/components/providers/ProjectProvider";
-import { useProjectId, useProjectPath } from "@/hooks/useNavigation";
-import { listTraces } from "@/lib/api/traces";
-import { queryKeys } from "@/lib/query/keys";
+import { useOrganization } from "@/components/providers/OrganizationProvider";
 import {
   API_URL,
   DOCS_TRACING_URL,
@@ -30,7 +27,7 @@ import {
 import { CodeBlock } from "@/components/common/CodeBlock";
 import { cn } from "@/lib/utils/cn";
 
-/* ── SDK snippets ─────────────────────────────────────────────────────── */
+const ONBOARDING_PROJECT_NAME = "onboarding";
 
 const INSTALL_SNIPPETS = {
   openai: 'pip install "pandaprobe[openai]"',
@@ -44,9 +41,9 @@ const PROVIDER_KEY_EXPORTS: Record<Provider, string> = {
   gemini: 'export GOOGLE_API_KEY="your-google-key"',
 };
 
-function envSnippet(provider: Provider, projectName: string, endpoint: string) {
+function envSnippet(provider: Provider, endpoint: string) {
   return `export PANDAPROBE_API_KEY="your-api-key"
-export PANDAPROBE_PROJECT_NAME="${projectName}"
+export PANDAPROBE_PROJECT_NAME="${ONBOARDING_PROJECT_NAME}"
 export PANDAPROBE_ENDPOINT="${endpoint}"
 
 ${PROVIDER_KEY_EXPORTS[provider]}`;
@@ -97,17 +94,13 @@ const PROVIDERS: { id: Provider; label: string }[] = [
   { id: "gemini", label: "Google Gemini" },
 ];
 
-/* ── Page ─────────────────────────────────────────────────────────────── */
-
-export default function QuickstartPage() {
+export default function OnboardingQuickstartPage() {
   useDocumentTitle("Quickstart");
 
-  const { currentProject } = useProject();
-  const basePath = useProjectPath();
+  const { orgId } = useParams();
+  const orgBase = `/org/${orgId}`;
 
   const [provider, setProvider] = useState<Provider>("openai");
-
-  const projectName = currentProject?.name ?? "my-first-project";
 
   return (
     <div className="max-w-4xl space-y-8 animate-fade-in pb-12">
@@ -129,11 +122,8 @@ export default function QuickstartPage() {
         title="Set environment variables"
         description="Point the SDK at your project and authenticate it with an API key."
       >
-        <CodeBlock
-          code={envSnippet(provider, projectName, API_URL)}
-          language="bash"
-        />
-        <InlineApiKeyHint basePath={basePath} />
+        <CodeBlock code={envSnippet(provider, API_URL)} language="bash" />
+        <InlineApiKeyHint orgBase={orgBase} />
       </StepSection>
 
       <StepSection
@@ -151,17 +141,15 @@ export default function QuickstartPage() {
         number={4}
         icon={<Zap className="h-4 w-4" />}
         title="View your first trace"
-        description="Run your script, then come back here to confirm it landed."
+        description="Run your script, then come back here. PandaProbe will create the project and capture your trace automatically."
       >
-        <TraceDetector basePath={basePath} />
+        <TraceDetector orgBase={orgBase} />
       </StepSection>
 
       <NextSteps />
     </div>
   );
 }
-
-/* ── Header ───────────────────────────────────────────────────────────── */
 
 function Header() {
   return (
@@ -178,8 +166,6 @@ function Header() {
     </div>
   );
 }
-
-/* ── Step section wrapper ─────────────────────────────────────────────── */
 
 interface StepSectionProps {
   number: number;
@@ -217,8 +203,6 @@ function StepSection({
   );
 }
 
-/* ── Provider tabs ────────────────────────────────────────────────────── */
-
 function ProviderTabs({
   value,
   onChange,
@@ -247,21 +231,13 @@ function ProviderTabs({
   );
 }
 
-/* ── API key hint (step 2 addon) ──────────────────────────────────────── */
-
-function InlineApiKeyHint({ basePath }: { basePath: string }) {
-  // /org/{orgId}/settings/api-keys — strip the /project/{projectId} segment
-  const apiKeysHref = basePath.replace(
-    /\/project\/[^/]+$/,
-    "/settings/api-keys",
-  );
-
+function InlineApiKeyHint({ orgBase }: { orgBase: string }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 border border-border bg-surface text-xs font-mono text-text-dim">
       <KeyRound className="h-3.5 w-3.5 text-text-muted" />
       <span>Don&apos;t have an API key yet?</span>
       <Link
-        href={apiKeysHref}
+        href={`${orgBase}/settings/api-keys`}
         className="flex items-center gap-1 text-primary hover:text-text transition-colors"
       >
         Create one
@@ -270,8 +246,6 @@ function InlineApiKeyHint({ basePath }: { basePath: string }) {
     </div>
   );
 }
-
-/* ── Trace detector (step 4) ──────────────────────────────────────────── */
 
 function DocsHint() {
   return (
@@ -291,20 +265,10 @@ function DocsHint() {
   );
 }
 
-function TraceDetector({ basePath }: { basePath: string }) {
-  const projectId = useProjectId() ?? "";
-
-  // One-shot check on mount. Refetches automatically when the user returns
-  const tracesQuery = useQuery({
-    queryKey: [
-      ...queryKeys.traces.list(projectId, { limit: 1 }),
-      "quickstart-detector",
-    ],
-    queryFn: () => listTraces({ limit: 1 }),
-    staleTime: 0,
-  });
-
-  const hasTrace = (tracesQuery.data?.total ?? 0) > 0;
+function TraceDetector({ orgBase }: { orgBase: string }) {
+  const { projects, refetchProjects } = useOrganization();
+  const firstProject = projects[0] ?? null;
+  const hasTrace = !!firstProject;
 
   return (
     <div
@@ -325,18 +289,23 @@ function TraceDetector({ basePath }: { basePath: string }) {
           {hasTrace ? "First trace received." : "Waiting for your first trace"}
         </span>
       </div>
-      <Link
-        href={`${basePath}/traces`}
-        className={cn(
-          "flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono transition-colors border",
-          hasTrace
-            ? "border-success/40 bg-success/20 text-success hover:bg-success/30"
-            : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20",
-        )}
-      >
-        Open Traces
-        <ArrowRight className="h-3 w-3" />
-      </Link>
+      {hasTrace ? (
+        <Link
+          href={`${orgBase}/project/${firstProject.id}/traces`}
+          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono transition-colors border border-success/40 bg-success/20 text-success hover:bg-success/30"
+        >
+          Open Traces
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={() => refetchProjects()}
+          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono transition-colors border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+        >
+          Check now
+        </button>
+      )}
     </div>
   );
 }
@@ -349,8 +318,6 @@ function LiveDot() {
     </span>
   );
 }
-
-/* ── Next steps ───────────────────────────────────────────────────────── */
 
 function NextSteps() {
   const links = [

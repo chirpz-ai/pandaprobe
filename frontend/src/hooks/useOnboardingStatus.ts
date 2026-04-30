@@ -48,7 +48,7 @@ export function useOnboardingStatus(): OnboardingStatus {
     (!!orgId && apiKeysQuery.isPending) ||
     (projectCreated && tracesQuery.isPending);
 
-  const allComplete = projectCreated && apiKeyCreated && traceIngested;
+  const allComplete = apiKeyCreated && traceIngested;
 
   return {
     projectCreated,

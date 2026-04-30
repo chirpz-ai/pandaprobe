@@ -29,12 +29,16 @@ import {
   Plus,
   Mail,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useOrgId, useResolvedProjectId } from "@/hooks/useNavigation";
 import { DOCS_URL, STORAGE_KEYS } from "@/lib/utils/constants";
 import { createOrganization } from "@/lib/api/organizations";
+import { getSubscription } from "@/lib/api/subscriptions";
+import { SubscriptionPlan } from "@/lib/api/enums";
+import { queryKeys } from "@/lib/query/keys";
 import { extractErrorMessage } from "@/lib/api/client";
 import { useToast } from "@/components/providers/ToastProvider";
 import { FormDialog } from "@/components/common/FormDialog";
@@ -94,6 +98,46 @@ function NavLink({
     );
   }
   return link;
+}
+
+function BackToHomeButton({
+  collapsed,
+  onClick,
+}: {
+  collapsed: boolean;
+  onClick: () => void;
+}) {
+  const btn = (
+    <Button
+      variant="ghost"
+      onClick={onClick}
+      className={cn(
+        "w-full justify-start gap-3 px-3 py-2 text-primary",
+        collapsed && "justify-center px-2",
+      )}
+    >
+      <ArrowLeft className="h-4 w-4" />
+      {!collapsed && <span>Back to Home</span>}
+    </Button>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>{btn}</Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content
+            side="right"
+            sideOffset={8}
+            className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
+          >
+            Back to Home
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
+    );
+  }
+  return btn;
 }
 
 function SwitcherDropdown({
@@ -375,6 +419,14 @@ export function Sidebar() {
     ? projects.find((p) => p.id === resolvedProjectId)?.name
     : null;
 
+  const subQuery = useQuery({
+    queryKey: queryKeys.subscriptions.current(orgId),
+    queryFn: () => getSubscription(orgId),
+    enabled: !!orgId,
+    staleTime: 300_000,
+  });
+  const isHobby = subQuery.data?.plan === SubscriptionPlan.HOBBY;
+
   const displayName = user?.displayName || user?.email?.split("@")[0] || "User";
   const displayEmail = user?.email || "";
 
@@ -433,6 +485,8 @@ export function Sidebar() {
         <nav className="flex-1 py-2 overflow-y-auto">
           {inAccountRoute ? (
             <>
+              {/* Back to Home */}
+              <BackToHomeButton collapsed={collapsed} onClick={exitSettings} />
               {/* Account view */}
               <div className="space-y-0.5 mt-1">
                 {accountNav.map((item) => (
@@ -447,6 +501,8 @@ export function Sidebar() {
             </>
           ) : settingsView ? (
             <>
+              {/* Back to Home */}
+              <BackToHomeButton collapsed={collapsed} onClick={exitSettings} />
               {/* Org switcher at top of settings view */}
               <SwitcherDropdown
                 label={activeOrg?.name ?? "Select org"}
@@ -505,23 +561,38 @@ export function Sidebar() {
           )}
         </nav>
 
-        {/* ── Bottom action button ────────────────────────────────── */}
-        <div className="pb-2">
-          <Tooltip.Root>
-            <Tooltip.Trigger asChild>
-              {inAccountRoute || settingsView ? (
-                <Button
-                  variant="ghost"
-                  onClick={exitSettings}
-                  className={cn(
-                    "w-full justify-start gap-3 px-3 py-2",
-                    collapsed && "justify-center px-2",
-                  )}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  {!collapsed && <span>Back to Home</span>}
-                </Button>
-              ) : (
+        {/* ── Bottom action buttons ───────────────────────────────── */}
+        {!inAccountRoute && !settingsView && (
+          <div className="pb-2 space-y-0.5">
+            {isHobby && (
+              <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                  <Link
+                    href={`${orgBase}/settings/plans`}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 text-sm font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
+                      collapsed && "justify-center px-2",
+                    )}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {!collapsed && <span>Upgrade</span>}
+                  </Link>
+                </Tooltip.Trigger>
+                {collapsed && (
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      side="right"
+                      sideOffset={8}
+                      className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
+                    >
+                      Upgrade
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                )}
+              </Tooltip.Root>
+            )}
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
                 <Button
                   variant="ghost"
                   onClick={openSettings}
@@ -533,21 +604,21 @@ export function Sidebar() {
                   <Settings className="h-4 w-4" />
                   {!collapsed && <span>Settings</span>}
                 </Button>
+              </Tooltip.Trigger>
+              {collapsed && (
+                <Tooltip.Portal>
+                  <Tooltip.Content
+                    side="right"
+                    sideOffset={8}
+                    className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
+                  >
+                    Settings
+                  </Tooltip.Content>
+                </Tooltip.Portal>
               )}
-            </Tooltip.Trigger>
-            {collapsed && (
-              <Tooltip.Portal>
-                <Tooltip.Content
-                  side="right"
-                  sideOffset={8}
-                  className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
-                >
-                  {inAccountRoute || settingsView ? "Back to Home" : "Settings"}
-                </Tooltip.Content>
-              </Tooltip.Portal>
-            )}
-          </Tooltip.Root>
-        </div>
+            </Tooltip.Root>
+          </div>
+        )}
 
         {/* ── Footer ─────────────────────────────────────────────── */}
         <div className="border-t border-border py-2">

@@ -9,15 +9,7 @@ import { isPostHogEnabled } from "./PostHogProvider";
 /**
  * Routes where session recording is completely disabled.
  */
-const BLOCKED_SUFFIXES = [
-  "/settings/api-keys",
-  "/settings/billing",
-  "/settings/plans",
-  "/settings/members",
-  "/settings/organization",
-  "/settings/account",
-  "/settings/invitations",
-];
+const BLOCKED_SUFFIXES = ["/settings/account", "/settings/invitations"];
 
 export function isBlockedRoute(pathname: string): boolean {
   return BLOCKED_SUFFIXES.some((suffix) => pathname.includes(suffix));
