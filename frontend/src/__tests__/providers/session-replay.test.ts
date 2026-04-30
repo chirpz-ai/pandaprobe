@@ -18,20 +18,28 @@ jest.mock("@/components/providers/PostHogProvider", () => ({
 import { isBlockedRoute } from "@/components/providers/SessionReplayController";
 
 describe("isBlockedRoute", () => {
-  it("blocks /settings/api-keys", () => {
-    expect(isBlockedRoute("/org/abc/settings/api-keys")).toBe(true);
+  it("blocks /settings/account", () => {
+    expect(isBlockedRoute("/settings/account")).toBe(true);
   });
 
-  it("blocks /settings/billing", () => {
-    expect(isBlockedRoute("/org/abc/settings/billing")).toBe(true);
+  it("blocks /settings/invitations", () => {
+    expect(isBlockedRoute("/settings/invitations")).toBe(true);
   });
 
-  it("blocks /settings/plans", () => {
-    expect(isBlockedRoute("/org/abc/settings/plans")).toBe(true);
+  it("allows /settings/api-keys", () => {
+    expect(isBlockedRoute("/org/abc/settings/api-keys")).toBe(false);
   });
 
-  it("blocks /settings/members", () => {
-    expect(isBlockedRoute("/org/abc/settings/members")).toBe(true);
+  it("allows /settings/billing", () => {
+    expect(isBlockedRoute("/org/abc/settings/billing")).toBe(false);
+  });
+
+  it("allows /settings/plans", () => {
+    expect(isBlockedRoute("/org/abc/settings/plans")).toBe(false);
+  });
+
+  it("allows /settings/members", () => {
+    expect(isBlockedRoute("/org/abc/settings/members")).toBe(false);
   });
 
   it("allows project home page", () => {
