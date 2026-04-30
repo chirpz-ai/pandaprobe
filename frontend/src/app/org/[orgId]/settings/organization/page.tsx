@@ -110,7 +110,7 @@ export default function OrganizationSettingsPage() {
               Organization ID
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-text-dim truncate">
+              <span className="ph-no-capture text-xs font-mono text-text-dim truncate">
                 {currentOrg.id}
               </span>
               <button
