@@ -486,10 +486,7 @@ export function Sidebar() {
           {inAccountRoute ? (
             <>
               {/* Back to Home */}
-              <BackToHomeButton
-                collapsed={collapsed}
-                onClick={exitSettings}
-              />
+              <BackToHomeButton collapsed={collapsed} onClick={exitSettings} />
               {/* Account view */}
               <div className="space-y-0.5 mt-1">
                 {accountNav.map((item) => (
@@ -505,10 +502,7 @@ export function Sidebar() {
           ) : settingsView ? (
             <>
               {/* Back to Home */}
-              <BackToHomeButton
-                collapsed={collapsed}
-                onClick={exitSettings}
-              />
+              <BackToHomeButton collapsed={collapsed} onClick={exitSettings} />
               {/* Org switcher at top of settings view */}
               <SwitcherDropdown
                 label={activeOrg?.name ?? "Select org"}

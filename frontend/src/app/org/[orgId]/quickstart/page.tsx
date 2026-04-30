@@ -286,9 +286,7 @@ function TraceDetector({ orgBase }: { orgBase: string }) {
           <LiveDot />
         )}
         <span className="text-xs font-mono text-text">
-          {hasTrace
-            ? "First trace received."
-            : "Waiting for your first trace"}
+          {hasTrace ? "First trace received." : "Waiting for your first trace"}
         </span>
       </div>
       {hasTrace ? (

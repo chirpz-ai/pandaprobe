@@ -129,7 +129,10 @@ export default function QuickstartPage() {
         title="Set environment variables"
         description="Point the SDK at your project and authenticate it with an API key."
       >
-        <CodeBlock code={envSnippet(provider, projectName, API_URL)} language="bash" />
+        <CodeBlock
+          code={envSnippet(provider, projectName, API_URL)}
+          language="bash"
+        />
         <InlineApiKeyHint basePath={basePath} />
       </StepSection>
 
