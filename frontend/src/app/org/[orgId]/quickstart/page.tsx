@@ -35,10 +35,18 @@ const INSTALL_SNIPPETS = {
   gemini: 'pip install "pandaprobe[google-genai]"',
 };
 
-function envSnippet(endpoint: string) {
+const PROVIDER_KEY_EXPORTS: Record<Provider, string> = {
+  openai: 'export OPENAI_API_KEY="your-openai-key"',
+  anthropic: 'export ANTHROPIC_API_KEY="your-anthropic-key"',
+  gemini: 'export GOOGLE_API_KEY="your-google-key"',
+};
+
+function envSnippet(provider: Provider, endpoint: string) {
   return `export PANDAPROBE_API_KEY="your-api-key"
 export PANDAPROBE_PROJECT_NAME="${ONBOARDING_PROJECT_NAME}"
-export PANDAPROBE_ENDPOINT="${endpoint}"`;
+export PANDAPROBE_ENDPOINT="${endpoint}"
+
+${PROVIDER_KEY_EXPORTS[provider]}`;
 }
 
 const WRAP_SNIPPETS = {
@@ -114,7 +122,7 @@ export default function OnboardingQuickstartPage() {
         title="Set environment variables"
         description="Point the SDK at your project and authenticate it with an API key."
       >
-        <CodeBlock code={envSnippet(API_URL)} language="bash" />
+        <CodeBlock code={envSnippet(provider, API_URL)} language="bash" />
         <InlineApiKeyHint orgBase={orgBase} />
       </StepSection>
 

@@ -39,8 +39,7 @@ export default function OrgPage() {
           Welcome to PandaProbe
         </h1>
         <p className="text-sm font-mono text-text-dim mt-1">
-        Before you can send traces, you&apos;ll need an API key.
-        Let&apos;s get you set up.
+        Let&apos;s get you set up before you can send traces.
         </p>
       </div>
 
