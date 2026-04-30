@@ -96,6 +96,46 @@ function NavLink({
   return link;
 }
 
+function BackToHomeButton({
+  collapsed,
+  onClick,
+}: {
+  collapsed: boolean;
+  onClick: () => void;
+}) {
+  const btn = (
+    <Button
+      variant="ghost"
+      onClick={onClick}
+      className={cn(
+        "w-full justify-start gap-3 px-3 py-2 text-primary",
+        collapsed && "justify-center px-2",
+      )}
+    >
+      <ArrowLeft className="h-4 w-4" />
+      {!collapsed && <span>Back to Home</span>}
+    </Button>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>{btn}</Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content
+            side="right"
+            sideOffset={8}
+            className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
+          >
+            Back to Home
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
+    );
+  }
+  return btn;
+}
+
 function SwitcherDropdown({
   label,
   icon,
@@ -433,6 +473,11 @@ export function Sidebar() {
         <nav className="flex-1 py-2 overflow-y-auto">
           {inAccountRoute ? (
             <>
+              {/* Back to Home */}
+              <BackToHomeButton
+                collapsed={collapsed}
+                onClick={exitSettings}
+              />
               {/* Account view */}
               <div className="space-y-0.5 mt-1">
                 {accountNav.map((item) => (
@@ -447,6 +492,11 @@ export function Sidebar() {
             </>
           ) : settingsView ? (
             <>
+              {/* Back to Home */}
+              <BackToHomeButton
+                collapsed={collapsed}
+                onClick={exitSettings}
+              />
               {/* Org switcher at top of settings view */}
               <SwitcherDropdown
                 label={activeOrg?.name ?? "Select org"}
@@ -506,22 +556,10 @@ export function Sidebar() {
         </nav>
 
         {/* ── Bottom action button ────────────────────────────────── */}
-        <div className="pb-2">
-          <Tooltip.Root>
-            <Tooltip.Trigger asChild>
-              {inAccountRoute || settingsView ? (
-                <Button
-                  variant="ghost"
-                  onClick={exitSettings}
-                  className={cn(
-                    "w-full justify-start gap-3 px-3 py-2",
-                    collapsed && "justify-center px-2",
-                  )}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  {!collapsed && <span>Back to Home</span>}
-                </Button>
-              ) : (
+        {!inAccountRoute && !settingsView && (
+          <div className="pb-2">
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
                 <Button
                   variant="ghost"
                   onClick={openSettings}
@@ -533,21 +571,21 @@ export function Sidebar() {
                   <Settings className="h-4 w-4" />
                   {!collapsed && <span>Settings</span>}
                 </Button>
+              </Tooltip.Trigger>
+              {collapsed && (
+                <Tooltip.Portal>
+                  <Tooltip.Content
+                    side="right"
+                    sideOffset={8}
+                    className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
+                  >
+                    Settings
+                  </Tooltip.Content>
+                </Tooltip.Portal>
               )}
-            </Tooltip.Trigger>
-            {collapsed && (
-              <Tooltip.Portal>
-                <Tooltip.Content
-                  side="right"
-                  sideOffset={8}
-                  className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
-                >
-                  {inAccountRoute || settingsView ? "Back to Home" : "Settings"}
-                </Tooltip.Content>
-              </Tooltip.Portal>
-            )}
-          </Tooltip.Root>
-        </div>
+            </Tooltip.Root>
+          </div>
+        )}
 
         {/* ── Footer ─────────────────────────────────────────────── */}
         <div className="border-t border-border py-2">
