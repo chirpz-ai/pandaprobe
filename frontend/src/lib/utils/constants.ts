@@ -9,7 +9,6 @@ export const DOCS_QUICKSTART_URL = `${DOCS_URL}/get-started/quickstart`;
 export const DOCS_TRACING_URL = `${DOCS_URL}/tracing/overview`;
 export const DOCS_INTEGRATIONS_URL = `${DOCS_URL}/tracing/integrations/overview`;
 export const DOCS_MANUAL_URL = `${DOCS_URL}/tracing/manual/decorators`;
-export const DOCS_EVALUATION_URL = `${DOCS_URL}/evaluation/overview`;
 export const DOCS_CONCEPTS_URL = `${DOCS_URL}/tracing/concepts`;
 
 export const STORAGE_KEYS = {
