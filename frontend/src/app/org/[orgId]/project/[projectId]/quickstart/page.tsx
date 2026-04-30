@@ -22,9 +22,9 @@ import { listTraces } from "@/lib/api/traces";
 import { queryKeys } from "@/lib/query/keys";
 import {
   API_URL,
-  DOCS_QUICKSTART_URL,
+  DOCS_TRACING_URL,
   DOCS_INTEGRATIONS_URL,
-  DOCS_EVALUATION_URL,
+  DOCS_MANUAL_URL,
   DOCS_CONCEPTS_URL,
 } from "@/lib/utils/constants";
 import { CodeBlock } from "@/components/common/CodeBlock";
@@ -133,6 +133,7 @@ export default function QuickstartPage() {
       >
         <ProviderTabs value={provider} onChange={setProvider} />
         <CodeBlock code={WRAP_SNIPPETS[provider]} language="python" />
+        <DocsHint />
       </StepSection>
 
       <StepSection
@@ -262,6 +263,24 @@ function InlineApiKeyHint({ basePath }: { basePath: string }) {
 
 /* ── Trace detector (step 4) ──────────────────────────────────────────── */
 
+function DocsHint() {
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 border border-border bg-surface text-xs font-mono text-text-dim">
+      <BookOpen className="h-3.5 w-3.5 text-text-muted" />
+      <span>Need the full walkthrough or advanced integrations?</span>
+      <a
+        href={DOCS_TRACING_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 text-primary hover:text-text transition-colors"
+      >
+        Open documentation
+        <ExternalLink className="h-3 w-3" />
+      </a>
+    </div>
+  );
+}
+
 function TraceDetector({ basePath }: { basePath: string }) {
   const projectId = useProjectId() ?? "";
 
@@ -326,22 +345,22 @@ function LiveDot() {
 function NextSteps() {
   const links = [
     {
+      title: "Concepts",
+      description:
+        "Traces, spans, sessions, and how the data model fits together.",
+      href: DOCS_CONCEPTS_URL,
+    },
+    {
       title: "Integrations",
       description:
         "Advance integrations for frameworks like LangGraph, CrewAI, Google ADK, Claude Agent SDK, and OpenAI Agents.",
       href: DOCS_INTEGRATIONS_URL,
     },
     {
-      title: "Evaluation",
+      title: "Manual Instrumentation",
       description:
-        "Score your traces and agents with LLM-as-judge, advanance research grounded metrics and monitors.",
-      href: DOCS_EVALUATION_URL,
-    },
-    {
-      title: "Concepts",
-      description:
-        "Traces, spans, sessions, and how the data model fits together.",
-      href: DOCS_CONCEPTS_URL,
+        "Full control with @trace and @span decorators for custom span names, kinds, and metadata.",
+      href: DOCS_MANUAL_URL,
     },
   ];
 
@@ -349,7 +368,7 @@ function NextSteps() {
     <section className="space-y-3 pt-4 border-t border-border">
       <div className="flex items-center gap-2">
         <BookOpen className="h-4 w-4 text-text-muted" />
-        <h2 className="text-sm font-mono text-text">What&apos;s next</h2>
+        <h2 className="text-sm font-mono text-text">Explore the docs</h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {links.map((link) => (
@@ -372,15 +391,6 @@ function NextSteps() {
           </a>
         ))}
       </div>
-      <a
-        href={DOCS_QUICKSTART_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-xs font-mono text-text-dim hover:text-text transition-colors mt-2"
-      >
-        Read the full quickstart
-        <ExternalLink className="h-3 w-3" />
-      </a>
     </section>
   );
 }
