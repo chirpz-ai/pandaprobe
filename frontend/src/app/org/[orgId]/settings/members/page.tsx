@@ -172,7 +172,7 @@ export default function MembersPage() {
           <div className="flex items-end gap-3 mb-4">
             <div className="flex-1">
               <label className="text-xs font-mono text-text-muted block mb-1">
-                Email address
+                Invite your team
               </label>
               <Input
                 type="email"
