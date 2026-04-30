@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 import { AUTH_ENABLED } from "@/lib/auth/firebase";
+import { DOCS_URL } from "@/lib/utils/constants";
+import { Button } from "@/components/ui/Button";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -79,11 +81,19 @@ export function TopBar() {
         })}
       </nav>
 
-      {!AUTH_ENABLED && (
-        <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-warning border border-warning/30 bg-warning/5">
-          Dev Mode
-        </span>
-      )}
+      <div className="flex items-center gap-3">
+        {!AUTH_ENABLED && (
+          <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-warning border border-warning/30 bg-warning/5">
+            Dev Mode
+          </span>
+        )}
+        <Button variant="link" size="sm" asChild>
+          <a href={DOCS_URL} target="_blank" rel="noopener noreferrer">
+            Docs
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </Button>
+      </div>
     </header>
   );
 }
