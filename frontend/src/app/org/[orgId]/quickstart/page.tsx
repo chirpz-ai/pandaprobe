@@ -161,8 +161,7 @@ function Header() {
         </h1>
       </div>
       <p className="text-sm font-mono text-text-dim">
-        Trace your first LLM call in under 2 minutes. Pick a provider, copy the
-        snippets, and ship.
+        Trace your first LLM call in under 2 minutes.
       </p>
     </div>
   );
