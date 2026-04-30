@@ -170,7 +170,7 @@ export default function MembersPage() {
       {isAdmin && (
         <div className="border-engraved bg-surface p-4">
           <div className="flex items-end gap-3 mb-4">
-            <div className="flex-1">
+            <div className="ph-no-capture flex-1">
               <label className="text-xs font-mono text-text-muted block mb-1">
                 Invite your team
               </label>
