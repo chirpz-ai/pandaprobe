@@ -10,11 +10,6 @@ import { isPostHogEnabled } from "./PostHogProvider";
  * Routes where session recording is completely disabled.
  */
 const BLOCKED_SUFFIXES = [
-  "/settings/api-keys",
-  "/settings/billing",
-  "/settings/plans",
-  "/settings/members",
-  "/settings/organization",
   "/settings/account",
   "/settings/invitations",
 ];

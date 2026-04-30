@@ -168,7 +168,7 @@ export default function APIKeysPage() {
             Copy this key now. You won&apos;t be able to see it again.
           </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 text-xs font-mono text-text bg-bg px-2 py-1 border border-border overflow-hidden">
+            <code className="ph-no-capture flex-1 text-xs font-mono text-text bg-bg px-2 py-1 border border-border overflow-hidden">
               {showRawKey ? newRawKey : "••••••••••••••••"}
             </code>
             <Tooltip content="Toggle visibility">
@@ -245,7 +245,7 @@ export default function APIKeysPage() {
                   className="border-b border-border hover:bg-surface-hi"
                 >
                   <td className="px-3 py-2 text-text">{key.name}</td>
-                  <td className="px-3 py-2 text-text-dim font-mono">
+                  <td className="ph-no-capture px-3 py-2 text-text-dim font-mono">
                     {key.key_prefix}...
                   </td>
                   <td className="px-3 py-2">
