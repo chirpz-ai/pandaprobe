@@ -4,7 +4,6 @@ import { type ReactNode } from "react";
 import Link from "next/link";
 import {
   Check,
-  FolderKanban,
   KeyRound,
   Rocket,
   ArrowRight,
@@ -17,7 +16,6 @@ import { cn } from "@/lib/utils/cn";
 
 export function OnboardingChecklist() {
   const {
-    projectCreated,
     apiKeyCreated,
     traceIngested,
     allComplete,
@@ -32,25 +30,11 @@ export function OnboardingChecklist() {
   const orgBase = `/org/${orgId}`;
   const projectBase = projectId ? `${orgBase}/project/${projectId}` : null;
 
-  const completedCount = [projectCreated, apiKeyCreated, traceIngested].filter(
-    Boolean,
-  ).length;
+  const completedCount = [apiKeyCreated, traceIngested].filter(Boolean).length;
 
   const steps: OnboardingStepProps[] = [
     {
       index: 1,
-      title: "Create a project",
-      description:
-        "Projects group your traces, sessions, and evaluations. You'll send data to one project at a time.",
-      icon: <FolderKanban className="h-4 w-4" />,
-      done: projectCreated,
-      cta: {
-        label: projectCreated ? "Manage projects" : "Create project",
-        href: `${orgBase}/settings/projects`,
-      },
-    },
-    {
-      index: 2,
       title: "Create an API key",
       description:
         "Your API key authenticates the SDK so it can ship traces to PandaProbe. Store it securely.",
@@ -60,11 +44,9 @@ export function OnboardingChecklist() {
         label: apiKeyCreated ? "Manage API keys" : "Create API key",
         href: `${orgBase}/settings/api-keys`,
       },
-      disabled: !projectCreated,
-      disabledReason: "Create a project first",
     },
     {
-      index: 3,
+      index: 2,
       title: "Send your first trace",
       description:
         "Install the SDK, wrap your LLM or use agent integrations, and run your application. Your first trace will show up in seconds.",
@@ -74,12 +56,12 @@ export function OnboardingChecklist() {
         label: traceIngested ? "View traces" : "Open Quickstart",
         href: traceIngested
           ? `${projectBase}/traces`
-          : `${projectBase}/quickstart`,
+          : projectBase
+            ? `${projectBase}/quickstart`
+            : `${orgBase}/quickstart`,
       },
-      disabled: !projectBase || !apiKeyCreated,
-      disabledReason: !projectCreated
-        ? "Create a project first"
-        : "Create an API key first",
+      disabled: !apiKeyCreated,
+      disabledReason: "Create an API key first",
     },
   ];
 
@@ -90,11 +72,11 @@ export function OnboardingChecklist() {
     >
       <header className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border">
         <p className="text-xs font-mono text-text-dim min-w-0">
-          Three short steps to your first trace. We&apos;ll check each one off
-          as you go.
+          Two short steps to your first trace. We&apos;ll check each one off as
+          you go.
         </p>
         <span className="flex-shrink-0 px-2 py-0.5 border border-border bg-surface-hi text-[10px] font-mono uppercase tracking-wider text-text-dim">
-          {completedCount}/3 done
+          {completedCount}/2 done
         </span>
       </header>
 
