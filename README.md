@@ -32,7 +32,10 @@
   <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/codeql.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
 </p>
 
----
+
+<p align="center">
+  <video width="100%" src="https://github.com/user-attachments/assets/074456d9-0af4-4757-8cf7-870746fa2eb6" controls></video>
+</p>
 
 ## What is PandaProbe?
 PandaProbe is an open source agent engineering platform. It helps teams collaboratively trace, evaluate, monitor, and debug AI agents. You can use PandaProbe cloud or self host the service.
