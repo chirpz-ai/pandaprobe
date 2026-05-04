@@ -25,6 +25,13 @@ celery.conf.update(
     task_always_eager=settings.CELERY_TASK_ALWAYS_EAGER,
     beat_scheduler="redbeat.RedBeatScheduler",
     redbeat_redis_url=settings.REDIS_URL,
+    broker_connection_retry_on_startup=True,
+    broker_connection_retry=True,
+    broker_transport_options={
+        "socket_keepalive": True,
+        "socket_connect_timeout": 10,
+        "retry_on_timeout": True,
+    },
 )
 
 celery.conf.beat_schedule = {
