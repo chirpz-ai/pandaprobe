@@ -55,6 +55,7 @@ export default function APIKeysPage() {
   const [rotatedRawKey, setRotatedRawKey] = useState<string | null>(null);
   const [showRotatedKey, setShowRotatedKey] = useState(false);
   const [rotatedCopied, setRotatedCopied] = useState(false);
+  const [rotatedKeySaved, setRotatedKeySaved] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<APIKeyResponse | null>(null);
   const [deleteMode, setDeleteMode] = useState<"revoke" | "permanent">(
     "revoke",
@@ -83,6 +84,7 @@ export default function APIKeysPage() {
       setRotatedRawKey(result.raw_key);
       setShowRotatedKey(true);
       setRotatedCopied(false);
+      setRotatedKeySaved(false);
       toast({ title: "API key rotated", variant: "success" });
       invalidate();
     } catch (err) {
@@ -95,6 +97,7 @@ export default function APIKeysPage() {
     navigator.clipboard.writeText(rotatedRawKey);
     toast({ title: "Copied to clipboard", variant: "success" });
     setRotatedCopied(true);
+    setRotatedKeySaved(true);
     setTimeout(() => setRotatedCopied(false), 2000);
   }
 
@@ -141,19 +144,27 @@ export default function APIKeysPage() {
       />
 
       {rotatedRawKey && (
-        <div className="bg-warning/5 border border-warning/20 p-3">
-          <div className="flex items-center justify-between mb-2">
+        <div className="bg-warning/5 border border-warning/20 p-3 space-y-3">
+          <div className="flex items-center justify-between">
             <p className="text-xs text-warning font-mono">
               Copy this rotated key now. You won&apos;t be able to see it again.
             </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-text-muted hover:text-text"
-              onClick={() => setRotatedRawKey(null)}
+            <Tooltip
+              content={rotatedKeySaved ? "" : "Copy the key before dismissing"}
             >
-              <X className="h-3 w-3" />
-            </Button>
+              <span>
+                <Button
+                  size="sm"
+                  disabled={!rotatedKeySaved}
+                  onClick={() => {
+                    setRotatedRawKey(null);
+                    setRotatedKeySaved(false);
+                  }}
+                >
+                  Done
+                </Button>
+              </span>
+            </Tooltip>
           </div>
           <div className="flex items-center gap-2">
             <code className="ph-no-capture flex-1 text-xs font-mono text-text bg-bg px-2 py-2 border border-border overflow-x-auto whitespace-nowrap scrollbar-hide">
@@ -453,7 +464,7 @@ function CreateKeyDialog({
       }}
       title={created ? "Save your API key" : "Create new API key"}
       titleIcon={<KeyRound className="h-4 w-4" />}
-      locked={loading}
+      locked={loading || created}
     >
       {created ? (
         <div className="space-y-4">
