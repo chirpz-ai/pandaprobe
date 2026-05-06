@@ -21,6 +21,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
+import { Dialog } from "@/components/common/Dialog";
 import { FormDialog } from "@/components/common/FormDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import {
@@ -30,7 +31,17 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/Select";
-import { Plus, RotateCw, Trash2, Copy, Eye, EyeOff, Check } from "lucide-react";
+import {
+  Plus,
+  RotateCw,
+  Trash2,
+  Copy,
+  Eye,
+  EyeOff,
+  Check,
+  KeyRound,
+  Loader2,
+} from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";
 
 export default function APIKeysPage() {
@@ -39,15 +50,11 @@ export default function APIKeysPage() {
   const queryClient = useQueryClient();
   const orgId = currentOrg?.id ?? "";
 
-  const [newName, setNewName] = useState("");
-  const [expiration, setExpiration] = useState<string>(KeyExpiration.never);
-  const [newRawKey, setNewRawKey] = useState<string | null>(null);
-  const [showRawKey, setShowRawKey] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<APIKeyResponse | null>(null);
   const [deleteMode, setDeleteMode] = useState<"revoke" | "permanent">(
     "revoke",
   );
-  const [copied, setCopied] = useState(false);
 
   useDocumentTitle("API Keys");
 
@@ -65,29 +72,10 @@ export default function APIKeysPage() {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys.list(orgId) });
 
-  async function handleCreate() {
-    if (!currentOrg || !newName.trim()) return;
-    try {
-      const result = await createAPIKey(currentOrg.id, {
-        name: newName.trim(),
-        expiration: expiration as KeyExpiration,
-      });
-      setNewRawKey(result.raw_key);
-      setShowRawKey(true);
-      toast({ title: "API key created", variant: "success" });
-      setNewName("");
-      invalidate();
-    } catch (err) {
-      toast({ title: extractErrorMessage(err), variant: "error" });
-    }
-  }
-
   async function handleRotate(keyId: string) {
     if (!currentOrg) return;
     try {
-      const result = await rotateAPIKey(currentOrg.id, keyId);
-      setNewRawKey(result.raw_key);
-      setShowRawKey(true);
+      await rotateAPIKey(currentOrg.id, keyId);
       toast({ title: "API key rotated", variant: "success" });
       invalidate();
     } catch (err) {
@@ -117,89 +105,25 @@ export default function APIKeysPage() {
     }
   }
 
-  function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied to clipboard", variant: "success" });
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   if (!currentOrg) return <EmptyState title="No organization selected" />;
 
   const canManage = currentOrg.role !== "MEMBER";
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-lg font-mono text-primary">API Keys</h1>
-
-      <div className="border-engraved bg-surface p-4">
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="text-xs font-mono text-text-muted block mb-1">
-              Key Name
-            </label>
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. Production"
-            />
-          </div>
-          <Select value={expiration} onValueChange={setExpiration}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(KeyExpiration).map((e) => (
-                <SelectItem key={e} value={e}>
-                  {e}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button size="sm" onClick={handleCreate} disabled={!newName.trim()}>
-            <Plus className="h-3 w-3" /> Create
-          </Button>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-mono text-primary">API Keys</h1>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Plus className="h-3 w-3" /> Create new API key
+        </Button>
       </div>
 
-      {newRawKey && (
-        <div className="bg-warning/5 border border-warning/20 p-3">
-          <p className="text-xs text-warning font-mono mb-2">
-            Copy this key now. You won&apos;t be able to see it again.
-          </p>
-          <div className="flex items-center gap-2">
-            <code className="ph-no-capture flex-1 text-xs font-mono text-text bg-bg px-2 py-1 border border-border overflow-hidden">
-              {showRawKey ? newRawKey : "••••••••••••••••"}
-            </code>
-            <Tooltip content="Toggle visibility">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowRawKey(!showRawKey)}
-              >
-                {showRawKey ? (
-                  <EyeOff className="h-3 w-3" />
-                ) : (
-                  <Eye className="h-3 w-3" />
-                )}
-              </Button>
-            </Tooltip>
-            <Tooltip content={copied ? "Copied!" : "Copy"}>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => copyToClipboard(newRawKey)}
-              >
-                {copied ? (
-                  <Check className="h-3 w-3 text-success" />
-                ) : (
-                  <Copy className="h-3 w-3" />
-                )}
-              </Button>
-            </Tooltip>
-          </div>
-        </div>
-      )}
+      <CreateKeyDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        orgId={orgId}
+        onCreated={invalidate}
+      />
 
       {isPending ? (
         <LoadingState />
@@ -392,5 +316,181 @@ export default function APIKeysPage() {
         </div>
       </FormDialog>
     </div>
+  );
+}
+
+/* ── Create key dialog ────────────────────────────────────────────────── */
+
+function CreateKeyDialog({
+  open,
+  onOpenChange,
+  orgId,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  orgId: string;
+  onCreated: () => void;
+}) {
+  const { toast } = useToast();
+
+  const [name, setName] = useState("");
+  const [expiration, setExpiration] = useState<string>(KeyExpiration.never);
+  const [loading, setLoading] = useState(false);
+  const [rawKey, setRawKey] = useState<string | null>(null);
+  const [showKey, setShowKey] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const created = rawKey !== null;
+
+  function reset() {
+    setName("");
+    setExpiration(KeyExpiration.never);
+    setRawKey(null);
+    setShowKey(false);
+    setCopied(false);
+    setLoading(false);
+  }
+
+  function handleClose() {
+    onOpenChange(false);
+    // Defer reset so the closing animation plays with current content
+    setTimeout(reset, 200);
+  }
+
+  async function handleCreate() {
+    if (!name.trim()) return;
+    setLoading(true);
+    try {
+      const result = await createAPIKey(orgId, {
+        name: name.trim(),
+        expiration: expiration as KeyExpiration,
+      });
+      setRawKey(result.raw_key);
+      setShowKey(true);
+      toast({ title: "API key created", variant: "success" });
+      onCreated();
+    } catch (err) {
+      toast({ title: extractErrorMessage(err), variant: "error" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function copyToClipboard() {
+    if (!rawKey) return;
+    navigator.clipboard.writeText(rawKey);
+    toast({ title: "Copied to clipboard", variant: "success" });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+      }}
+      title={created ? "Save your API key" : "Create new API key"}
+      titleIcon={<KeyRound className="h-4 w-4" />}
+      locked={loading}
+    >
+      {created ? (
+        <div className="space-y-4">
+          <div className="bg-warning/5 border border-warning/20 p-3 space-y-2">
+            <p className="text-xs text-warning font-mono">
+              Please copy and save your secret key in a safe place since you won&apos;t be able to view it again.
+              If you do lose it, you&apos;ll need to generate a new one.
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="ph-no-capture flex-1 text-xs font-mono text-text bg-bg px-2 py-2 border border-border overflow-x-auto whitespace-nowrap scrollbar-hide">
+                {showKey ? rawKey : "••••••••••••••••"}
+              </code>
+              <Tooltip content="Toggle visibility">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowKey(!showKey)}
+                >
+                  {showKey ? (
+                    <EyeOff className="h-3 w-3" />
+                  ) : (
+                    <Eye className="h-3 w-3" />
+                  )}
+                </Button>
+              </Tooltip>
+              <Tooltip content={copied ? "Copied!" : "Copy"}>
+                <Button variant="ghost" size="icon" onClick={copyToClipboard}>
+                  {copied ? (
+                    <Check className="h-3 w-3 text-success" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button size="sm" onClick={handleClose}>
+              Done
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-mono text-text-muted block mb-1">
+                Key Name
+              </label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Production"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && name.trim()) handleCreate();
+                }}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-text-muted block mb-1">
+                Expiration
+              </label>
+              <Select value={expiration} onValueChange={setExpiration}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(KeyExpiration).map((e) => (
+                    <SelectItem key={e} value={e}>
+                      {e}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={loading}
+              onClick={handleClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={loading || !name.trim()}
+              onClick={handleCreate}
+            >
+              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Create API key
+            </Button>
+          </div>
+        </div>
+      )}
+    </Dialog>
   );
 }
