@@ -399,8 +399,9 @@ function CreateKeyDialog({
         <div className="space-y-4">
           <div className="bg-warning/5 border border-warning/20 p-3 space-y-2">
             <p className="text-xs text-warning font-mono">
-              Please copy and save your secret key in a safe place since you won&apos;t be able to view it again.
-              If you do lose it, you&apos;ll need to generate a new one.
+              Please copy and save your secret key in a safe place since you
+              won&apos;t be able to view it again. If you do lose it,
+              you&apos;ll need to generate a new one.
             </p>
             <div className="flex items-center gap-2">
               <code className="ph-no-capture flex-1 text-xs font-mono text-text bg-bg px-2 py-2 border border-border overflow-x-auto whitespace-nowrap scrollbar-hide">
