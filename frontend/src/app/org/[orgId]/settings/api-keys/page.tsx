@@ -41,6 +41,7 @@ import {
   Check,
   KeyRound,
   Loader2,
+  X,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";
 
@@ -51,6 +52,9 @@ export default function APIKeysPage() {
   const orgId = currentOrg?.id ?? "";
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [rotatedRawKey, setRotatedRawKey] = useState<string | null>(null);
+  const [showRotatedKey, setShowRotatedKey] = useState(false);
+  const [rotatedCopied, setRotatedCopied] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<APIKeyResponse | null>(null);
   const [deleteMode, setDeleteMode] = useState<"revoke" | "permanent">(
     "revoke",
@@ -75,12 +79,23 @@ export default function APIKeysPage() {
   async function handleRotate(keyId: string) {
     if (!currentOrg) return;
     try {
-      await rotateAPIKey(currentOrg.id, keyId);
+      const result = await rotateAPIKey(currentOrg.id, keyId);
+      setRotatedRawKey(result.raw_key);
+      setShowRotatedKey(true);
+      setRotatedCopied(false);
       toast({ title: "API key rotated", variant: "success" });
       invalidate();
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
     }
+  }
+
+  function copyRotatedKey() {
+    if (!rotatedRawKey) return;
+    navigator.clipboard.writeText(rotatedRawKey);
+    toast({ title: "Copied to clipboard", variant: "success" });
+    setRotatedCopied(true);
+    setTimeout(() => setRotatedCopied(false), 2000);
   }
 
   function openDelete(key: APIKeyResponse) {
@@ -124,6 +139,51 @@ export default function APIKeysPage() {
         orgId={orgId}
         onCreated={invalidate}
       />
+
+      {rotatedRawKey && (
+        <div className="bg-warning/5 border border-warning/20 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-warning font-mono">
+              Copy this rotated key now. You won&apos;t be able to see it again.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-text-muted hover:text-text"
+              onClick={() => setRotatedRawKey(null)}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="ph-no-capture flex-1 text-xs font-mono text-text bg-bg px-2 py-2 border border-border overflow-x-auto whitespace-nowrap scrollbar-hide">
+              {showRotatedKey ? rotatedRawKey : "••••••••••••••••"}
+            </code>
+            <Tooltip content="Toggle visibility">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowRotatedKey(!showRotatedKey)}
+              >
+                {showRotatedKey ? (
+                  <EyeOff className="h-3 w-3" />
+                ) : (
+                  <Eye className="h-3 w-3" />
+                )}
+              </Button>
+            </Tooltip>
+            <Tooltip content={rotatedCopied ? "Copied!" : "Copy"}>
+              <Button variant="ghost" size="icon" onClick={copyRotatedKey}>
+                {rotatedCopied ? (
+                  <Check className="h-3 w-3 text-success" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+              </Button>
+            </Tooltip>
+          </div>
+        </div>
+      )}
 
       {isPending ? (
         <LoadingState />
