@@ -60,7 +60,7 @@ client = wrap_openai(OpenAI())
 
 response = client.chat.completions.create(
     model="gpt-5.4",
-    messages=[{"role": "user", "content": "What is PandaProbe?"}],
+    messages=[{"role": "user", "content": "What is agent engineering?"}],
 )
 
 print(response.choices[0].message.content)`,
@@ -72,7 +72,7 @@ client = wrap_anthropic(Anthropic())
 response = client.messages.create(
     model="claude-sonnet-4-6",
     max_tokens=1024,
-    messages=[{"role": "user", "content": "What is PandaProbe?"}],
+    messages=[{"role": "user", "content": "What is agent engineering?"}],
 )
 
 print(response.content[0].text)`,
@@ -83,7 +83,7 @@ client = wrap_gemini(genai.Client())
 
 response = client.models.generate_content(
     model="gemini-3.1-flash-preview",
-    contents="What is PandaProbe?",
+    contents="What is agent engineering?",
 )
 
 print(response.text)`,
