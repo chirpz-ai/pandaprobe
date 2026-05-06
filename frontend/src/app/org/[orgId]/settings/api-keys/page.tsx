@@ -510,7 +510,7 @@ function CreateKeyDialog({
                 placeholder="e.g. Production"
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && name.trim()) handleCreate();
+                  if (e.key === "Enter" && name.trim() && !loading) handleCreate();
                 }}
               />
             </div>
