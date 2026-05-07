@@ -31,6 +31,7 @@ export default function ProjectsPage() {
   const queryClient = useQueryClient();
   const orgId = currentOrg?.id ?? "";
 
+  const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [editTarget, setEditTarget] = useState<ProjectResponse | null>(null);
@@ -57,6 +58,12 @@ export default function ProjectsPage() {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: queryKeys.projects.all(orgId) });
 
+  function openCreate() {
+    setNewName("");
+    setNewDesc("");
+    setCreateOpen(true);
+  }
+
   async function handleCreate() {
     if (!currentOrg || !newName.trim()) return;
     try {
@@ -70,6 +77,7 @@ export default function ProjectsPage() {
       invalidate();
     } catch (err) {
       toast({ title: extractErrorMessage(err), variant: "error" });
+      throw err;
     }
   }
 
@@ -111,34 +119,11 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-lg font-mono text-primary">Projects</h1>
-
-      <div className="border-engraved bg-surface p-4">
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="text-xs font-mono text-text-muted block mb-1">
-              Name
-            </label>
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Project name"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="text-xs font-mono text-text-muted block mb-1">
-              Description
-            </label>
-            <Input
-              value={newDesc}
-              onChange={(e) => setNewDesc(e.target.value)}
-              placeholder="Optional"
-            />
-          </div>
-          <Button size="sm" onClick={handleCreate} disabled={!newName.trim()}>
-            <Plus className="h-3 w-3" /> Create
-          </Button>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-mono text-primary">Projects</h1>
+        <Button size="sm" onClick={openCreate}>
+          <Plus className="h-3 w-3" /> Create new project
+        </Button>
       </div>
 
       {isPending ? (
@@ -235,6 +220,38 @@ export default function ProjectsPage() {
       )}
 
       <FormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Create new project"
+        titleIcon={<Plus className="h-4 w-4" />}
+        submitLabel="Create project"
+        submitDisabled={!newName.trim()}
+        onSubmit={handleCreate}
+      >
+        <div>
+          <label className="text-xs font-mono text-text-muted block mb-1">
+            Name <span className="text-error">*</span>
+          </label>
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="e.g. production"
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="text-xs font-mono text-text-muted block mb-1">
+            Description
+          </label>
+          <Input
+            value={newDesc}
+            onChange={(e) => setNewDesc(e.target.value)}
+            placeholder="Optional"
+          />
+        </div>
+      </FormDialog>
+
+      <FormDialog
         open={!!editTarget}
         onOpenChange={(v) => {
           if (!v) setEditTarget(null);
@@ -246,7 +263,7 @@ export default function ProjectsPage() {
       >
         <div>
           <label className="text-xs font-mono text-text-muted block mb-1">
-            Name
+            Name <span className="text-error">*</span>
           </label>
           <Input
             value={editName}
