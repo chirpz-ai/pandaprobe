@@ -22,18 +22,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.context import ApiContext, AuthMethod
 from app.infrastructure.auth.adapters import get_auth_adapter
 from app.infrastructure.db.engine import get_db_session
-from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.identity_repo import IdentityRepository
 from app.infrastructure.db.repositories.project_repo import ProjectRepository
 from app.infrastructure.db.repositories.user_repo import UserRepository
-from app.registry.constants import MembershipRole, SubscriptionPlan
-from app.registry.constants import validate_resource_name
+from app.registry.constants import SubscriptionPlan, validate_resource_name
 from app.registry.exceptions import AuthenticationError, ValidationError
 from app.registry.security import hash_api_key
 from app.registry.settings import settings
 from app.services.analytics_service import AnalyticsService
 from app.services.crm_service import CrmService
 from app.services.email_service import EmailService
+from app.services.identity_service import IdentityService
 
 _SESSION_THRESHOLD = timedelta(minutes=30)
 
@@ -153,23 +152,11 @@ async def _resolve_jwt(
     memberships = await identity_repo.list_user_orgs(user.id)
 
     if not memberships:
-        if user.display_name and user.display_name.strip():
-            first_name = user.display_name.strip().split()[0]
-            org_name = f"{first_name}'s Organization"
-        else:
-            org_name = "Personal Organization"
-        org = await identity_repo.create_organization(name=org_name)
-        await identity_repo.create_membership(user_id=user.id, org_id=org.id, role=MembershipRole.OWNER)
-
-        billing_repo = BillingRepository(session)
-        sub = await billing_repo.create_subscription(
-            org_id=org.id,
-            **({"plan": SubscriptionPlan.DEVELOPMENT} if not settings.AUTH_ENABLED else {}),
-        )
-        await billing_repo.create_usage_record(
-            org_id=org.id,
-            period_start=sub.current_period_start,
-            period_end=sub.current_period_end,
+        svc = IdentityService(session)
+        await svc.create_organization(
+            name="My Organization",
+            owner_id=user.id,
+            plan=SubscriptionPlan.DEVELOPMENT if not settings.AUTH_ENABLED else None,
         )
 
         memberships = await identity_repo.list_user_orgs(user.id)
