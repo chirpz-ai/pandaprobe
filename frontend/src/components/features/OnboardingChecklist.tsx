@@ -9,6 +9,7 @@ import {
   ArrowRight,
   BookOpen,
   ExternalLink,
+  FolderPlus,
 } from "lucide-react";
 import { useOnboardingStatus } from "@/hooks/useOnboardingStatus";
 import { DOCS_QUICKSTART_URL } from "@/lib/utils/constants";
@@ -29,41 +30,64 @@ export function OnboardingChecklist() {
 
   const orgBase = `/org/${orgId}`;
   const projectBase = projectId ? `${orgBase}/project/${projectId}` : null;
+  const projectCreated = !!projectId;
+  const projectsSettingsHref = `${orgBase}/settings/projects`;
 
-  const completedCount = [apiKeyCreated, traceIngested].filter(Boolean).length;
+  const baseSteps: Omit<OnboardingStepProps, "index">[] = [];
 
-  const steps: OnboardingStepProps[] = [
-    {
-      index: 1,
-      title: "Create an API key",
-      description:
-        "Your API key authenticates the SDK so it can ship traces to PandaProbe. Store it securely.",
-      icon: <KeyRound className="h-4 w-4" />,
-      done: apiKeyCreated,
-      cta: {
-        label: apiKeyCreated ? "Manage API keys" : "Create API key",
-        href: `${orgBase}/settings/api-keys`,
-      },
+  baseSteps.push({
+    title: "Create an API key",
+    description:
+      "Your API key authenticates the SDK so it can ship traces to PandaProbe. Store it securely.",
+    icon: <KeyRound className="h-4 w-4" />,
+    done: apiKeyCreated,
+    cta: {
+      label: apiKeyCreated ? "Manage API keys" : "Create API key",
+      href: `${orgBase}/settings/api-keys`,
     },
-    {
-      index: 2,
-      title: "Send your first trace",
+  });
+
+  if (!projectCreated) {
+    baseSteps.push({
+      title: "Create a project",
       description:
-        "Install the SDK, wrap your LLM or use agent integrations, and run your application. Your first trace will show up in seconds.",
-      icon: <Rocket className="h-4 w-4" />,
-      done: traceIngested,
+        "Projects isolate your traces, sessions, and evaluations. You'll need at least one before you can send traces.",
+      icon: <FolderPlus className="h-4 w-4" />,
+      done: false,
       cta: {
-        label: traceIngested ? "View traces" : "Open Quickstart",
-        href: traceIngested
+        label: "Create project",
+        href: projectsSettingsHref,
+      },
+    });
+  }
+
+  baseSteps.push({
+    title: "Send your first trace",
+    description:
+      "Install the SDK, wrap your LLM or use agent integrations, and run your application. Your first trace will show up in seconds.",
+    icon: <Rocket className="h-4 w-4" />,
+    done: traceIngested,
+    cta: {
+      label: traceIngested ? "View traces" : "Open Quickstart",
+      href: projectBase
+        ? traceIngested
           ? `${projectBase}/traces`
-          : projectBase
-            ? `${projectBase}/quickstart`
-            : `${orgBase}/quickstart`,
-      },
-      disabled: !apiKeyCreated,
-      disabledReason: "Create an API key first",
+          : `${projectBase}/quickstart`
+        : projectsSettingsHref,
     },
-  ];
+    disabled: !projectCreated || !apiKeyCreated,
+    disabledReason: !projectCreated
+      ? "Create a project first"
+      : "Create an API key first",
+  });
+
+  const steps: OnboardingStepProps[] = baseSteps.map((step, i) => ({
+    ...step,
+    index: i + 1,
+  }));
+
+  const completedCount = baseSteps.filter((s) => s.done).length;
+  const totalCount = baseSteps.length;
 
   return (
     <section
@@ -72,11 +96,11 @@ export function OnboardingChecklist() {
     >
       <header className="flex items-center justify-between gap-4 px-5 py-3 border-b border-border">
         <p className="text-xs font-mono text-text-dim min-w-0">
-          Two short steps to your first trace. We&apos;ll check each one off as
-          you go.
+          A few short steps to your first trace. We&apos;ll check each one off
+          as you go.
         </p>
         <span className="flex-shrink-0 px-2 py-0.5 border border-border bg-surface-hi text-[10px] font-mono uppercase tracking-wider text-text-dim">
-          {completedCount}/2 done
+          {completedCount}/{totalCount} done
         </span>
       </header>
 

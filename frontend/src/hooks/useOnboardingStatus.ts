@@ -8,7 +8,6 @@ import { listAPIKeys } from "@/lib/api/api-keys";
 import { listTraces } from "@/lib/api/traces";
 
 export interface OnboardingStatus {
-  projectCreated: boolean;
   apiKeyCreated: boolean;
   traceIngested: boolean;
   allComplete: boolean;
@@ -39,19 +38,17 @@ export function useOnboardingStatus(): OnboardingStatus {
     staleTime: 60_000,
   });
 
-  const projectCreated = projects.length > 0;
   const apiKeyCreated = (apiKeysQuery.data ?? []).some((k) => k.is_active);
   const traceIngested = (tracesQuery.data?.total ?? 0) > 0;
 
   const isLoading =
     orgLoading ||
     (!!orgId && apiKeysQuery.isPending) ||
-    (projectCreated && tracesQuery.isPending);
+    (!!projectId && tracesQuery.isPending);
 
   const allComplete = apiKeyCreated && traceIngested;
 
   return {
-    projectCreated,
     apiKeyCreated,
     traceIngested,
     allComplete,

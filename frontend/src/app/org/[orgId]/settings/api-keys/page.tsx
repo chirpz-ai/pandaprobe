@@ -512,7 +512,7 @@ function CreateKeyDialog({
           <div className="space-y-3">
             <div>
               <label className="text-xs font-mono text-text-muted block mb-1">
-                Key Name
+                Key Name <span className="text-error">*</span>
               </label>
               <Input
                 value={name}

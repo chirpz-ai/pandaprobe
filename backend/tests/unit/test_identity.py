@@ -67,6 +67,8 @@ async def test_create_organization_allowed_below_limit() -> None:
         return_value=AsyncMock(current_period_start=None, current_period_end=None)
     )
     svc._billing_repo.create_usage_record = AsyncMock()
+    svc._project_repo.create_project = AsyncMock()
 
     result = await svc.create_organization(name="New Org", owner_id=uuid4())
     assert result.name == "New Org"
+    svc._project_repo.create_project.assert_awaited_once()
