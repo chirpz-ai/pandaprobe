@@ -125,7 +125,7 @@ async def create_api_key(
         created_by=ctx.user.id,
         expiration=body.expiration.value,
     )
-    AnalyticsService().api_key_created(user_id=str(ctx.user.id), org_id=str(org_id))
+    AnalyticsService().api_key_created(org_id=str(org_id), user_id=str(ctx.user.id))
     return _key_response(api_key, raw_key=raw_key)
 
 
