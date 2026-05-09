@@ -1,6 +1,6 @@
 [project]
 name = "pandaprobe"
-version = "0.1.0"
+version = "0.3.0"
 description = "Open-source agent tracing and evaluation service"
 readme = "README.md"
 requires-python = ">=3.12"
