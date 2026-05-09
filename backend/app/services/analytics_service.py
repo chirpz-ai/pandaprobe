@@ -14,6 +14,7 @@ so ``capture()`` appends to an in-memory queue and returns in microseconds.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import posthog
@@ -67,23 +68,33 @@ class AnalyticsService:
 
     @staticmethod
     def _capture(
-        distinct_id: str,
-        event: str,
-        properties: dict[str, Any] | None = None,
         *,
-        org_id: str | None = None,
+        org_id: str,
+        event: str,
+        user_id: str | None = None,
+        properties: dict[str, Any] | None = None,
     ) -> None:
         if _client is None:
             return
         try:
-            props = {_PROJECT_NAME_KEY: _PROJECT_NAME, **(properties or {})}
-            groups = {"organization": org_id} if org_id else None
-            _client.capture(distinct_id=distinct_id, event=event, properties=props, groups=groups)
+            props: dict[str, Any] = {
+                _PROJECT_NAME_KEY: _PROJECT_NAME,
+                "org_id": org_id,
+            }
+            if user_id is not None:
+                props["user_id"] = user_id
+            if properties:
+                props.update(properties)
+            _client.capture(
+                distinct_id=f"org:{org_id}",
+                event=event,
+                properties=props,
+            )
         except Exception:
-            logger.exception("posthog_capture_error", event_name=event, distinct_id=distinct_id)
+            logger.exception("posthog_capture_error", event_name=event, org_id=org_id)
 
     @staticmethod
-    def _identify(
+    def _set(
         distinct_id: str,
         properties: dict[str, Any] | None = None,
     ) -> None:
@@ -96,61 +107,98 @@ class AnalyticsService:
             logger.exception("posthog_identify_error", distinct_id=distinct_id)
 
     # ------------------------------------------------------------------
-    # Public API — P0 events
+    # Organization-profile management
     # ------------------------------------------------------------------
 
-    def identify_user(
+    def identify_org(
         self,
         *,
-        user_id: str,
-        email: str,
-        display_name: str | None,
         org_id: str,
+        created_at: datetime,
+        owner_user_id: str,
+        owner_email: str,
+        owner_display_name: str | None,
     ) -> None:
-        """Set person properties on the PostHog user profile."""
+        """Set the org profile.  Call once at org creation."""
         if not self.is_configured():
             return
-        self._identify(user_id, {"email": email, "display_name": display_name, "org_id": org_id})
+        self._set(
+            f"org:{org_id}",
+            {
+                "org_id": org_id,
+                "created_at": created_at.isoformat(),
+                "owner_user_id": owner_user_id,
+                "owner_email": owner_email,
+                "owner_display_name": owner_display_name,
+            },
+        )
+
+    # ------------------------------------------------------------------
+    # Public API — P0 events
+    # ------------------------------------------------------------------
 
     def user_signed_up(
         self,
         *,
+        org_id: str,
         user_id: str,
         email: str,
-        org_id: str,
     ) -> None:
         """Capture a new user registration."""
         if not self.is_configured():
             return
         self._capture(
-            user_id,
-            "user_signed_up",
-            {"email": email, "org_id": org_id},
             org_id=org_id,
+            event="user_signed_up",
+            user_id=user_id,
+            properties={"email": email},
         )
 
     def user_authenticated(
         self,
         *,
-        user_id: str,
         org_id: str,
+        user_id: str,
     ) -> None:
         """Capture a successful authentication event."""
         if not self.is_configured():
             return
         self._capture(
-            user_id,
-            "user_authenticated",
-            {"org_id": org_id},
             org_id=org_id,
+            event="user_authenticated",
+            user_id=user_id,
+        )
+
+    def organization_created(
+        self,
+        *,
+        org_id: str,
+        user_id: str,
+        source: str,
+    ) -> None:
+        """Capture an organization creation event.
+
+        Fires for every org that comes into existence.
+        ``source`` distinguishes the origin:
+
+        - ``"signup"`` — JIT-created during the user's first auth.
+        - ``"api"`` — explicitly created via ``POST /organizations``.
+        """
+        if not self.is_configured():
+            return
+        self._capture(
+            org_id=org_id,
+            event="organization_created",
+            user_id=user_id,
+            properties={"source": source},
         )
 
     def trace_ingested(
         self,
         *,
-        distinct_id: str,
-        project_id: str,
         org_id: str,
+        user_id: str | None,
+        project_id: str,
         has_session: bool,
         span_count: int,
     ) -> None:
@@ -158,31 +206,29 @@ class AnalyticsService:
         if not self.is_configured():
             return
         self._capture(
-            distinct_id,
-            "trace_ingested",
-            {
+            org_id=org_id,
+            event="trace_ingested",
+            user_id=user_id,
+            properties={
                 "project_id": project_id,
-                "org_id": org_id,
                 "has_session": has_session,
                 "span_count": span_count,
             },
-            org_id=org_id,
         )
 
     def api_key_created(
         self,
         *,
-        user_id: str,
         org_id: str,
+        user_id: str,
     ) -> None:
         """Capture an API key creation event."""
         if not self.is_configured():
             return
         self._capture(
-            user_id,
-            "api_key_created",
-            {"org_id": org_id, "user_id": user_id},
             org_id=org_id,
+            event="api_key_created",
+            user_id=user_id,
         )
 
     # ------------------------------------------------------------------
@@ -192,9 +238,9 @@ class AnalyticsService:
     def eval_run_created(
         self,
         *,
-        distinct_id: str,
-        project_id: str,
         org_id: str,
+        user_id: str | None,
+        project_id: str,
         metric_names: list[str],
         target_count: int,
         model: str | None,
@@ -203,24 +249,23 @@ class AnalyticsService:
         if not self.is_configured():
             return
         self._capture(
-            distinct_id,
-            "eval_run_created",
-            {
+            org_id=org_id,
+            event="eval_run_created",
+            user_id=user_id,
+            properties={
                 "project_id": project_id,
-                "org_id": org_id,
                 "metric_names": metric_names,
                 "target_count": target_count,
                 "model": model,
             },
-            org_id=org_id,
         )
 
     def session_eval_run_created(
         self,
         *,
-        distinct_id: str,
-        project_id: str,
         org_id: str,
+        user_id: str | None,
+        project_id: str,
         metric_names: list[str],
         session_count: int,
         model: str | None,
@@ -229,24 +274,23 @@ class AnalyticsService:
         if not self.is_configured():
             return
         self._capture(
-            distinct_id,
-            "session_eval_run_created",
-            {
+            org_id=org_id,
+            event="session_eval_run_created",
+            user_id=user_id,
+            properties={
                 "project_id": project_id,
-                "org_id": org_id,
                 "metric_names": metric_names,
                 "session_count": session_count,
                 "model": model,
             },
-            org_id=org_id,
         )
 
     def eval_monitor_created(
         self,
         *,
-        distinct_id: str,
-        project_id: str,
         org_id: str,
+        user_id: str | None,
+        project_id: str,
         target_type: str,
         cadence: str,
         metric_names: list[str],
@@ -255,14 +299,13 @@ class AnalyticsService:
         if not self.is_configured():
             return
         self._capture(
-            distinct_id,
-            "eval_monitor_created",
-            {
+            org_id=org_id,
+            event="eval_monitor_created",
+            user_id=user_id,
+            properties={
                 "project_id": project_id,
-                "org_id": org_id,
                 "target_type": target_type,
                 "cadence": cadence,
                 "metric_names": metric_names,
             },
-            org_id=org_id,
         )
