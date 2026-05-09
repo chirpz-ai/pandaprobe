@@ -18,6 +18,7 @@ from app.api.rate_limit import limiter
 from app.infrastructure.db.engine import get_db_session
 from app.registry.constants import InvitationStatus, MembershipRole
 from app.registry.exceptions import AuthenticationError
+from app.services.analytics_service import AnalyticsService
 from app.services.identity_service import IdentityService
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -118,6 +119,21 @@ async def create_organization(
     _require_user(ctx)
     svc = IdentityService(session)
     org = await svc.create_organization(name=body.name, owner_id=ctx.user.id)
+
+    analytics = AnalyticsService()
+    analytics.organization_created(
+        org_id=str(org.id),
+        user_id=str(ctx.user.id),
+        source="api",
+    )
+    analytics.identify_org(
+        org_id=str(org.id),
+        created_at=org.created_at,
+        owner_user_id=str(ctx.user.id),
+        owner_email=ctx.user.email,
+        owner_display_name=ctx.user.display_name,
+    )
+
     return OrganizationResponse(id=org.id, name=org.name, created_at=org.created_at.isoformat())
 
 
