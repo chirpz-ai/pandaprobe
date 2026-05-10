@@ -151,6 +151,7 @@ async def _resolve_jwt(
 
     memberships = await identity_repo.list_user_orgs(user.id)
 
+    org_jit_created = False
     if not memberships:
         svc = IdentityService(session)
         await svc.create_organization(
@@ -160,6 +161,7 @@ async def _resolve_jwt(
         )
 
         memberships = await identity_repo.list_user_orgs(user.id)
+        org_jit_created = True
 
     is_new_user = user_created
 
@@ -214,23 +216,31 @@ async def _resolve_jwt(
             sync_new_user_to_crm.delay(user.email)
 
         analytics.user_signed_up(
+            org_id=str(organization.id),
             user_id=str(user.id),
             email=user.email,
-            org_id=str(organization.id),
         )
 
-    analytics.identify_user(
-        user_id=str(user.id),
-        email=user.email,
-        display_name=user.display_name,
-        org_id=str(organization.id),
-    )
+    if org_jit_created:
+        analytics.organization_created(
+            org_id=str(organization.id),
+            user_id=str(user.id),
+            source="signup",
+        )
+
+        analytics.identify_org(
+            org_id=str(organization.id),
+            created_at=organization.created_at,
+            owner_user_id=str(user.id),
+            owner_email=user.email,
+            owner_display_name=user.display_name,
+        )
 
     now = datetime.now(timezone.utc)
     if prev_sign_in is None or (now - prev_sign_in) > _SESSION_THRESHOLD:
         analytics.user_authenticated(
-            user_id=str(user.id),
             org_id=str(organization.id),
+            user_id=str(user.id),
         )
 
     return ApiContext(

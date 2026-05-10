@@ -502,11 +502,10 @@ async def create_eval_run(
         await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
         raise
 
-    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
     AnalyticsService().eval_run_created(
-        distinct_id=distinct_id,
-        project_id=str(ctx.project.id),
         org_id=str(ctx.organization.id),
+        user_id=str(ctx.user.id) if ctx.user else None,
+        project_id=str(ctx.project.id),
         metric_names=body.metrics,
         target_count=prepared.run.total_targets,
         model=body.model,
@@ -551,11 +550,10 @@ async def create_batch_eval_run(
         await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.TRACE_EVALS, count=billable)
         raise
 
-    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
     AnalyticsService().eval_run_created(
-        distinct_id=distinct_id,
-        project_id=str(ctx.project.id),
         org_id=str(ctx.organization.id),
+        user_id=str(ctx.user.id) if ctx.user else None,
+        project_id=str(ctx.project.id),
         metric_names=body.metrics,
         target_count=prepared.run.total_targets,
         model=body.model,
@@ -1035,11 +1033,10 @@ async def create_session_eval_run(
         await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
         raise
 
-    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
     AnalyticsService().session_eval_run_created(
-        distinct_id=distinct_id,
-        project_id=str(ctx.project.id),
         org_id=str(ctx.organization.id),
+        user_id=str(ctx.user.id) if ctx.user else None,
+        project_id=str(ctx.project.id),
         metric_names=body.metrics,
         session_count=prepared.run.total_targets,
         model=body.model,
@@ -1081,11 +1078,10 @@ async def create_batch_session_eval_run(
         await usage_svc.rollback_increment(ctx.organization.id, UsageCategory.SESSION_EVALS, count=billable)
         raise
 
-    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
     AnalyticsService().session_eval_run_created(
-        distinct_id=distinct_id,
-        project_id=str(ctx.project.id),
         org_id=str(ctx.organization.id),
+        user_id=str(ctx.user.id) if ctx.user else None,
+        project_id=str(ctx.project.id),
         metric_names=body.metrics,
         session_count=prepared.run.total_targets,
         model=body.model,
@@ -1598,11 +1594,10 @@ async def create_monitor(
         signal_weights=body.signal_weights,
     )
 
-    distinct_id = str(ctx.user.id) if ctx.user else f"org:{ctx.organization.id}"
     AnalyticsService().eval_monitor_created(
-        distinct_id=distinct_id,
-        project_id=str(ctx.project.id),
         org_id=str(ctx.organization.id),
+        user_id=str(ctx.user.id) if ctx.user else None,
+        project_id=str(ctx.project.id),
         target_type=body.target_type,
         cadence=body.cadence,
         metric_names=body.metrics,
