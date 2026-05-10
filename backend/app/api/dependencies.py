@@ -151,6 +151,7 @@ async def _resolve_jwt(
 
     memberships = await identity_repo.list_user_orgs(user.id)
 
+    org_jit_created = False
     if not memberships:
         svc = IdentityService(session)
         await svc.create_organization(
@@ -160,6 +161,7 @@ async def _resolve_jwt(
         )
 
         memberships = await identity_repo.list_user_orgs(user.id)
+        org_jit_created = True
 
     is_new_user = user_created
 
@@ -219,6 +221,7 @@ async def _resolve_jwt(
             email=user.email,
         )
 
+    if org_jit_created:
         analytics.organization_created(
             org_id=str(organization.id),
             user_id=str(user.id),
