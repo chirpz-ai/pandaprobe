@@ -35,7 +35,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.8.0"]
+dev = ["ruff>=0.15.12"]
 test = [
     "httpx>=0.28.0",
     "nest-asyncio>=1.6.0",
