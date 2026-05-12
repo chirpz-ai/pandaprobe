@@ -87,9 +87,7 @@ export function FormDialog({
               {description}
             </Dialog.Description>
           ) : (
-            <Dialog.Description className="sr-only">
-              {title}
-            </Dialog.Description>
+            <Dialog.Description className="sr-only">{title}</Dialog.Description>
           )}
           <div className="space-y-4">
             {children}
