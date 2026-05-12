@@ -58,9 +58,13 @@ export function Dialog({
               </RadixDialog.Close>
             )}
           </div>
-          {description && (
+          {description ? (
             <RadixDialog.Description className="text-xs text-text-dim mb-4">
               {description}
+            </RadixDialog.Description>
+          ) : (
+            <RadixDialog.Description className="sr-only">
+              {title}
             </RadixDialog.Description>
           )}
           {children}
