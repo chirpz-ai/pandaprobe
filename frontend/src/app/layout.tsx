@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "PandaProbe",
   description:
     "Open-source agent engineering platform — tracing, evaluation, and monitoring for agents.",
+  other: {
+    google: "notranslate",
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -35,10 +38,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      translate="no"
       data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} dark h-full`}
     >
-      <body className="min-h-full bg-bg text-text font-mono antialiased">
+      <body className="notranslate min-h-full bg-bg text-text font-mono antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>
