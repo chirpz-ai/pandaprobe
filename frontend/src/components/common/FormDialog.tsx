@@ -82,10 +82,12 @@ export function FormDialog({
               <X className="h-4 w-4" />
             </Dialog.Close>
           </div>
-          {description && (
+          {description ? (
             <Dialog.Description className="text-xs text-text-dim mb-4">
               {description}
             </Dialog.Description>
+          ) : (
+            <Dialog.Description className="sr-only">{title}</Dialog.Description>
           )}
           <div className="space-y-4">
             {children}
