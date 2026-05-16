@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "linden",
+  "theme": "mint",
   "name": "PandaProbe",
   "logo": {
     "light": "/assets/logo/light.png",
@@ -72,8 +72,8 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
-        "icon": "book",
+        "tab": "Observability",
+        "icon": "route",
         "groups": [
           {
             "group": "Get Started",
@@ -135,38 +135,45 @@
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        "tab": "Evaluation",
+        "icon": "drafting-compass",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "evaluation/get-started/quickstart",
+              "evaluation/get-started/concepts",
+              "evaluation/get-started/evaluation-approaches"
+            ]
           },
           {
-            "group": "Evaluation",
+            "group": "Trace Evaluation",
+            "icon": "route",
             "pages": [
-              "evaluation/overview",
-              "evaluation/concepts",
-              {
-                "group": "Trace Evaluation",
-                "icon": "drafting-compass",
-                "pages": [
-                  "evaluation/trace-evaluation/introduction",
-                  "evaluation/trace-evaluation/metrics"
-                ]
-              },
-              {
-                "group": "Agent Evaluation",
-                "icon": "bot",
-                "pages": [
-                  "evaluation/agent-evaluation/introduction",
-                  "evaluation/agent-evaluation/metrics"
-                ]
-              },
-              {
-                "group": "Set Up Evaluation",
-                "icon": "cog",
-                "pages": [
-                  "evaluation/setup/introduction",
-                  "evaluation/setup/run-eval-ui",
-                  "evaluation/setup/run-eval-api",
-                  "evaluation/setup/scheduling"
-                ]
-              }
+              "evaluation/trace-evaluation/introduction",
+              "evaluation/trace-evaluation/metrics"
+            ]
+          },
+          {
+            "group": "Agent Evaluation",
+            "icon": "bot",
+            "pages": [
+              "evaluation/agent-evaluation/introduction",
+              "evaluation/agent-evaluation/metrics"
+            ]
+          },
+          {
+            "group": "Set Up Evaluation",
+            "icon": "cog",
+            "pages": [
+              "evaluation/setup/introduction",
+              "evaluation/setup/run-eval-ui",
+              "evaluation/setup/run-eval-api",
+              "evaluation/setup/scheduling"
             ]
           }
         ]
@@ -299,6 +306,16 @@
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/evaluation/overview",
+      "destination": "/evaluation/get-started/evaluation-approaches"
+    },
+    {
+      "source": "/evaluation/concepts",
+      "destination": "/evaluation/get-started/concepts"
+    }
+  ],
   "seo": {
     "metatags": {
       "canonical": "https://docs.pandaprobe.com",
