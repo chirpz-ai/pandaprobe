@@ -1,0 +1,77 @@
+---
+title: "Core service"
+description: "Release notes for the PandaProbe Core service"
+icon: "server"
+rss: true
+---
+
+Release history for the **PandaProbe Core Platform**.
+
+Current version: `v0.3.1`
+
+<Update label="v0.3.1" description="2026-05-12" tags={["Bug fix"]}>
+  - Fixed a translation-layer bug that could crash pages on load. Translations are now blocked by default to prevent the regression.
+  - Cleared a Radix Dialog warning that was surfacing in the browser console.
+  - Internal: added repo conventions (`CLAUDE.md`) and a formatting pass.
+</Update>
+
+<Update label="v0.3.0" description="2026-05-09" tags={["Analytics"]}>
+  ### Org-scoped analytics
+
+  - Refactored the analytics service and the PostHog event taxonomy to be **org-scoped** instead of routing-scoped. Signup, API, eval-run, and trace events now all carry a consistent org identifier, making PostHog dashboards and funnels significantly cleaner.
+  - Added new events for org creation.
+  - Internal: tests updated for the new analytics shape; minor edge-case fix.
+</Update>
+
+<Update label="v0.2.0" description="2026-05-07" tags={["Onboarding"]}>
+  ### Project creation & onboarding UX
+
+  - Project creation moved to a **dialog-based flow** (matches the new API key creation UX in v0.1.9).
+  - Org creation now **auto-provisions an onboarding project**, so new orgs land in a usable state immediately.
+  - Removed the org-level quickstart page (now redundant with the onboarding flow).
+  - Updated the invitation email template.
+  - Onboarding checklist refinements.
+  - Internal: services migrated to use the `svc` layer instead of routing through repos directly, for consistency with the rest of the architecture.
+</Update>
+
+<Update label="v0.1.9" description="2026-05-06" tags={["Dashboard"]}>
+  ### API keys & dashboard polish
+
+  - New **dialog-based API key creation** flow with inline key display for the rotation feature.
+  - Added a shared `Dialog` component for reuse across the app.
+  - Dashboard formatting and theme polish; assorted bug fixes.
+  - Updated onboarding sample prompt.
+</Update>
+
+<Update label="v0.1.8" description="2026-05-04" tags={["Bug fix"]}>
+  - Fixed a **Celery broker liveness probe** issue that was causing intermittent worker restarts.
+  - Added an explainer video to the onboarding experience.
+</Update>
+
+<Update label="v0.1.7" description="2026-04-30" tags={["Onboarding"]}>
+  ### Onboarding & privacy
+
+  - Added an **org-level quickstart page** alongside the project-level quickstart.
+  - Onboarding status tracking; simplified onboarding checklist.
+  - **Email and ID masking** in PostHog events for privacy.
+  - Navigation polish: "back to home" button moved to the top, plus new CTA buttons and doc links.
+  - Surfaced LLM client key exports in the quickstart.
+  - Frontend formatting & test fixes; dead-link cleanup.
+</Update>
+
+<Update label="v0.1.6" description="2026-04-27" tags={["Docs"]}>
+  ### Documentation revamp
+
+  - Comprehensive documentation overhaul: quickstart, installation, welcome page, integrations overview, OpenAI / Anthropic / Google wrappers, LangGraph / CrewAI / Google ADK / Claude Agent SDK / OpenAI Agents SDK integration pages, eval intro / concepts / setup, session and user pages.
+  - New logo and updated header.
+  - Stripe **promotion code** support enabled at checkout.
+  - Fixed the `user_authenticated` PostHog event.
+</Update>
+
+<Update label="v0.1.5" description="2026-04-26 — Public launch">
+  ### Public launch of the PandaProbe core service
+
+  PandaProbe is officially launched with the `v0.1.5` core OSS service release.
+
+  This release establishes the first public launch version of the PandaProbe platform, including tracing, evaluation, monitoring, and API-backed workflows for agent observability.
+</Update>
