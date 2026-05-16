@@ -293,7 +293,8 @@
         "tab": "Changelog",
         "icon": "history",
         "pages": [
-          "changelog/index"
+          "changelog/python-sdk",
+          "changelog/core-service"
         ]
       }
     ]
