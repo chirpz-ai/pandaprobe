@@ -1,0 +1,149 @@
+---
+title: "Concepts"
+description: "Core concepts behind PandaProbe's evaluation framework: runs, metrics, scores, signals, and monitors."
+icon: "shapes"
+---
+
+This page explains the core building blocks of PandaProbe evaluation and how they fit together.
+
+At a high level:
+
+1. An **eval run** selects traces or sessions to evaluate.
+2. One or more **metrics** run against each selected item.
+3. Each metric produces a **score** with a value, reason, and metadata.
+4. Optional **monitors** repeat eval runs on a schedule.
+
+## Eval runs
+
+An **eval run** is a batch job that applies one or more metrics to a target set of traces or sessions.
+
+Every eval run has:
+
+- A **target type**: `TRACE` or `SESSION`
+- A list of **metrics** to run
+- Optional **filters** that choose which traces or sessions are included
+- Optional **sampling** to evaluate a fraction of matching data
+
+When you create an eval run, PandaProbe:
+
+1. Resolves the target data (traces or sessions) based on your filters
+2. Optionally samples a fraction of the matches
+3. Dispatches the work to a background worker
+4. Returns immediately with status `PENDING`
+
+The API responds with `202 Accepted`; the metric computation happens asynchronously. You can poll the run status or review results in the dashboard.
+
+An eval run has a lifecycle:
+
+| Status | Meaning |
+|---|---|
+| `PENDING` | Created, waiting for a worker to pick it up |
+| `RUNNING` | Worker is actively evaluating traces/sessions |
+| `COMPLETED` | All metrics finished (some individual scores may have failed) |
+| `FAILED` | The run itself encountered a fatal error |
+
+Each run tracks progress fields such as `evaluated_count` and `failed_count` so you can monitor completion and failures.
+
+## Metrics
+
+A **metric** is a reusable evaluation function that scores one trace or one session. PandaProbe ships with 11 built-in metrics across two categories.
+
+### Trace-level metrics
+
+Trace metrics evaluate an individual trace: the spans, inputs, outputs, tool calls, model calls, and metadata captured during one agent operation.
+
+Most trace metrics use an **LLM-as-judge** approach. The metric extracts relevant information from the trace, asks an LLM to judge a specific quality dimension, and parses the structured response into a score.
+
+Some trace metrics use embedding or similarity analysis instead:
+
+- **Coherence** measures input-output alignment using embeddings.
+- **Loop detection** compares traces in the same session to detect repeated behavior.
+
+<Note>
+  Most trace metrics can run on a single trace by itself. `loop_detection` needs session context because it compares the current trace with previous traces in the same session.
+</Note>
+
+### Session-level metrics
+
+Session metrics evaluate an entire agent lifecycle. Instead of judging one trace, they aggregate signals from the traces in a session to answer broader questions about agent reliability and consistency.
+
+Session-level aggregation is deterministic. PandaProbe first computes trace-level signals, then combines them mathematically into session scores.
+
+The two session metrics, `agent_reliability` and `agent_consistency`, use four trace-level signals:
+
+| Signal | Weight | Source metric |
+|---|---|---|
+| `confidence` | 1.0 | `confidence` metric |
+| `loop_detection` | 1.0 | `loop_detection` metric |
+| `tool_correctness` | 0.8 | `tool_correctness` metric |
+| `coherence` | 1.0 | `coherence` metric |
+
+Signal weights are configurable per eval run and can be overridden via the API.
+
+## Scores
+
+A **score** is the stored result of running one metric against one trace or session.
+
+Scores are what you inspect in the dashboard, query through the API, trend over time, and use for monitoring. Every score contains:
+
+| Field | Description |
+|---|---|
+| `name` | The metric that produced it (e.g., `task_completion`) |
+| `value` | The score value as a string (e.g., `"0.85"`) |
+| `data_type` | `NUMERIC` (0–1 float), `BOOLEAN` (`true`/`false`), or `CATEGORICAL` |
+| `source` | `AUTOMATED` (from eval run), `ANNOTATION` (human), or `PROGRAMMATIC` (SDK) |
+| `status` | `SUCCESS`, `FAILED`, or `PENDING` |
+| `reason` | LLM-generated explanation of the score |
+| `metadata` | Rich structured data (threshold, intermediate results, signal breakdowns) |
+| `eval_run_id` | Links back to the originating eval run (null for manual scores) |
+
+### Score sources
+
+Scores can originate from three places:
+
+- **Automated** — produced by an eval run
+- **Annotation** — created or edited by a human in the dashboard
+- **Programmatic** — submitted via the SDK or API (e.g., from a CI pipeline)
+
+## Thresholds
+
+Each metric has a **default threshold** that defines what counts as passing. A score at or above the threshold is considered successful.
+
+Thresholds can be overridden per eval run. This lets you change your quality bar without changing the metric itself.
+
+<Info>
+  The threshold does not change the score value. It only changes the pass/fail interpretation stored in score metadata.
+</Info>
+
+## Signals
+
+A **signal** is a trace-level score that can be reused as input for session-level evaluation.
+
+For example, session evaluation uses `confidence`, `loop_detection`, `tool_correctness`, and `coherence` as signals. These signals are computed for each trace in the session, then aggregated into `agent_reliability` and `agent_consistency`.
+
+This two-step model keeps session evaluation explainable: a low session score can be traced back to the specific traces and signals that caused it.
+
+## Monitors
+
+A **monitor** is a saved evaluation configuration that runs on a recurring schedule. It combines:
+
+- **Target type** — `TRACE` or `SESSION`
+- **Metrics** — which metrics to run
+- **Filters** — which data to evaluate
+- **Cadence** — how often to run (`every_6h`, `daily`, `weekly`, or custom cron)
+- **Sampling rate** — fraction of matching data to evaluate
+- **`only_if_changed`** — skip the run if no new data has arrived since the last run
+
+Monitors have their own lifecycle (`ACTIVE`, `PAUSED`) and can be triggered manually outside their normal schedule.
+
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Trace Evaluation" icon="route" href="/evaluation/trace-evaluation/introduction">
+    Dive into how trace-level metrics work.
+  </Card>
+  <Card title="Agent Evaluation" icon="bot" href="/evaluation/agent-evaluation/introduction">
+    Learn about session-level aggregation metrics.
+  </Card>
+</CardGroup>
