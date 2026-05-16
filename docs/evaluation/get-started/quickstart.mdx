@@ -1,0 +1,76 @@
+---
+title: "Quickstart"
+description: "Run your first evaluation against captured traces or sessions in under 2 minutes"
+icon: "rocket"
+---
+
+<Note>
+  Before you begin, make sure you have:
+
+  - A PandaProbe account. Sign up at [app.pandaprobe.com](https://app.pandaprobe.com).
+  - At least one **trace** captured in your project. If you haven't set up tracing yet, follow the [Observability Quickstart](/get-started/quickstart) first.
+  - For agent (session) evaluation: traces grouped under the same `session_id`.
+</Note>
+
+<Info>
+  PandaProbe Cloud manages the evaluation LLM infrastructure for you. You do not need to bring your own LLM API key to run evaluations in PandaProbe Cloud.
+</Info>
+
+## Run your first evaluation
+
+The fastest way to evaluate is directly from the dashboard. You pick a trace (or session), choose a metric, and PandaProbe runs the evaluation in the background.
+
+<Steps>
+  <Step title="Open the Traces tab">
+    In the PandaProbe dashboard, open the **Traces** tab. You should see the traces that were captured by the SDK.
+  </Step>
+  <Step title="Select traces to evaluate">
+    Pick one or more traces, then click **Evaluate**. You can also open a single trace and click **Evaluate** from the detail view.
+  </Step>
+  <Step title="Choose a metric">
+    Start with `task_completion` — a 2-stage LLM-as-judge metric that scores whether the agent accomplished the user's objective.
+
+    <Tip>
+      You can run multiple metrics in the same eval run. Each one produces an independent score attached to the trace.
+    </Tip>
+  </Step>
+  <Step title="Submit the run">
+    Click **Submit**. PandaProbe creates an eval run with status `PENDING` and dispatches the work to a background worker. The API responds with `202 Accepted`.
+  </Step>
+  <Step title="Review the score">
+    Open the trace once the run completes. You should see a score with a numeric value, a pass/fail status, a human-readable reason, and structured metadata explaining how the score was produced.
+  </Step>
+</Steps>
+
+## Try session evaluation
+
+If you have traces grouped under a `session_id`, you can evaluate the entire agent lifecycle:
+
+<Steps>
+  <Step title="Open the Sessions tab">
+    Open **Sessions** to view grouped agent lifecycles.
+  </Step>
+  <Step title="Select a session and click Evaluate">
+    Choose one or more sessions and click **Evaluate**.
+  </Step>
+  <Step title="Pick a session metric">
+    Start with `agent_reliability` — it surfaces worst-case failure risk across the session by aggregating trace-level signals (`confidence`, `coherence`, `tool_correctness`, `loop_detection`).
+  </Step>
+  <Step title="Submit and review">
+    Submit the run. When it completes, the session detail page shows the aggregated score along with the trace-level signals that produced it.
+  </Step>
+</Steps>
+
+## What's next?
+
+<CardGroup cols={3}>
+  <Card title="Core Concepts" icon="shapes" href="/evaluation/get-started/concepts">
+    Learn how eval runs, metrics, scores, signals, and monitors fit together.
+  </Card>
+  <Card title="Evaluation Approaches" icon="lightbulb" href="/evaluation/get-started/evaluation-approaches">
+    Understand when to use trace vs. agent (session) evaluation.
+  </Card>
+  <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+    Create eval runs programmatically from CI, notebooks, or internal tools.
+  </Card>
+</CardGroup>

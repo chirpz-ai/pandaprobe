@@ -11,6 +11,8 @@ Use the table below to choose the right package extra, then open the integration
 | Integration | Install Extra | Class | Mechanism |
 | --- | --- | --- | --- |
 | LangGraph | `"pandaprobe[langgraph]"` | `LangGraphCallbackHandler` | LangChain callback handler |
+| LangChain | `"pandaprobe[langchain]"` | `LangChainCallbackHandler` | LangChain callback handler |
+| DeepAgents | `"pandaprobe[deepagents]"` | `DeepAgentsCallbackHandler` | LangChain callback handler |
 | Google ADK | `"pandaprobe[google-adk]"` | `GoogleADKAdapter` | `wrapt` monkey-patching |
 | Claude Agent SDK | `"pandaprobe[claude-agent-sdk]"` | `ClaudeAgentSDKAdapter` | `wrapt` monkey-patching + hook injection |
 | CrewAI | `"pandaprobe[crewai]"` | `CrewAIAdapter` | `wrapt` monkey-patching |
@@ -29,7 +31,13 @@ Use the table below to choose the right package extra, then open the integration
 
 <CardGroup cols={2}>
   <Card title="LangGraph" icon="/assets/providers/langgraph.svg" href="/tracing/integrations/langgraph">
-    Callback handler for LangGraph / LangChain
+    Callback handler for LangGraph graphs and ReAct agents
+  </Card>
+  <Card title="LangChain" icon="/assets/providers/langchain.svg" href="/tracing/integrations/langchain">
+    Callback handler for `create_agent` and LCEL pipelines
+  </Card>
+  <Card title="DeepAgents" icon="/assets/providers/deepagents.svg" href="/tracing/integrations/deepagents">
+    Callback handler for deep agents with sub-agent dispatch
   </Card>
   <Card title="Google ADK" icon="/assets/providers/adk.svg" href="/tracing/integrations/google-adk">
     Monkey-patch instrumentation for ADK runners and tools

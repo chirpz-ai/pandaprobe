@@ -1,0 +1,154 @@
+---
+title: "LangChain"
+description: "Trace LangChain agent (create_agent) and LCEL pipelines with automatic span capture"
+icon: "/assets/providers/langchain.svg"
+---
+
+### Installation
+
+<Tabs>
+  <Tab title="pip">
+    ```bash
+    pip install "pandaprobe[langchain]"
+    ```
+  </Tab>
+  <Tab title="uv">
+    ```bash
+    uv add "pandaprobe[langchain]"
+    ```
+  </Tab>
+</Tabs>
+
+### Setup
+
+```python
+from pandaprobe.integrations.langchain import LangChainCallbackHandler
+
+handler = LangChainCallbackHandler(
+    session_id="conversation-123",
+    user_id="user-abc",
+    tags=["production"],
+)
+```
+
+<Tip>
+  We recommend using UUIDs for `session_id` and `user_id` so traces can be grouped reliably across runs.
+</Tip>
+
+### Usage
+
+The handler works with both `langchain.agents.create_agent` and plain LCEL pipelines (`prompt | model | parser`). Pass it via LangChain's `config["callbacks"]`:
+
+```python
+from langchain.agents import create_agent
+
+agent = create_agent(
+    model="openai:gpt-5.4-nano",
+    tools=[...],
+)
+
+result = agent.invoke(
+    {"messages": [{"role": "user", "content": "Hello!"}]},
+    config={"callbacks": [handler]},
+)
+```
+
+<Warning>
+  The handler must be passed in `config["callbacks"]` for each invocation. There is no global `instrument()` step.
+</Warning>
+
+### What gets traced
+
+| LangChain Callback | Span Kind | Description |
+| --- | --- | --- |
+| `on_chain_start` / `on_chain_end` | `CHAIN` (root) or `AGENT` (nested) | Root chain creates the trace boundary |
+| `on_llm_start` / `on_chat_model_start` / `on_llm_end` | `LLM` | Model, parameters, token usage, reasoning |
+| `on_tool_start` / `on_tool_end` | `TOOL` | Tool name, input, output |
+| `on_retriever_start` / `on_retriever_end` | `RETRIEVER` | Retrieval queries and results |
+
+### Trace name remapping
+
+`create_agent` compiles to a LangGraph graph internally, so its root run reports `name="LangGraph"`. LCEL pipelines report `name="RunnableSequence"`. The handler rewrites both to `"LangChain"` so the trace is named consistently — custom user-given chain names are preserved.
+
+### Token usage
+
+Token usage is extracted from LangChain's `usage_metadata` (primary) or legacy `llm_output.token_usage` (fallback). The mapping is: `input_tokens` → `prompt_tokens`, `output_tokens` → `completion_tokens`. Reasoning tokens are subtracted from `output_tokens` when present.
+
+### Example with tools
+
+This example builds a LangChain agent via `create_agent` with one tool and traces it via `LangChainCallbackHandler`:
+
+```python
+from langchain.agents import create_agent
+from langchain.tools import tool
+
+import pandaprobe
+from pandaprobe.integrations.langchain import LangChainCallbackHandler
+
+
+@tool
+def get_weather(city: str) -> str:
+    """Get the current weather for a given city."""
+    weather_data = {
+        "london": "Cloudy, 15°C, 70% humidity",
+        "tokyo": "Sunny, 28°C, 45% humidity",
+        "new york": "Partly cloudy, 22°C, 55% humidity",
+        "paris": "Rainy, 12°C, 85% humidity",
+    }
+    return weather_data.get(city.lower(), f"Weather data not available for {city}")
+
+
+@tool
+def get_population(city: str) -> str:
+    """Get the approximate population of a city."""
+    populations = {
+        "london": "8.8 million",
+        "tokyo": "13.9 million",
+        "new york": "8.3 million",
+        "paris": "2.2 million",
+    }
+    return populations.get(city.lower(), f"Population data not available for {city}")
+
+
+agent = create_agent(
+    model="openai:gpt-5.4-nano",
+    tools=[get_weather, get_population],
+    system_prompt="You are a helpful assistant with access to weather and population tools.",
+)
+
+handler = LangChainCallbackHandler(tags=["tool-agent", "example"])
+
+result = agent.invoke(
+    {"messages": [{"role": "user", "content": "What's the weather like in London and what's its population?"}]},
+    config={"callbacks": [handler]},
+)
+
+final_message = result["messages"][-1]
+print(f"Agent: {final_message.content}")
+
+pandaprobe.flush()
+pandaprobe.shutdown()
+```
+
+This produces a trace with: `CHAIN` (root, named "LangChain") → `AGENT` (`tools` node) → `LLM` (model call) → `TOOL` (`get_weather`) → `TOOL` (`get_population`) → `LLM` (final response).
+
+### LCEL pipelines
+
+The handler also works for plain LCEL chains. The trace is named "LangChain" by default (the underlying `RunnableSequence` name is rewritten) so LCEL runs are labeled consistently with agent runs.
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+
+from pandaprobe.integrations.langchain import LangChainCallbackHandler
+
+prompt = ChatPromptTemplate.from_template("Tell me a joke about {topic}")
+llm = ChatOpenAI(model="gpt-5.4-nano")
+chain = prompt | llm
+
+handler = LangChainCallbackHandler()
+result = chain.invoke(
+    {"topic": "pandas"},
+    config={"callbacks": [handler]},
+)
+```

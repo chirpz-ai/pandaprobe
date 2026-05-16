@@ -1,0 +1,120 @@
+---
+title: "Evaluation Approaches"
+description: "Choose between trace-level and agent (session-level) evaluation for measuring the quality of your AI agents."
+icon: "lightbulb"
+---
+
+PandaProbe evaluation answers two fundamentally different questions about your agents. **Trace evaluation** scores a single interaction. **Agent evaluation** scores an entire session — a full agent lifecycle made up of many traces.
+
+Both approaches use the same underlying eval-run mechanism (filters, metrics, scores, monitors), but the unit they evaluate and the questions they answer are different.
+
+## Two levels of evaluation
+
+<CardGroup cols={2}>
+  <Card title="Trace Evaluation" icon="route" href="/evaluation/trace-evaluation/introduction">
+    **"How well did the agent handle this single request?"**
+
+    Scores individual traces for task completion, tool use, arguments, planning, coherence, loops, and related quality signals.
+  </Card>
+  <Card title="Agent Evaluation" icon="bot" href="/evaluation/agent-evaluation/introduction">
+    **"How reliable is this agent across an entire session?"**
+
+    Scores sessions by aggregating trace-level signals across the full agent lifecycle, capturing reliability, consistency, and worst-case failures.
+  </Card>
+</CardGroup>
+
+<Tip>
+  Start with trace evaluation when you need to debug specific failures. Use session evaluation when you need to understand how an agent behaves across a complete conversation, workflow, or task.
+</Tip>
+
+## Trace evaluation
+
+A **trace** is one agent execution: a single request with all of its spans, model calls, tool calls, inputs, and outputs. Trace evaluation scores that one execution.
+
+Use trace evaluation when you want to inspect or regress-test individual interactions:
+
+- Did this request succeed?
+- Did the agent call the right tools?
+- Were the tool arguments correct?
+- Did the output follow from the input?
+
+### Trace-level metrics
+
+| Metric | Method | What it measures |
+|---|---|---|
+| `task_completion` | LLM judge (2-stage) | Did the agent accomplish the user's objective? |
+| `tool_correctness` | LLM judge (2-stage) | Did the agent select the right tools? |
+| `argument_correctness` | LLM judge (3-stage) | Were tool call arguments correct? |
+| `step_efficiency` | LLM judge (2-stage) | Did the agent execute with minimal unnecessary steps? |
+| `confidence` | LLM judge (1-stage) | Were the agent's actions decisive and well-founded? |
+| `plan_adherence` | LLM judge (3-stage) | Did the agent follow its declared plan? |
+| `plan_quality` | LLM judge (3-stage) | Is the agent's plan complete and well-structured? |
+| `coherence` | Embedding distance | Does the output logically follow from the input? |
+| `loop_detection` | Hybrid similarity | Is the agent stuck repeating itself across traces? |
+
+Most trace metrics use **LLM-as-judge**: they extract clean inputs from the trace, ask a judge LLM for a structured verdict, then store the score with a reason and metadata. A couple of metrics (`coherence`, `loop_detection`) use deterministic embedding or similarity analysis instead.
+
+## Agent (session) evaluation
+
+A **session** is the unit for an agent lifecycle — an entire conversation, a multi-step workflow, a support ticket, or an autonomous job. Sessions are groups of traces that share the same `session_id`.
+
+Agent evaluation is **session-level** evaluation. Instead of judging one trace, it aggregates signals from all traces in the session to answer broader questions:
+
+- Did the agent stay reliable across the whole task?
+- Did quality degrade over a conversation?
+- Did retries, loops, or inefficient steps affect the final outcome?
+- Which sessions need review first?
+
+These patterns are invisible at the trace level — they only appear when you look at the **distribution** of signals across the entire session.
+
+### Session-level metrics
+
+| Metric | Method | What it measures |
+|---|---|---|
+| `agent_reliability` | Max-compose + top-k tail risk | Worst-case failure risk across the session |
+| `agent_consistency` | Weighted RMS aggregation | Overall stability and smooth operation |
+
+Session aggregation is **deterministic**: PandaProbe first computes trace-level signals (`confidence`, `coherence`, `tool_correctness`, `loop_detection`) for each trace, then combines them mathematically into the session score. No additional LLM calls are needed at aggregation time.
+
+This two-step design makes session evaluation explainable: a low session score can be traced back to the specific traces and signals that caused it.
+
+## How it works end-to-end
+
+Both approaches use the same execution model. Evaluations run asynchronously in the background. You create an eval run from the dashboard or API, PandaProbe resolves the matching traces or sessions, runs the selected metrics, and stores the results as scores.
+
+<Steps>
+  <Step title="Create an eval run">
+    Select the target type (`TRACE` or `SESSION`), metrics, and filters. You can evaluate all matching data, filter by fields such as date range, status, session, user, or tags, and sample a fraction of results to control cost.
+  </Step>
+  <Step title="Background processing">
+    A worker executes each metric against the selected traces or sessions. Trace metrics use LLM judges or embeddings; session metrics deterministically aggregate trace-level signals.
+  </Step>
+  <Step title="Scores are persisted">
+    Each metric produces a score, a reason, and rich metadata. Scores are stored and linked to the originating eval run, trace, or session.
+  </Step>
+  <Step title="Review and iterate">
+    View scores in the dashboard, query them via the API, track trends over time, and set up recurring monitors to evaluate new data automatically.
+  </Step>
+</Steps>
+
+## Scheduling evaluations
+
+Beyond one-off eval runs, PandaProbe supports **monitors**: recurring evaluation schedules that automatically create eval runs on a cadence (`every_6h`, `daily`, `weekly`, or custom cron). Monitors can skip runs when no new data has arrived, which helps control evaluation cost. Monitors work for both trace and session evaluation.
+
+<Card title="Scheduling Evaluations" icon="clock" href="/evaluation/setup/scheduling">
+  Set up automated evaluation monitors with custom cadences and filters.
+</Card>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Trace Evaluation" icon="route" href="/evaluation/trace-evaluation/introduction">
+    Dive into trace-level metrics and how they're computed.
+  </Card>
+  <Card title="Agent Evaluation" icon="bot" href="/evaluation/agent-evaluation/introduction">
+    Learn about session-level aggregation and signals.
+  </Card>
+  <Card title="Set Up Evaluation" icon="cog" href="/evaluation/setup/introduction">
+    Choose dashboard, API, or scheduled monitors for running evaluations.
+  </Card>
+</CardGroup>

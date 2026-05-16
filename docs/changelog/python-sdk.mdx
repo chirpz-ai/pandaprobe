@@ -1,0 +1,60 @@
+---
+title: "Python SDK"
+description: "Release notes for the PandaProbe Python SDK"
+icon: "package"
+rss: true
+---
+
+Release history for the **PandaProbe Python SDK**.
+
+Current version: `v0.3.0`
+
+<Update label="v0.3.0" description="2026-05-16" tags={["Integrations"]}>
+  ### DeepAgents integration
+
+  - Added `pandaprobe.integrations.deepagents.DeepAgentsCallbackHandler` for tracing deep agents built with `create_deep_agent`. A single handler captures the parent agent **and** every sub-agent dispatched via the built-in `task` tool — sub-agent invocations forward `callbacks` / `tags` / `configurable` automatically, so the entire nested run is one trace.
+  - Span tree faithfully records the `task (TOOL) → <subagent> (AGENT)` nesting, preserving the LangChain universal schema across the dispatcher boundary.
+  - Trace name remap: DeepAgents wraps a LangGraph compiled graph (root reports `name="LangGraph"`); rewritten to `"DeepAgents"` while custom user-given graph names pass through.
+  - New optional dependency: `pip install "pandaprobe[deepagents]"` (requires Python ≥3.11).
+  - New examples in `examples/deepagents/`: simple agent, sub-agent dispatch via the `task` tool, and multi-turn with sessions.
+
+  ### Test infrastructure
+
+  - Test suite is now hermetic: a session-level fixture in `tests/conftest.py` pins `PANDAPROBE_ENDPOINT` to a fake host and clears every `PANDAPROBE_*` config var, so developer-machine env exports cannot leak into tests or accidentally hit production. Pinned by a regression-test class.
+</Update>
+
+<Update label="v0.2.0" description="2026-05-14" tags={["Integrations"]}>
+  ### LangChain integration
+
+  - Added `pandaprobe.integrations.langchain.LangChainCallbackHandler` for tracing LangChain agents built with `langchain.agents.create_agent` and plain LCEL pipelines (`prompt | model | parser`).
+  - Refactored shared callback logic into a private `pandaprobe.integrations._langchain_core` package. `LangGraphCallbackHandler` is now a thin subclass — behavior is unchanged for existing users; future LangChain-family integrations share the same base.
+  - Trace name remap: `create_agent`'s root reports `name="LangGraph"`, LCEL chains report `name="RunnableSequence"` — both rewritten to `"LangChain"` while custom user-given names pass through.
+  - Improved `safe_output` to faithfully serialize `@dataclass` instances (e.g. LangGraph `Command` objects) into structured JSON instead of `repr()` strings, preserving routing fields.
+  - Diagnostic-label fix: error logs in `_finalize_trace` now correctly reflect the active integration's name (`PandaProbe LangChain callback failed…` vs `PandaProbe LangGraph callback failed…`).
+  - New optional dependency: `pip install "pandaprobe[langchain]"`.
+  - New examples in `examples/langchain/`: simple agent, LCEL chain, multi-turn with sessions.
+</Update>
+
+<Update label="v0.1.4" description="2026-04-26" tags={["Bug fix"]}>
+  - Fixed installation of optional dependency extras (e.g. `pandaprobe[openai]`, `pandaprobe[gemini]`) by quoting glob-pattern extras to avoid shell unmatched-glob errors on common shells.
+  - Minor example and documentation corrections.
+</Update>
+
+<Update label="v0.1.3" description="2026-03-29" tags={["Docs"]}>
+  - Documentation polish: page titles and copy fixes across the SDK reference.
+</Update>
+
+<Update label="v0.1.2" description="2026-03-29" tags={["Docs"]}>
+  - Updated and expanded Python SDK documentation.
+</Update>
+
+<Update label="v0.1.1" description="2026-03-29">
+  ### Initial public release of the Python SDK
+
+  - **Tracing core**: `pandaprobe.init`, `pandaprobe.trace`, `pandaprobe.span` decorators, `TraceContext`/`SpanContext` context managers, background-batched transport with retry/backoff and atexit flushing.
+  - **Provider wrappers**: OpenAI, Anthropic, and Google Gemini — automatic LLM span capture without code changes.
+  - **Framework integrations**: LangGraph, Google ADK, Claude Agent SDK, CrewAI, and OpenAI Agents SDK.
+  - **Session and user context**: `pandaprobe.session(...)` / `pandaprobe.user(...)` ContextVar-based propagation across decorators, wrappers, and integrations.
+  - **Programmatic scoring**: `Client.score(trace_id, name, value, ...)` for trace-level evaluation signals.
+  - **Auto-init from environment**: `PANDAPROBE_API_KEY` + `PANDAPROBE_PROJECT_NAME` env vars trigger lazy client creation; `PANDAPROBE_ENABLED=false` disables silently.
+</Update>

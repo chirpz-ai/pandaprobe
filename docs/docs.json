@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "linden",
+  "theme": "mint",
   "name": "PandaProbe",
   "logo": {
     "light": "/assets/logo/light.png",
@@ -72,8 +72,8 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
-        "icon": "book",
+        "tab": "Observability",
+        "icon": "route",
         "groups": [
           {
             "group": "Get Started",
@@ -104,6 +104,8 @@
                 "pages": [
                   "tracing/integrations/overview",
                   "tracing/integrations/langgraph",
+                  "tracing/integrations/langchain",
+                  "tracing/integrations/deepagents",
                   "tracing/integrations/crewai",
                   "tracing/integrations/google-adk",
                   "tracing/integrations/claude-agent-sdk",
@@ -133,38 +135,45 @@
                 ]
               }
             ]
+          }
+        ]
+      },
+      {
+        "tab": "Evaluation",
+        "icon": "drafting-compass",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "evaluation/get-started/quickstart",
+              "evaluation/get-started/concepts",
+              "evaluation/get-started/evaluation-approaches"
+            ]
           },
           {
-            "group": "Evaluation",
+            "group": "Trace Evaluation",
+            "icon": "route",
             "pages": [
-              "evaluation/overview",
-              "evaluation/concepts",
-              {
-                "group": "Trace Evaluation",
-                "icon": "drafting-compass",
-                "pages": [
-                  "evaluation/trace-evaluation/introduction",
-                  "evaluation/trace-evaluation/metrics"
-                ]
-              },
-              {
-                "group": "Agent Evaluation",
-                "icon": "bot",
-                "pages": [
-                  "evaluation/agent-evaluation/introduction",
-                  "evaluation/agent-evaluation/metrics"
-                ]
-              },
-              {
-                "group": "Set Up Evaluation",
-                "icon": "cog",
-                "pages": [
-                  "evaluation/setup/introduction",
-                  "evaluation/setup/run-eval-ui",
-                  "evaluation/setup/run-eval-api",
-                  "evaluation/setup/scheduling"
-                ]
-              }
+              "evaluation/trace-evaluation/introduction",
+              "evaluation/trace-evaluation/metrics"
+            ]
+          },
+          {
+            "group": "Agent Evaluation",
+            "icon": "bot",
+            "pages": [
+              "evaluation/agent-evaluation/introduction",
+              "evaluation/agent-evaluation/metrics"
+            ]
+          },
+          {
+            "group": "Set Up Evaluation",
+            "icon": "cog",
+            "pages": [
+              "evaluation/setup/introduction",
+              "evaluation/setup/run-eval-ui",
+              "evaluation/setup/run-eval-api",
+              "evaluation/setup/scheduling"
             ]
           }
         ]
@@ -291,18 +300,29 @@
         "tab": "Changelog",
         "icon": "history",
         "pages": [
-          "changelog/index"
+          "changelog/python-sdk",
+          "changelog/core-service"
         ]
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/evaluation/overview",
+      "destination": "/evaluation/get-started/evaluation-approaches"
+    },
+    {
+      "source": "/evaluation/concepts",
+      "destination": "/evaluation/get-started/concepts"
+    }
+  ],
   "seo": {
     "metatags": {
       "canonical": "https://docs.pandaprobe.com",
       "charset": "UTF-8",
       "viewport": "width=device-width, initial-scale=1.0",
       "description": "PandaProbe is an open-source agent engineering platform. Traces, evals, metrics, and live monitoring to debug and improve your AI agents.",
-      "keywords": "PandaProbe, AI agents, agent engineering, agent observability, agent tracing, agent evaluation, OpenAI tracing, Anthropic tracing, Google Gemini tracing, LangGraph, CrewAI, Google ADK, Python SDK, open source, agent debugging, agent monitoring",
+      "keywords": "PandaProbe, AI agents, agent engineering, agent observability, agent tracing, agent evaluation, OpenAI tracing, Anthropic tracing, Google Gemini tracing, LangGraph, LangChain, DeepAgents, CrewAI, Google ADK, Python SDK, open source, agent debugging, agent monitoring",
       "author": "Chirpz AI team",
       "robots": "index, follow",
       "googlebot": "index, follow",
