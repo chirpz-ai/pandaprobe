@@ -72,7 +72,7 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Observability",
+        "tab": "Tracing",
         "icon": "route",
         "groups": [
           {
@@ -89,7 +89,7 @@
               "tracing/overview",
               "tracing/concepts",
               {
-                "group": "Wrappers",
+                "group": "LLM Providers",
                 "icon": "package",
                 "pages": [
                   "tracing/wrappers/overview",
@@ -101,7 +101,7 @@
                 ]
               },
               {
-                "group": "Integrations",
+                "group": "Agent Frameworks",
                 "icon": "link",
                 "pages": [
                   "tracing/integrations/overview",
