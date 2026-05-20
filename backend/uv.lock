@@ -1731,7 +1731,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.14.0" },
-    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "celery", extras = ["redis"], specifier = ">=5.4.0" },
     { name = "celery-redbeat", specifier = ">=2.2.0" },
     { name = "croniter", specifier = ">=6.0.0" },
