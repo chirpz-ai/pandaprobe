@@ -1,0 +1,138 @@
+---
+title: "AWS Bedrock"
+description: "Auto-trace AWS Bedrock Converse and InvokeModel calls"
+icon: "/assets/providers/bedrock-color.svg"
+tag: "BETA"
+---
+
+<Note>
+  `wrap_bedrock` is currently in **beta**.
+</Note>
+
+### Installation
+
+<Tabs>
+  <Tab title="pip">
+    ```bash
+    pip install "pandaprobe[bedrock]"
+    ```
+  </Tab>
+  <Tab title="uv">
+    ```bash
+    uv add "pandaprobe[bedrock]"
+    ```
+  </Tab>
+</Tabs>
+
+The `bedrock` extra installs `boto3>=1.34.0`. For async support install `aioboto3` separately — `wrap_bedrock` detects it at runtime and instruments async methods automatically without making it a hard dependency.
+
+### Setup
+
+```python
+import boto3
+from pandaprobe.wrappers import wrap_bedrock
+
+client = wrap_bedrock(
+    boto3.client("bedrock-runtime", region_name="us-east-1")
+)
+```
+
+## Converse API (recommended)
+
+Span name: `"bedrock-converse"`, SpanKind: `LLM`
+
+```python
+response = client.converse(
+    modelId="anthropic.claude-haiku-4-5-20251001-v1:0",
+    system=[{"text": "You are a concise assistant."}],
+    messages=[
+        {"role": "user", "content": [{"text": "Explain recursion in one sentence."}]},
+    ],
+    inferenceConfig={"temperature": 0.5, "maxTokens": 200},
+)
+```
+
+The Converse API is provider-agnostic — the same call shape works across Claude, Mistral, Llama, Titan and other Bedrock-hosted foundation models. Prefer Converse over InvokeModel for new integrations.
+
+**What gets traced**
+
+- Input: top-level `system` blocks **hoisted** into the messages list as a `role="system"` entry, followed by the `messages` array. Text-only `content` blocks are flattened into a single string; mixed-block content (images, tool use/results) round-trips as structured JSON.
+- Output: assistant `content` text blocks joined together
+- Model: `modelId` from the request kwargs
+- Token usage (see mapping table below)
+- Model parameters: `temperature`, `topP`, `maxTokens`, `stopSequences` from `inferenceConfig`, plus `guardrailConfig`, `additionalModelRequestFields`, `toolConfig`
+- `reasoningContent` blocks (when models emit them) are stored in span metadata as `reasoning_summary`
+
+### Streaming
+
+```python
+response = client.converse_stream(
+    modelId="anthropic.claude-haiku-4-5-20251001-v1:0",
+    messages=[{"role": "user", "content": [{"text": "Hello!"}]}],
+    inferenceConfig={"temperature": 0.5, "maxTokens": 200},
+)
+for event in response["stream"]:
+    delta = event.get("contentBlockDelta", {}).get("delta", {})
+    if delta.get("text"):
+        print(delta["text"], end="")
+```
+
+The wrapper preserves the `{"stream": ..., "ResponseMetadata": ...}` response shape — only the inner iterator is replaced with a tracing-aware reducer. User code accesses `response["stream"]` exactly as before. Time-to-first-token is captured on the first `contentBlockDelta`; final token usage is read from the trailing `metadata` event.
+
+## InvokeModel API (legacy fallback)
+
+Span name: `"bedrock-invoke-model"` (or `"bedrock-invoke-model-stream"`), SpanKind: `LLM`
+
+```python
+import json
+
+response = client.invoke_model(
+    modelId="anthropic.claude-haiku-4-5-20251001-v1:0",
+    body=json.dumps({
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 200,
+        "messages": [{"role": "user", "content": "Hi"}],
+    }),
+    contentType="application/json",
+    accept="application/json",
+)
+```
+
+InvokeModel bodies are provider-specific JSON; the wrapper parses the body on a best-effort basis and recognises:
+
+- Anthropic Claude on Bedrock — `{"messages": [...], "system": "..."}`, output `content` blocks, usage as `input_tokens` / `output_tokens`
+- Mistral on Bedrock — `{"messages": [...]}`
+- Amazon Titan — `{"inputText": "..."}`, output via `results[0].outputText`, usage via `inputTextTokenCount` + `results[0].tokenCount`
+- Cohere / Meta Llama — `{"prompt": "..."}` and provider-specific generation fields
+
+Unknown body shapes still produce an LLM span containing the serialised request body as input.
+
+## Async (aioboto3)
+
+`aioboto3` is supported but not required. When `wrap_bedrock` is given an `aioboto3` client (its module path starts with `aioboto3` / `aiobotocore`, or its methods are coroutine functions), the wrapper installs async-shaped patches for `converse`, `converse_stream`, `invoke_model`, and `invoke_model_with_response_stream`.
+
+```python
+import aioboto3
+from pandaprobe.wrappers import wrap_bedrock
+
+session = aioboto3.Session()
+async with session.client("bedrock-runtime", region_name="us-east-1") as client:
+    wrap_bedrock(client)
+    response = await client.converse(...)
+```
+
+## Token usage mapping
+
+| Bedrock Field | PandaProbe Field |
+| --- | --- |
+| `usage.inputTokens` (Converse) | `prompt_tokens` |
+| `usage.outputTokens` (Converse) | `completion_tokens` |
+| `usage.totalTokens` (Converse) | `total_tokens` |
+| `usage.cacheReadInputTokens` | `cache_read_tokens` |
+| `usage.cacheWriteInputTokens` | `cache_creation_tokens` |
+| `usage.input_tokens` (InvokeModel/Anthropic) | `prompt_tokens` |
+| `usage.output_tokens` (InvokeModel/Anthropic) | `completion_tokens` |
+| `inputTextTokenCount` (Titan) | `prompt_tokens` |
+| `results[0].tokenCount` (Titan) | `completion_tokens` |
+| `meta.billed_units.input_tokens` (Cohere) | `prompt_tokens` |
+| `meta.billed_units.output_tokens` (Cohere) | `completion_tokens` |
