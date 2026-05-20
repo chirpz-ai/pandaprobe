@@ -113,8 +113,8 @@ class Settings(BaseSettings):
     # -- Evaluation LLM defaults ---------------------------------------------
     # Model string follows LiteLLM format: "<provider>/<model>"
     # e.g. "openai/gpt-4o-mini", "anthropic/claude-3-5-sonnet-20241022",
-    # "vertex_ai/gemini-3.1-flash-lite-preview"
-    EVAL_LLM_MODEL: str = "vertex_ai/gemini-3.1-flash-lite-preview"
+    # "vertex_ai/gemini-3.1-flash-lite"
+    EVAL_LLM_MODEL: str = "vertex_ai/gemini-3.1-flash-lite"
     EVAL_LLM_TEMPERATURE: float = 1.0
     EVAL_EMBEDDING_MODEL: str = "vertex_ai/text-embedding-004"
     EVAL_EMBEDDING_CACHE_SIZE: int = 2048
