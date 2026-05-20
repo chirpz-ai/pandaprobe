@@ -95,7 +95,9 @@
                   "tracing/wrappers/overview",
                   "tracing/wrappers/openai",
                   "tracing/wrappers/anthropic",
-                  "tracing/wrappers/google-gemini"
+                  "tracing/wrappers/google-gemini",
+                  "tracing/wrappers/mistral",
+                  "tracing/wrappers/bedrock"
                 ]
               },
               {
@@ -322,7 +324,7 @@
       "charset": "UTF-8",
       "viewport": "width=device-width, initial-scale=1.0",
       "description": "PandaProbe is an open-source agent engineering platform. Traces, evals, metrics, and live monitoring to debug and improve your AI agents.",
-      "keywords": "PandaProbe, AI agents, agent engineering, agent observability, agent tracing, agent evaluation, OpenAI tracing, Anthropic tracing, Google Gemini tracing, LangGraph, LangChain, DeepAgents, CrewAI, Google ADK, Python SDK, open source, agent debugging, agent monitoring",
+      "keywords": "PandaProbe, AI agents, agent engineering, agent observability, agent tracing, agent evaluation, OpenAI tracing, Anthropic tracing, Google Gemini tracing, Mistral, Bedrock, LangGraph, LangChain, DeepAgents, CrewAI, Google ADK, Python SDK, open source, agent debugging, agent monitoring",
       "author": "Chirpz AI team",
       "robots": "index, follow",
       "googlebot": "index, follow",
