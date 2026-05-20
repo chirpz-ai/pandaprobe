@@ -7,7 +7,22 @@ rss: true
 
 Release history for the **PandaProbe Python SDK**.
 
-Current version: `v0.3.0`
+Current version: `v0.4.0`
+
+<Update label="v0.4.0" description="2026-05-18" tags={["Wrappers"]}>
+  ### Mistral AI and AWS Bedrock wrappers
+
+  - Added `pandaprobe.wrappers.wrap_mistral` for the official `mistralai>=1.0.0` client. Instruments `chat.complete` / `chat.complete_async` (blocking) and `chat.stream` / `chat.stream_async` (streaming) — every call automatically produces an LLM span with input, output, model, model parameters, and token usage. Mistral's native `prompt_tokens` / `completion_tokens` / `total_tokens` map directly onto PandaProbe's canonical names; `UNSET` sentinel kwargs are stripped before logging.
+  - Added `pandaprobe.wrappers.wrap_bedrock` *(beta)* for the AWS `bedrock-runtime` client (`boto3` and `aioboto3`). Instruments the recommended **Converse** API (`converse`, `converse_stream`) end-to-end — system blocks are hoisted into the universal-schema messages list, text-only `content` blocks are flattened, the streaming response dict (`{"stream": ..., "ResponseMetadata": ...}`) shape is preserved with only the inner iterator wrapped, time-to-first-token is captured on the first `contentBlockDelta`, and final usage (`inputTokens` / `outputTokens` / `totalTokens` and cache-read / cache-write counts) is read from the trailing `metadata` event.
+  - Bedrock legacy **InvokeModel** path is also instrumented (`invoke_model`, `invoke_model_with_response_stream`) with best-effort body parsing across Anthropic-on-Bedrock, Mistral, Llama, Titan, and Cohere body shapes.
+  - Async support for Bedrock is opportunistic — `aioboto3` is detected at runtime via `inspect.iscoroutinefunction` plus client-class-module heuristics, so you can use it without listing it as a dependency.
+  - New optional dependencies: `pip install "pandaprobe[mistral]"` and `pip install "pandaprobe[bedrock]"`.
+  - New examples in `examples/mistral/` (chat completion, streaming, multi-turn with sessions) and `examples/bedrock/` (Converse, Converse streaming, legacy InvokeModel with the Anthropic Claude body shape).
+
+  <Note>
+    `wrap_bedrock` ships as **beta**.
+  </Note>
+</Update>
 
 <Update label="v0.3.0" description="2026-05-16" tags={["Integrations"]}>
   ### DeepAgents integration

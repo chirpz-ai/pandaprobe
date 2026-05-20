@@ -1,0 +1,115 @@
+---
+title: "Mistral AI"
+description: "Auto-trace Mistral AI chat completions"
+icon: "/assets/providers/mistral-color.svg"
+---
+
+### Installation
+
+<Tabs>
+  <Tab title="pip">
+    ```bash
+    pip install "pandaprobe[mistral]"
+    ```
+  </Tab>
+  <Tab title="uv">
+    ```bash
+    uv add "pandaprobe[mistral]"
+    ```
+  </Tab>
+</Tabs>
+
+### Setup
+
+<Tabs>
+  <Tab title="Sync">
+    ```python
+    from pandaprobe.wrappers import wrap_mistral
+    from mistralai.client import Mistral
+
+    client = wrap_mistral(Mistral(api_key="..."))
+    ```
+  </Tab>
+  <Tab title="Async">
+    ```python
+    from pandaprobe.wrappers import wrap_mistral
+    from mistralai.client import Mistral
+
+    # The Mistral SDK exposes both sync and async on the same client.
+    client = wrap_mistral(Mistral(api_key="..."))
+
+    response = await client.chat.complete_async(
+        model="mistral-small-latest",
+        messages=[{"role": "user", "content": "Hello!"}],
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Chat API
+
+Span name: `"mistral-chat"`, SpanKind: `LLM`
+
+```python
+response = client.chat.complete(
+    model="mistral-small-latest",
+    messages=[
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "Explain recursion in one sentence."},
+    ],
+    temperature=0.5,
+    max_tokens=200,
+)
+```
+
+**What gets traced**
+
+- Input: `messages` list, captured directly (Mistral already speaks the universal schema)
+- Output: assistant message from `choices[0].message`
+- Model name (from the response body)
+- Token usage
+- Model parameters: `temperature`, `top_p`, `max_tokens`, `random_seed`, `safe_prompt`, `response_format`, `tool_choice`, `presence_penalty`, `frequency_penalty`, `n`, `stop`
+
+### Streaming
+
+<CodeGroup>
+```python title="chat.stream — sync"
+res = client.chat.stream(
+    model="mistral-small-latest",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+with res as event_stream:
+    for event in event_stream:
+        delta = event.data.choices[0].delta
+        if delta.content:
+            print(delta.content, end="")
+```
+
+```python title="chat.stream_async — async"
+res = await client.chat.stream_async(
+    model="mistral-small-latest",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+async with res as event_stream:
+    async for event in event_stream:
+        delta = event.data.choices[0].delta
+        if delta.content:
+            print(delta.content, end="")
+```
+</CodeGroup>
+
+Both streaming patterns are fully supported with time-to-first-token tracking. The wrapper transparently passes through the SDK's `EventStream` / `EventStreamAsync` context manager, buffers `delta.content` chunks, and emits a single LLM span containing the full reduced output and the final token usage Mistral reports on the terminal chunk.
+
+## Async
+
+The Mistral SDK exposes async via `chat.complete_async` and `chat.stream_async` on the same client class — both are instrumented by `wrap_mistral`. No separate async client class exists.
+
+## Token usage mapping
+
+Mistral already uses our canonical names, so the mapping is the identity:
+
+| Mistral Field | PandaProbe Field |
+| --- | --- |
+| `prompt_tokens` | `prompt_tokens` |
+| `completion_tokens` | `completion_tokens` |
+| `total_tokens` | `total_tokens` |

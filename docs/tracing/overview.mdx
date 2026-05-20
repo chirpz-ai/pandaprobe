@@ -10,9 +10,9 @@ PandaProbe captures the full execution flow of your LLM as **traces** composed o
   Traces and spans are persisted and indexed for search, filtering, and evaluation. Instrumentation is opt-in per deploy via environment configuration; when tracing is disabled, the SDK avoids network I/O and mutation.
 </Info>
 
-Instrumentation is organized into three layers, ordered from the least invasive (wrappers) to the most flexible (manual APIs).
+Instrumentation is organized into three layers, ordered from zero-code drop-ins to fully manual control.
 
-## Layer 1 — Wrappers (zero-code LLM tracing)
+## Layer 1 — LLM Providers (zero-code wrappers)
 
 Wrap an LLM client to automatically trace every API call. The wrapper returns the **same client type** as the underlying SDK—no refactors beyond the wrap call.
 
@@ -20,7 +20,7 @@ Wrap an LLM client to automatically trace every API call. The wrapper returns th
 - `wrap_gemini(client)` — `generate_content` and `generate_content_stream`
 - `wrap_anthropic(client)` — `messages.create` and `messages.stream`
 
-## Layer 2 — Integrations (automatic agent framework tracing)
+## Layer 2 — Agent Frameworks (automatic agent integrations)
 
 Hook into an agent framework to trace the full lifecycle: LLM calls, tool invocations, sub-agent handoffs, guardrails, and related steps—without instrumenting each call yourself.
 
@@ -35,15 +35,15 @@ Define exactly what gets traced, how spans are named, and what metadata you atta
 
 ## When to use each layer
 
-- Use **Wrappers** when you want LLM call visibility with minimal code changes—especially for direct provider usage without a heavy agent framework.
-- Use **Integrations** when you run on a supported agent framework and want end-to-end traces (LLM + tools + orchestration) with consistent semantics.
+- Use **LLM Providers** when you want LLM call visibility with minimal code changes—especially for direct provider usage without a heavy agent framework.
+- Use **Agent Frameworks** when you run on a supported agent framework and want end-to-end traces (LLM + tools + orchestration) with consistent semantics.
 - Use **Manual instrumentation** when you need custom span names, kinds, metadata, or you are building your own agent runtime and wrappers do not fit.
 
 <CardGroup cols={3}>
-  <Card title="Wrappers" icon="zap" href="/tracing/wrappers/overview">
+  <Card title="LLM Providers" icon="zap" href="/tracing/wrappers/overview">
     Zero-code LLM tracing
   </Card>
-  <Card title="Integrations" icon="puzzle" href="/tracing/integrations/overview">
+  <Card title="Agent Frameworks" icon="puzzle" href="/tracing/integrations/overview">
     Agent framework tracing
   </Card>
   <Card title="Manual" icon="code" href="/tracing/manual/decorators">
