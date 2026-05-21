@@ -63,6 +63,7 @@ class LLMEngine:
         LiteLLM reads API keys from ``os.environ`` at call time, so we
         sync our pydantic-settings values into the process environment.
         """
+        litellm.suppress_debug_info = True
         self._sync_credentials()
         self._embedding_cache: OrderedDict[str, list[float]] = OrderedDict()
 

@@ -55,7 +55,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component.name }}
 
       - name: Build and push (${{ matrix.component.name }}/${{ matrix.platform.suffix }})
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.component.context }}
           file: ${{ matrix.component.file }}
@@ -130,6 +130,7 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+      artifact-metadata: write
       security-events: write
 
     steps:
@@ -183,7 +184,7 @@ jobs:
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Attest SBOM
-        uses: actions/attest-sbom@v2
+        uses: actions/attest@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}
           subject-digest: ${{ steps.digest.outputs.digest }}
@@ -198,7 +199,7 @@ jobs:
           push-to-registry: true
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-${{ matrix.component }}
           path: sbom-${{ matrix.component }}.json
@@ -216,14 +217,14 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download SBOM artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: sboms
           pattern: sbom-*
           merge-multiple: true
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           files: sboms/*.json
