@@ -2,6 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils/cn";
 import { getInstruction, type InstructionId } from "./InstructionContent";
 
 interface InstructionCardProps {
@@ -10,6 +11,7 @@ interface InstructionCardProps {
   title?: string;
   description?: string;
   ctaLabel?: string;
+  highlight?: boolean;
   onClick: () => void;
 }
 
@@ -19,6 +21,7 @@ export function InstructionCard({
   title,
   description,
   ctaLabel = "Open",
+  highlight = false,
   onClick,
 }: InstructionCardProps) {
   const instruction = getInstruction(instructionId);
@@ -34,7 +37,12 @@ export function InstructionCard({
         <h3 className="flex-1 min-w-0 truncate text-sm font-mono text-text">
           {displayTitle}
         </h3>
-        <Button variant="info" size="sm" onClick={onClick}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onClick}
+          className={cn(highlight && "border-text/60 animate-pulse-glow")}
+        >
           {ctaLabel}
           <ArrowRight className="h-3 w-3" />
         </Button>

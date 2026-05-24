@@ -141,13 +141,14 @@ export default function ProjectHomePage() {
         defaultOpen={!hasAnyTrace}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y divide-border md:divide-y-0 md:divide-x">
-          {QUICKSTART_ENTRIES.map((entry) => (
+          {QUICKSTART_ENTRIES.map((entry, index) => (
             <InstructionCard
               key={entry.id}
               instructionId={entry.id}
               step={entry.step}
               title={entry.title}
               description={entry.description}
+              highlight={index === 0 && !hasAnyTrace}
               onClick={() => setActiveInstruction(entry.id)}
             />
           ))}

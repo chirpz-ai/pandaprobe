@@ -31,8 +31,9 @@
   --radius-xl:        0px;
   --radius-full:      0px;
 
-  --animate-fade-in:  fadeIn 0.4s ease-out forwards;
-  --animate-slide-up: slideUp 0.4s ease-out forwards;
+  --animate-fade-in:    fadeIn 0.4s ease-out forwards;
+  --animate-slide-up:   slideUp 0.4s ease-out forwards;
+  --animate-pulse-glow: pulseGlow 1.8s ease-out infinite;
 }
 
 /* ─── Keyframes ────────────────────────────────────────────────────────────── */
@@ -44,6 +45,12 @@
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55); }
+  70%  { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0);  }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);    }
 }
 
 /* ─── Base ─────────────────────────────────────────────────────────────────── */
