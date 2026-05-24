@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  BookOpen,
-  ExternalLink,
-  Route,
-  Settings2,
-  Users,
-} from "lucide-react";
+import { BookOpen, ExternalLink, Route, Settings2, Users } from "lucide-react";
 import {
   DOCS_EVAL_API_URL,
   DOCS_EVAL_SCHEDULING_URL,
@@ -48,7 +42,8 @@ const TRACE_EVAL_STEPS = [
 const SESSION_EVAL_STEPS = [
   {
     title: "Open the Sessions tab",
-    description: "Open Sessions to view grouped agent traces representing a single agent lifecycle.",
+    description:
+      "Open Sessions to view grouped agent traces representing a single agent lifecycle.",
   },
   {
     title: "Choose sessions to evaluate",
@@ -57,8 +52,7 @@ const SESSION_EVAL_STEPS = [
   },
   {
     title: "Configure the eval run",
-    description:
-      "Enter a run name and select session-level metrics.",
+    description: "Enter a run name and select session-level metrics.",
   },
   {
     title: "Customize signal weights",
@@ -156,10 +150,7 @@ function Timeline({ steps }: { steps: TimelineStep[] }) {
             {i + 1}
           </span>
           <div
-            className={cn(
-              "flex-1 min-w-0",
-              i < steps.length - 1 ? "pb-3" : "",
-            )}
+            className={cn("flex-1 min-w-0", i < steps.length - 1 ? "pb-3" : "")}
           >
             <p className="text-xs font-mono text-text leading-relaxed">
               {step.title}

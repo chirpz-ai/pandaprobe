@@ -59,8 +59,8 @@ export default function OrgPage() {
             <h2 className="text-sm font-mono text-text">Create a project</h2>
             <p className="text-xs font-mono text-text-muted mt-0.5 leading-snug">
               Projects isolate traces, sessions, and evaluations. Once
-              you&apos;ve created one, we&apos;ll walk you through sending
-              your first trace.
+              you&apos;ve created one, we&apos;ll walk you through sending your
+              first trace.
             </p>
           </div>
           <Link

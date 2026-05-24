@@ -5,11 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import {
-  listAPIKeys,
-  rotateAPIKey,
-  deleteAPIKey,
-} from "@/lib/api/api-keys";
+import { listAPIKeys, rotateAPIKey, deleteAPIKey } from "@/lib/api/api-keys";
 import { extractErrorMessage } from "@/lib/api/client";
 import type { APIKeyResponse } from "@/lib/api/types";
 import { Button } from "@/components/ui/Button";
@@ -21,15 +17,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { FormDialog } from "@/components/common/FormDialog";
 import { useToast } from "@/components/providers/ToastProvider";
 import { APIKeyDialog } from "@/components/features/APIKeyDialog";
-import {
-  Plus,
-  RotateCw,
-  Trash2,
-  Copy,
-  Eye,
-  EyeOff,
-  Check,
-} from "lucide-react";
+import { Plus, RotateCw, Trash2, Copy, Eye, EyeOff, Check } from "lucide-react";
 import { formatDateTime } from "@/lib/utils/format";
 
 export default function APIKeysPage() {

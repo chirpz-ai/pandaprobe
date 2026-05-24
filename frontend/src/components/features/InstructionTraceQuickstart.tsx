@@ -153,10 +153,7 @@ export function InstructionTraceQuickstart() {
             onDismiss={() => setIssuedKey(null)}
           />
         ) : (
-          <CreateApiKeyButton
-            loading={creatingKey}
-            onClick={handleCreateKey}
-          />
+          <CreateApiKeyButton loading={creatingKey} onClick={handleCreateKey} />
         )}
       </StepSection>
 

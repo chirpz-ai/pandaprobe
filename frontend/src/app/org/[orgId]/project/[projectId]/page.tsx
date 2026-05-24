@@ -4,13 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import {
-  BarChart3,
-  CheckCircle,
-  Layers,
-  ListTree,
-  Rocket,
-} from "lucide-react";
+import { BarChart3, CheckCircle, Layers, ListTree, Rocket } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { listTraces } from "@/lib/api/traces";
 import { listSessions } from "@/lib/api/sessions";

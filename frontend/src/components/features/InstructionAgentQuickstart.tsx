@@ -317,10 +317,7 @@ export function InstructionAgentQuickstart() {
             onDismiss={() => setIssuedKey(null)}
           />
         ) : (
-          <CreateApiKeyButton
-            loading={creatingKey}
-            onClick={handleCreateKey}
-          />
+          <CreateApiKeyButton loading={creatingKey} onClick={handleCreateKey} />
         )}
       </StepSection>
 

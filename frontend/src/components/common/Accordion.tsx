@@ -31,10 +31,7 @@ export function Accordion({
       type="single"
       collapsible
       defaultValue={defaultOpen ? value : undefined}
-      className={cn(
-        "border-engraved bg-surface animate-fade-in",
-        className,
-      )}
+      className={cn("border-engraved bg-surface animate-fade-in", className)}
     >
       <AccordionPrimitive.Item value={value}>
         <AccordionPrimitive.Header asChild>

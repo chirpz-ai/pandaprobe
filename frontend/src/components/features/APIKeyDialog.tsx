@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Check,
-  Copy,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Loader2,
-} from "lucide-react";
+import { Check, Copy, Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 import { createAPIKey } from "@/lib/api/api-keys";
 import { extractErrorMessage } from "@/lib/api/client";
 import { KeyExpiration } from "@/lib/api/enums";
