@@ -42,7 +42,7 @@ const QUICKSTART_ENTRIES: QuickstartEntry[] = [
   {
     id: "agent-quickstart",
     step: 2,
-    title: "Trace your first agent",
+    title: "Trace your agent",
     description:
       "Instrument advanced agent frameworks like DeepAgents, CrewAI, and more.",
   },
