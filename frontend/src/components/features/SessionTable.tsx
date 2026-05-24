@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/Badge";
 import {
   formatRelativeTime,
   formatDuration,
-  formatCost,
+  // TODO(cost): re-enable when session cost computation is implemented.
+  // formatCost,
 } from "@/lib/utils/format";
 import { useProjectPath } from "@/hooks/useNavigation";
 
@@ -90,9 +91,10 @@ export function SessionTable({
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Tokens
             </th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">
+            {/* TODO(cost): Restore Cost column once session cost computation is implemented. */}
+            {/* <th className="text-left px-3 py-2 text-text-muted font-normal">
               Cost
-            </th>
+            </th> */}
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               First Trace
             </th>
@@ -138,9 +140,10 @@ export function SessionTable({
               <td className="px-3 py-2 text-text-dim">
                 {session.total_tokens}
               </td>
-              <td className="px-3 py-2 text-text-dim">
+              {/* TODO(cost): Restore Cost cell once session cost computation is implemented. */}
+              {/* <td className="px-3 py-2 text-text-dim">
                 {formatCost(session.total_cost)}
-              </td>
+              </td> */}
               <td className="px-3 py-2 text-text-dim">
                 {formatRelativeTime(session.first_trace_at)}
               </td>

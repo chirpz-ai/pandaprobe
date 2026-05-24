@@ -7,7 +7,8 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import {
   formatRelativeTime,
   formatDuration,
-  formatCost,
+  // TODO(cost): re-enable when trace cost computation is implemented.
+  // formatCost,
 } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/Badge";
 import { useProjectPath } from "@/hooks/useNavigation";
@@ -86,9 +87,10 @@ export function TraceTable({
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Tokens
             </th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">
+            {/* TODO(cost): Restore Cost column once trace cost computation is implemented. */}
+            {/* <th className="text-left px-3 py-2 text-text-muted font-normal">
               Cost
-            </th>
+            </th> */}
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Spans
             </th>
@@ -130,9 +132,10 @@ export function TraceTable({
                 {formatDuration(trace.latency_ms)}
               </td>
               <td className="px-3 py-2 text-text-dim">{trace.total_tokens}</td>
-              <td className="px-3 py-2 text-text-dim">
+              {/* TODO(cost): Restore Cost cell once trace cost computation is implemented. */}
+              {/* <td className="px-3 py-2 text-text-dim">
                 {formatCost(trace.total_cost)}
-              </td>
+              </td> */}
               <td className="px-3 py-2 text-text-dim">{trace.span_count}</td>
               <td className="px-3 py-2 text-text-dim">
                 {formatRelativeTime(trace.started_at)}
