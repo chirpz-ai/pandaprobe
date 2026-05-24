@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { Bot, Gauge, Rocket, type LucideIcon } from "lucide-react";
+import { Bot, DraftingCompass, Route, type LucideIcon } from "lucide-react";
 import { InstructionAgentQuickstart } from "./InstructionAgentQuickstart";
 import { InstructionEvalQuickstart } from "./InstructionEvalQuickstart";
 import { InstructionTraceQuickstart } from "./InstructionTraceQuickstart";
@@ -23,9 +23,9 @@ export interface InstructionDefinition {
 export const INSTRUCTIONS: Record<InstructionId, InstructionDefinition> = {
   quickstart: {
     id: "quickstart",
-    title: "Quickstart",
+    title: "Trace Quickstart",
     description: "Trace your first LLM call in under 2 minutes.",
-    icon: Rocket,
+    icon: Route,
     Body: InstructionTraceQuickstart,
   },
   "agent-quickstart": {
@@ -38,8 +38,8 @@ export const INSTRUCTIONS: Record<InstructionId, InstructionDefinition> = {
   "evaluation-quickstart": {
     id: "evaluation-quickstart",
     title: "Evaluation Quickstart",
-    description: "Score your traces with monitors and eval runs.",
-    icon: Gauge,
+    description: "Evaluate your agent's traces and sessions.",
+    icon: DraftingCompass,
     Body: InstructionEvalQuickstart,
   },
 };
