@@ -86,7 +86,6 @@ export function InstructionEvalQuickstart() {
         <div className="border border-border bg-surface p-3">
           <Timeline steps={TRACE_EVAL_STEPS} />
         </div>
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           controls
           preload="metadata"
@@ -106,7 +105,6 @@ export function InstructionEvalQuickstart() {
         <div className="border border-border bg-surface p-3">
           <Timeline steps={SESSION_EVAL_STEPS} />
         </div>
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           controls
           preload="metadata"
