@@ -129,7 +129,7 @@ export default function ProjectHomePage() {
       <h1 className="text-lg font-mono text-primary">Home</h1>
 
       <Accordion
-        title="Quickstarts"
+        title="Quickstart"
         description="Short, focused walkthroughs to get you tracing, instrumenting agents, and running evals."
         icon={<Rocket className="h-4 w-4" />}
         defaultOpen={!hasAnyTrace}
