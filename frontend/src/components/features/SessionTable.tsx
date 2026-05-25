@@ -121,11 +121,7 @@ export function SessionTable({
           {sessions.map((session) => (
             <tr
               key={session.session_id}
-              ref={
-                lastVisited === session.session_id
-                  ? scrollToRef
-                  : undefined
-              }
+              ref={lastVisited === session.session_id ? scrollToRef : undefined}
               className={cn(
                 "border-b border-border border-l-2 hover:bg-surface-hi transition-colors",
                 lastVisited === session.session_id

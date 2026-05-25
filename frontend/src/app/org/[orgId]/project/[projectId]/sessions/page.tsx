@@ -58,8 +58,9 @@ export default function SessionsPage() {
   useDocumentTitle("Sessions");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { lastVisited, restoredPage, markVisited } =
-    useLastVisitedRow("pp_visited_sessions");
+  const { lastVisited, restoredPage, markVisited } = useLastVisitedRow(
+    "pp_visited_sessions",
+  );
 
   const pageRestored = useRef(false);
   useEffect(() => {

@@ -120,9 +120,7 @@ export function TraceTable({
           {traces.map((trace) => (
             <tr
               key={trace.trace_id}
-              ref={
-                lastVisited === trace.trace_id ? scrollToRef : undefined
-              }
+              ref={lastVisited === trace.trace_id ? scrollToRef : undefined}
               className={cn(
                 "border-b border-border border-l-2 hover:bg-surface-hi transition-colors",
                 lastVisited === trace.trace_id
