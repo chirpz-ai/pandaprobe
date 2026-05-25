@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useQuery,
   useQueryClient,
@@ -30,6 +30,7 @@ import { X, FlaskConical } from "lucide-react";
 import { SessionSortBy, SortOrder } from "@/lib/api/enums";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useUrlState } from "@/hooks/useUrlState";
+import { useLastVisitedRow } from "@/hooks/useVisitedRows";
 import { extractErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -57,6 +58,22 @@ export default function SessionsPage() {
   useDocumentTitle("Sessions");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { lastVisited, restoredPage, markVisited } = useLastVisitedRow(
+    "pp_visited_sessions",
+  );
+
+  const pageRestored = useRef(false);
+  useEffect(() => {
+    if (!pageRestored.current && restoredPage) {
+      pageRestored.current = true;
+      set({ page: restoredPage });
+    }
+  }, [restoredPage, set]);
+
+  const handleRowVisit = useCallback(
+    (id: string) => markVisited(id, String(page)),
+    [markVisited, page],
+  );
   const [runEvalOpen, setRunEvalOpen] = useState(false);
 
   const params = useMemo<ListSessionsParams>(() => {
@@ -273,6 +290,8 @@ export default function SessionsPage() {
                 sessions={data.items}
                 selected={selected}
                 onSelectionChange={setSelected}
+                lastVisited={lastVisited}
+                onRowVisit={handleRowVisit}
               />
             </div>
             <Pagination

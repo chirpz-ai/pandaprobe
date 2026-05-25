@@ -16,6 +16,7 @@ const buttonVariants = cva(
         ghost: "text-text-dim hover:text-text hover:bg-surface-hi",
         destructive:
           "bg-error/10 text-error border border-error/30 hover:bg-error/20",
+        info: "bg-info/10 text-info border border-info/40 hover:bg-info/20",
         link: "text-text-dim underline-offset-4 hover:underline hover:text-text",
       },
       size: {

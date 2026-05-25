@@ -30,7 +30,8 @@ import { useToast } from "@/components/providers/ToastProvider";
 import {
   formatDateTime,
   formatDuration,
-  formatCost,
+  // TODO(cost): re-enable when trace cost computation is implemented.
+  // formatCost,
   formatTokens,
 } from "@/lib/utils/format";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -186,10 +187,11 @@ export default function TraceDetailPage({
               {formatTokens(trace.total_tokens)}
             </span>
           </div>
-          <div>
+          {/* TODO(cost): Restore Total Cost once trace cost computation is implemented. */}
+          {/* <div>
             <span className="text-text-muted block">Total Cost</span>
             <span className="text-text">{formatCost(trace.total_cost)}</span>
-          </div>
+          </div> */}
           <div>
             <span className="text-text-muted block">Started</span>
             <span className="text-text">

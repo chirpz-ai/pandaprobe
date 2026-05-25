@@ -1,30 +1,45 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import Link from "next/link";
 import type { TraceListItem } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import {
   formatRelativeTime,
   formatDuration,
-  formatCost,
+  // TODO(cost): re-enable when trace cost computation is implemented.
+  // formatCost,
 } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/Badge";
 import { useProjectPath } from "@/hooks/useNavigation";
+import { cn } from "@/lib/utils/cn";
 
 interface TraceTableProps {
   traces: TraceListItem[];
   selected?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
+  lastVisited?: string | null;
+  onRowVisit?: (id: string) => void;
 }
 
 export function TraceTable({
   traces,
   selected,
   onSelectionChange,
+  lastVisited,
+  onRowVisit,
 }: TraceTableProps) {
   const basePath = useProjectPath("/traces");
   const selectable = !!selected && !!onSelectionChange;
+  const hasScrolled = useRef(false);
+  const scrollToRef = useCallback((node: HTMLTableRowElement | null) => {
+    if (node && !hasScrolled.current) {
+      hasScrolled.current = true;
+      requestAnimationFrame(() => {
+        node.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    }
+  }, []);
 
   const allSelected =
     selectable &&
@@ -86,9 +101,10 @@ export function TraceTable({
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Tokens
             </th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">
+            {/* TODO(cost): Restore Cost column once trace cost computation is implemented. */}
+            {/* <th className="text-left px-3 py-2 text-text-muted font-normal">
               Cost
-            </th>
+            </th> */}
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Spans
             </th>
@@ -104,7 +120,13 @@ export function TraceTable({
           {traces.map((trace) => (
             <tr
               key={trace.trace_id}
-              className="border-b border-border hover:bg-surface-hi transition-colors"
+              ref={lastVisited === trace.trace_id ? scrollToRef : undefined}
+              className={cn(
+                "border-b border-border border-l-2 hover:bg-surface-hi transition-colors",
+                lastVisited === trace.trace_id
+                  ? "border-l-primary/40 bg-primary/[0.03]"
+                  : "border-l-transparent",
+              )}
             >
               {selectable && (
                 <td className="w-8 px-3 py-2">
@@ -118,6 +140,7 @@ export function TraceTable({
               <td className="px-3 py-2 max-w-[200px] truncate">
                 <Link
                   href={`${basePath}/${trace.trace_id}`}
+                  onClick={() => onRowVisit?.(trace.trace_id)}
                   className="text-text hover:text-primary transition-colors"
                 >
                   {trace.name}
@@ -130,9 +153,10 @@ export function TraceTable({
                 {formatDuration(trace.latency_ms)}
               </td>
               <td className="px-3 py-2 text-text-dim">{trace.total_tokens}</td>
-              <td className="px-3 py-2 text-text-dim">
+              {/* TODO(cost): Restore Cost cell once trace cost computation is implemented. */}
+              {/* <td className="px-3 py-2 text-text-dim">
                 {formatCost(trace.total_cost)}
-              </td>
+              </td> */}
               <td className="px-3 py-2 text-text-dim">{trace.span_count}</td>
               <td className="px-3 py-2 text-text-dim">
                 {formatRelativeTime(trace.started_at)}

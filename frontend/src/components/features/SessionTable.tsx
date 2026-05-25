@@ -1,29 +1,44 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import Link from "next/link";
 import type { SessionSummary } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
 import {
   formatRelativeTime,
   formatDuration,
-  formatCost,
+  // TODO(cost): re-enable when session cost computation is implemented.
+  // formatCost,
 } from "@/lib/utils/format";
 import { useProjectPath } from "@/hooks/useNavigation";
+import { cn } from "@/lib/utils/cn";
 
 interface SessionTableProps {
   sessions: SessionSummary[];
   selected?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
+  lastVisited?: string | null;
+  onRowVisit?: (id: string) => void;
 }
 
 export function SessionTable({
   sessions,
   selected,
   onSelectionChange,
+  lastVisited,
+  onRowVisit,
 }: SessionTableProps) {
   const basePath = useProjectPath("/sessions");
   const selectable = !!selected && !!onSelectionChange;
+  const hasScrolled = useRef(false);
+  const scrollToRef = useCallback((node: HTMLTableRowElement | null) => {
+    if (node && !hasScrolled.current) {
+      hasScrolled.current = true;
+      requestAnimationFrame(() => {
+        node.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    }
+  }, []);
 
   const allSelected =
     selectable &&
@@ -90,9 +105,10 @@ export function SessionTable({
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Tokens
             </th>
-            <th className="text-left px-3 py-2 text-text-muted font-normal">
+            {/* TODO(cost): Restore Cost column once session cost computation is implemented. */}
+            {/* <th className="text-left px-3 py-2 text-text-muted font-normal">
               Cost
-            </th>
+            </th> */}
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               First Trace
             </th>
@@ -105,7 +121,13 @@ export function SessionTable({
           {sessions.map((session) => (
             <tr
               key={session.session_id}
-              className="border-b border-border hover:bg-surface-hi transition-colors"
+              ref={lastVisited === session.session_id ? scrollToRef : undefined}
+              className={cn(
+                "border-b border-border border-l-2 hover:bg-surface-hi transition-colors",
+                lastVisited === session.session_id
+                  ? "border-l-primary/40 bg-primary/[0.03]"
+                  : "border-l-transparent",
+              )}
             >
               {selectable && (
                 <td className="w-8 px-3 py-2">
@@ -119,6 +141,7 @@ export function SessionTable({
               <td className="px-3 py-2 max-w-[200px] truncate">
                 <Link
                   href={`${basePath}/${session.session_id}`}
+                  onClick={() => onRowVisit?.(session.session_id)}
                   className="text-text hover:text-primary transition-colors"
                 >
                   {session.session_id}
@@ -138,9 +161,10 @@ export function SessionTable({
               <td className="px-3 py-2 text-text-dim">
                 {session.total_tokens}
               </td>
-              <td className="px-3 py-2 text-text-dim">
+              {/* TODO(cost): Restore Cost cell once session cost computation is implemented. */}
+              {/* <td className="px-3 py-2 text-text-dim">
                 {formatCost(session.total_cost)}
-              </td>
+              </td> */}
               <td className="px-3 py-2 text-text-dim">
                 {formatRelativeTime(session.first_trace_at)}
               </td>

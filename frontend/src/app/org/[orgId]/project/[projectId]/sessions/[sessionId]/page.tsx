@@ -30,7 +30,8 @@ import { useToast } from "@/components/providers/ToastProvider";
 import {
   formatDateTime,
   formatDuration,
-  formatCost,
+  // TODO(cost): re-enable when session cost computation is implemented.
+  // formatCost,
   formatTokens,
 } from "@/lib/utils/format";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -223,12 +224,13 @@ export default function SessionDetailPage({
                 {formatTokens(session.total_tokens)}
               </span>
             </div>
-            <div>
+            {/* TODO(cost): Restore Total Cost once session cost computation is implemented. */}
+            {/* <div>
               <span className="text-text-muted block">Total Cost</span>
               <span className="text-text">
                 {formatCost(session.total_cost)}
               </span>
-            </div>
+            </div> */}
             <div>
               <span className="text-text-muted block">First Trace</span>
               <span className="text-text">

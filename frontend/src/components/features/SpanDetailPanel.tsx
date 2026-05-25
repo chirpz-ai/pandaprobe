@@ -51,7 +51,8 @@ function TraceDetail({ trace }: { trace: TraceResponse }) {
       <DetailSection title="Summary">
         <div className="grid grid-cols-3 gap-x-6 gap-y-2">
           <KV label="Total tokens" value={formatTokens(trace.total_tokens)} />
-          <KV label="Total cost" value={formatCost(trace.total_cost)} />
+          {/* TODO(cost): Restore Total cost once trace cost computation is implemented. */}
+          {/* <KV label="Total cost" value={formatCost(trace.total_cost)} /> */}
           <KV label="Spans" value={String(trace.spans.length)} />
         </div>
       </DetailSection>
