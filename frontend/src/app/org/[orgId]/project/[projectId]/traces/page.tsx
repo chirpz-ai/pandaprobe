@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useQuery,
   useQueryClient,
@@ -39,6 +39,7 @@ import { TraceStatus, TraceSortBy, SortOrder } from "@/lib/api/enums";
 import { queryKeys } from "@/lib/query/keys";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useUrlState } from "@/hooks/useUrlState";
+import { useLastVisitedRow } from "@/hooks/useVisitedRows";
 import { extractErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils/cn";
 
@@ -68,6 +69,21 @@ export default function TracesPage() {
   useDocumentTitle("Traces");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { lastVisited, restoredPage, markVisited } =
+    useLastVisitedRow("pp_visited_traces");
+
+  const pageRestored = useRef(false);
+  useEffect(() => {
+    if (!pageRestored.current && restoredPage) {
+      pageRestored.current = true;
+      set({ page: restoredPage });
+    }
+  }, [restoredPage, set]);
+
+  const handleRowVisit = useCallback(
+    (id: string) => markVisited(id, String(page)),
+    [markVisited, page],
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -360,6 +376,8 @@ export default function TracesPage() {
                 traces={data.items}
                 selected={selected}
                 onSelectionChange={setSelected}
+                lastVisited={lastVisited}
+                onRowVisit={handleRowVisit}
               />
             </div>
             <Pagination
