@@ -125,6 +125,8 @@ class CliAuthService:
         Raises:
             AuthenticationError: if the code is missing/expired/used, or
                 the verifier does not match the stored challenge.
+            AuthorizationError: if the user is no longer a member of the
+                org by the time the code is exchanged.
         """
         if not code or not code_verifier:
             raise ValidationError("Both 'code' and 'code_verifier' are required.")
@@ -141,6 +143,9 @@ class CliAuthService:
 
         org_id = UUID(payload["org_id"])
         user_id = UUID(payload["user_id"])
+
+        # Re-verify membership at exchange time
+        await self._identity.require_membership(user_id, org_id)
 
         expiration = f"{int(payload['expires_days'])}d"
         api_key, raw_key = await self._identity.create_api_key(

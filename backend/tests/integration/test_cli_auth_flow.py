@@ -120,3 +120,21 @@ async def test_exchange_rejects_unknown_code(client: AsyncClient):
         json={"code": "does-not-exist", "code_verifier": "whatever"},
     )
     assert resp.status_code == 401
+
+
+async def test_exchange_rejects_user_removed_from_org_within_ttl(client: AsyncClient, db_session: AsyncSession):
+    # Membership is checked at issue time; if the user is removed before exchanging,
+    # the key must NOT be minted (otherwise they regain access for 90 days).
+    user = await _seed_member(db_session)
+    verifier, challenge = _pkce_pair()
+    code = await _issue_code(db_session, user.id, challenge)
+
+    await IdentityRepository(db_session).delete_membership(user.id, TEST_ORG_ID)
+    await db_session.commit()
+
+    resp = await client.post("/cli/auth/exchange", json={"code": code, "code_verifier": verifier})
+    assert resp.status_code == 403
+
+    # And no key was created as a side effect.
+    keys = await IdentityRepository(db_session).list_api_keys(TEST_ORG_ID)
+    assert keys == []
