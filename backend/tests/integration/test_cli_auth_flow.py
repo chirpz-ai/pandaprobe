@@ -114,6 +114,21 @@ async def test_exchange_rejects_wrong_verifier(client: AsyncClient, db_session: 
     assert resp.status_code == 401
 
 
+async def test_wrong_verifier_does_not_consume_code(client: AsyncClient, db_session: AsyncSession):
+    # A failed PKCE attempt must NOT burn the code: the legitimate CLI can still
+    # complete login with the correct verifier while the code is within its TTL.
+    user = await _seed_member(db_session)
+    verifier, challenge = _pkce_pair()
+    code = await _issue_code(db_session, user.id, challenge)
+
+    bad = await client.post("/cli/auth/exchange", json={"code": code, "code_verifier": "wrong"})
+    assert bad.status_code == 401
+
+    good = await client.post("/cli/auth/exchange", json={"code": code, "code_verifier": verifier})
+    assert good.status_code == 200, good.text
+    assert good.json()["api_key"].startswith("sk_pp_")
+
+
 async def test_exchange_rejects_unknown_code(client: AsyncClient):
     resp = await client.post(
         "/cli/auth/exchange",

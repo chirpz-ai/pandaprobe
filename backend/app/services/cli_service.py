@@ -118,9 +118,11 @@ class CliAuthService:
     async def exchange(self, *, code: str, code_verifier: str) -> dict:
         """Exchange a single-use code + PKCE verifier for a fresh 90-day API key.
 
-        The code is consumed atomically (single-use). The PKCE challenge
-        is verified with a constant-time compare. The raw key is returned
-        exactly once and is never persisted or logged.
+        The PKCE challenge is verified with a constant-time compare; the
+        code is consumed (single-use) only **after** a successful verify,
+        so a wrong verifier never burns a code the legitimate CLI still
+        needs. The raw key is returned exactly once and is never persisted
+        or logged.
 
         Raises:
             AuthenticationError: if the code is missing/expired/used, or
@@ -132,7 +134,8 @@ class CliAuthService:
             raise ValidationError("Both 'code' and 'code_verifier' are required.")
 
         # Atomic single-use: fetch-and-delete so a replay finds nothing.
-        raw = await self._redis.getdel(f"{_CODE_PREFIX}{code}")
+        redis_key = f"{_CODE_PREFIX}{code}"
+        raw = await self._redis.get(redis_key)
         if raw is None:
             raise AuthenticationError("Authorization code is invalid, expired, or already used.")
 
@@ -140,6 +143,9 @@ class CliAuthService:
 
         if not verify_pkce(code_verifier, payload["code_challenge"]):
             raise AuthenticationError("PKCE verification failed.")
+
+        if await self._redis.delete(redis_key) == 0:
+            raise AuthenticationError("Authorization code is invalid, expired, or already used.")
 
         org_id = UUID(payload["org_id"])
         user_id = UUID(payload["user_id"])
