@@ -1,11 +1,12 @@
 ---
-title: "CLI"
+title: "PandaProbe CLI"
+sidebarTitle: "CLI"
 description: "Inspect traces, sessions, spans, scores, and evaluation runs from your terminal"
 icon: "terminal"
 ---
 
-The **PandaProbe CLI** is a single binary for interacting PandaProbe API from the terminal:
- list and inspect traces, sessions, and spans; create eval runs or read
+The **PandaProbe CLI** is a single binary for working with the PandaProbe API from your
+terminal: list and inspect traces, sessions, and spans; create eval runs; and read
 evaluation scores and details.
 
 ## Install
@@ -159,7 +160,10 @@ pandaprobe sessions get <session-id>
 ### Evaluations
 
 Evaluation commands target traces or sessions via `--target trace|session` (default
-`trace`).
+`trace`). This is the only command group with **write** operations alongside the
+read ones — the three commands that create data are called out explicitly below.
+
+**Read** &mdash; inspect metrics, runs, and scores:
 
 ```bash
 # List available metrics
@@ -175,7 +179,12 @@ pandaprobe evals scores list --name coherence
 pandaprobe evals scores get <trace-id>
 ```
 
-Creating evaluations and submitting scores (write operations):
+**Write** &mdash; create runs and submit scores:
+
+<Warning>
+  These three commands execute `write` endpoints. Everything else in the
+  CLI is read-only.
+</Warning>
 
 ```bash
 # Run metrics over traces matching filters
@@ -187,11 +196,6 @@ pandaprobe evals runs batch --trace-ids <id1>,<id2> --metrics coherence
 # Submit a score for a trace (trace target only)
 pandaprobe evals scores submit --trace-id <trace-id> --name accuracy --value 0.92
 ```
-
-<Note>
-  `evals runs create`, `evals runs batch`, and `evals scores submit` create data. All
-  other commands are read-only.
-</Note>
 
 ## Examples
 
