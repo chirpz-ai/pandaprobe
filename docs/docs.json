@@ -309,7 +309,8 @@
         "icon": "history",
         "pages": [
           "changelog/python-sdk",
-          "changelog/core-service"
+          "changelog/core-service",
+          "changelog/cli"
         ]
       }
     ]
