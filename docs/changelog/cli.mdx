@@ -1,0 +1,24 @@
+---
+title: "CLI"
+description: "Release notes for the PandaProbe CLI"
+icon: "terminal"
+rss: true
+---
+
+Release history for the **PandaProbe CLI** (`pandaprobe`).
+
+Current version: `v0.1.0`
+
+<Update label="v0.1.0" description="2026-06-03" tags={["Initial release"]}>
+  ### Public release of the PandaProbe CLI
+
+  A single-binary, agent-first command-line tool for working with the PandaProbe API from your terminal. See the [CLI docs](/tools/cli) to get started.
+
+  - **Traces & sessions**: `traces list` / `get` / `spans` and `sessions list` / `get`, with rich server-side filtering (status, user, tags, date range, sort) and `--limit` / `--offset` pagination.
+  - **Evaluations**: `evals metrics`, `evals runs` (`create`, `batch`, `list`, `get`, `scores`), and `evals scores` (`list`, `get`, `submit`), targeting traces or sessions via `--target trace|session`.
+  - **Authentication**: `pandaprobe auth login` performs a browser-based OAuth 2.0 Authorization-Code + PKCE flow against PandaProbe Cloud, mints a 90-day API key, and stores it in `~/.pandaprobe/config.yaml` — the raw key never travels through the browser. Plus `auth status` / `auth logout`, and a manual API-key path (`config set`) for self-hosted deployments.
+  - **Agent-first output**: JSON by default (data to stdout, errors as JSON to stderr), meaningful exit codes (`0`/`1`/`2`/`3`/`4`/`5`), and an opt-in `--format table` for humans.
+  - **Configuration**: precedence of flags → `PANDAPROBE_*` environment variables → `~/.pandaprobe/config.yaml` → defaults; inspect with `config show`.
+  - **Install**: one-line `curl` (macOS/Linux) and `irm` (Windows) installers via `cli.pandaprobe.com`, `go install`, and prebuilt binaries for Linux, macOS, and Windows (amd64/arm64) on each GitHub release.
+  - **Shell completion** for bash, zsh, fish, and PowerShell.
+</Update>
