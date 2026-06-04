@@ -1,0 +1,281 @@
+---
+title: "CLI"
+description: "Inspect traces, sessions, spans, scores, and evaluation runs from your terminal"
+icon: "terminal"
+---
+
+The **PandaProbe CLI** is a single binary for interacting PandaProbe API from the terminal:
+ list and inspect traces, sessions, and spans; create eval runs or read
+evaluation scores and details.
+
+## Install
+
+<Tabs>
+  <Tab title="macOS / Linux">
+    ```bash
+    curl -fsSL https://cli.pandaprobe.com/install.sh | sh
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    irm https://cli.pandaprobe.com/install.ps1 | iex
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```bash
+    go install github.com/chirpz-ai/pandaprobe-cli@latest
+    ```
+  </Tab>
+</Tabs>
+
+Verify the install:
+
+```bash
+pandaprobe version
+```
+
+## Authenticate
+
+There are two ways to authenticate. Use **automatic login** for PandaProbe Cloud, or a
+**manual API key** for self-hosted deployments (or if you prefer to manage keys
+yourself).
+
+### Method 1 — Automatic login (PandaProbe Cloud)
+
+<Note>
+  `pandaprobe auth login` currently supports **PandaProbe Cloud only**. Sign up at
+  [app.pandaprobe.com](https://app.pandaprobe.com) before logging in. For self-hosted or
+  other non-SaaS endpoints, use **Method 2** below.
+</Note>
+
+```bash
+pandaprobe auth login
+```
+
+This opens your browser, authenticates you against PandaProbe Cloud, mints a 90-day API
+key, and writes `api_key` + `project_name` to `~/.pandaprobe/config.yaml`. On a headless
+machine, add `--no-browser` to print the URL instead.
+
+```bash
+pandaprobe auth status   # confirm you're logged in (key masked)
+pandaprobe auth logout   # remove stored credentials locally
+```
+
+### Method 2 — Manual API key
+
+Create an API key in your PandaProbe dashboard, then store it together with your project
+name:
+
+```bash
+pandaprobe config set api_key sk_pp_xxxxxxxx
+pandaprobe config set project_name my-project
+```
+
+For self-hosted or non-default deployments, also set the endpoint:
+
+```bash
+pandaprobe config set endpoint https://your-pandaprobe-host
+```
+
+<Note>
+  You can also provide these per-command with `--api-key` / `--project` / `--endpoint`,
+  or via the `PANDAPROBE_API_KEY`, `PANDAPROBE_PROJECT_NAME`, and `PANDAPROBE_ENDPOINT`
+  environment variables.
+</Note>
+
+## Quickstart
+
+```bash
+# Confirm you're authenticated
+pandaprobe auth status
+
+# List recent traces
+pandaprobe traces list --limit 5
+
+# List only failed traces
+pandaprobe traces list --status ERROR --limit 5
+
+# Get a full trace with all its spans
+pandaprobe traces get <trace-id>
+
+# List conversation sessions
+pandaprobe sessions list --limit 5
+
+# Read evaluation scores for a trace
+pandaprobe evals scores get <trace-id>
+
+# List evaluation runs
+pandaprobe evals runs list
+
+# Human-readable table output
+pandaprobe traces list --limit 5 --format table
+```
+
+## Commands
+
+Pagination is `--limit` (1–200) and `--offset`. Filtering happens server-side, so you
+fetch only what you need.
+
+### Traces
+
+```bash
+# List traces, newest first
+pandaprobe traces list --limit 20
+
+# Filter by status and sort
+pandaprobe traces list --status ERROR --sort-by started_at --sort-order desc
+
+# Get a single trace with all its spans
+pandaprobe traces get <trace-id>
+
+# Output only the spans, filtered by kind
+pandaprobe traces spans <trace-id> --kind LLM
+```
+
+`traces list` filters: `--status` (`PENDING`, `RUNNING`, `COMPLETED`, `ERROR`),
+`--session-id`, `--user-id`, `--name`, `--tags`, `--started-after`, `--started-before`,
+`--sort-by` (`started_at`, `ended_at`, `name`, `latency`, `status`), `--sort-order`
+(`asc`, `desc`).
+
+`traces get` returns the trace with its spans inlined. Use `--spans-only` for just the
+spans array, and `--kind` / `--status` to filter spans. Span kinds: `AGENT`, `TOOL`,
+`LLM`, `RETRIEVER`, `CHAIN`, `EMBEDDING`, `OTHER`. Span statuses: `OK`, `ERROR`, `UNSET`.
+
+### Sessions
+
+```bash
+# List sessions (conversations)
+pandaprobe sessions list --limit 20
+
+# Get a session and its traces
+pandaprobe sessions get <session-id>
+```
+
+`sessions list` filters: `--user-id`, `--has-error`, `--started-after`,
+`--started-before`, `--tags`, `--query`, `--sort-by` (`recent`, `trace_count`,
+`latency`, `cost`), `--sort-order`. `sessions get` accepts `--include-traces`
+(default `true`).
+
+### Evaluations
+
+Evaluation commands target traces or sessions via `--target trace|session` (default
+`trace`).
+
+```bash
+# List available metrics
+pandaprobe evals metrics --target trace
+
+# List runs, then drill into one
+pandaprobe evals runs list
+pandaprobe evals runs get <run-id>
+pandaprobe evals runs scores <run-id>
+
+# List scores, or fetch all scores for one trace
+pandaprobe evals scores list --name coherence
+pandaprobe evals scores get <trace-id>
+```
+
+Creating evaluations and submitting scores (write operations):
+
+```bash
+# Run metrics over traces matching filters
+pandaprobe evals runs create --metrics coherence,tool_correctness --status COMPLETED
+
+# Run metrics over a specific set of traces
+pandaprobe evals runs batch --trace-ids <id1>,<id2> --metrics coherence
+
+# Submit a score for a trace (trace target only)
+pandaprobe evals scores submit --trace-id <trace-id> --name accuracy --value 0.92
+```
+
+<Note>
+  `evals runs create`, `evals runs batch`, and `evals scores submit` create data. All
+  other commands are read-only.
+</Note>
+
+## Examples
+
+Compose commands with `jq`:
+
+```bash
+# Count traces by status
+pandaprobe traces list --limit 200 | jq '[.items[].status] | group_by(.) | map({status: .[0], count: length})'
+
+# Find a failed trace and read its first error
+ID=$(pandaprobe traces list --status ERROR --limit 1 | jq -r '.items[0].trace_id')
+pandaprobe traces get "$ID" | jq '.spans[] | select(.error != null) | .error'
+
+# Pull every score for a trace
+pandaprobe evals scores get "$ID" | jq '.[] | {name, value, data_type}'
+```
+
+---
+
+## Output and exit codes
+
+By default the CLI emits JSON: **data goes to stdout, errors to stderr** — so output
+pipes cleanly into `jq`. Pass `--format table` for human-readable tables.
+
+List commands return an `items` array plus a `pagination` block:
+
+```json
+{
+  "items": [ /* ... */ ],
+  "pagination": { "total": 150, "limit": 20, "offset": 0 }
+}
+```
+
+Errors are JSON objects on stderr:
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "invalid --status \"NOPE\": must be one of PENDING, RUNNING, COMPLETED, ERROR",
+    "status": 422
+  }
+}
+```
+
+Exit codes are part of the contract:
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success |
+| `1` | General error (network, decode, unexpected) |
+| `2` | Authentication/authorization error (401, 403) |
+| `3` | Not found (404) |
+| `4` | Validation error (bad flags, 400, 422) |
+| `5` | Other API error (other 4xx, 5xx) |
+
+## Configuration reference
+
+Values resolve in this order (highest to lowest): command-line flags →
+`PANDAPROBE_*` environment variables → `~/.pandaprobe/config.yaml` → built-in defaults.
+
+| Setting | Flag | Environment variable | Config key | Default |
+| --- | --- | --- | --- | --- |
+| API key | `--api-key` | `PANDAPROBE_API_KEY` | `api_key` | — |
+| Project name | `--project` | `PANDAPROBE_PROJECT_NAME` | `project_name` | — |
+| Endpoint | `--endpoint` | `PANDAPROBE_ENDPOINT` | `endpoint` | `https://api.pandaprobe.com` |
+| Web app URL | `--auth-url` | `PANDAPROBE_AUTH_URL` | `auth_url` | `https://app.pandaprobe.com` |
+| Output format | `--format` | `PANDAPROBE_FORMAT` | `format` | `json` |
+| Timeout (seconds) | — | `PANDAPROBE_TIMEOUT` | `timeout` | `30` |
+
+Inspect the effective configuration (the API key is masked):
+
+```bash
+pandaprobe config show
+```
+
+Other global flags: `--verbose` and `--debug` (log HTTP details to stderr, key masked),
+`--no-color`, and `--config <path>` to use a non-default config file.
+
+## Shell completion
+
+```bash
+pandaprobe completion zsh  > "${fpath[1]}/_pandaprobe"
+pandaprobe completion bash > /etc/bash_completion.d/pandaprobe
+```
+
+Supported shells: `bash`, `zsh`, `fish`, `powershell`.

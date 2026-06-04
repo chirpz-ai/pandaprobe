@@ -84,6 +84,12 @@
             ]
           },
           {
+            "group": "Tools",
+            "pages": [
+              "tools/cli"
+            ]
+          },
+          {
             "group": "Tracing",
             "pages": [
               "tracing/overview",
