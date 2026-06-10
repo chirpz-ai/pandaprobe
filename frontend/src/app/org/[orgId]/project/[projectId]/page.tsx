@@ -10,7 +10,7 @@ import {
   CheckCircle,
   Layers,
   ListTree,
-  Rocket
+  Rocket,
 } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { listTraces } from "@/lib/api/traces";

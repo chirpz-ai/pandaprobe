@@ -41,11 +41,11 @@ const MODES: Record<Mode, ModeConfig> = {
   },
 };
 
-const MODE_ORDER: Mode[] = ["terminal", "agent"];
+const MODE_ORDER: Mode[] = ["agent", "terminal"];
 
 export function SkillOnboarding() {
   const { toast } = useToast();
-  const [mode, setMode] = useState<Mode>("terminal");
+  const [mode, setMode] = useState<Mode>("agent");
   const [copied, setCopied] = useState(false);
 
   const active = MODES[mode];
@@ -60,7 +60,6 @@ export function SkillOnboarding() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-
         <div className="flex items-center gap-2">
           {MODE_ORDER.map((id) => {
             const { label, icon: Icon } = MODES[id];
@@ -86,8 +85,8 @@ export function SkillOnboarding() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border border-border bg-surface-hi px-4 py-3.5">
-        <ChevronRight className="h-4 w-4 flex-shrink-0 text-text-dim" />
+      <div className="flex items-center gap-3 border border-info/30 bg-info/10 px-4 py-3.5">
+        <ChevronRight className="h-4 w-4 flex-shrink-0 text-info" />
         <code className="flex-1 min-w-0 truncate font-mono text-sm text-text">
           {active.display}
         </code>
@@ -95,7 +94,7 @@ export function SkillOnboarding() {
           type="button"
           onClick={handleCopy}
           aria-label="Copy to clipboard"
-          className="flex-shrink-0 p-1.5 border border-border bg-surface text-text-muted hover:text-text hover:border-primary/40 transition-colors"
+          className="flex-shrink-0 p-1.5 border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
         >
           {copied ? (
             <Check className="h-3.5 w-3.5 text-success" />
