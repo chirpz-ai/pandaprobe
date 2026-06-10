@@ -87,7 +87,7 @@ export function SkillOnboarding() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border border-info/30 bg-info/10 px-4 py-3.5">
+      <div className="flex items-center gap-3 border border-info/30 bg-info/10 px-4 py-2.5">
         <ChevronRight className="h-4 w-4 flex-shrink-0 text-info" />
         <code className="flex-1 min-w-0 truncate font-mono text-sm text-text">
           {active.display}
