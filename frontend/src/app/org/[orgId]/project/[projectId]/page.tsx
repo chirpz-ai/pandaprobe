@@ -4,7 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, CheckCircle, Layers, ListTree, Rocket } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  CheckCircle,
+  Layers,
+  ListTree,
+  Rocket
+} from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { listTraces } from "@/lib/api/traces";
 import { listSessions } from "@/lib/api/sessions";
@@ -16,6 +23,7 @@ import { Accordion } from "@/components/common/Accordion";
 import { LoadingState } from "@/components/common/LoadingState";
 import { InstructionCard } from "@/components/features/InstructionCard";
 import { InstructionSidebar } from "@/components/features/InstructionSidebar";
+import { SkillOnboarding } from "@/components/features/SkillOnboarding";
 import type { InstructionId } from "@/components/features/InstructionContent";
 
 interface QuickstartEntry {
@@ -89,7 +97,6 @@ export default function ProjectHomePage() {
   if (initialLoading && !hasData) return <LoadingState />;
 
   const projectBase = `/org/${orgId}/project/${projectId}`;
-  const hasAnyTrace = (tracesQuery.data?.total ?? 0) > 0;
 
   const cards = [
     {
@@ -128,21 +135,37 @@ export default function ProjectHomePage() {
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-lg font-mono text-primary">Home</h1>
 
+      <div className="border-engraved bg-surface p-5 space-y-4 animate-fade-in">
+        <div className="flex items-start gap-3">
+          <span className="flex-shrink-0 text-primary">
+            <Rocket className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-sm font-mono text-text">Get started</h2>
+            <p className="text-xs font-mono text-text-muted mt-0.5 leading-relaxed">
+              Fastest path: let your coding agent set up PandaProbe with our
+              packaged skill. Install it, then ask your agent to set up
+              PandaProbe.
+            </p>
+          </div>
+        </div>
+        <SkillOnboarding />
+      </div>
+
       <Accordion
-        title="Quickstart"
-        description="Short, focused walkthroughs to get you tracing, instrumenting agents, and running evals."
-        icon={<Rocket className="h-4 w-4" />}
-        defaultOpen={!hasAnyTrace}
+        title="Setup guides & resources"
+        description="Prefer to wire it up yourself? Step-by-step walkthroughs for tracing, agents, and evals."
+        icon={<BookOpen className="h-4 w-4" />}
+        defaultOpen={false}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y divide-border md:divide-y-0 md:divide-x">
-          {QUICKSTART_ENTRIES.map((entry, index) => (
+          {QUICKSTART_ENTRIES.map((entry) => (
             <InstructionCard
               key={entry.id}
               instructionId={entry.id}
               step={entry.step}
               title={entry.title}
               description={entry.description}
-              highlight={index === 0 && !hasAnyTrace}
               onClick={() => setActiveInstruction(entry.id)}
             />
           ))}
