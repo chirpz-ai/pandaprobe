@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Bot, Check, ChevronRight, Copy, Terminal } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers/ToastProvider";
 import { cn } from "@/lib/utils/cn";
 
@@ -65,21 +66,22 @@ export function SkillOnboarding() {
             const { label, icon: Icon } = MODES[id];
             const isActive = id === mode;
             return (
-              <button
+              <Button
                 key={id}
-                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setMode(id)}
                 aria-pressed={isActive}
                 className={cn(
-                  "inline-flex items-center gap-2 px-3 py-1.5 border text-xs font-mono uppercase tracking-wider transition-colors",
+                  "border uppercase tracking-wider",
                   isActive
                     ? "border-text text-text bg-surface-hi"
-                    : "border-border text-text-dim hover:text-text hover:border-border-hi",
+                    : "border-border hover:border-border-hi",
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
                 {label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -90,18 +92,19 @@ export function SkillOnboarding() {
         <code className="flex-1 min-w-0 truncate font-mono text-sm text-text">
           {active.display}
         </code>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleCopy}
           aria-label="Copy to clipboard"
-          className="flex-shrink-0 p-1.5 border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+          className="h-8 w-8 flex-shrink-0 border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
         >
           {copied ? (
             <Check className="h-3.5 w-3.5 text-success" />
           ) : (
             <Copy className="h-3.5 w-3.5" />
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );
