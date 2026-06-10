@@ -101,7 +101,8 @@ def test_welcome_html_contains_key_links() -> None:
     html = EmailService._welcome_html()
     assert "docs.pandaprobe.com" in html
     assert "github.com/chirpz-ai/pandaprobe" in html
-    assert "discord.gg/A2VfrRhx" in html
+    assert "npx skills add chirpz-ai/pandaprobe-skills" in html
+    assert "cal.com/sina-tayebati/pandaprobe-intro" in html
     assert "Hey," in html
 
 
