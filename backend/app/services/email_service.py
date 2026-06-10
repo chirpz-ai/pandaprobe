@@ -141,20 +141,16 @@ class EmailService:
     </p>
 
     <p style="margin: 0 0 15px 0;">
-        Here's some useful resources to get you started:
+        Prefer to explore on your own? These will help:
     </p>
 
     <p style="margin: 0 0 8px 0;">
         &bull; Our docs: <a href="https://docs.pandaprobe.com"
           style="color: #0000EE; text-decoration: underline;">https://docs.pandaprobe.com</a>
     </p>
-    <p style="margin: 0 0 8px 0;">
+    <p style="margin: 0 0 15px 0;">
         &bull; Our repo: <a href="https://github.com/chirpz-ai/pandaprobe"
           style="color: #0000EE; text-decoration: underline;">https://github.com/chirpz-ai/pandaprobe</a>
-    </p>
-    <p style="margin: 0 0 15px 0;">
-        &bull; Our discord: <a href="https://discord.gg/A2VfrRhx"
-          style="color: #0000EE; text-decoration: underline;">https://discord.gg/A2VfrRhx</a>
     </p>
 
     <p style="margin: 15px 0;">
