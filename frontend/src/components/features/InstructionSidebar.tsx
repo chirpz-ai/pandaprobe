@@ -1,26 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
 import {
   InstructionContent,
-  getInstruction,
+  INSTRUCTIONS,
   type InstructionId,
 } from "./InstructionContent";
 
 interface InstructionSidebarProps {
-  instructionId: InstructionId;
   open: boolean;
   onClose: () => void;
+  initialInstructionId?: InstructionId;
 }
 
+const TABS = Object.values(INSTRUCTIONS);
+
 export function InstructionSidebar({
-  instructionId,
   open,
   onClose,
+  initialInstructionId = "quickstart",
 }: InstructionSidebarProps) {
-  const { icon: Icon, title, description } = getInstruction(instructionId);
+  const [active, setActive] = useState<InstructionId>(initialInstructionId);
 
   return (
     <>
@@ -35,28 +38,42 @@ export function InstructionSidebar({
         )}
         aria-hidden={!open}
       >
-        <div className="flex items-center justify-between h-12 px-4 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <Icon className="h-4 w-4 text-primary flex-shrink-0" />
-            <h2 className="text-xs font-mono text-primary uppercase tracking-wider truncate">
-              {title}
-            </h2>
-            <span className="text-[11px] font-mono text-text-dim truncate hidden sm:inline">
-              · {description}
-            </span>
+        <div className="flex items-center gap-2 h-12 px-3 border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-1 min-w-0 overflow-x-auto scrollbar-hide">
+            {TABS.map(({ id, title, icon: Icon }) => {
+              const isActive = id === active;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActive(id)}
+                  aria-pressed={isActive}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1.5 border text-xs font-mono whitespace-nowrap transition-colors",
+                    isActive
+                      ? "border-primary/40 bg-primary/10 text-primary"
+                      : "border-transparent text-text-dim hover:text-text hover:bg-surface-hi",
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  {title}
+                </button>
+              );
+            })}
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            aria-label={`Close ${title}`}
+            aria-label="Close resources"
+            className="ml-auto flex-shrink-0"
           >
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
-          {open && <InstructionContent instructionId={instructionId} />}
+          {open && <InstructionContent instructionId={active} />}
         </div>
       </div>
     </>

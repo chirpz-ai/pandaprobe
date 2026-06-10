@@ -4,7 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, CheckCircle, Layers, ListTree, Rocket } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  CheckCircle,
+  Layers,
+  ListTree,
+  Rocket,
+} from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { listTraces } from "@/lib/api/traces";
 import { listSessions } from "@/lib/api/sessions";
@@ -12,47 +19,14 @@ import { listMonitors } from "@/lib/api/evaluations";
 import { getUsage } from "@/lib/api/subscriptions";
 import { queryKeys } from "@/lib/query/keys";
 import { formatNumber } from "@/lib/utils/format";
-import { Accordion } from "@/components/common/Accordion";
+import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/common/LoadingState";
-import { InstructionCard } from "@/components/features/InstructionCard";
 import { InstructionSidebar } from "@/components/features/InstructionSidebar";
-import type { InstructionId } from "@/components/features/InstructionContent";
-
-interface QuickstartEntry {
-  id: InstructionId;
-  step: number;
-  title: string;
-  description: string;
-}
-
-const QUICKSTART_ENTRIES: QuickstartEntry[] = [
-  {
-    id: "quickstart",
-    step: 1,
-    title: "Send your first trace",
-    description:
-      "Install the SDK, mint an API key, and wrap your LLM client to trace your first call.",
-  },
-  {
-    id: "agent-quickstart",
-    step: 2,
-    title: "Trace your agent",
-    description:
-      "Instrument advanced agent frameworks like DeepAgents, CrewAI, and more.",
-  },
-  {
-    id: "evaluation-quickstart",
-    step: 3,
-    title: "Evaluate your agent",
-    description:
-      "Set up monitors and eval runs to score your agent's traces and sessions.",
-  },
-];
+import { SkillOnboarding } from "@/components/features/SkillOnboarding";
 
 export default function ProjectHomePage() {
   const { orgId, projectId } = useParams();
-  const [activeInstruction, setActiveInstruction] =
-    useState<InstructionId | null>(null);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
 
   useDocumentTitle("Home");
 
@@ -89,7 +63,6 @@ export default function ProjectHomePage() {
   if (initialLoading && !hasData) return <LoadingState />;
 
   const projectBase = `/org/${orgId}/project/${projectId}`;
-  const hasAnyTrace = (tracesQuery.data?.total ?? 0) > 0;
 
   const cards = [
     {
@@ -128,26 +101,33 @@ export default function ProjectHomePage() {
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-lg font-mono text-primary">Home</h1>
 
-      <Accordion
-        title="Quickstart"
-        description="Short, focused walkthroughs to get you tracing, instrumenting agents, and running evals."
-        icon={<Rocket className="h-4 w-4" />}
-        defaultOpen={!hasAnyTrace}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y divide-border md:divide-y-0 md:divide-x">
-          {QUICKSTART_ENTRIES.map((entry, index) => (
-            <InstructionCard
-              key={entry.id}
-              instructionId={entry.id}
-              step={entry.step}
-              title={entry.title}
-              description={entry.description}
-              highlight={index === 0 && !hasAnyTrace}
-              onClick={() => setActiveInstruction(entry.id)}
-            />
-          ))}
+      <div className="border-engraved bg-surface p-5 space-y-4 animate-fade-in">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="flex-shrink-0 text-primary">
+              <Rocket className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-sm font-mono text-text">Get started</h2>
+              <p className="text-xs font-mono text-text-muted mt-0.5 leading-relaxed">
+                Fastest path: let your coding agent set up PandaProbe with our
+                packaged skill. Install it, then ask your agent to set up
+                PandaProbe.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setResourcesOpen(true)}
+            className="flex-shrink-0"
+          >
+            <BookOpen className="h-3 w-3" />
+            More resources
+          </Button>
         </div>
-      </Accordion>
+        <SkillOnboarding />
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card) => (
@@ -200,9 +180,8 @@ export default function ProjectHomePage() {
       )}
 
       <InstructionSidebar
-        instructionId={activeInstruction ?? "quickstart"}
-        open={activeInstruction !== null}
-        onClose={() => setActiveInstruction(null)}
+        open={resourcesOpen}
+        onClose={() => setResourcesOpen(false)}
       />
     </div>
   );

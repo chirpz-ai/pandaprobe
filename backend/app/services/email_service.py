@@ -124,27 +124,40 @@ class EmailService:
     </p>
 
     <p style="margin: 0 0 15px 0;">
-        Here's some useful resources to get you started:
+        Fastest path: let your coding agent drive it with our packaged skill.
+        From your project root:
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        <code style="display: block; background: #f4f4f4; border: 1px solid #e0e0e0;
+          border-radius: 4px; padding: 10px 12px; font-family: 'Courier New', monospace;
+          font-size: 9pt; white-space: nowrap; overflow-x: auto;">npx skills add chirpz-ai/pandaprobe-skills --skill '*' --yes</code>
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        Then ask your coding agent &ldquo;set up PandaProbe&rdquo; and it'll walk you
+        through the onboarding, wiring up PandaProbe, and running your first
+        instrumented agent.
+    </p>
+
+    <p style="margin: 0 0 15px 0;">
+        Prefer to explore on your own? These will help:
     </p>
 
     <p style="margin: 0 0 8px 0;">
         &bull; Our docs: <a href="https://docs.pandaprobe.com"
           style="color: #0000EE; text-decoration: underline;">https://docs.pandaprobe.com</a>
     </p>
-    <p style="margin: 0 0 8px 0;">
+    <p style="margin: 0 0 15px 0;">
         &bull; Our repo: <a href="https://github.com/chirpz-ai/pandaprobe"
           style="color: #0000EE; text-decoration: underline;">https://github.com/chirpz-ai/pandaprobe</a>
     </p>
-    <p style="margin: 0 0 15px 0;">
-        &bull; Our discord: <a href="https://discord.gg/A2VfrRhx"
-          style="color: #0000EE; text-decoration: underline;">https://discord.gg/A2VfrRhx</a>
-    </p>
 
     <p style="margin: 15px 0;">
-        Btw, if you want to see PandaProbe in action or just chat about what you're building,
-        feel free to book some time with me here:
-        <a href="https://www.pandaprobe.com/contact"
-          style="color: #0000EE; text-decoration: underline;">https://www.pandaprobe.com/contact</a>
+        Btw, if you'd like to share what you're building,
+        I'd love to chat about how PandaProbe can fit your use case. Grab some time with me here:
+        <a href="https://cal.com/sina-tayebati/pandaprobe-intro"
+          style="color: #0000EE; text-decoration: underline;">https://cal.com/sina-tayebati/pandaprobe-intro</a>
     </p>
 
     <p style="margin: 15px 0 0 0;">
