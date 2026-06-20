@@ -1,0 +1,139 @@
+---
+title: "Agent Skill"
+sidebarTitle: "Agent Skill"
+description: "Teach AI coding agents to trace, evaluate, and debug with PandaProbe"
+icon: "pocket-knife"
+---
+
+The **PandaProbe Agent Skill** teaches AI coding agents — Claude Code, Cursor, and other
+tools that support the open [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills)
+standard — how to work with PandaProbe. With it installed, your agent knows how to set up
+PandaProbe, instrument your app, and drive the `pandaprobe` CLI without you spelling out the
+details every time.
+
+It's open source and lives at
+[github.com/chirpz-ai/pandaprobe-skills](https://github.com/chirpz-ai/pandaprobe-skills).
+
+## Why use it
+
+Coding agents produce significantly better results with the skill installed, because it
+conditions them to follow PandaProbe's best practices — work doc-first instead of guessing
+APIs from memory, use the CLI for data access instead of hand-building requests, and never
+echo API keys into the chat.
+
+The skill is self-contained: a `SKILL.md` entry point plus focused reference docs.
+
+```
+SKILL.md
+references/
+  ├── setup.md            # guided onboarding playbook
+  ├── instrumentation.md  # SDK tracing across frameworks and providers
+  └── cli.md              # the pandaprobe CLI command tree and recipes
+```
+
+It uses a **progressive disclosure** model to keep context usage low. The agent only sees the
+skill's name and description until a task matches; it then reads `SKILL.md`, and pulls in a
+specific reference file (`setup.md`, `instrumentation.md`, or `cli.md`) only when that topic
+comes up.
+
+## What it can do
+
+<CardGroup cols={2}>
+  <Card title="Onboard a project" icon="rocket">
+    Guided, interactive setup that builds and runs a first traced agent example from scratch
+    and verifies the traces landed — ideal for a new or empty project.
+  </Card>
+  <Card title="Instrument your app" icon="route">
+    Add PandaProbe tracing via an agent-framework integration, a provider wrapper, or manual
+    decorators — working doc-first against the live documentation.
+  </Card>
+  <Card title="Read & evaluate data" icon="terminal">
+    Use the `pandaprobe` CLI to inspect traces, sessions, spans, and scores, and to run
+    evaluations.
+  </Card>
+  <Card title="Look up the docs" icon="book-open">
+    Fetch the latest PandaProbe documentation — the source of truth that all instrumentation
+    relies on.
+  </Card>
+</CardGroup>
+
+## Install
+
+The skill is distributed through [`npx skills`](https://github.com/vercel-labs/skills), the
+open agent-skills CLI.
+
+<Tabs>
+  <Tab title="Ask your coding agent">
+    The simplest path is to ask your coding agent to install it. Paste a prompt like:
+
+    > Install the PandaProbe agent skill from the `chirpz-ai/pandaprobe-skills` GitHub
+    > repository.
+  </Tab>
+  <Tab title="Manual Installation">
+    Pick the scope that fits your workflow:
+
+    ```bash
+    # Local — install into the current project (all detected agents):
+    npx skills add chirpz-ai/pandaprobe-skills --skill '*' --yes
+
+    # Global — install for all your projects (all detected agents):
+    npx skills add chirpz-ai/pandaprobe-skills --skill '*' --yes --global
+
+    # Target a specific agent (e.g. Claude Code), installed globally:
+    npx skills add chirpz-ai/pandaprobe-skills --agent claude-code --skill '*' --yes --global
+    ```
+
+    `--skill '*'` selects every skill in the repo (there is one, `pandaprobe`). Omit
+    `--agent` to install to all detected agents, or pass `--agent <name>` to target one.
+
+    <Accordion title="Install from a local checkout">
+      To test changes before pushing, install from a local clone:
+
+      ```bash
+      npx skills add ./ --agent claude-code
+      ```
+    </Accordion>
+  </Tab>
+</Tabs>
+
+## Prerequisites
+
+<Note>
+  The skill installs the instructions, not the tools. Depending on what you ask it to do,
+  you'll also need:
+</Note>
+
+- **The `pandaprobe` CLI** — for data and evaluation access. Install with:
+  ```bash
+  curl -fsSL https://cli.pandaprobe.com/install.sh | sh
+  ```
+- **A PandaProbe account and API key** — sign up at
+  [app.pandaprobe.com](https://app.pandaprobe.com), then run `pandaprobe auth login`.
+  Self-hosted deployments can configure an endpoint and key manually instead.
+- **Python 3.10+** with `pip install pandaprobe` — for SDK instrumentation.
+
+## Usage examples
+
+Once installed, the agent picks the skill up automatically for prompts like:
+
+- "Set up PandaProbe in this project and show me my first traces."
+- "Add PandaProbe tracing to my LangGraph agent."
+- "Use pandaprobe to list my failed traces, then drill into the error in trace `tr_…`."
+- "Run a coherence eval over yesterday's completed traces."
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Skill repository" icon="github" href="https://github.com/chirpz-ai/pandaprobe-skills">
+    The open-source `pandaprobe-skills` repo with the full `SKILL.md` and references.
+  </Card>
+  <Card title="CLI reference" icon="terminal" href="/introduction/cli">
+    Install, authenticate, and use the `pandaprobe` CLI.
+  </Card>
+  <Card title="Tracing overview" icon="route" href="/tracing/overview">
+    The three layers of instrumentation the skill uses.
+  </Card>
+  <Card title="Evaluation" icon="drafting-compass" href="/evaluation/get-started/concepts">
+    How metrics, scores, and monitors work.
+  </Card>
+</CardGroup>
