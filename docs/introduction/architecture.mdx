@@ -1,0 +1,107 @@
+---
+title: "Architecture"
+description: "How PandaProbe captures, evaluates, and monitors agent behavior"
+icon: "layout-dashboard"
+---
+
+PandaProbe is a unified platform for the full agent development lifecycle. This page shows
+how its pieces fit together — from instrumenting your application to continuously monitoring
+agent quality in production.
+
+## The agent engineering loop
+
+PandaProbe is built around a continuous loop:
+
+1. **Trace** — capture what your agent actually did.
+2. **Evaluate** — score those traces and sessions for quality and reliability.
+3. **Monitor** — re-run evaluations on a schedule so regressions surface automatically.
+
+Each stage feeds the next: traces are the raw signal, evaluation turns that signal into
+scores, and monitoring keeps those scores fresh as new data arrives.
+
+## How data flows
+
+<Steps>
+  <Step title="Instrument your application">
+    Add the PandaProbe SDK to your app. Wrap an LLM client, enable a framework integration,
+    or annotate functions with decorators — see the [three layers of tracing](/tracing/overview).
+  </Step>
+  <Step title="Send traces and spans">
+    As your agent runs, the SDK emits **traces** (one logical run) made of **spans** (each
+    LLM call, tool call, or step) to the PandaProbe API.
+  </Step>
+  <Step title="Ingest and persist">
+    The API queues incoming data and a background worker persists each trace and its spans,
+    so ingestion stays fast and non-blocking for your application.
+  </Step>
+  <Step title="Evaluate traces and sessions">
+    Create an **eval run** to apply one or more **metrics** to selected traces or sessions.
+    Workers compute scores asynchronously using LLM-as-judge metrics, embeddings, or
+    deterministic aggregation.
+  </Step>
+  <Step title="Monitor on a schedule">
+    Save an eval configuration as a **monitor** to re-run it on a recurring cadence, so new
+    traces and sessions are checked automatically.
+  </Step>
+  <Step title="Review in the dashboard">
+    Inspect traces, drill into spans, and track scores and trends over time in the dashboard —
+    or query everything through the API and CLI.
+  </Step>
+</Steps>
+
+## Core building blocks
+
+<CardGroup cols={2}>
+  <Card title="Traces & Spans" icon="route" href="/tracing/get-started/concepts">
+    A trace is one end-to-end run; spans are the tree of steps inside it.
+  </Card>
+  <Card title="Sessions" icon="fingerprint-pattern" href="/tracing/sessions">
+    Group related traces under a session to see an agent's full lifecycle.
+  </Card>
+  <Card title="Metrics & Scores" icon="drafting-compass" href="/evaluation/get-started/concepts">
+    Metrics score a trace or session; each result is stored as a score with a reason.
+  </Card>
+  <Card title="Monitors" icon="clock" href="/evaluation/setup/scheduling">
+    Saved evaluations that run on a schedule to catch regressions in production.
+  </Card>
+</CardGroup>
+
+## Two ways to connect
+
+PandaProbe separates how applications send data from how people manage their workspace:
+
+| Plane | Who uses it | How it authenticates |
+|---|---|---|
+| **Data plane** | SDK clients and the CLI sending traces, spans, and evaluations | Org-scoped API key + project name |
+| **Management plane** | The dashboard, for users, projects, and billing | Sign-in with your identity provider |
+
+<Note>
+  The project an API key writes to is resolved by name within your organization, so SDK
+  clients only need an API key and a project name to start sending data.
+</Note>
+
+## Deployment options
+
+<CardGroup cols={2}>
+  <Card title="PandaProbe Cloud" icon="cloud" href="https://app.pandaprobe.com/">
+    Managed deployment with a free tier — no infrastructure to run. Sign up and start tracing.
+  </Card>
+  <Card title="Self-hosted" icon="server" href="https://github.com/chirpz-ai/pandaprobe">
+    Run the open-source stack yourself with Docker Compose and keep your data in your own
+    environment.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/tracing/get-started/quickstart">
+    Trace your first LLM call in under 2 minutes.
+  </Card>
+  <Card title="Tracing Overview" icon="search" href="/tracing/overview">
+    Explore the three layers of instrumentation.
+  </Card>
+  <Card title="Evaluation" icon="drafting-compass" href="/evaluation/get-started/concepts">
+    Learn how metrics, scores, and monitors work.
+  </Card>
+</CardGroup>
