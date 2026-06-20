@@ -72,28 +72,41 @@
   "navigation": {
     "tabs": [
       {
+        "tab": "Introduction",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "introduction/welcome",
+              "introduction/architecture"
+            ]
+          },
+          {
+            "group": "Tools",
+            "pages": [
+              "introduction/cli",
+              "introduction/agent-skill"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Tracing",
         "icon": "route",
         "groups": [
           {
             "group": "Get Started",
             "pages": [
-              "get-started/welcome",
-              "get-started/quickstart",
-              "get-started/installation"
-            ]
-          },
-          {
-            "group": "Tools",
-            "pages": [
-              "tools/cli"
+              "tracing/get-started/quickstart",
+              "tracing/get-started/concepts",
+              "tracing/get-started/installation"
             ]
           },
           {
             "group": "Tracing",
             "pages": [
               "tracing/overview",
-              "tracing/concepts",
               {
                 "group": "LLM Providers",
                 "icon": "package",
@@ -160,7 +173,6 @@
           },
           {
             "group": "Trace Evaluation",
-            "icon": "route",
             "pages": [
               "evaluation/trace-evaluation/introduction",
               "evaluation/trace-evaluation/metrics"
@@ -168,7 +180,6 @@
           },
           {
             "group": "Agent Evaluation",
-            "icon": "bot",
             "pages": [
               "evaluation/agent-evaluation/introduction",
               "evaluation/agent-evaluation/metrics"
@@ -176,7 +187,6 @@
           },
           {
             "group": "Set Up Evaluation",
-            "icon": "cog",
             "pages": [
               "evaluation/setup/introduction",
               "evaluation/setup/run-eval-ui",
@@ -199,7 +209,6 @@
           },
           {
             "group": "Traces",
-            "icon": "fingerprint",
             "pages": [
               {
                 "group": "Traces",
@@ -230,7 +239,6 @@
           },
           {
             "group": "Evaluations",
-            "icon": "drafting-compass",
             "pages": [
               {
                 "group": "Trace Eval Runs",
@@ -323,6 +331,46 @@
     {
       "source": "/evaluation/concepts",
       "destination": "/evaluation/get-started/concepts"
+    },
+    {
+      "source": "/get-started/welcome",
+      "destination": "/introduction/welcome"
+    },
+    {
+      "source": "/tools/cli",
+      "destination": "/introduction/cli"
+    },
+    {
+      "source": "/overview/welcome",
+      "destination": "/introduction/welcome"
+    },
+    {
+      "source": "/overview/architecture",
+      "destination": "/introduction/architecture"
+    },
+    {
+      "source": "/overview/cli",
+      "destination": "/introduction/cli"
+    },
+    {
+      "source": "/overview/agent-skill",
+      "destination": "/introduction/agent-skill"
+    },
+    {
+      "source": "/tracing/concepts",
+      "destination": "/tracing/get-started/concepts"
+    },
+    {
+      "source": "/get-started/quickstart",
+      "destination": "/tracing/get-started/quickstart"
+    },
+    {
+      "source": "/get-started/concepts",
+      "destination": "/tracing/get-started/concepts"
+    },
+    {
+      "source": "/get-started/installation",
+      "destination": "/tracing/get-started/installation"
     }
   ],
   "seo": {
