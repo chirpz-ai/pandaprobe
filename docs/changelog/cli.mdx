@@ -7,7 +7,18 @@ rss: true
 
 Release history for the **PandaProbe CLI** (`pandaprobe`).
 
-Current version: `v0.1.0`
+Current version: `v0.2.0`
+
+<Update label="v0.2.0" description="2026-06-26" tags={["Feature"]}>
+  ### Evaluation monitors
+
+  Manage scheduled evaluation monitors entirely from the CLI with the new `evals monitors` command group. See the [CLI docs](/introduction/cli#monitors) for details.
+
+  - **Monitor lifecycle**: `evals monitors create`, `list`, `get`, `update`, `delete`, `pause`, `resume`, `runs`, and `trigger` — wrapping the evaluation-monitor API so monitors are managed with the same auth, config, and output as every other command.
+  - **Scheduling**: predefined cadences (`every_6h`, `daily`, `weekly`) or a custom `cron:<5-field expression>`, with `--sampling-rate`, `--model`, and `--only-if-changed` controls.
+  - **Targeting**: `create` derives `TRACE` / `SESSION` scope from `--target`, reuses the same per-target filter flags as `evals runs create`, and accepts `--signal-weights` for session monitors.
+  - **Filtering & output**: `list` filters by `--status ACTIVE|PAUSED` with `--limit` / `--offset`; JSON by default with `--format table` support for monitor and run listings.
+</Update>
 
 <Update label="v0.1.0" description="2026-06-03" tags={["Initial release"]}>
   ### Public release of the PandaProbe CLI
