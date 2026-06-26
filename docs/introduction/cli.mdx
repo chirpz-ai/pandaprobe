@@ -1,13 +1,13 @@
 ---
 title: "PandaProbe CLI"
 sidebarTitle: "CLI"
-description: "Inspect traces, sessions, spans, scores, and evaluation runs from your terminal"
+description: "Inspect traces, sessions, spans, scores, evaluation runs, and monitors from your terminal"
 icon: "terminal"
 ---
 
 The **PandaProbe CLI** is a single binary for working with the PandaProbe API from your
-terminal: list and inspect traces, sessions, and spans; create eval runs; and read
-evaluation scores and details.
+terminal: list and inspect traces, sessions, and spans; create eval runs; read
+evaluation scores and details; and manage scheduled evaluation monitors.
 
 ## Install
 
@@ -161,7 +161,7 @@ pandaprobe sessions get <session-id>
 
 Evaluation commands target traces or sessions via `--target trace|session` (default
 `trace`). This is the only command group with **write** operations alongside the
-read ones — the three commands that create data are called out explicitly below.
+read ones — the commands that create or modify data are called out explicitly below.
 
 **Read** &mdash; inspect metrics, runs, and scores:
 
@@ -182,8 +182,8 @@ pandaprobe evals scores get <trace-id>
 **Write** &mdash; create runs and submit scores:
 
 <Warning>
-  These three commands execute `write` endpoints. Everything else in the
-  CLI is read-only.
+  These three commands — together with the `evals monitors` lifecycle commands
+  below — execute `write` endpoints. Everything else in the CLI is read-only.
 </Warning>
 
 ```bash
@@ -196,6 +196,56 @@ pandaprobe evals runs batch --trace-ids <id1>,<id2> --metrics coherence
 # Submit a score for a trace (trace target only)
 pandaprobe evals scores submit --trace-id <trace-id> --name accuracy --value 0.92
 ```
+
+#### Monitors
+
+Monitors schedule recurring evaluation runs over the traces or sessions matching a
+filter. Like the other `evals` commands, `monitors create` derives its target from
+`--target trace|session` (sent to the API as `TRACE` / `SESSION`).
+
+**Read** &mdash; list monitors and the runs they have produced:
+
+```bash
+# List monitors, optionally filtered by status
+pandaprobe evals monitors list --status ACTIVE
+
+# Inspect one monitor and the eval runs it has spawned
+pandaprobe evals monitors get <monitor-id>
+pandaprobe evals monitors runs <monitor-id>
+```
+
+**Write** &mdash; create, update, and control monitors:
+
+```bash
+# Create a daily monitor over completed traces
+pandaprobe evals monitors create \
+  --name "Daily prod eval" \
+  --metrics coherence,tool_correctness \
+  --cadence daily \
+  --status COMPLETED
+
+# Custom schedule via cron (minute hour day-of-month month day-of-week, UTC)
+pandaprobe evals monitors create --name "Every 4h" --metrics coherence --cadence "cron:0 */4 * * *"
+
+# Update fields on an existing monitor (only what you pass is changed)
+pandaprobe evals monitors update <monitor-id> --sampling-rate 0.5 --cadence weekly
+
+# Pause / resume scheduling, or fire an immediate run
+pandaprobe evals monitors pause   <monitor-id>
+pandaprobe evals monitors resume  <monitor-id>
+pandaprobe evals monitors trigger <monitor-id>
+
+# Delete a monitor (spawned runs are preserved)
+pandaprobe evals monitors delete <monitor-id>
+```
+
+`monitors create` flags: `--name` and `--metrics` (required), `--cadence` (required;
+`every_6h`, `daily`, `weekly`, or `cron:<5-field expression>`), `--sampling-rate`
+(0–1), `--model`, `--only-if-changed` (default `true`), plus the same per-target filter
+flags as `evals runs create`. `--signal-weights` is accepted for `--target session`
+only. `monitors update` takes the same fields (filters as a single `--filters '<json>'`
+object) and sends only the ones you set. `monitors list` filters by `--status`
+(`ACTIVE`, `PAUSED`) with `--limit` / `--offset`.
 
 ## Examples
 
