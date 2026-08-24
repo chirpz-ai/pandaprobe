@@ -15,7 +15,7 @@ export function JsonViewer({
   data,
   className,
   defaultExpanded = true,
-  maxInitialDepth = 3,
+  maxInitialDepth = Number.POSITIVE_INFINITY,
 }: JsonViewerProps) {
   if (data == null) {
     return <span className="token-keyword text-xs font-mono">null</span>;
@@ -92,18 +92,9 @@ function JsonNode({
   }
 }
 
-const MAX_INLINE_STRING = 120;
-
 function JsonString({ value }: { value: string }) {
-  if (value.length <= MAX_INLINE_STRING) {
-    return <span className="token-string">&quot;{value}&quot;</span>;
-  }
   return (
-    <span className="token-string">
-      &quot;{value.slice(0, MAX_INLINE_STRING)}
-      <span className="text-text-muted">…</span>
-      &quot;
-    </span>
+    <span className="token-string whitespace-pre-wrap break-words">{`"${value}"`}</span>
   );
 }
 
