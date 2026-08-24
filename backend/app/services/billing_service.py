@@ -37,6 +37,13 @@ _stripe_configured = False
 _STRIPE_TIMEOUT_S = 20
 _STRIPE_MAX_RETRIES = 2
 
+#: Must match the Stripe webhook endpoint's version, or payload and response shapes
+#: diverge and moved fields read back as ``None``. See ``test_stripe_api_contract``.
+STRIPE_API_VERSION = "2026-03-25.dahlia"
+
+#: The only ``billing_reason`` that closes a period; the rest invoice within one.
+_RENEWAL_BILLING_REASON = "subscription_cycle"
+
 
 class StripeNotConfiguredError(PandaProbeError):
     """Raised when a Stripe operation is attempted without an API key.
@@ -56,7 +63,7 @@ class StripeNotConfiguredError(PandaProbeError):
 
 
 def _ensure_stripe_configured() -> None:
-    """Assign the Stripe API key, timeout, and retry policy. Idempotent.
+    """Assign the Stripe API key, version, timeout, and retry policy. Idempotent.
 
     Pure local assignment — this contacts nothing. ``RequestsClient`` is the
     SDK's HTTP *transport*, not an API client; constructing it only stores a
@@ -78,6 +85,7 @@ def _ensure_stripe_configured() -> None:
     from stripe._http_client import RequestsClient
 
     stripe.api_key = settings.STRIPE_SECRET_KEY
+    stripe.api_version = STRIPE_API_VERSION
     stripe.max_network_retries = _STRIPE_MAX_RETRIES
     stripe.default_http_client = RequestsClient(timeout=_STRIPE_TIMEOUT_S)
     _stripe_configured = True
@@ -90,6 +98,32 @@ def _resolve_plan_from_price_id(price_id: str) -> SubscriptionPlan | None:
         settings.STRIPE_STARTUP_PRICE_ID: SubscriptionPlan.STARTUP,
     }
     return mapping.get(price_id)
+
+
+def _invoice_subscription_id(invoice: object) -> str | None:
+    """Extract the subscription ID from a Stripe Invoice, or None if there is none.
+
+    The same Basil-generation change that moved the billing period onto
+    subscription items (see ``_get_sub_period``) also removed the Invoice's
+    top-level ``subscription`` field, relocating it to
+    ``parent.subscription_details.subscription``.
+
+    Reading the old path against a Basil-or-later payload yields ``None``, which
+    the invoice webhook handlers treat as "not a subscription invoice" and skip.
+    That silently stopped every ``invoice.paid`` from marking its period billed.
+
+    The legacy top-level path is kept as a fallback so this works against both
+    shapes, which makes it safe regardless of the webhook endpoint's version.
+    """
+    parent = getattr(invoice, "parent", None)
+    details = getattr(parent, "subscription_details", None)
+    subscription = getattr(details, "subscription", None)
+    if subscription is None:
+        subscription = getattr(invoice, "subscription", None)
+    # Either shape may hand back an expanded Subscription instead of a bare ID.
+    if subscription is None or isinstance(subscription, str):
+        return subscription
+    return getattr(subscription, "id", None)
 
 
 def _get_sub_period(stripe_sub: object) -> tuple[datetime, datetime]:
@@ -384,7 +418,7 @@ class BillingService:
         the next billing period.
         """
         obj = event_data["object"]
-        subscription_id = getattr(obj, "subscription", None)
+        subscription_id = _invoice_subscription_id(obj)
         if not subscription_id:
             return
 
@@ -417,7 +451,7 @@ class BillingService:
     async def handle_invoice_paid(self, event_data: dict) -> None:
         """Process ``invoice.paid`` -- final overage report, then advance billing period."""
         obj = event_data["object"]
-        subscription_id = getattr(obj, "subscription", None)
+        subscription_id = _invoice_subscription_id(obj)
         invoice_id = obj.id
 
         if not subscription_id:
@@ -444,10 +478,13 @@ class BillingService:
             finally:
                 await self.release_overage_lock(sub.org_id)
 
-        # Mark the ending period as fully billed
-        old_usage = await self._repo.get_current_usage_record(sub.org_id, sub.current_period_start)
-        if old_usage and not old_usage.billed:
-            await self._repo.mark_billed(sub.org_id, sub.current_period_start, invoice_id)
+        # Only a renewal closes a period: ``calculate_unreported_overages`` skips
+        # billed records, so closing the period a signup invoice *opens* would make
+        # that customer's whole first month of overage unbillable.
+        if getattr(obj, "billing_reason", None) == _RENEWAL_BILLING_REASON:
+            old_usage = await self._repo.get_current_usage_record(sub.org_id, sub.current_period_start)
+            if old_usage and not old_usage.billed:
+                await self._repo.mark_billed(sub.org_id, sub.current_period_start, invoice_id)
 
         # Advance to the new billing period
         stripe_sub = stripe.Subscription.retrieve(subscription_id)
@@ -463,7 +500,7 @@ class BillingService:
     async def handle_invoice_payment_failed(self, event_data: dict) -> None:
         """Process ``invoice.payment_failed`` -- mark subscription past due."""
         obj = event_data["object"]
-        subscription_id = getattr(obj, "subscription", None)
+        subscription_id = _invoice_subscription_id(obj)
         if not subscription_id:
             return
 
