@@ -4,6 +4,7 @@ import type {
   TraceUpdate,
   TraceAccepted,
   TraceResponse,
+  TraceMutationResponse,
   TraceListItem,
   SpanCreate,
   SpanUpdate,
@@ -107,8 +108,11 @@ export async function getTrace(traceId: string): Promise<TraceResponse> {
 export async function updateTrace(
   traceId: string,
   data: TraceUpdate,
-): Promise<TraceResponse> {
-  const res = await client.patch<TraceResponse>(`/traces/${traceId}`, data);
+): Promise<TraceMutationResponse> {
+  const res = await client.patch<TraceMutationResponse>(
+    `/traces/${traceId}`,
+    data,
+  );
   return res.data;
 }
 

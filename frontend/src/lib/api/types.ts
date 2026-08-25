@@ -307,7 +307,7 @@ export interface TraceAccepted {
   task_id: string;
 }
 
-export interface TraceResponse {
+export interface TraceMutationResponse {
   trace_id: string;
   project_id: string;
   name: string;
@@ -322,9 +322,12 @@ export interface TraceResponse {
   tags: string[];
   environment: string | null;
   release: string | null;
-  spans: SpanResponse[];
   total_tokens: number;
   total_cost: number;
+}
+
+export interface TraceResponse extends TraceMutationResponse {
+  spans: SpanResponse[];
 }
 
 export interface TraceListItem {
