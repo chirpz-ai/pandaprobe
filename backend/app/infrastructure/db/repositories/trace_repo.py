@@ -163,11 +163,16 @@ class TraceRepository:
         project_id: UUID,
         **fields: Any,
     ) -> TraceModel | None:
-        """Selectively update trace fields.  Returns the updated ORM row or None."""
-        stmt = (
-            select(TraceModel)
-            .options(selectinload(TraceModel.spans))
-            .where(TraceModel.trace_id == trace_id, TraceModel.project_id == project_id)
+        """Selectively update trace fields.  Returns the updated ORM row or None.
+
+        Spans are intentionally *not* eager-loaded: an update touches only trace
+        columns, and a long-running trace can hold tens of megabytes of span
+        payloads.  Callers must map the row with ``include_spans=False``, since the
+        relationship cannot lazy-load on an async session.
+        """
+        stmt = select(TraceModel).where(
+            TraceModel.trace_id == trace_id,
+            TraceModel.project_id == project_id,
         )
         row = (await self._session.execute(stmt)).scalar_one_or_none()
         if row is None:
