@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -57,6 +57,8 @@ export default function TraceDetailPage({
   const [copiedId, setCopiedId] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
   const [runEvalOpen, setRunEvalOpen] = useState(false);
+  // The span panel below can expand over this card to gain reading room.
+  const metadataRef = useRef<HTMLDivElement>(null);
 
   const hasPendingEval = useHasPendingEvalForTarget("trace", traceId);
 
@@ -171,7 +173,7 @@ export default function TraceDetailPage({
         </div>
       </div>
 
-      <div className="border-engraved bg-surface p-4">
+      <div ref={metadataRef} className="border-engraved bg-surface p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
           <div>
             <span className="text-text-muted block">Status</span>
@@ -237,7 +239,7 @@ export default function TraceDetailPage({
         </div>
       </div>
 
-      <SpanWaterfall trace={trace} />
+      <SpanWaterfall trace={trace} overlayTargetRef={metadataRef} />
 
       <ScoresSidebar
         scores={scores}
