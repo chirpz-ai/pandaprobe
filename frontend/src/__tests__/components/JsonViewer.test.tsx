@@ -2,13 +2,7 @@ import { render, screen } from "@testing-library/react";
 
 import { JsonViewer } from "@/components/common/JsonViewer";
 
-/**
- * Span detail rendering.
- *
- * Long string values used to be cut with `slice(0, 120)` and an ellipsis. Unlike
- * objects and arrays, a string node has no expand toggle, so the remainder was
- * unreachable — the `content` of an LLM message was only ever partly readable.
- */
+// String nodes have no expand toggle, so a truncated value was unrecoverable.
 
 const LONG = "x".repeat(500);
 
@@ -28,7 +22,6 @@ describe("JsonViewer string values", () => {
   it("keeps every character of the original value", () => {
     const { container } = render(<JsonViewer data={{ content: LONG }} />);
 
-    // 500 chars plus the two rendered quote characters.
     expect(container.textContent).toContain(LONG);
     expect(container.textContent?.match(/x/g)).toHaveLength(500);
   });
@@ -62,7 +55,7 @@ describe("JsonViewer string values", () => {
 });
 
 describe("JsonViewer default expansion", () => {
-  /** A tool-call shape, nested well past the old depth-3 cap. */
+  /** Nested past the old depth-3 cap. */
   const DEEP = {
     messages: [
       {
@@ -77,8 +70,7 @@ describe("JsonViewer default expansion", () => {
   it("expands every level by default", () => {
     render(<JsonViewer data={DEEP} />);
 
-    // Visible only if messages -> [0] -> tool_calls -> [0] -> function ->
-    // arguments are all expanded on first render.
+    // Only reachable if every level is expanded on first render.
     expect(screen.getByText('"query"')).toBeInTheDocument();
     expect(screen.getByText('"needle"')).toBeInTheDocument();
   });
@@ -95,7 +87,6 @@ describe("JsonViewer default expansion", () => {
       <JsonViewer data={DEEP} maxInitialDepth={1} />,
     );
 
-    // The nested array is collapsed to a placeholder, so the leaf is absent.
     expect(container.textContent).toMatch(/\d+ items|\d+ keys/);
     expect(screen.queryByText('"needle"')).not.toBeInTheDocument();
   });
