@@ -15,7 +15,7 @@ const CODING_AGENT_PROMPT = `Help me set up and get started with PandaProbe by C
 
 First install the SKILL via \`npx skills add chirpz-ai/pandaprobe-skills --skill '*' --yes\`, and load the skill.
 
-Then tell me what I can do with PandaProbe and use the \`setup\` path to onboard me following the interactive mode.`;
+Then walk me through what I can do with PandaProbe and use the \`setup\` path to onboard me following the interactive mode.`;
 
 interface ModeConfig {
   label: string;
@@ -27,7 +27,7 @@ interface ModeConfig {
 
 const MODES: Record<Mode, ModeConfig> = {
   terminal: {
-    label: "Terminal",
+    label: "Install Skill",
     icon: Terminal,
     display: "npx skills add chirpz-ai/pandaprobe-skills",
     copy: SKILL_INSTALL_COMMAND,
@@ -87,23 +87,23 @@ export function SkillOnboarding() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border border-info/30 bg-info/10 px-4 py-2.5">
-        <ChevronRight className="h-4 w-4 flex-shrink-0 text-info" />
+      <div className="flex items-center gap-3 border border-border-hi bg-surface px-4 py-2.5">
+        <ChevronRight className="h-4 w-4 flex-shrink-0 text-text-dim" />
         <code className="flex-1 min-w-0 truncate font-mono text-sm text-text">
           {active.display}
         </code>
         <Button
-          variant="ghost"
-          size="icon"
+          variant="primary"
+          size="sm"
           onClick={handleCopy}
-          aria-label="Copy to clipboard"
-          className="h-8 w-8 flex-shrink-0 border border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
+          className="flex-shrink-0"
         >
           {copied ? (
             <Check className="h-3.5 w-3.5 text-success" />
           ) : (
             <Copy className="h-3.5 w-3.5" />
           )}
+          Copy
         </Button>
       </div>
     </div>
