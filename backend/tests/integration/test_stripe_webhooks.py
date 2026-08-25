@@ -22,7 +22,7 @@ from uuid import uuid4
 
 import pytest
 import stripe
-from httpx import AsyncClient
+from httpx import AsyncClient, Response
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -97,13 +97,35 @@ def _dahlia_invoice(**overrides) -> dict:
     return invoice
 
 
-async def _post(client: AsyncClient, event_type: str, invoice: dict):
-    body = _event(event_type, invoice)
-    return await client.post(
-        _WEBHOOK_PATH,
-        content=body,
-        headers={"Stripe-Signature": _sign(body), "Content-Type": "application/json"},
-    )
+@pytest.fixture
+def deliver(client: AsyncClient, db_session: AsyncSession):
+    """Deliver a signed event, then drop the test session's cached ORM state.
+
+    The route commits through its own ``async_session_factory()`` session, so
+    ``db_session`` never observes those writes on its own: its identity map still
+    holds the instances the fixtures inserted, and the factory sets
+    ``expire_on_commit=False``, so a later ``select()`` hands back those same
+    objects carrying their pre-webhook values.  The staleness is selective --
+    columns the fixtures set explicitly (``billed``, the period bounds, ``status``)
+    read stale, while ones they left unset are populated by the query -- which is
+    how an assertion on ``billed`` can fail with the ``stripe_invoice_id`` check
+    beside it still passing.  Expiring here forces the next read to hit the
+    database.
+    """
+
+    async def _deliver(body: bytes, *, signature: str | None = None) -> Response:
+        response = await client.post(
+            _WEBHOOK_PATH,
+            content=body,
+            headers={
+                "Stripe-Signature": signature or _sign(body),
+                "Content-Type": "application/json",
+            },
+        )
+        db_session.expire_all()
+        return response
+
+    return _deliver
 
 
 @pytest.fixture
@@ -152,7 +174,7 @@ def stub_stripe_subscription(monkeypatch: pytest.MonkeyPatch) -> tuple[datetime,
 
 
 async def test_invoice_paid_marks_the_period_billed(
-    client: AsyncClient,
+    deliver,
     db_session: AsyncSession,
     paid_subscription: tuple[datetime, datetime],
     stub_stripe_subscription: tuple[datetime, datetime],
@@ -162,7 +184,7 @@ async def test_invoice_paid_marks_the_period_billed(
     new_start, new_end = stub_stripe_subscription
     invoice = _dahlia_invoice()
 
-    response = await _post(client, "invoice.paid", invoice)
+    response = await deliver(_event("invoice.paid", invoice))
     assert response.status_code == 200
 
     repo = BillingRepository(db_session)
@@ -180,7 +202,7 @@ async def test_invoice_paid_marks_the_period_billed(
 
 
 async def test_signup_invoice_keeps_the_period_billable(
-    client: AsyncClient,
+    deliver,
     db_session: AsyncSession,
     paid_subscription: tuple[datetime, datetime],
     stub_stripe_subscription: tuple[datetime, datetime],
@@ -192,7 +214,7 @@ async def test_signup_invoice_keeps_the_period_billable(
     """
     period_start, _ = paid_subscription
 
-    response = await _post(client, "invoice.paid", _dahlia_invoice(billing_reason="subscription_create"))
+    response = await deliver(_event("invoice.paid", _dahlia_invoice(billing_reason="subscription_create")))
     assert response.status_code == 200
 
     record = await BillingRepository(db_session).get_current_usage_record(TEST_ORG_ID, period_start)
@@ -202,12 +224,12 @@ async def test_signup_invoice_keeps_the_period_billable(
 
 
 async def test_invoice_payment_failed_marks_past_due(
-    client: AsyncClient,
+    deliver,
     db_session: AsyncSession,
     paid_subscription: tuple[datetime, datetime],
 ) -> None:
     """Dunning visibility: the status must reflect a failed payment."""
-    response = await _post(client, "invoice.payment_failed", _dahlia_invoice(status="open"))
+    response = await deliver(_event("invoice.payment_failed", _dahlia_invoice(status="open")))
     assert response.status_code == 200
 
     sub = await BillingRepository(db_session).get_subscription_by_org(TEST_ORG_ID)
@@ -216,14 +238,14 @@ async def test_invoice_payment_failed_marks_past_due(
 
 
 async def test_one_off_invoice_is_ignored(
-    client: AsyncClient,
+    deliver,
     db_session: AsyncSession,
     paid_subscription: tuple[datetime, datetime],
 ) -> None:
     """An invoice with no subscription must not be treated as a renewal."""
     period_start, _ = paid_subscription
 
-    response = await _post(client, "invoice.paid", _dahlia_invoice(parent=None))
+    response = await deliver(_event("invoice.paid", _dahlia_invoice(parent=None)))
     assert response.status_code == 200
 
     record = await BillingRepository(db_session).get_current_usage_record(TEST_ORG_ID, period_start)
@@ -231,34 +253,28 @@ async def test_one_off_invoice_is_ignored(
     assert record.billed is False, "a one-off invoice must not close a billing period"
 
 
-async def test_invalid_signature_is_rejected(client: AsyncClient) -> None:
+async def test_invalid_signature_is_rejected(deliver) -> None:
     """Signature verification still guards the endpoint."""
-    body = _event("invoice.paid", _dahlia_invoice())
-    response = await client.post(
-        _WEBHOOK_PATH,
-        content=body,
-        headers={"Stripe-Signature": "t=1,v1=deadbeef", "Content-Type": "application/json"},
-    )
+    response = await deliver(_event("invoice.paid", _dahlia_invoice()), signature="t=1,v1=deadbeef")
     assert response.status_code == 400
 
 
 async def test_duplicate_delivery_is_processed_once(
-    client: AsyncClient,
+    deliver,
     db_session: AsyncSession,
     paid_subscription: tuple[datetime, datetime],
     stub_stripe_subscription: tuple[datetime, datetime],
 ) -> None:
     """Stripe retries deliveries; the idempotency key must absorb them.
 
-    The same event id is sent twice with valid signatures. The second delivery
-    must be recognised as a duplicate rather than advancing the period again.
+    The same event id is sent twice, each freshly signed. The second delivery must
+    be recognised as a duplicate rather than advancing the period again.
     """
     period_start, _ = paid_subscription
     body = _event("invoice.paid", _dahlia_invoice())
-    headers = {"Stripe-Signature": _sign(body), "Content-Type": "application/json"}
 
-    first = await client.post(_WEBHOOK_PATH, content=body, headers=headers)
-    second = await client.post(_WEBHOOK_PATH, content=body, headers={**headers, "Stripe-Signature": _sign(body)})
+    first = await deliver(body)
+    second = await deliver(body)
     assert first.status_code == 200
     assert second.status_code == 200
 
