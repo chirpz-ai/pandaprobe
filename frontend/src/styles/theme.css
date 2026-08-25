@@ -5,16 +5,18 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  --color-bg:         #18191b;
-  --color-surface:    #1f2022;
-  --color-surface-hi: #252628;
+  --color-bg:         #0c0c0b;
+  --color-surface:    #111110;
+  --color-surface-hi: #171717;
 
-  --color-border:     #2d2e30;
-  --color-border-hi:  #3a3b3e;
+  --color-border:     #202020;
+  --color-border-hi:  #2c2c2c;
+
+  --color-line:       #363636;
 
   --color-text:       #d1d5db;
-  --color-text-dim:   #6b7280;
-  --color-text-muted: #4b5563;
+  --color-text-dim:   #858d9b;
+  --color-text-muted: #737b89;
 
   --color-accent:     #e5e7eb;
   --color-primary:    #ffffff;
