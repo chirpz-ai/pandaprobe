@@ -78,8 +78,8 @@ All site configuration lives in `docs.json`. Key settings:
 | Setting | Description |
 |---|---|
 | `theme` | Mintlify theme (`linden`) |
-| `colors` | Brand colors (primary: `#10B981`) |
-| `background.color.dark` | Dark mode background (`#18191b`) |
+| `colors` | Brand colors (primary: `#056196`) |
+| `background.color.dark` | Dark mode background (`#0c0c0b`) |
 | `logo` | Logo images for light/dark mode |
 | `navigation` | Full sidebar and tab structure |
 
