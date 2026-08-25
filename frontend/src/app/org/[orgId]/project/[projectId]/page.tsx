@@ -108,11 +108,10 @@ export default function ProjectHomePage() {
               <Rocket className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <h2 className="text-sm font-mono text-text">Get started</h2>
-              <p className="text-xs font-mono text-text-muted mt-0.5 leading-relaxed">
-                Fastest path: let your coding agent set up PandaProbe with our
-                packaged skill. Install it, then ask your agent to set up
-                PandaProbe.
+              <h2 className="text-base font-mono text-text">Get started</h2>
+              <p className="text-sm font-mono text-text-muted mt-0.5 leading-relaxed">
+                Paste the prompt into your coding agent and it handles setup. Or
+                install the skill yourself.
               </p>
             </div>
           </div>

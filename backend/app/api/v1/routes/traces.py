@@ -152,8 +152,16 @@ class SpanResponse(BaseModel):
     time_to_first_token_ms: float | None = None
 
 
-class TraceResponse(BaseModel):
-    """Public trace representation (single-item detail)."""
+class TraceMutationResponse(BaseModel):
+    """A trace after a write, without its spans.
+
+    Spans are deliberately omitted. A trace accumulates them across repeated
+    ``POST /traces/{id}/spans`` calls with no ceiling on the total, so echoing
+    them back grows unboundedly: one production trace reached ~29 MB of span
+    payloads over 374 appends, and serialising that exceeded Cloud Run's response
+    limit — the write committed but the response was killed, so every retry of an
+    already-applied update failed again. Read spans via ``GET /traces/{id}``.
+    """
 
     trace_id: UUID
     project_id: UUID
@@ -169,9 +177,14 @@ class TraceResponse(BaseModel):
     tags: list[str]
     environment: str | None = None
     release: str | None = None
-    spans: list[SpanResponse] = Field(default_factory=list)
     total_tokens: int = 0
     total_cost: float = 0.0
+
+
+class TraceResponse(TraceMutationResponse):
+    """Public trace representation (single-item detail), spans included."""
+
+    spans: list[SpanResponse] = Field(default_factory=list)
 
 
 class TraceListItem(BaseModel):
@@ -518,7 +531,7 @@ async def batch_tags(
 # -- Parameterised /{trace_id} routes -----------------------------------------
 
 
-@router.patch("/{trace_id}", response_model=TraceResponse)
+@router.patch("/{trace_id}", response_model=TraceMutationResponse)
 async def update_trace(
     trace_id: UUID,
     body: TraceUpdate,
@@ -531,6 +544,8 @@ async def update_trace(
     ``"session_id": null`` explicitly clears the field; omitting
     ``session_id`` entirely leaves it unchanged.  ``metadata`` is
     shallow-merged with existing values.
+
+    The response omits ``spans`` -- use ``GET /traces/{trace_id}`` for those.
 
     Auth: `Bearer` + `X-Project-ID` | `X-API-Key` + `X-Project-Name`
     """

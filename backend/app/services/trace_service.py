@@ -64,11 +64,14 @@ class TraceService:
         project_id: UUID,
         **fields: Any,
     ) -> TraceDetail:
-        """Update trace fields or raise ``NotFoundError``."""
+        """Update trace fields or raise ``NotFoundError``.
+
+        Returns the trace without spans -- ``update_trace`` does not load them.
+        """
         row = await self._repo.update_trace(trace_id, project_id, **fields)
         if row is None:
             raise NotFoundError(f"Trace {trace_id} not found.")
-        return await self._enrich_trace(self._repo._to_trace(row))
+        return await self._enrich_trace(self._repo._to_trace(row, include_spans=False))
 
     async def update_span(
         self,

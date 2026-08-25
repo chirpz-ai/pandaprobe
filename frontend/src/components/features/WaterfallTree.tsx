@@ -50,9 +50,9 @@ const SPAN_KIND_CONFIG: Record<
   TOOL: { icon: Wrench, color: "#eab308", label: "Tool" },
   LLM: { icon: Sparkles, color: "#a78bfa", label: "LLM" },
   RETRIEVER: { icon: Search, color: "#22c55e", label: "Retriever" },
-  CHAIN: { icon: Link, color: "#6b7280", label: "Chain" },
+  CHAIN: { icon: Link, color: "#858d9b", label: "Chain" },
   EMBEDDING: { icon: Grid3X3, color: "#06b6d4", label: "Embedding" },
-  OTHER: { icon: Circle, color: "#4b5563", label: "Other" },
+  OTHER: { icon: Circle, color: "#737b89", label: "Other" },
 };
 
 function getKindConfig(kind: SpanKind) {
@@ -184,7 +184,7 @@ const SpanWaterfallNode = memo(function SpanWaterfallNode({
         <div className="relative flex-shrink-0 w-4 h-4 flex items-center justify-center">
           {depth > 0 && (
             <div
-              className="absolute border-l border-b border-border"
+              className="absolute border-l border-b border-line"
               style={{
                 left: -10,
                 top: -6,

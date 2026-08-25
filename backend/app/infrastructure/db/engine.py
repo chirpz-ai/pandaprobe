@@ -15,10 +15,17 @@ from sqlalchemy.ext.asyncio import (
 
 from app.registry.settings import settings
 
+#: Retire pooled connections well before anything upstream can reap them. Cloud
+#: Run reaches Cloud SQL through a VPC connector whose instances are recycled as
+#: it scales, so an established socket can die without either end noticing.
+_POOL_RECYCLE_S = 1800
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     pool_size=settings.POSTGRES_POOL_SIZE,
     max_overflow=settings.POSTGRES_MAX_OVERFLOW,
+    pool_pre_ping=True,
+    pool_recycle=_POOL_RECYCLE_S,
     echo=False,
 )
 

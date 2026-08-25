@@ -18,3 +18,7 @@ os.environ["AUTH_PROVIDER"] = "supabase"
 # run without a key. Tests patch the Stripe calls themselves, so a dummy value
 # is enough — CI mounts no real secret.
 os.environ.setdefault("STRIPE_SECRET_KEY", "sk_test_dummy")
+# Set explicitly (not just for CI): the webhook test signs payloads with this, and
+# ``.env.development`` would otherwise supply a real secret locally, making the
+# suite behave differently on a developer machine than in CI.
+os.environ.setdefault("STRIPE_WEBHOOK_SECRET", "whsec_test_dummy")
