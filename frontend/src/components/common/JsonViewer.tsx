@@ -132,7 +132,7 @@ function JsonObject({
     <span>
       <CollapseToggle expanded onClick={toggle} />
       <span className="token-punctuation">{"{"}</span>
-      <div className="ml-4 border-l border-border/50 pl-3">
+      <div className="ml-4 border-l border-line/50 pl-3">
         {keys.map((key, i) => (
           <div key={key} className="leading-5">
             <span className="token-param">&quot;{key}&quot;</span>
@@ -187,7 +187,7 @@ function JsonArray({
     <span>
       <CollapseToggle expanded onClick={toggle} />
       <span className="token-punctuation">{"["}</span>
-      <div className="ml-4 border-l border-border/50 pl-3">
+      <div className="ml-4 border-l border-line/50 pl-3">
         {items.map((item, i) => (
           <div key={i} className="leading-5">
             <JsonNode
