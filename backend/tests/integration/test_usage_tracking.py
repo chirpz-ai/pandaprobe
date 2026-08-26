@@ -36,6 +36,20 @@ async def redis_client():
     await client.aclose()
 
 
+class _ReplayEvalOnceRedis:
+    """Simulate redis-py losing the first EVAL response and replaying the command."""
+
+    def __init__(self, client):
+        self._client = client
+
+    def __getattr__(self, name):
+        return getattr(self._client, name)
+
+    async def eval(self, *args, **kwargs):
+        await self._client.eval(*args, **kwargs)
+        return await self._client.eval(*args, **kwargs)
+
+
 async def test_check_and_increment_increments_for_paid_plan(db_session, redis_client):
     repo = BillingRepository(db_session)
     await repo.create_subscription(
@@ -47,6 +61,61 @@ async def test_check_and_increment_increments_for_paid_plan(db_session, redis_cl
     svc = UsageService(redis_client, db_session)
     n = await svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACES)
     assert n == 1
+
+
+async def test_check_and_increment_retry_does_not_duplicate_usage(db_session, redis_client):
+    repo = BillingRepository(db_session)
+    sub = await repo.create_subscription(
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_subscription_id="sub_retry_dedup",
+    )
+    await db_session.commit()
+
+    svc = UsageService(_ReplayEvalOnceRedis(redis_client), db_session)
+    n = await svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACE_EVALS, count=3_000)
+
+    key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
+    assert n == 3_000
+    assert int(await redis_client.hget(key, "trace_evals")) == 3_000
+
+
+async def test_check_and_increment_retry_preserves_quota_rejection(db_session, redis_client):
+    repo = BillingRepository(db_session)
+    sub = await repo.create_subscription(TEST_ORG_ID)
+    await db_session.commit()
+
+    key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
+    await redis_client.hset(key, "trace_evals", "98")
+    svc = UsageService(_ReplayEvalOnceRedis(redis_client), db_session)
+
+    with pytest.raises(QuotaExceededError):
+        await svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACE_EVALS, count=5)
+    assert int(await redis_client.hget(key, "trace_evals")) == 98
+
+
+async def test_rollback_increment_retry_does_not_decrement_twice(db_session, redis_client):
+    repo = BillingRepository(db_session)
+    sub = await repo.create_subscription(
+        TEST_ORG_ID,
+        plan=SubscriptionPlan.PRO,
+        stripe_subscription_id="sub_rollback_retry_dedup",
+    )
+    await db_session.commit()
+
+    await UsageService(redis_client, db_session).check_and_increment(
+        TEST_ORG_ID,
+        UsageCategory.TRACE_EVALS,
+        count=3_000,
+    )
+    await UsageService(_ReplayEvalOnceRedis(redis_client), db_session).rollback_increment(
+        TEST_ORG_ID,
+        UsageCategory.TRACE_EVALS,
+        count=3_000,
+    )
+
+    key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
+    assert int(await redis_client.hget(key, "trace_evals")) == 0
 
 
 async def test_check_and_increment_hobby_raises_when_trace_limit_reached(db_session, redis_client):
