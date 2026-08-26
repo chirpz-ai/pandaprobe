@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.db.models import SubscriptionModel, UsageRecordModel
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.redis.client import redis_pool
+from app.infrastructure.redis.locks import acquire_owned_lock
 from app.registry.constants import SubscriptionPlan, SubscriptionStatus
 from app.registry.settings import settings
 
@@ -231,6 +232,32 @@ async def test_invoice_payment_failed_marks_past_due(
     """Dunning visibility: the status must reflect a failed payment."""
     response = await deliver(_event("invoice.payment_failed", _dahlia_invoice(status="open")))
     assert response.status_code == 200
+
+    sub = await BillingRepository(db_session).get_subscription_by_org(TEST_ORG_ID)
+    assert sub is not None
+    assert sub.status == SubscriptionStatus.PAST_DUE
+
+
+async def test_lock_acquire_retry_still_processes_webhook(
+    deliver,
+    db_session: AsyncSession,
+    paid_subscription: tuple[datetime, datetime],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A replay after Redis accepted the lock must still report acquisition."""
+    calls = 0
+
+    async def replayed_acquire(client, key: str, token: str, *, ttl: int) -> bool:
+        nonlocal calls
+        calls += 1
+        assert await acquire_owned_lock(client, key, token, ttl=ttl) is True
+        return await acquire_owned_lock(client, key, token, ttl=ttl)
+
+    monkeypatch.setattr("app.api.v1.routes.webhooks.acquire_owned_lock", replayed_acquire)
+
+    response = await deliver(_event("invoice.payment_failed", _dahlia_invoice(status="open")))
+    assert response.status_code == 200
+    assert calls == 1
 
     sub = await BillingRepository(db_session).get_subscription_by_org(TEST_ORG_ID)
     assert sub is not None

@@ -594,3 +594,17 @@ async def test_overage_lock_prevents_concurrent_reporting(db_session, redis_clie
     await billing_svc.release_overage_lock(TEST_ORG_ID)
     assert await billing_svc.acquire_overage_lock(TEST_ORG_ID) is True
     await billing_svc.release_overage_lock(TEST_ORG_ID)
+
+
+async def test_overage_lock_acquire_retry_still_reports_success(db_session, redis_client):
+    """A replay after Redis accepted the lock must not skip overage reporting."""
+    replaying_client = _ReplayEvalOnceRedis(redis_client)
+    billing_svc = BillingService(db_session, redis_client=replaying_client)
+    competing_svc = BillingService(db_session, redis_client=redis_client)
+
+    assert await billing_svc.acquire_overage_lock(TEST_ORG_ID) is True
+    assert await competing_svc.acquire_overage_lock(TEST_ORG_ID) is False
+
+    await billing_svc.release_overage_lock(TEST_ORG_ID)
+    assert await competing_svc.acquire_overage_lock(TEST_ORG_ID) is True
+    await competing_svc.release_overage_lock(TEST_ORG_ID)

@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import redis.asyncio as aioredis
 import stripe
@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.billing.entities import OverageDetail, Subscription
 from app.core.billing.plans import OVERAGE_UNIT_PRICE, get_plan_config
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
+from app.infrastructure.redis.locks import acquire_owned_lock, release_owned_lock
 from app.logging import logger
 from app.registry.constants import (
     OVERAGE_LOCK_PREFIX,
@@ -147,6 +148,7 @@ class BillingService:
         self._session = session
         self._repo = BillingRepository(session)
         self._redis = redis_client
+        self._overage_lock_tokens: dict[UUID, str] = {}
         _ensure_stripe_configured()
 
     async def _warm_sub_cache(self, org_id: UUID) -> None:
@@ -175,20 +177,26 @@ class BillingService:
         """Acquire a short-lived Redis lock to prevent concurrent overage reporting."""
         if self._redis is None:
             return True
-        return bool(
-            await self._redis.set(
-                f"{OVERAGE_LOCK_PREFIX}{org_id}",
-                "1",
-                nx=True,
-                ex=OVERAGE_LOCK_TTL,
-            )
+        token = uuid4().hex
+        acquired = await acquire_owned_lock(
+            self._redis,
+            f"{OVERAGE_LOCK_PREFIX}{org_id}",
+            token,
+            ttl=OVERAGE_LOCK_TTL,
         )
+        if acquired:
+            self._overage_lock_tokens[org_id] = token
+        return acquired
 
     async def release_overage_lock(self, org_id: UUID) -> None:
         """Release the per-org overage reporting lock."""
         if self._redis is None:
             return
-        await self._redis.delete(f"{OVERAGE_LOCK_PREFIX}{org_id}")
+        token = self._overage_lock_tokens.get(org_id)
+        if token is None:
+            return
+        await release_owned_lock(self._redis, f"{OVERAGE_LOCK_PREFIX}{org_id}", token)
+        self._overage_lock_tokens.pop(org_id, None)
 
     # -- Checkout & Portal ----------------------------------------------------
 
