@@ -14,6 +14,8 @@ Idempotency uses a two-phase TTL approach:
      DELETE, the short TTL expires naturally well before Stripe retries.
 """
 
+from uuid import uuid4
+
 import redis.asyncio as aioredis
 import stripe
 from fastapi import APIRouter, Request
@@ -21,6 +23,7 @@ from fastapi.responses import JSONResponse
 
 from app.infrastructure.db.engine import async_session_factory
 from app.infrastructure.redis.client import redis_pool
+from app.infrastructure.redis.locks import acquire_owned_lock, complete_owned_lock, release_owned_lock
 from app.logging import logger
 from app.registry.settings import settings
 from app.services.billing_service import BillingService
@@ -74,14 +77,15 @@ async def stripe_webhook(request: Request) -> JSONResponse:
     redis_client = aioredis.Redis(connection_pool=redis_pool)
     try:
         idempotency_key = f"{_IDEMPOTENCY_PREFIX}{event_id}"
+        lock_token = uuid4().hex
 
-        already_processing = not await redis_client.set(
+        acquired = await acquire_owned_lock(
+            redis_client,
             idempotency_key,
-            "1",
-            nx=True,
-            ex=_PROCESSING_LOCK_TTL,
+            lock_token,
+            ttl=_PROCESSING_LOCK_TTL,
         )
-        if already_processing:
+        if not acquired:
             logger.info("stripe_webhook_duplicate", event_id=event_id, event_type=event_type)
             return JSONResponse(status_code=200, content={"received": True})
 
@@ -103,11 +107,21 @@ async def stripe_webhook(request: Request) -> JSONResponse:
                     case "customer.subscription.deleted":
                         await billing_svc.handle_subscription_deleted(event_data)
         except Exception:
-            await redis_client.delete(idempotency_key)
+            try:
+                await release_owned_lock(redis_client, idempotency_key, lock_token)
+            except Exception:
+                logger.exception("stripe_webhook_lock_release_failed", event_id=event_id, event_type=event_type)
             logger.exception("stripe_webhook_failed", event_type=event_type, event_id=event_id)
             raise
 
-        await redis_client.expire(idempotency_key, _IDEMPOTENCY_TTL)
+        completed = await complete_owned_lock(
+            redis_client,
+            idempotency_key,
+            lock_token,
+            ttl=_IDEMPOTENCY_TTL,
+        )
+        if not completed:
+            logger.warning("stripe_webhook_lock_lost", event_id=event_id, event_type=event_type)
 
         logger.info("stripe_webhook_processed", event_type=event_type, event_id=event_id)
         return JSONResponse(status_code=200, content={"received": True})

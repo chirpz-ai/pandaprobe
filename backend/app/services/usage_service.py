@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,21 +31,41 @@ from app.registry.exceptions import QuotaExceededError
 
 # Lua script: atomic check-and-increment with optional hard limit.
 #   KEYS[1] = usage hash key
+#   KEYS[2] = retry-deduplication key
 #   ARGV[1] = field name (e.g. "traces")
 #   ARGV[2] = increment amount
 #   ARGV[3] = hard limit (-1 = unlimited / no check)
 #   ARGV[4] = TTL in seconds for the hash key
+#   ARGV[5] = TTL in seconds for the retry-deduplication key
 # Returns the new counter value, or -1 if the limit would be exceeded.
 _CHECK_AND_INCREMENT_LUA = """
+local cached_result = redis.call('GET', KEYS[2])
+if cached_result then
+    return tonumber(cached_result)
+end
 local current = redis.call('HINCRBY', KEYS[1], ARGV[1], tonumber(ARGV[2]))
 local limit = tonumber(ARGV[3])
 if limit >= 0 and current > limit then
     redis.call('HINCRBY', KEYS[1], ARGV[1], -tonumber(ARGV[2]))
+    redis.call('SET', KEYS[2], '-1', 'EX', tonumber(ARGV[5]))
     return -1
 end
 redis.call('EXPIRE', KEYS[1], tonumber(ARGV[4]))
+redis.call('SET', KEYS[2], tostring(current), 'EX', tonumber(ARGV[5]))
 return current
 """
+
+_ROLLBACK_INCREMENT_LUA = """
+local cached_result = redis.call('GET', KEYS[2])
+if cached_result then
+    return tonumber(cached_result)
+end
+local current = redis.call('HINCRBY', KEYS[1], ARGV[1], -tonumber(ARGV[2]))
+redis.call('SET', KEYS[2], tostring(current), 'EX', tonumber(ARGV[3]))
+return current
+"""
+
+_USAGE_RETRY_DEDUP_TTL_S = 60
 
 
 class UsageService:
@@ -88,16 +108,19 @@ class UsageService:
             hard_limit = -1
 
         usage_key = self._usage_key(org_id, sub.current_period_start)
+        retry_dedup_key = f"{usage_key}:retry:{uuid4().hex}"
         ttl = self._compute_ttl(sub.current_period_end)
 
         new_val = await self._redis.eval(  # type: ignore[union-attr]
             _CHECK_AND_INCREMENT_LUA,
-            1,
+            2,
             usage_key,
+            retry_dedup_key,
             category.value,
             str(count),
             str(hard_limit),
             str(ttl),
+            str(_USAGE_RETRY_DEDUP_TTL_S),
         )
 
         if new_val == -1:
@@ -124,7 +147,16 @@ class UsageService:
             if sub is None:
                 return
             usage_key = self._usage_key(org_id, sub.current_period_start)
-            await self._redis.hincrby(usage_key, category.value, -count)  # type: ignore[union-attr]
+            retry_dedup_key = f"{usage_key}:rollback-retry:{uuid4().hex}"
+            await self._redis.eval(  # type: ignore[union-attr]
+                _ROLLBACK_INCREMENT_LUA,
+                2,
+                usage_key,
+                retry_dedup_key,
+                category.value,
+                str(count),
+                str(_USAGE_RETRY_DEDUP_TTL_S),
+            )
         except Exception:
             logger.warning("rollback_increment_failed", org_id=str(org_id), category=str(category), count=count)
 

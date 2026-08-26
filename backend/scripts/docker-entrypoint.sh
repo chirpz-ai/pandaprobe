@@ -16,7 +16,7 @@ info() { echo -e "  ${CYAN}ℹ${NC} $1"; }
 # ── Banner ──────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${CYAN}║        PandaProbe Service v0.5.0         ║${NC}"
+echo -e "${BOLD}${CYAN}║        PandaProbe Service v0.6.0         ║${NC}"
 echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${BOLD}Environment:${NC} ${APP_ENV:-development}"
