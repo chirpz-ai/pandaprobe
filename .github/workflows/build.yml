@@ -15,7 +15,7 @@ jobs:
     name: Backend – Verify dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: astral-sh/setup-uv@v7
         with:
@@ -37,7 +37,7 @@ jobs:
     name: Backend – Docker build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build Docker image
         run: docker build -t pandaprobe-backend:ci-${{ github.sha }} ./backend
@@ -46,7 +46,7 @@ jobs:
     name: Frontend – Production build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
@@ -66,7 +66,7 @@ jobs:
     name: Frontend – Docker build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build Docker image
         run: docker build -t pandaprobe-frontend:ci-${{ github.sha }} ./frontend
