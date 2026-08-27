@@ -192,7 +192,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component }}
           subject-digest: ${{ steps.digest.outputs.digest }}
