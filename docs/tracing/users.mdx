@@ -12,11 +12,11 @@ Unlike `session_id`, which groups traces into an agent lifecycle, `user_id` iden
   User identifiers are strings you control. Use the same stable identifier your application already uses for the user, account, or tenant.
 </Info>
 
-## Context managers (scoped)
+## Scoped API
 
 Prefer `pandaprobe.user()` when user attribution can be scoped to a block of code. The user is applied to all traces created inside the block and is reset when the block exits.
 
-```python
+```python title="Python"
 import pandaprobe
 
 with pandaprobe.user("user-abc"):
@@ -26,20 +26,40 @@ with pandaprobe.user("user-abc"):
 
 You can combine user and session scopes when you want both lifecycle grouping and identity attribution:
 
-```python
+```python title="Python"
 with pandaprobe.session("conversation-123"), pandaprobe.user("user-abc"):
     # traces here get both session_id and user_id
     ...
+```
+
+TypeScript uses async callback scopes:
+
+```ts title="TypeScript"
+import { session, user, withTrace } from "pandaprobe";
+
+await session("conversation-123", () =>
+  user("user-abc", () =>
+    withTrace("my-agent", async () => {
+      // Traces inherit both sessionId and userId.
+    }),
+  ),
+);
 ```
 
 ## Imperative API (global)
 
 Use `set_user()` when request middleware or worker setup needs to set the user once before calling into application code.
 
-```python
+```python title="Python"
 pandaprobe.set_user("user-abc")
 
 # All subsequent traces inherit this user_id
+```
+
+```ts title="TypeScript"
+import { setUser } from "pandaprobe";
+
+setUser("user-abc");
 ```
 
 <Warning>
@@ -50,7 +70,7 @@ pandaprobe.set_user("user-abc")
 
 Explicit parameters take precedence over scoped or global values:
 
-```python
+```python title="Python"
 @pandaprobe.trace(user_id="explicit-user")
 def my_agent(query: str):
     ...
@@ -59,13 +79,37 @@ with pandaprobe.start_trace("agent", user_id="explicit-user") as t:
     ...
 ```
 
+```ts title="TypeScript"
+import { trace, withTrace } from "pandaprobe";
+
+class Agent {
+  @trace({ userId: "explicit-user" })
+  async runAgent(query: string) {
+    // ...
+  }
+}
+
+await withTrace("agent", { userId: "explicit-user" }, async () => {
+  // ...
+});
+```
+
 Integration constructors also accept `user_id`:
 
-```python
+```python title="Python"
 from pandaprobe.integrations.langgraph import LangGraphCallbackHandler
 
 handler = LangGraphCallbackHandler(
     session_id="conversation-123",
     user_id="user-abc",
 )
+```
+
+```ts title="TypeScript"
+import { LangGraphCallbackHandler } from "pandaprobe/integrations/langgraph";
+
+const handler = new LangGraphCallbackHandler({
+  sessionId: "conversation-123",
+  userId: "user-abc",
+});
 ```
