@@ -75,17 +75,32 @@ On clean exit, spans auto-promote from `UNSET` to `OK`. On exception, status is 
 
 ## Input/Output convention
 
-LLM spans use a standard `messages` format:
+LLM spans use the same standard `messages` format in both SDKs:
 
-```python
-{
-    "messages": [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "Hello!"},
-        {"role": "assistant", "content": "Hi there! How can I help?"}
-    ]
-}
-```
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    {
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Hello!"},
+            {"role": "assistant", "content": "Hi there! How can I help?"},
+        ]
+    }
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    {
+      messages: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: "Hello!" },
+        { role: "assistant", content: "Hi there! How can I help?" },
+      ],
+    }
+    ```
+  </Tab>
+</Tabs>
 
 At the trace level, `input` contains only the last user message and `output` contains only the last assistant message. This convention is enforced automatically by wrappers, integrations, and the `@trace` decorator.
 
