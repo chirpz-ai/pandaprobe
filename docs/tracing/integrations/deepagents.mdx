@@ -5,7 +5,7 @@ icon: "/assets/providers/deepagents.svg"
 ---
 
 <Note>
-  `deepagents` requires Python 3.11 or newer.
+  The Python `deepagents` package requires Python 3.11 or newer. TypeScript users should also follow the engine requirements of the installed DeepAgents and LangChain packages.
 </Note>
 
 ### Installation
@@ -21,19 +21,49 @@ icon: "/assets/providers/deepagents.svg"
     uv add "pandaprobe[deepagents]"
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe deepagents langchain @langchain/core @langchain/openai @langchain/langgraph @langchain/langgraph-checkpoint @langchain/langgraph-sdk "langsmith@>=0.7.1 <0.10.0"
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe deepagents langchain @langchain/core @langchain/openai @langchain/langgraph @langchain/langgraph-checkpoint @langchain/langgraph-sdk "langsmith@>=0.7.1 <0.10.0"
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe deepagents langchain @langchain/core @langchain/openai @langchain/langgraph @langchain/langgraph-checkpoint @langchain/langgraph-sdk "langsmith@>=0.7.1 <0.10.0"
+    ```
+  </Tab>
 </Tabs>
 
 ### Setup
 
-```python
-from pandaprobe.integrations.deepagents import DeepAgentsCallbackHandler
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    from pandaprobe.integrations.deepagents import DeepAgentsCallbackHandler
 
-handler = DeepAgentsCallbackHandler(
-    session_id="conversation-123",
-    user_id="user-abc",
-    tags=["production"],
-)
-```
+    handler = DeepAgentsCallbackHandler(
+        session_id="conversation-123",
+        user_id="user-abc",
+        tags=["production"],
+    )
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { DeepAgentsCallbackHandler } from "pandaprobe/integrations/deepagents";
+
+    const handler = new DeepAgentsCallbackHandler({
+      sessionId: "conversation-123",
+      userId: "user-abc",
+      tags: ["production"],
+    });
+    ```
+  </Tab>
+</Tabs>
 
 <Tip>
   We recommend using UUIDs for `session_id` and `user_id` so traces can be grouped reliably across runs.
@@ -43,7 +73,7 @@ handler = DeepAgentsCallbackHandler(
 
 `create_deep_agent` returns a LangGraph compiled graph that respects LangChain's `config={"callbacks": [...]}`. A single handler instance captures the parent agent **and** every sub-agent dispatched via the built-in `task` tool — sub-agent invocations forward `callbacks` / `tags` / `configurable` through automatically.
 
-```python
+```python title="Python"
 from deepagents import create_deep_agent
 
 agent = create_deep_agent(
@@ -56,6 +86,13 @@ result = agent.invoke(
     {"messages": [{"role": "user", "content": "Hello!"}]},
     config={"callbacks": [handler]},
 )
+```
+
+```ts title="TypeScript"
+const result = await agent.invoke(
+  { messages: [{ role: "user", content: "Hello!" }] },
+  { callbacks: [handler] },
+);
 ```
 
 <Warning>
@@ -109,11 +146,11 @@ DeepAgents wraps a LangGraph compiled graph, so the root run reports `name="Lang
 
 Token usage is extracted from LangChain's `usage_metadata` (primary) or legacy `llm_output.token_usage` (fallback). The mapping is: `input_tokens` → `prompt_tokens`, `output_tokens` → `completion_tokens`. Reasoning tokens are subtracted from `output_tokens` when present.
 
-### Example with sub-agents
+### Example
 
-This example declares a `researcher` sub-agent alongside the main deep agent. When the model decides to delegate research, it calls the built-in `task` tool, which dispatches the sub-agent — the handler captures the entire nested run as one trace:
+The Python example declares a `researcher` sub-agent alongside the main deep agent. When the model decides to delegate research, it calls the built-in `task` tool, which dispatches the sub-agent — the handler captures the entire nested run as one trace:
 
-```python
+```python title="Python"
 from deepagents import create_deep_agent
 from langchain.tools import tool
 
@@ -180,4 +217,26 @@ pandaprobe.flush()
 pandaprobe.shutdown()
 ```
 
-This produces one trace where the parent agent's `task` tool span contains the entire nested `researcher` sub-agent run, including its internal `tools` chain and tool calls.
+```ts title="TypeScript"
+import { ChatOpenAI } from "@langchain/openai";
+import { createDeepAgent } from "deepagents";
+import { flush } from "pandaprobe";
+import { DeepAgentsCallbackHandler } from "pandaprobe/integrations/deepagents";
+
+const agent = createDeepAgent({
+  model: new ChatOpenAI({ model: "gpt-5.6-terra", useResponsesApi: true }),
+  tools: [],
+  systemPrompt: "You are a helpful research assistant. Be concise.",
+});
+
+const handler = new DeepAgentsCallbackHandler({ tags: ["deepagents"] });
+const result = await agent.invoke(
+  { messages: [{ role: "user", content: "What is the capital of France?" }] },
+  { callbacks: [handler] },
+);
+
+console.log(result.messages.at(-1)?.content);
+await flush();
+```
+
+The Python example produces one trace where the parent agent's `task` tool span contains the entire nested `researcher` sub-agent run, including its internal `tools` chain and tool calls.
