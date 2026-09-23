@@ -17,40 +17,53 @@ icon: "/assets/providers/mistral-color.svg"
     uv add "pandaprobe[mistral]"
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe @mistralai/mistralai
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe @mistralai/mistralai
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe @mistralai/mistralai
+    ```
+  </Tab>
 </Tabs>
 
 ### Setup
 
 <Tabs>
-  <Tab title="Sync">
-    ```python
+  <Tab title="Python">
+    ```python title="Python"
     from pandaprobe.wrappers import wrap_mistral
     from mistralai.client import Mistral
 
     client = wrap_mistral(Mistral(api_key="..."))
     ```
   </Tab>
-  <Tab title="Async">
-    ```python
-    from pandaprobe.wrappers import wrap_mistral
-    from mistralai.client import Mistral
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { Mistral } from "@mistralai/mistralai";
+    import { wrapMistral } from "pandaprobe/wrappers/mistral";
 
-    # The Mistral SDK exposes both sync and async on the same client.
-    client = wrap_mistral(Mistral(api_key="..."))
-
-    response = await client.chat.complete_async(
-        model="mistral-small-latest",
-        messages=[{"role": "user", "content": "Hello!"}],
-    )
+    const client = wrapMistral(new Mistral({ apiKey: process.env.MISTRAL_API_KEY }));
     ```
   </Tab>
 </Tabs>
+
+<Note>
+  PandaProbe traces both synchronous and asynchronous Python methods, plus the Promise-based TypeScript client.
+</Note>
 
 ## Chat API
 
 Span name: `"mistral-chat"`, SpanKind: `LLM`
 
-```python
+```python title="Python"
 response = client.chat.complete(
     model="mistral-small-latest",
     messages=[
@@ -60,6 +73,18 @@ response = client.chat.complete(
     temperature=0.5,
     max_tokens=200,
 )
+```
+
+```ts title="TypeScript"
+const response = await client.chat.complete({
+  model: "mistral-small-latest",
+  messages: [
+    { role: "system", content: "You are a concise assistant." },
+    { role: "user", content: "Explain recursion in one sentence." },
+  ],
+  temperature: 0.5,
+  maxTokens: 200,
+});
 ```
 
 **What gets traced**
@@ -72,8 +97,7 @@ response = client.chat.complete(
 
 ### Streaming
 
-<CodeGroup>
-```python title="chat.stream — sync"
+```python title="Python"
 res = client.chat.stream(
     model="mistral-small-latest",
     messages=[{"role": "user", "content": "Hello!"}],
@@ -85,24 +109,20 @@ with res as event_stream:
             print(delta.content, end="")
 ```
 
-```python title="chat.stream_async — async"
-res = await client.chat.stream_async(
-    model="mistral-small-latest",
-    messages=[{"role": "user", "content": "Hello!"}],
-)
-async with res as event_stream:
-    async for event in event_stream:
-        delta = event.data.choices[0].delta
-        if delta.content:
-            print(delta.content, end="")
+The TypeScript wrapper instruments the JavaScript SDK's asynchronous `chat.stream` method:
+
+```ts title="TypeScript"
+const stream = await client.chat.stream({
+  model: "mistral-small-latest",
+  messages: [{ role: "user", content: "Hello!" }],
+});
+for await (const event of stream) {
+  const content = event.data?.choices?.[0]?.delta?.content;
+  if (typeof content === "string") process.stdout.write(content);
+}
 ```
-</CodeGroup>
 
-Both streaming patterns are fully supported with time-to-first-token tracking. The wrapper transparently passes through the SDK's `EventStream` / `EventStreamAsync` context manager, buffers `delta.content` chunks, and emits a single LLM span containing the full reduced output and the final token usage Mistral reports on the terminal chunk.
-
-## Async
-
-The Mistral SDK exposes async via `chat.complete_async` and `chat.stream_async` on the same client class — both are instrumented by `wrap_mistral`. No separate async client class exists.
+Python's `chat.stream` and `chat.stream_async`, plus TypeScript's `chat.stream`, are traced with time-to-first-token and reduced output.
 
 ## Token usage mapping
 

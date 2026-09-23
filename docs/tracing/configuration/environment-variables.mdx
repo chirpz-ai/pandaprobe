@@ -43,10 +43,17 @@ load_dotenv()
 import pandaprobe
 # SDK auto-initializes from environment variables
 ```
+
+```ts title="TypeScript"
+import { getClient } from "pandaprobe";
+
+// Export variables in the shell or load a .env file before first use.
+const client = getClient();
+```
 </CodeGroup>
 
 <Note>
-  The SDK reads environment variables via `os.environ.get()` at initialization time. Changes to environment variables after the client is created have no effect. Use `pandaprobe.init()` to reconfigure.
+  Python reads variables from `os.environ`; TypeScript reads them from `process.env`. Values are resolved at client initialization, so later environment changes have no effect. Re-run Python's `pandaprobe.init(...)` or TypeScript's `init({...})` to reconfigure.
 </Note>
 
 ### Boolean parsing

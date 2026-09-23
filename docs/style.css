@@ -1,0 +1,8 @@
+#navbar .nav-logo {
+  height: 1.75rem;
+}
+
+/* Temporarily hide Discord from the navbar. Remove this rule to restore it. */
+#navbar li:has(> a[href="https://discord.gg/A2VfrRhx"]) {
+  display: none;
+}

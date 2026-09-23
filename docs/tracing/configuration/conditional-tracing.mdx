@@ -15,11 +15,11 @@ export PANDAPROBE_ENABLED=false
 When `PANDAPROBE_ENABLED=false`:
 
 - The SDK does not initialize a client
-- `pandaprobe.get_client()` returns `None`
-- `pandaprobe.flush()` and `pandaprobe.shutdown()` silently do nothing
-- `@pandaprobe.trace` and `@pandaprobe.span` decorators pass through transparently (zero overhead)
+- Python's `pandaprobe.get_client()` returns `None`; TypeScript's `getClient()` returns `null`
+- `flush()` and `shutdown()` silently do nothing
+- Python and TypeScript decorators pass through transparently
 - Wrappers return the original client unchanged
-- Integration adapters' `instrument()` calls are no-ops
+- Integrations do not submit traces
 
 <Tip>
   This makes it safe to leave PandaProbe instrumentation in all environments. The SDK adds zero overhead when disabled.
@@ -27,17 +27,26 @@ When `PANDAPROBE_ENABLED=false`:
 
 ### Disable via init()
 
-```python
-import pandaprobe
-
-pandaprobe.init(enabled=False)
-```
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    import pandaprobe
+    pandaprobe.init(enabled=False)
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { init } from "pandaprobe";
+    init({ enabled: false });
+    ```
+  </Tab>
+</Tabs>
 
 ### Environment-based configuration
 
 Common pattern using different configurations per environment:
 
-```python
+```python title="Python"
 import os
 import pandaprobe
 
@@ -52,11 +61,24 @@ pandaprobe.init(
 )
 ```
 
+```ts title="TypeScript"
+import { init } from "pandaprobe";
+
+const environment = process.env.APP_ENV ?? "development";
+init({
+  apiKey: process.env.PANDAPROBE_API_KEY,
+  projectName: "my-project",
+  environment,
+  enabled: environment !== "testing",
+  debug: environment === "development",
+});
+```
+
 ### Conditional tracing without disabling
 
 If you want the SDK enabled but want to conditionally trace specific operations:
 
-```python
+```python title="Python"
 import pandaprobe
 
 def handle_request(query: str):
@@ -65,4 +87,19 @@ def handle_request(query: str):
             return process(query, t)
     else:
         return process(query, None)
+```
+
+```ts title="TypeScript"
+import { withTrace } from "pandaprobe";
+
+async function handleRequest(query: string) {
+  if (shouldTrace(query)) {
+    return withTrace(
+      "agent",
+      { input: { messages: [{ role: "user", content: query }] } },
+      (trace) => processQuery(query, trace),
+    );
+  }
+  return processQuery(query, null);
+}
 ```

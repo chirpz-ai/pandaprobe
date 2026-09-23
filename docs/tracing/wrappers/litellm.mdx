@@ -6,6 +6,10 @@ icon: "/assets/providers/litellm.svg"
 
 [LiteLLM](https://docs.litellm.ai) gives you a single, OpenAI-compatible interface for calling 100+ LLM providers. `wrap_litellm` instruments the module-level `litellm.completion` / `litellm.acompletion` functions so every call — to OpenAI, Anthropic, Gemini, or any other supported provider — is traced automatically as an `LLM` span.
 
+<Note>
+  The LiteLLM wrapper is currently available in the Python SDK only. TypeScript applications using the LiteLLM proxy can instrument its OpenAI-compatible endpoint with [`wrapOpenAI`](/tracing/wrappers/openai).
+</Note>
+
 ### Installation
 
 <Tabs>
@@ -27,7 +31,7 @@ Unlike the other wrappers, LiteLLM's entry points are **module-level functions**
 
 <Tabs>
   <Tab title="Patch the module">
-    ```python
+    ```python title="Python"
     import litellm
     from pandaprobe.wrappers import wrap_litellm
 
@@ -40,7 +44,7 @@ Unlike the other wrappers, LiteLLM's entry points are **module-level functions**
     ```
   </Tab>
   <Tab title="Import and patch">
-    ```python
+    ```python title="Python"
     from pandaprobe.wrappers import wrap_litellm
 
     # Omit the argument to import litellm and patch it globally.
@@ -60,7 +64,7 @@ Both the synchronous `completion` and asynchronous `acompletion` functions are p
 
 Span name: `"litellm-chat"`, SpanKind: `LLM`
 
-```python
+```python title="Python"
 response = litellm.completion(
     model="gpt-5.4",
     messages=[
@@ -85,21 +89,21 @@ response = litellm.completion(
 LiteLLM routes to the target provider based on the `model` string — the wrapper and trace shape are identical regardless of which provider serves the request. Set the matching provider API key in your environment.
 
 <CodeGroup>
-```python title="OpenAI"
+```python title="Python — OpenAI"
 litellm.completion(
     model="gpt-5.4",
     messages=[{"role": "user", "content": "Hi"}],
 )  # OPENAI_API_KEY
 ```
 
-```python title="Anthropic Claude"
+```python title="Python — Anthropic Claude"
 litellm.completion(
     model="anthropic/claude-sonnet-4-6",
     messages=[{"role": "user", "content": "Hi"}],
 )  # ANTHROPIC_API_KEY
 ```
 
-```python title="Google Gemini"
+```python title="Python — Google Gemini"
 litellm.completion(
     model="gemini/gemini-3.1-flash-lite",
     messages=[{"role": "user", "content": "Hi"}],
@@ -109,8 +113,7 @@ litellm.completion(
 
 ## Streaming
 
-<CodeGroup>
-```python title="completion — sync"
+```python title="Python"
 stream = litellm.completion(
     model="gpt-5.4",
     messages=[{"role": "user", "content": "Hello!"}],
@@ -123,32 +126,7 @@ for chunk in stream:
         print(delta, end="")
 ```
 
-```python title="acompletion — async"
-stream = await litellm.acompletion(
-    model="gpt-5.4",
-    messages=[{"role": "user", "content": "Hello!"}],
-    stream=True,
-    stream_options={"include_usage": True},
-)
-async for chunk in stream:
-    delta = chunk.choices[0].delta.content
-    if delta:
-        print(delta, end="")
-```
-</CodeGroup>
-
-Streaming is fully supported. The wrapper records `completion_start_time` on the first chunk for time-to-first-token tracking, and reduces chunks to a single response for the span output. Pass `stream_options={"include_usage": True}` so LiteLLM emits token usage on the terminal chunk — otherwise streamed spans have no usage totals.
-
-## Async
-
-The async entry point is the module-level `litellm.acompletion`, instrumented by the same `wrap_litellm` call — no separate client. It supports both blocking and streaming, mirroring `completion`.
-
-```python
-response = await litellm.acompletion(
-    model="anthropic/claude-sonnet-4-6",
-    messages=[{"role": "user", "content": "Hello!"}],
-)
-```
+Streaming is supported through both synchronous `completion` and asynchronous `acompletion` with the same PandaProbe setup. The wrapper records `completion_start_time` on the first chunk for time-to-first-token tracking and reduces chunks to a single response for the span output. Pass `stream_options={"include_usage": True}` so LiteLLM emits token usage on the terminal chunk — otherwise streamed spans have no usage totals.
 
 ## Token usage mapping
 
@@ -165,7 +143,7 @@ LiteLLM normalizes every provider's usage into the OpenAI shape, so the mapping 
 
 If you run LiteLLM as a **proxy server** instead of the embedded SDK, it exposes an OpenAI-compatible endpoint. Point the `openai` client at the proxy base URL and trace it with [`wrap_openai`](/tracing/wrappers/openai) — no LiteLLM-specific wrapping is needed.
 
-```python
+```python title="Python"
 from openai import OpenAI
 from pandaprobe.wrappers import wrap_openai
 

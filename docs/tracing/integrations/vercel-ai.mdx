@@ -1,0 +1,120 @@
+---
+title: "Vercel AI SDK"
+description: "Trace Vercel AI SDK generation and streaming calls with PandaProbe middleware"
+icon: "/assets/providers/vercel.svg"
+---
+
+<Note>
+  The Vercel AI SDK integration is available in the PandaProbe TypeScript SDK only. Vercel AI does not provide a Python SDK.
+</Note>
+
+### Installation
+
+Install PandaProbe, the Vercel AI SDK, and the provider package used by your model. This example uses OpenAI.
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe ai @ai-sdk/openai
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe ai @ai-sdk/openai
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe ai @ai-sdk/openai
+    ```
+  </Tab>
+</Tabs>
+
+### Setup
+
+Wrap the language model with PandaProbe middleware before passing it to `generateText`, `streamText`, or other Vercel AI SDK functions that use the language model middleware interface.
+
+```ts title="TypeScript"
+import { openai } from "@ai-sdk/openai";
+import { wrapLanguageModel } from "ai";
+import { pandaProbeMiddleware } from "pandaprobe/integrations/vercel-ai";
+
+const model = wrapLanguageModel({
+  model: openai("gpt-5.6-terra"),
+  middleware: pandaProbeMiddleware(),
+});
+```
+
+The wrapped model remains a normal Vercel AI language model. If there is no active PandaProbe trace, each generation creates a standalone trace. Inside `withTrace()`, the model call becomes a nested `LLM` span.
+
+## Generate text
+
+```ts title="TypeScript"
+import { generateText } from "ai";
+import { flush } from "pandaprobe";
+
+const { text } = await generateText({
+  model,
+  prompt: "What is the capital of France?",
+});
+
+console.log(text);
+await flush();
+```
+
+## Stream text
+
+```ts title="TypeScript"
+import { streamText } from "ai";
+
+const result = streamText({
+  model,
+  prompt: "Count to three.",
+});
+
+for await (const delta of result.textStream) {
+  process.stdout.write(delta);
+}
+```
+
+Streaming captures time-to-first-token, combines text deltas into one span output, and records final usage. The span is finalized if the stream completes, fails, or is cancelled before completion.
+
+## What gets traced
+
+| Vercel AI operation | PandaProbe field |
+| --- | --- |
+| `doGenerate` / `generateText` | `LLM` span with normalized input and output |
+| `doStream` / `streamText` | Streaming `LLM` span with time-to-first-token |
+| Model identifier | `model` |
+| Input prompt or messages | `input.messages` |
+| Generated text | `output.messages` |
+| Input, output, and total tokens | Normalized `token_usage` |
+| Provider error | Span error and `ERROR` status |
+
+## Custom span name
+
+The default span and standalone trace name is `vercel-ai-generate`. Override it when one application uses multiple wrapped models:
+
+```ts title="TypeScript"
+const model = wrapLanguageModel({
+  model: openai("gpt-5.6-terra"),
+  middleware: pandaProbeMiddleware({ name: "support-agent-generation" }),
+});
+```
+
+## Combine with manual tracing
+
+```ts title="TypeScript"
+import { withTrace } from "pandaprobe";
+
+await withTrace(
+  "support-agent",
+  { input: { messages: [{ role: "user", content: "How do I reset my password?" }] } },
+  async (trace) => {
+    const result = await generateText({ model, prompt: "How do I reset my password?" });
+    trace.setOutput({ messages: [{ role: "assistant", content: result.text }] });
+  },
+);
+```
+
+This produces one trace with the Vercel model call nested beneath it as an `LLM` span.

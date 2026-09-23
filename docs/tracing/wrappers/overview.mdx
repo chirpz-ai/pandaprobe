@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "Zero-code LLM tracing for OpenAI, Anthropic, Google Gemini, Mistral AI, LiteLLM, and AWS Bedrock"
+description: "Zero-code LLM tracing for Python and TypeScript provider SDKs"
 icon: "gauge"
 ---
 
@@ -12,14 +12,14 @@ All wrappers automatically capture: input messages, output messages, model name,
 
 ## Comparison
 
-| Wrapper | Install Extra | Provider Methods Traced |
-| --- | --- | --- |
-| `wrap_openai` | `"pandaprobe[openai]"` | `chat.completions.create`, `responses.create` |
-| `wrap_anthropic` | `"pandaprobe[anthropic]"` | `messages.create`, `messages.stream` |
-| `wrap_gemini` | `"pandaprobe[gemini]"` | `models.generate_content`, `models.generate_content_stream` |
-| `wrap_mistral` | `"pandaprobe[mistral]"` | `chat.complete`, `chat.complete_async`, `chat.stream`, `chat.stream_async` |
-| `wrap_litellm` | `"pandaprobe[litellm]"` | `litellm.completion`, `litellm.acompletion` (any provider, incl. streaming) |
-| `wrap_bedrock` *(beta)* | `"pandaprobe[bedrock]"` | `converse`, `converse_stream`, `invoke_model`, `invoke_model_with_response_stream` |
+| Provider | Python wrapper | TypeScript wrapper | APIs traced |
+| --- | --- | --- | --- |
+| OpenAI | `wrap_openai` | `wrapOpenAI` | Chat Completions and Responses |
+| Anthropic | `wrap_anthropic` | `wrapAnthropic` | Messages, including streaming |
+| Google Gemini | `wrap_gemini` | `wrapGemini` | Generate content, including streaming |
+| Mistral | `wrap_mistral` | `wrapMistral` | Chat completions, including streaming |
+| AWS Bedrock | `wrap_bedrock` | `wrapBedrock` | Converse and InvokeModel, including streaming |
+| LiteLLM | `wrap_litellm` | — | Completion and async completion across providers |
 
 <Tip>
   Install only the provider extras you use so dependency resolution stays minimal.
@@ -27,13 +27,26 @@ All wrappers automatically capture: input messages, output messages, model name,
 
 ## Quick example
 
-```python
-from pandaprobe.wrappers import wrap_openai
-from openai import OpenAI
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    from pandaprobe.wrappers import wrap_openai
+    from openai import OpenAI
 
-client = wrap_openai(OpenAI())
-# Use client exactly as before — all calls are traced automatically
-```
+    client = wrap_openai(OpenAI())
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import OpenAI from "openai";
+    import { wrapOpenAI } from "pandaprobe/wrappers/openai";
+
+    const client = wrapOpenAI(new OpenAI());
+    ```
+  </Tab>
+</Tabs>
+
+Use the returned client exactly as before—supported calls are traced automatically.
 
 <Note>
   Wrappers work seamlessly with manual instrumentation. If a wrapper call happens inside a `pandaprobe.start_trace()` or `@pandaprobe.trace` context, the LLM span is automatically nested as a child span.
@@ -57,7 +70,7 @@ client = wrap_openai(OpenAI())
   <Card title="LiteLLM" href="/tracing/wrappers/litellm">
     Unified `completion` across 100+ providers, async, streaming, and proxy
   </Card>
-  <Card title="AWS Bedrock (beta)" href="/tracing/wrappers/bedrock">
+  <Card title="AWS Bedrock" href="/tracing/wrappers/bedrock">
     Converse and InvokeModel APIs, streaming, and aioboto3 support
   </Card>
 </CardGroup>

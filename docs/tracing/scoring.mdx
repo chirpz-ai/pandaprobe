@@ -12,17 +12,31 @@ PandaProbe lets you attach **scores** to traces programmatically. Scores can rep
 
 ## Basic usage
 
-```python
-import pandaprobe
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    import pandaprobe
 
-pandaprobe.score(
-    trace_id="your-trace-id",
-    name="user_satisfaction",
-    value="0.9",
-    data_type="NUMERIC",
-    reason="User clicked thumbs up",
-)
-```
+    pandaprobe.score(
+        trace_id="your-trace-id",
+        name="user_satisfaction",
+        value="0.9",
+        data_type="NUMERIC",
+        reason="User clicked thumbs up",
+    )
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { ScoreDataType, score } from "pandaprobe";
+
+    score("your-trace-id", "user_satisfaction", "0.9", {
+      dataType: ScoreDataType.NUMERIC,
+      reason: "User clicked thumbs up",
+    });
+    ```
+  </Tab>
+</Tabs>
 
 ## Parameters
 
@@ -34,6 +48,8 @@ pandaprobe.score(
 | `data_type` | `str` | No | One of `NUMERIC`, `BOOLEAN`, `CATEGORICAL`. Default: `NUMERIC` |
 | `reason` | `str` or `None` | No | Human-readable explanation for the score |
 | `metadata` | `dict` or `None` | No | Arbitrary key-value pairs |
+
+TypeScript passes the first three values positionally and uses a camelCase options object: `score(traceId, name, value, {dataType, reason, metadata})`.
 
 ## Score data types (`ScoreDataType`)
 
@@ -57,12 +73,24 @@ pandaprobe.score(
 
 From a context manager:
 
-```python
+```python title="Python"
 with pandaprobe.start_trace("my-agent") as t:
     trace_id = t.trace_id
     # ... run your agent ...
 
 pandaprobe.score(trace_id=trace_id, name="quality", value="0.8")
+```
+
+```ts title="TypeScript"
+import { score, withTrace } from "pandaprobe";
+
+let traceId = "";
+await withTrace("my-agent", async (trace) => {
+  traceId = trace.traceId;
+  // Run your agent.
+});
+
+score(traceId, "quality", "0.8");
 ```
 
 <Tip>
@@ -71,8 +99,14 @@ pandaprobe.score(trace_id=trace_id, name="quality", value="0.8")
 
 ## Multiple scores per trace
 
-```python
+```python title="Python"
 pandaprobe.score(trace_id=tid, name="relevance", value="0.9", data_type="NUMERIC")
 pandaprobe.score(trace_id=tid, name="hallucination_free", value="true", data_type="BOOLEAN")
 pandaprobe.score(trace_id=tid, name="sentiment", value="positive", data_type="CATEGORICAL")
+```
+
+```ts title="TypeScript"
+score(traceId, "relevance", "0.9", { dataType: ScoreDataType.NUMERIC });
+score(traceId, "hallucination_free", "true", { dataType: ScoreDataType.BOOLEAN });
+score(traceId, "sentiment", "positive", { dataType: ScoreDataType.CATEGORICAL });
 ```

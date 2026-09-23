@@ -17,36 +17,53 @@ icon: "/assets/providers/openai.svg"
     uv add "pandaprobe[openai]"
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe openai
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe openai
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe openai
+    ```
+  </Tab>
 </Tabs>
 
 ### Setup
 
 <Tabs>
-  <Tab title="Sync">
-    ```python
+  <Tab title="Python">
+    ```python title="Python"
     from pandaprobe.wrappers import wrap_openai
     from openai import OpenAI
 
     client = wrap_openai(OpenAI())
     ```
   </Tab>
-  <Tab title="Async">
-    ```python
-    from pandaprobe.wrappers import wrap_openai
-    from openai import AsyncOpenAI
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import OpenAI from "openai";
+    import { wrapOpenAI } from "pandaprobe/wrappers/openai";
 
-    async_client = wrap_openai(AsyncOpenAI())
+    const client = wrapOpenAI(new OpenAI());
     ```
   </Tab>
 </Tabs>
 
-Works with both synchronous and asynchronous clients; use the same `wrap_openai` entry point.
+<Note>
+  PandaProbe traces both synchronous and asynchronous Python clients, plus the Promise-based TypeScript client.
+</Note>
 
 ## Chat Completions API
 
 Span name: `"openai-chat"`, SpanKind: `LLM`
 
-```python
+```python title="Python"
 response = client.chat.completions.create(
     model="gpt-5.4",
     messages=[
@@ -55,6 +72,17 @@ response = client.chat.completions.create(
     ],
     temperature=0.7,
 )
+```
+
+```ts title="TypeScript"
+const response = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "user", content: "Explain quantum computing." },
+  ],
+  temperature: 0.7,
+});
 ```
 
 **What gets traced**
@@ -67,7 +95,7 @@ response = client.chat.completions.create(
 
 ### Streaming
 
-```python
+```python title="Python"
 stream = client.chat.completions.create(
     model="gpt-5.4",
     messages=[{"role": "user", "content": "Hello!"}],
@@ -78,18 +106,37 @@ for chunk in stream:
         print(chunk.choices[0].delta.content, end="")
 ```
 
+```ts title="TypeScript"
+const stream = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [{ role: "user", content: "Hello!" }],
+  stream: true,
+});
+for await (const chunk of stream) {
+  process.stdout.write(chunk.choices[0]?.delta.content ?? "");
+}
+```
+
 Streaming is fully supported. The wrapper records `completion_start_time` on the first chunk for time-to-first-token tracking. Chunks are reduced to a single response for the span output.
 
 ## Responses API
 
 Span name: `"openai-response"`, SpanKind: `LLM`
 
-```python
+```python title="Python"
 response = client.responses.create(
     model="gpt-5.4",
     instructions="You are a helpful assistant.",
     input="What is the capital of France?",
 )
+```
+
+```ts title="TypeScript"
+const response = await client.responses.create({
+  model: "gpt-5.6-terra",
+  instructions: "You are a helpful assistant.",
+  input: "What is the capital of France?",
+});
 ```
 
 **What gets traced**
@@ -104,7 +151,7 @@ response = client.responses.create(
 
 Built-in tools such as `web_search`, `file_search`, and `code_interpreter` are automatically traced as child spans with SpanKind `TOOL`:
 
-```python
+```python title="Python"
 response = client.responses.create(
     model="gpt-5.4",
     input="Search the web for PandaProbe",

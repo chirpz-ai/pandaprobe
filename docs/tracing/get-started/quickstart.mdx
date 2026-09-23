@@ -25,6 +25,21 @@ icon: "rocket"
         uv add "pandaprobe[openai,gemini,anthropic]"
         ```
       </Tab>
+      <Tab title="npm">
+        ```bash
+        npm install pandaprobe openai @google/genai @anthropic-ai/sdk
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn add pandaprobe openai @google/genai @anthropic-ai/sdk
+        ```
+      </Tab>
+      <Tab title="pnpm">
+        ```bash
+        pnpm add pandaprobe openai @google/genai @anthropic-ai/sdk
+        ```
+      </Tab>
     </Tabs>
   </Step>
   <Step title="Set environment variables">
@@ -42,7 +57,8 @@ icon: "rocket"
 
     <Tabs>
       <Tab title="OpenAI">
-        ```python
+        <CodeGroup>
+        ```python title="Python"
         from pandaprobe.wrappers import wrap_openai
         from openai import OpenAI
 
@@ -55,9 +71,26 @@ icon: "rocket"
 
         print(response.choices[0].message.content)
         ```
+
+        ```ts title="TypeScript"
+        import OpenAI from "openai";
+        import { flush } from "pandaprobe";
+        import { wrapOpenAI } from "pandaprobe/wrappers/openai";
+
+        const client = wrapOpenAI(new OpenAI());
+        const response = await client.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: "What is PandaProbe?" }],
+        });
+
+        console.log(response.choices[0]?.message.content);
+        await flush();
+        ```
+        </CodeGroup>
       </Tab>
       <Tab title="Gemini">
-        ```python
+        <CodeGroup>
+        ```python title="Python"
         from pandaprobe.wrappers import wrap_gemini
         from google import genai
 
@@ -70,9 +103,26 @@ icon: "rocket"
 
         print(response.text)
         ```
+
+        ```ts title="TypeScript"
+        import { GoogleGenAI } from "@google/genai";
+        import { flush } from "pandaprobe";
+        import { wrapGemini } from "pandaprobe/wrappers/gemini";
+
+        const client = wrapGemini(new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY }));
+        const response = await client.models.generateContent({
+          model: "gemini-3.8-flash",
+          contents: "What is PandaProbe?",
+        });
+
+        console.log(response.text);
+        await flush();
+        ```
+        </CodeGroup>
       </Tab>
       <Tab title="Anthropic">
-        ```python
+        <CodeGroup>
+        ```python title="Python"
         from pandaprobe.wrappers import wrap_anthropic
         from anthropic import Anthropic
 
@@ -85,6 +135,24 @@ icon: "rocket"
 
         print(response.content[0].text)
         ```
+
+        ```ts title="TypeScript"
+        import Anthropic from "@anthropic-ai/sdk";
+        import { flush } from "pandaprobe";
+        import { wrapAnthropic } from "pandaprobe/wrappers/anthropic";
+
+        const client = wrapAnthropic(new Anthropic());
+        const response = await client.messages.create({
+          model: "claude-sonnet-5",
+          max_tokens: 1024,
+          messages: [{ role: "user", content: "What is PandaProbe?" }],
+        });
+
+        const text = response.content.find((block) => block.type === "text");
+        console.log(text?.type === "text" ? text.text : "");
+        await flush();
+        ```
+        </CodeGroup>
       </Tab>
     </Tabs>
   </Step>
@@ -108,5 +176,5 @@ icon: "rocket"
 </CardGroup>
 
 <Note>
-  For short-lived scripts, call `pandaprobe.flush()` before the process exits to ensure all traces are sent. Long-running services flush automatically.
+  For short-lived scripts, call Python's `pandaprobe.flush()` or TypeScript's `await flush()` before the process exits to ensure all traces are sent.
 </Note>

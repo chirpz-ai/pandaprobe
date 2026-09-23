@@ -1,13 +1,82 @@
 ---
 title: "Core service"
 description: "Release notes for the PandaProbe Core service"
-icon: "server"
+icon: "github"
 rss: true
 ---
 
 Release history for the **PandaProbe Core Platform**.
 
-Current version: `v0.3.1`
+Current version: `v0.6.1`
+
+<Update label="v0.6.1" description="2026-08-25" tags={["Reliability", "Bug fixes"]}>
+  ### Redis and billing reliability
+
+  - Hardened the Redis connection pool against stale Memorystore connections with health checks, TCP keepalive, socket timeouts, and bounded retries.
+  - Made usage counter increments and rollbacks replay-safe, preventing Redis retries from applying the same change twice.
+  - Added ownership-safe locks for Stripe webhooks and overage reporting so retries preserve idempotency without releasing another worker's lock.
+</Update>
+
+<Update label="v0.6.0" description="2026-08-24" tags={["Billing", "Tracing", "Dashboard"]}>
+  ### Billing, trace API, and dashboard improvements
+
+  - Updated invoice webhook handling for the pinned Stripe API version while retaining compatibility with the legacy invoice shape. Renewal periods and overage reporting now advance correctly.
+  - Changed `PATCH /traces/{trace_id}` to omit the potentially unbounded `spans` payload. `GET /traces/{trace_id}` continues to return the complete trace with spans.
+  - Added database connection pre-ping and recycling to avoid handing stale pooled connections to requests.
+  - Added an expandable span waterfall, fixed long JSON value truncation, and refined the dashboard's dark theme and interaction states.
+  - Improved Agent Skill installation and onboarding guidance on the project home page.
+</Update>
+
+<Update label="v0.5.3" description="2026-08-09" tags={["Evaluation"]}>
+  - Refined task-completion scoring for traces that contain only Harness setup activity. These traces are now described as not having attempted the task yet, while subsequent task actions are judged normally.
+</Update>
+
+<Update label="v0.5.2" description="2026-08-09" tags={["Evaluation"]}>
+  ### Harness-aware evaluation
+
+  - Updated trace judges to recognize Harness meta-tools and treat guidance, state checks, notices, and trace inspection as neutral framework activity.
+  - Excluded Harness meta-tools from plan adherence, plan quality, step efficiency, argument correctness, tool correctness, and confidence penalties.
+  - Improved task-completion scoring for partial traces and Harness-only activity.
+</Update>
+
+<Update label="v0.5.1" description="2026-08-08" tags={["Reliability", "Billing"]}>
+  ### Worker and billing reliability
+
+  - Added worker-pool heartbeats to Cloud Run health probes and included prefetched tasks in queue-depth checks.
+  - Added dispatch locks, task time limits, and timeout handling for background jobs.
+  - Tightened Stripe client configuration and now fail fast when the Stripe API key is missing.
+</Update>
+
+<Update label="v0.5.0" description="2026-06-10" tags={["Onboarding"]}>
+  ### Agent-assisted onboarding
+
+  - Added project onboarding through the PandaProbe Agent Skill, with install commands and a ready-to-copy coding-agent prompt.
+  - Reorganized manual setup guides as secondary resources and refreshed the onboarding email flow.
+</Update>
+
+<Update label="v0.4.0" description="2026-06-03" tags={["CLI", "Authentication"]}>
+  ### CLI authentication
+
+  - Added OAuth 2.0 Authorization Code with PKCE endpoints, service logic, dashboard authorization page, and API integration for the PandaProbe CLI.
+  - Hardened token exchange by rechecking organization membership and retaining authorization codes when PKCE verification fails.
+</Update>
+
+<Update label="v0.3.4" description="2026-06-01" tags={["Bug fix"]}>
+  - Improved Celery's Redis reliability with connection health checks, keepalive, timeout retries, and disabled unused task-result tracking.
+</Update>
+
+<Update label="v0.3.3" description="2026-05-24" tags={["Dashboard", "Onboarding"]}>
+  ### In-product setup guides
+
+  - Replaced the standalone quickstart with a project sidebar containing guided setup for traces, agents, and evaluations.
+  - Added a dedicated API-key creation dialog and reusable instruction components.
+  - Improved trace and session tables by preserving the opened row and scrolling it into view.
+</Update>
+
+<Update label="v0.3.2" description="2026-05-20" tags={["Integrations", "Maintenance"]}>
+  - Expanded documentation for Deep Agents, LangChain, Amazon Bedrock, Mistral, and the Core and Python SDK changelogs.
+  - Updated Gemini model references and refreshed LiteLLM, FastAPI, asyncpg, pytest, Ruff, and release tooling dependencies.
+</Update>
 
 <Update label="v0.3.1" description="2026-05-12" tags={["Bug fix"]}>
   - Fixed a translation-layer bug that could crash pages on load. Translations are now blocked by default to prevent the regression.

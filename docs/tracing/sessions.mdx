@@ -36,12 +36,12 @@ Create a new `session_id` whenever a new agent lifecycle begins. Common examples
 
 Reuse the same `session_id` for every trace produced during that lifecycle.
 
-## Context managers (scoped)
+## Scoped API
 
 Prefer `pandaprobe.session()` when you can scope a session to a block of code. The session is applied to all traces created inside the block and is reset when the block exits.
 
 <CodeGroup>
-```python nested.py
+```python title="Python — nested.py"
 import pandaprobe
 
 with pandaprobe.session("conversation-123"):
@@ -50,21 +50,39 @@ with pandaprobe.session("conversation-123"):
         ...
 ```
 
-```python combined.py
+```python title="Python — combined.py"
 with pandaprobe.session("conversation-123"):
     # traces here get session_id="conversation-123"
     ...
 ```
 </CodeGroup>
 
+TypeScript uses an async callback scope backed by `AsyncLocalStorage`, so concurrent sessions remain isolated:
+
+```ts title="TypeScript"
+import { session, withTrace } from "pandaprobe";
+
+await session("conversation-123", async () => {
+  await withTrace("my-agent", async (trace) => {
+    // This trace inherits sessionId="conversation-123".
+  });
+});
+```
+
 ## Imperative API (global)
 
 Use `set_session()` when a request or worker context needs to set the session once before calling into application code.
 
-```python
+```python title="Python"
 pandaprobe.set_session("conversation-123")
 
 # All subsequent traces inherit this session_id
+```
+
+```ts title="TypeScript"
+import { setSession } from "pandaprobe";
+
+setSession("conversation-123");
 ```
 
 <Warning>
@@ -75,7 +93,7 @@ pandaprobe.set_session("conversation-123")
 
 When using decorators or context managers, explicit parameters always take precedence over scoped or global values:
 
-```python
+```python title="Python"
 @pandaprobe.trace(session_id="explicit-session")
 def my_agent(query: str):
     ...
@@ -84,25 +102,48 @@ with pandaprobe.start_trace("agent", session_id="explicit") as t:
     ...
 ```
 
+```ts title="TypeScript"
+import { trace, withTrace } from "pandaprobe";
+
+class Agent {
+  @trace({ sessionId: "explicit-session" })
+  async runAgent(query: string) {
+    // ...
+  }
+}
+
+await withTrace("agent", { sessionId: "explicit" }, async () => {
+  // ...
+});
+```
+
 ## Precedence rules
 
 1. Explicit parameters passed to `@trace`, `start_trace()`, or integration constructors
 2. Context manager scope (`pandaprobe.session()`)
 3. Imperative setting (`pandaprobe.set_session()`)
 
+TypeScript follows the same precedence using `sessionId`, `session()`, and `setSession()`.
+
 ## Works across all layers
 
 Session IDs propagate to wrappers, integrations, and manual instrumentation. Integration constructors also accept `session_id`:
 
-```python
+```python title="Python"
 from pandaprobe.integrations.langgraph import LangGraphCallbackHandler
 
 handler = LangGraphCallbackHandler(session_id="conversation-123")
 ```
 
+```ts title="TypeScript"
+import { LangGraphCallbackHandler } from "pandaprobe/integrations/langgraph";
+
+const handler = new LangGraphCallbackHandler({ sessionId: "conversation-123" });
+```
+
 ## Multi-turn session example
 
-```python
+```python title="Python"
 import uuid
 
 import openai
@@ -142,4 +183,32 @@ if __name__ == "__main__":
     pandaprobe.flush()
     pandaprobe.shutdown()
     print(f"All traces grouped under session_id={session_id}")
+```
+
+```ts title="TypeScript multi-turn session"
+import { randomUUID } from "node:crypto";
+import OpenAI from "openai";
+import { flush, session } from "pandaprobe";
+import { wrapOpenAI } from "pandaprobe/wrappers/openai";
+
+const client = wrapOpenAI(new OpenAI());
+const sessionId = randomUUID();
+const conversation: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+  { role: "system", content: "You are a concise geography assistant." },
+];
+
+await session(sessionId, async () => {
+  for (const question of ["What is the capital of France?", "What about Germany?"]) {
+    conversation.push({ role: "user", content: question });
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: conversation,
+    });
+    const reply = response.choices[0]?.message.content ?? "";
+    conversation.push({ role: "assistant", content: reply });
+    console.log(reply);
+  }
+});
+
+await flush();
 ```

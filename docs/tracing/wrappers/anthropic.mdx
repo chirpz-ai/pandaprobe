@@ -17,40 +17,68 @@ icon: "/assets/providers/claude.svg"
     uv add "pandaprobe[anthropic]"
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe @anthropic-ai/sdk
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe @anthropic-ai/sdk
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe @anthropic-ai/sdk
+    ```
+  </Tab>
 </Tabs>
 
 ### Setup
 
 <Tabs>
-  <Tab title="Sync">
-    ```python
+  <Tab title="Python">
+    ```python title="Python"
     from pandaprobe.wrappers import wrap_anthropic
     from anthropic import Anthropic
 
     client = wrap_anthropic(Anthropic())
     ```
   </Tab>
-  <Tab title="Async">
-    ```python
-    from pandaprobe.wrappers import wrap_anthropic
-    from anthropic import AsyncAnthropic
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import Anthropic from "@anthropic-ai/sdk";
+    import { wrapAnthropic } from "pandaprobe/wrappers/anthropic";
 
-    async_client = wrap_anthropic(AsyncAnthropic())
+    const client = wrapAnthropic(new Anthropic());
     ```
   </Tab>
 </Tabs>
+
+<Note>
+  PandaProbe traces both synchronous and asynchronous Python clients, plus the Promise-based TypeScript client.
+</Note>
 
 ## Messages API
 
 Span name: `"anthropic-messages"`, SpanKind: `LLM`
 
-```python
+```python title="Python"
 response = client.messages.create(
     model="claude-sonnet-4-6",
     max_tokens=1024,
     system="You are a helpful assistant.",
     messages=[{"role": "user", "content": "Explain quantum computing."}],
 )
+```
+
+```ts title="TypeScript"
+const response = await client.messages.create({
+  model: "claude-sonnet-5",
+  max_tokens: 1024,
+  system: "You are a helpful assistant.",
+  messages: [{ role: "user", content: "Explain quantum computing." }],
+});
 ```
 
 **What gets traced**
@@ -65,7 +93,7 @@ response = client.messages.create(
 ### Streaming
 
 <CodeGroup>
-```python title="stream=True"
+```python title="Python — stream=True"
 response = client.messages.create(
     model="claude-sonnet-4-6",
     max_tokens=1024,
@@ -77,7 +105,7 @@ for event in response:
         print(event.delta.text, end="")
 ```
 
-```python title="messages.stream context manager"
+```python title="Python — messages.stream context manager"
 with client.messages.stream(
     model="claude-sonnet-4-6",
     max_tokens=1024,
@@ -89,6 +117,22 @@ with client.messages.stream(
 </CodeGroup>
 
 Both streaming patterns are fully supported with time-to-first-token tracking.
+
+In TypeScript, both `messages.create({stream: true, ...})` and `messages.stream(...)` are instrumented:
+
+```ts title="TypeScript"
+const stream = await client.messages.create({
+  model: "claude-sonnet-5",
+  max_tokens: 1024,
+  messages: [{ role: "user", content: "Hello!" }],
+  stream: true,
+});
+for await (const event of stream) {
+  if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+    process.stdout.write(event.delta.text);
+  }
+}
+```
 
 ## Extended thinking
 

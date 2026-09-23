@@ -4,6 +4,10 @@ description: "Trace Google Agent Development Kit agents with automatic lifecycle
 icon: "/assets/providers/adk.svg"
 ---
 
+<Note>
+  The Google ADK integration is currently available in the Python SDK only.
+</Note>
+
 ### Installation
 
 <Tabs>
@@ -21,7 +25,7 @@ icon: "/assets/providers/adk.svg"
 
 ### Setup
 
-```python
+```python title="Python"
 from pandaprobe.integrations.google_adk import GoogleADKAdapter
 
 adapter = GoogleADKAdapter(
@@ -42,7 +46,7 @@ adapter.instrument()
 
 ### Usage
 
-```python
+```python title="Python"
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 
@@ -88,7 +92,7 @@ When using Gemini models with thinking enabled, thought parts are automatically 
 
 This example defines two function tools and runs an `LlmAgent` asynchronously using `GoogleADKAdapter`. We trace the agent via `GoogleADKAdapter`:
 
-```python
+```python title="Python"
 import asyncio
 import uuid
 

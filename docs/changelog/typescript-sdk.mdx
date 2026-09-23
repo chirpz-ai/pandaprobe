@@ -1,0 +1,50 @@
+---
+title: "TypeScript SDK"
+description: "Release notes for the PandaProbe TypeScript SDK"
+icon: "package"
+rss: true
+---
+
+Release history for the **PandaProbe TypeScript SDK** (`pandaprobe`).
+
+Current version: `v0.4.2`
+
+<Update label="v0.4.2" description="2026-09-22" tags={["Bug fixes", "Compatibility"]}>
+  ### OpenAI Agents trace data
+
+  - Updated the OpenAI Agents adapter for current `ResponseSpanData`, which exposes model input and response data through `_input` and `_response`. Legacy `input` and `response` fields remain supported.
+  - Fixed empty OpenAI Agents spans by restoring normalized input, output, model, token usage, model parameters, and reasoning data.
+  - Added `task` and `turn` span handling, including usage and turn metadata.
+  - Nested LLM input and output now propagate through intermediate spans to the nearest parent agent, keeping agent and root trace data populated.
+
+  ### Decorator compatibility
+
+  - Added support for current Stage 3 TypeScript method decorators while retaining compatibility with legacy `experimentalDecorators` emit.
+  - Both bare and configured `@trace` / `@span` usage work with synchronous and asynchronous class methods.
+
+  ### Examples and release compatibility
+
+  - Updated the DeepAgents example and install target for the current API and required LangChain runtime peers.
+  - Refreshed provider examples with current models, including Claude Sonnet 5, Gemini 3.8 Flash, Mistral Small, and `gpt-5.6-terra`.
+  - Added AWS credential guidance and updated the Bedrock example to the Claude Sonnet 5 global inference profile.
+  - Kept provider and framework SDKs on demand so the base development install remains compatible with the Node 18 CI matrix.
+  - Pinned npm `11.5.1` in the release workflow for Node 20 and npm trusted-publishing compatibility.
+</Update>
+
+<Update label="v0.4.1" description="2026-06-24" tags={["Release"]}>
+  ### Release metadata update
+
+  - Advanced the published SDK version to `v0.4.1`.
+  - No runtime or public API changes from `v0.4.0`.
+</Update>
+
+<Update label="v0.4.0" description="2026-06-24" tags={["Initial release"]}>
+  ### Initial public release of the TypeScript SDK
+
+  - **Tracing core:** `init`, `Client`, trace and span contexts, `withTrace` / `withSpan`, method decorators, buffered transport with retry, shutdown flushing, and programmatic scoring.
+  - **Context propagation:** concurrency-safe session, user, trace, and span state built on `AsyncLocalStorage`.
+  - **Provider wrappers:** OpenAI, Anthropic, Google Gemini, Mistral, and AWS Bedrock, including streaming, time-to-first-token, normalized input/output, and token usage.
+  - **Agent integrations:** LangChain, LangGraph, DeepAgents, Claude Agent SDK, OpenAI Agents SDK, and Vercel AI SDK.
+  - **Universal trace shape:** normalized `CHAIN → AGENT → LLM / TOOL` trees compatible with traces produced by the Python SDK.
+  - **Package support:** Node.js 18 or newer, dual ESM and CommonJS builds, TypeScript declarations, and provider-specific package exports.
+</Update>

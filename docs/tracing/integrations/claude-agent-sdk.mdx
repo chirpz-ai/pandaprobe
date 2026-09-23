@@ -17,20 +17,53 @@ icon: "/assets/providers/claude.svg"
     uv add "pandaprobe[claude-agent-sdk]"
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe @anthropic-ai/claude-agent-sdk
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe @anthropic-ai/claude-agent-sdk
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe @anthropic-ai/claude-agent-sdk
+    ```
+  </Tab>
 </Tabs>
 
 ### Setup
 
-```python
-from pandaprobe.integrations.claude_agent_sdk import ClaudeAgentSDKAdapter
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    from pandaprobe.integrations.claude_agent_sdk import ClaudeAgentSDKAdapter
 
-adapter = ClaudeAgentSDKAdapter(
-    session_id="conversation-123",
-    user_id="user-abc",
-    tags=["production"],
-)
-adapter.instrument()
-```
+    adapter = ClaudeAgentSDKAdapter(
+        session_id="conversation-123",
+        user_id="user-abc",
+        tags=["production"],
+    )
+    adapter.instrument()
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    JavaScript ESM module bindings cannot be monkey-patched like Python modules, so TypeScript wraps the Claude Agent SDK's `query` function explicitly:
+
+    ```ts title="TypeScript"
+    import { query } from "@anthropic-ai/claude-agent-sdk";
+    import { wrapClaudeAgentQuery } from "pandaprobe/integrations/claude-agent-sdk";
+
+    const tracedQuery = wrapClaudeAgentQuery(query, {
+      sessionId: "conversation-123",
+      userId: "user-abc",
+      tags: ["production"],
+    });
+    ```
+  </Tab>
+</Tabs>
 
 <Tip>
   We recommend using UUIDs for `session_id` and `user_id` so traces can be grouped reliably across runs.
@@ -38,7 +71,7 @@ adapter.instrument()
 
 ### Usage
 
-```python
+```python title="Python"
 from claude_agent_sdk import ClaudeSDKClient
 
 client = ClaudeSDKClient(model="claude-sonnet-4-20250514")
@@ -49,6 +82,21 @@ async for event in client.receive_response(
 ):
     print(event)
 ```
+
+```ts title="TypeScript"
+for await (const message of tracedQuery({
+  prompt: "What is the weather in Paris?",
+  options: { model: "claude-sonnet-5" },
+})) {
+  if (message.type === "result" && "result" in message) {
+    console.log(message.result);
+  }
+}
+```
+
+<Note>
+  The TypeScript query wrapper traces each `query()` invocation independently. Unlike the Python client adapter, it does not persist conversation history across separate invocations.
+</Note>
 
 ### What gets traced
 
@@ -87,11 +135,11 @@ The adapter maintains conversation history across turns on the client instance (
 | `output_tokens` | `completion_tokens` |
 | `cache_read_input_tokens` | `cache_read_tokens` |
 
-### Example with tools
+### Example
 
-This example exposes two tools via an in-process MCP server and runs a query through `ClaudeSDKClient`. We trace the agent via `ClaudeAgentSDKAdapter`:
+The Python example exposes two tools via an in-process MCP server and runs a query through `ClaudeSDKClient`. We trace the agent via `ClaudeAgentSDKAdapter`:
 
-```python
+```python title="Python"
 import asyncio
 import uuid
 from typing import Any
@@ -181,4 +229,23 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-This produces a trace with: `CHAIN` (root) → `AGENT` → `LLM` (model call) → `TOOL` (`get_weather`) → `TOOL` (`get_population`) → `LLM` (final response).
+```ts title="TypeScript"
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { flush } from "pandaprobe";
+import { wrapClaudeAgentQuery } from "pandaprobe/integrations/claude-agent-sdk";
+
+const tracedQuery = wrapClaudeAgentQuery(query, { tags: ["claude-agent"] });
+
+for await (const message of tracedQuery({
+  prompt: "What is the capital of France?",
+  options: { model: "claude-sonnet-5" },
+})) {
+  if (message.type === "result" && "result" in message) {
+    console.log(message.result);
+  }
+}
+
+await flush();
+```
+
+The Python example produces a trace with: `CHAIN` (root) → `AGENT` → `LLM` (model call) → `TOOL` (`get_weather`) → `TOOL` (`get_population`) → `LLM` (final response).

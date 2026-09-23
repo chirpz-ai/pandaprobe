@@ -17,19 +17,49 @@ icon: "/assets/providers/langgraph.svg"
     uv add "pandaprobe[langgraph]"
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe @langchain/langgraph @langchain/openai @langchain/core
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe @langchain/langgraph @langchain/openai @langchain/core
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe @langchain/langgraph @langchain/openai @langchain/core
+    ```
+  </Tab>
 </Tabs>
 
 ### Setup
 
-```python
-from pandaprobe.integrations.langgraph import LangGraphCallbackHandler
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    from pandaprobe.integrations.langgraph import LangGraphCallbackHandler
 
-handler = LangGraphCallbackHandler(
-    session_id="conversation-123",
-    user_id="user-abc",
-    tags=["production"],
-)
-```
+    handler = LangGraphCallbackHandler(
+        session_id="conversation-123",
+        user_id="user-abc",
+        tags=["production"],
+    )
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { LangGraphCallbackHandler } from "pandaprobe/integrations/langgraph";
+
+    const handler = new LangGraphCallbackHandler({
+      sessionId: "conversation-123",
+      userId: "user-abc",
+      tags: ["production"],
+    });
+    ```
+  </Tab>
+</Tabs>
 
 <Tip>
   We recommend using UUIDs for `session_id` and `user_id` so traces can be grouped reliably across runs.
@@ -39,7 +69,7 @@ handler = LangGraphCallbackHandler(
 
 Pass the handler via LangChain's `config["callbacks"]`:
 
-```python
+```python title="Python"
 from langgraph.graph import StateGraph
 
 # ... define your graph ...
@@ -48,6 +78,13 @@ result = graph.invoke(
     {"messages": [{"role": "user", "content": "Hello!"}]},
     config={"callbacks": [handler]},
 )
+```
+
+```ts title="TypeScript"
+const result = await graph.invoke(
+  { messages: [{ role: "user", content: "Hello!" }] },
+  { callbacks: [handler] },
+);
 ```
 
 <Warning>
@@ -68,11 +105,11 @@ result = graph.invoke(
 Token usage is extracted from LangChain's `usage_metadata` (primary) or legacy `llm_output.token_usage` (fallback). The mapping is: `input_tokens` → `prompt_tokens`, `output_tokens` → `completion_tokens`. Reasoning tokens are subtracted from `output_tokens` when present.
 
 
-### Example with tools
+### Example
 
-This example builds a ReAct agent using LangGraph with two tools. We trace the agent via `LangGraphCallbackHandler`:
+The Python example builds a ReAct agent using LangGraph with two tools. We trace the agent via `LangGraphCallbackHandler`:
 
-```python
+```python title="Python"
 from typing import Annotated
 
 from langchain_core.messages import SystemMessage
@@ -154,4 +191,27 @@ pandaprobe.flush()
 pandaprobe.shutdown()
 ```
 
-This produces a trace with: `CHAIN` (root) → `LLM` (model call) → `TOOL` (`get_weather`) → `TOOL` (`get_population`) → `LLM` (final response).
+```ts title="TypeScript"
+import { END, MessagesAnnotation, START, StateGraph } from "@langchain/langgraph";
+import { ChatOpenAI } from "@langchain/openai";
+import { flush } from "pandaprobe";
+import { LangGraphCallbackHandler } from "pandaprobe/integrations/langgraph";
+
+const llm = new ChatOpenAI({ model: "gpt-4o-mini" });
+const graph = new StateGraph(MessagesAnnotation)
+  .addNode("chatbot", async (state) => ({ messages: [await llm.invoke(state.messages)] }))
+  .addEdge(START, "chatbot")
+  .addEdge("chatbot", END)
+  .compile();
+
+const handler = new LangGraphCallbackHandler({ tags: ["chatbot", "example"] });
+const result = await graph.invoke(
+  { messages: [{ role: "user", content: "What is the capital of France?" }] },
+  { callbacks: [handler] },
+);
+
+console.log(result.messages.at(-1)?.content);
+await flush();
+```
+
+The Python example produces a trace with: `CHAIN` (root) → `LLM` (model call) → `TOOL` (`get_weather`) → `TOOL` (`get_population`) → `LLM` (final response).

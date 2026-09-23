@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "aspen",
   "name": "PandaProbe",
   "logo": {
     "light": "/assets/logo/light.png",
@@ -59,6 +59,11 @@
         "label": "Discord",
         "icon": "discord",
         "href": "https://discord.gg/A2VfrRhx"
+      },
+      {
+        "label": "Support",
+        "icon": "mail",
+        "href": "mailto:sina@pandaprobe.com"
       }
     ],
     "primary": {
@@ -98,7 +103,7 @@
       },
       {
         "tab": "Harness",
-        "icon": "shield-check",
+        "icon": "refresh-ccw-dot",
         "groups": [
           {
             "group": "Get Started",
@@ -148,7 +153,7 @@
       },
       {
         "tab": "Tracing",
-        "icon": "route",
+        "icon": "activity",
         "groups": [
           {
             "group": "Get Started",
@@ -186,7 +191,8 @@
                   "tracing/integrations/crewai",
                   "tracing/integrations/google-adk",
                   "tracing/integrations/claude-agent-sdk",
-                  "tracing/integrations/openai-agents-sdk"
+                  "tracing/integrations/openai-agents-sdk",
+                  "tracing/integrations/vercel-ai"
                 ]
               },
               {
@@ -217,7 +223,7 @@
       },
       {
         "tab": "Evaluation",
-        "icon": "drafting-compass",
+        "icon": "flask-conical",
         "groups": [
           {
             "group": "Get Started",
@@ -373,6 +379,7 @@
         "icon": "history",
         "pages": [
           "changelog/python-sdk",
+          "changelog/typescript-sdk",
           "changelog/harness",
           "changelog/core-service",
           "changelog/cli"

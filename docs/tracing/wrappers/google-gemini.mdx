@@ -17,28 +17,64 @@ icon: "/assets/providers/gemini.svg"
     uv add "pandaprobe[gemini]"
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe @google/genai
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe @google/genai
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe @google/genai
+    ```
+  </Tab>
 </Tabs>
 
 ### Setup
 
-```python
-from pandaprobe.wrappers import wrap_gemini
-from google import genai
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    from pandaprobe.wrappers import wrap_gemini
+    from google import genai
 
-client = wrap_gemini(genai.Client())
-```
+    client = wrap_gemini(genai.Client())
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { GoogleGenAI } from "@google/genai";
+    import { wrapGemini } from "pandaprobe/wrappers/gemini";
+
+    const client = wrapGemini(new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY }));
+    ```
+  </Tab>
+</Tabs>
 
 ## Generate content
 
 Span name: `"gemini-generate"`, SpanKind: `LLM`
 
-```python
+```python title="Python"
 response = client.models.generate_content(
     model="gemini-3.1-flash-preview",
     contents="Explain quantum computing.",
     config={"temperature": 0.7},
 )
 print(response.text)
+```
+
+```ts title="TypeScript"
+const response = await client.models.generateContent({
+  model: "gemini-3.8-flash",
+  contents: "Explain quantum computing.",
+  config: { temperature: 0.7 },
+});
+console.log(response.text);
 ```
 
 **What gets traced**
@@ -50,10 +86,9 @@ print(response.text)
 - Model parameters: `temperature`, `top_p`, `top_k`, `max_output_tokens`, `stop_sequences`, and related fields
 - Thinking or reasoning parts stored in metadata as `reasoning_summary`
 
-### Streaming and async
+### Streaming
 
-<CodeGroup>
-```python title="Streaming"
+```python title="Python"
 stream = client.models.generate_content_stream(
     model="gemini-3.1-flash-preview",
     contents="Hello!",
@@ -62,27 +97,19 @@ for chunk in stream:
     print(chunk.text, end="")
 ```
 
-```python title="Async"
-response = await client.aio.models.generate_content(
-    model="gemini-3.1-flash-preview",
-    contents="Hello!",
-)
-
-async for chunk in client.aio.models.generate_content_stream(
-    model="gemini-3.1-flash-preview",
-    contents="Hello!",
-):
-    print(chunk.text, end="")
+```ts title="TypeScript streaming"
+const stream = await client.models.generateContentStream({
+  model: "gemini-3.8-flash",
+  contents: "Hello!",
+});
+for await (const chunk of stream) {
+  process.stdout.write(chunk.text ?? "");
+}
 ```
-</CodeGroup>
 
 <Note>
-  All four methods are traced: synchronous blocking, synchronous streaming, asynchronous blocking, asynchronous streaming.
+  PandaProbe traces Python's synchronous and asynchronous APIs and TypeScript's Promise-based APIs with the same span fields.
 </Note>
-
-<Accordion title="Sync vs async streaming">
-  Use `models.generate_content_stream` for synchronous iterators and `aio.models.generate_content_stream` with `async for` when the call site is already async. The wrapper emits the same span fields in both cases; only the execution model differs.
-</Accordion>
 
 ## Thinking mode
 
