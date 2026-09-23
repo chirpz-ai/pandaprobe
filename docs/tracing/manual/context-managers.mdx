@@ -1,18 +1,20 @@
 ---
-title: "Context Managers"
-description: "Fine-grained tracing with start_trace() and span() context managers"
+title: "Context Managers and Callback Scopes"
+description: "Fine-grained tracing with Python context managers and TypeScript callback scopes"
 icon: "braces"
 ---
 
-Context managers give you full control over trace and span lifecycle. Use them when you need to set metadata, token usage, or model information imperatively.
+Python context managers and TypeScript callback scopes give you full control over trace and span lifecycle. Use them when you need to set metadata, token usage, or model information imperatively.
 
 <Tip>
-  Prefer context managers over decorators when inputs and outputs are not simple function arguments/returns, or when you must attach token counts and costs after the fact.
+  Prefer scoped instrumentation over decorators when inputs and outputs are not simple function arguments/returns, or when you must attach token counts and costs after the fact.
 </Tip>
+
+## Python context managers
 
 ## Starting a trace
 
-```python
+```python title="Python"
 import pandaprobe
 
 with pandaprobe.start_trace("my-agent", input={"messages": [{"role": "user", "content": "Hello"}]}) as t:
@@ -42,7 +44,7 @@ Returns a `TraceContext` with:
 
 ## Creating spans
 
-```python
+```python title="Python"
 with pandaprobe.start_trace("rag-pipeline") as t:
     with t.span("retrieve", kind="RETRIEVER") as s:
         s.set_input({"query": "What is PandaProbe?"})
@@ -96,7 +98,7 @@ with pandaprobe.start_trace("rag-pipeline") as t:
 
 Spans can be nested to form a tree. Parent-child relationships are tracked automatically via a context-var span stack:
 
-```python
+```python title="Python"
 with pandaprobe.start_trace("pipeline") as t:
     with t.span("agent", kind="AGENT") as agent:
         with t.span("llm-call", kind="LLM") as llm:
@@ -112,7 +114,7 @@ The `llm-call` and `tool-call` spans are automatically parented to the `agent` s
 
 On exception within a span, the status is automatically set to `ERROR` and the error message is captured. The exception is re-raised.
 
-```python
+```python title="Python"
 with pandaprobe.start_trace("risky-operation") as t:
     with t.span("might-fail", kind="LLM") as s:
         s.set_model("gpt-5.4")
@@ -131,7 +133,7 @@ Both `TraceContext` and `SpanContext` work as sync or async context managers.
 
 <Tabs>
   <Tab title="Sync">
-    ```python
+    ```python title="Python"
     with pandaprobe.start_trace("agent") as t:
         with t.span("llm-call", kind="LLM") as s:
             s.set_model("gpt-5.4")
@@ -140,7 +142,7 @@ Both `TraceContext` and `SpanContext` work as sync or async context managers.
     ```
   </Tab>
   <Tab title="Async">
-    ```python
+    ```python title="Python"
     async with pandaprobe.start_trace("async-agent") as t:
         async with t.span("llm-call", kind="LLM") as s:
             s.set_model("gpt-5.4")
@@ -151,14 +153,14 @@ Both `TraceContext` and `SpanContext` work as sync or async context managers.
 </Tabs>
 
 <CodeGroup>
-```python trace-io.py
+```python title="Python — trace-io.py"
 with pandaprobe.start_trace("my-agent") as t:
     t.set_input({"messages": [{"role": "user", "content": "Hello"}]})
     reply = "Hi there!"
     t.set_output({"messages": [{"role": "assistant", "content": reply}]})
 ```
 
-```python pipeline-summary.py
+```python title="Python — pipeline-summary.py"
 with pandaprobe.start_trace("pipeline") as t:
     with t.span("generate", kind="LLM") as s:
         s.set_input({"messages": [...]})
@@ -166,3 +168,103 @@ with pandaprobe.start_trace("pipeline") as t:
     t.set_output({"summary": "done"})
 ```
 </CodeGroup>
+
+## TypeScript callback scopes
+
+JavaScript has no direct equivalent to Python's `with` statement. PandaProbe provides `withTrace()` and `withSpan()` callback wrappers that preserve the active trace and span across asynchronous work with `AsyncLocalStorage`.
+
+```ts title="TypeScript"
+import { SpanKind, flush, withSpan, withTrace } from "pandaprobe";
+
+await withTrace(
+  "rag-pipeline",
+  {
+    input: { messages: [{ role: "user", content: "When was the Eiffel Tower built?" }] },
+    tags: ["rag"],
+  },
+  async (trace) => {
+    const documents = await withSpan(
+      "retrieve",
+      { kind: SpanKind.RETRIEVER },
+      async (span) => {
+        span.setInput({ query: "Eiffel Tower built" });
+        const results = ["The Eiffel Tower was completed in 1889."];
+        span.setOutput({ documents: results });
+        return results;
+      },
+    );
+
+    const answer = await withSpan(
+      "generate",
+      { kind: SpanKind.LLM, model: "gpt-4o-mini" },
+      async (span) => {
+        span.setInput({
+          messages: [
+            { role: "system", content: `Context: ${documents.join(" ")}` },
+            { role: "user", content: "When was the Eiffel Tower built?" },
+          ],
+        });
+        const output = { messages: [{ role: "assistant", content: "It was completed in 1889." }] };
+        span.setOutput(output);
+        span.setTokenUsage({ promptTokens: 25, completionTokens: 8 });
+        return output;
+      },
+    );
+
+    trace.setOutput(answer);
+  },
+);
+
+await flush();
+```
+
+### Callback options
+
+| Function | Options |
+| --- | --- |
+| `withTrace(name, options, callback)` | `input`, `sessionId`, `userId`, `tags`, `metadata` |
+| `withSpan(name, options, callback)` | `kind`, `model`, `metadata` |
+
+Both functions also accept the callback as the second argument when no options are needed.
+
+### Context methods
+
+`TraceContext` provides `traceId`, `span()`, `setInput()`, `setOutput()`, `setMetadata()`, and `setStatus()`. `SpanContext` provides `spanId`, `setInput()`, `setOutput()`, `setModel()`, `setTokenUsage()`, `setModelParameters()`, `setCost()`, `setCompletionStartTime()`, `setError()`, and `setMetadata()`.
+
+TypeScript uses objects for structured token and cost data:
+
+```ts title="TypeScript"
+span.setTokenUsage({
+  promptTokens: 150,
+  completionTokens: 80,
+  reasoning_tokens: 20,
+});
+span.setCost({ total: 0.002 });
+span.setCompletionStartTime(new Date());
+```
+
+### Imperative lifecycle
+
+Use `startTrace()` only when a callback scope is impractical. Always pair it with `end()` and pass any error so the final trace status is correct.
+
+```ts title="TypeScript"
+import { startTrace, withSpan } from "pandaprobe";
+
+const trace = startTrace("background-job");
+let failure: unknown;
+try {
+  await withSpan("work", async (span) => {
+    span.setInput({ jobId: "job-123" });
+    span.setOutput({ completed: true });
+  });
+} catch (error) {
+  failure = error;
+  throw error;
+} finally {
+  trace.end(failure);
+}
+```
+
+<Note>
+  Exceptions thrown by `withTrace()` or `withSpan()` are recorded as errors and re-thrown. Nested callback scopes automatically preserve parent-child relationships.
+</Note>
