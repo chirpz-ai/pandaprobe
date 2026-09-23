@@ -4,6 +4,10 @@ description: "Trace CrewAI crew executions with automatic agent and task trackin
 icon: "/assets/providers/crewai-color.svg"
 ---
 
+<Note>
+  The CrewAI integration is currently available in the Python SDK only.
+</Note>
+
 ### Installation
 
 <Tabs>
@@ -22,7 +26,7 @@ icon: "/assets/providers/crewai-color.svg"
 ### Setup
 
 
-```python
+```python title="Python"
 from pandaprobe.integrations.crewai import CrewAIAdapter
 
 adapter = CrewAIAdapter(
@@ -39,7 +43,7 @@ adapter.instrument()
 
 ### Usage
 
-```python
+```python title="Python"
 from crewai import Agent, Task, Crew
 
 researcher = Agent(
@@ -87,7 +91,7 @@ CrewAI token usage is computed using delta tracking: the adapter snapshots the a
 
 This example sets up a three-agent crew (researcher → analyst → writer). It traces the agents via `CrewAIAdapter` and wraps the run in a `pandaprobe.session` for trace grouping:
 
-```python
+```python title="Python"
 import uuid
 
 from crewai import Agent, Crew, LLM, Task
