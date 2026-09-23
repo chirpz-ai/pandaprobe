@@ -2,12 +2,7 @@
 title: "AWS Bedrock"
 description: "Auto-trace AWS Bedrock Converse and InvokeModel calls"
 icon: "/assets/providers/bedrock-color.svg"
-tag: "BETA"
 ---
-
-<Note>
-  `wrap_bedrock` is currently in **beta**.
-</Note>
 
 ### Installation
 
@@ -22,26 +17,57 @@ tag: "BETA"
     uv add "pandaprobe[bedrock]"
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe @aws-sdk/client-bedrock-runtime
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe @aws-sdk/client-bedrock-runtime
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe @aws-sdk/client-bedrock-runtime
+    ```
+  </Tab>
 </Tabs>
 
-The `bedrock` extra installs `boto3>=1.34.0`. For async support install `aioboto3` separately — `wrap_bedrock` detects it at runtime and instruments async methods automatically without making it a hard dependency.
+For Python, the `bedrock` extra installs `boto3>=1.34.0`. For async support install `aioboto3` separately — `wrap_bedrock` detects it at runtime and instruments async methods automatically without making it a hard dependency.
 
 ### Setup
 
-```python
-import boto3
-from pandaprobe.wrappers import wrap_bedrock
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    import boto3
+    from pandaprobe.wrappers import wrap_bedrock
 
-client = wrap_bedrock(
-    boto3.client("bedrock-runtime", region_name="us-east-1")
-)
-```
+    client = wrap_bedrock(
+        boto3.client("bedrock-runtime", region_name="us-east-1")
+    )
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
+    import { wrapBedrock } from "pandaprobe/wrappers/bedrock";
+
+    const client = wrapBedrock(
+      new BedrockRuntimeClient({ region: process.env.AWS_REGION ?? "us-east-1" }),
+    );
+    ```
+
+    The JavaScript client uses the standard AWS credential provider chain. Set `AWS_REGION` and either export access keys, set `AWS_PROFILE`, use IAM Identity Center, or use the credentials attached to the runtime environment.
+  </Tab>
+</Tabs>
 
 ## Converse API (recommended)
 
 Span name: `"bedrock-converse"`, SpanKind: `LLM`
 
-```python
+```python title="Python"
 response = client.converse(
     modelId="anthropic.claude-haiku-4-5-20251001-v1:0",
     system=[{"text": "You are a concise assistant."}],
@@ -50,6 +76,20 @@ response = client.converse(
     ],
     inferenceConfig={"temperature": 0.5, "maxTokens": 200},
 )
+```
+
+```ts title="TypeScript"
+import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
+
+const response = await client.send(new ConverseCommand({
+  modelId: process.env.AWS_BEDROCK_MODEL_ID ?? "global.anthropic.claude-sonnet-5",
+  system: [{ text: "You are a concise assistant." }],
+  messages: [{
+    role: "user",
+    content: [{ text: "Explain recursion in one sentence." }],
+  }],
+  inferenceConfig: { maxTokens: 200 },
+}));
 ```
 
 The Converse API is provider-agnostic — the same call shape works across Claude, Mistral, Llama, Titan and other Bedrock-hosted foundation models. Prefer Converse over InvokeModel for new integrations.
@@ -65,7 +105,7 @@ The Converse API is provider-agnostic — the same call shape works across Claud
 
 ### Streaming
 
-```python
+```python title="Python"
 response = client.converse_stream(
     modelId="anthropic.claude-haiku-4-5-20251001-v1:0",
     messages=[{"role": "user", "content": [{"text": "Hello!"}]}],
@@ -79,11 +119,13 @@ for event in response["stream"]:
 
 The wrapper preserves the `{"stream": ..., "ResponseMetadata": ...}` response shape — only the inner iterator is replaced with a tracing-aware reducer. User code accesses `response["stream"]` exactly as before. Time-to-first-token is captured on the first `contentBlockDelta`; final token usage is read from the trailing `metadata` event.
 
+In TypeScript, send a `ConverseStreamCommand` and consume `response.stream` with `for await`. The wrapper preserves the AWS SDK response shape while tracing the asynchronous stream.
+
 ## InvokeModel API (legacy fallback)
 
 Span name: `"bedrock-invoke-model"` (or `"bedrock-invoke-model-stream"`), SpanKind: `LLM`
 
-```python
+```python title="Python"
 import json
 
 response = client.invoke_model(
@@ -111,7 +153,7 @@ Unknown body shapes still produce an LLM span containing the serialised request 
 
 `aioboto3` is supported but not required. When `wrap_bedrock` is given an `aioboto3` client (its module path starts with `aioboto3` / `aiobotocore`, or its methods are coroutine functions), the wrapper installs async-shaped patches for `converse`, `converse_stream`, `invoke_model`, and `invoke_model_with_response_stream`.
 
-```python
+```python title="Python"
 import aioboto3
 from pandaprobe.wrappers import wrap_bedrock
 
