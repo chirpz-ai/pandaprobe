@@ -16,22 +16,26 @@ Instrumentation is organized into three layers, ordered from zero-code drop-ins 
 
 Wrap an LLM client to automatically trace every API call. The wrapper returns the **same client type** as the underlying SDK—no refactors beyond the wrap call.
 
-- `wrap_openai(client)` — Chat Completions API and Responses API
-- `wrap_gemini(client)` — `generate_content` and `generate_content_stream`
-- `wrap_anthropic(client)` — `messages.create` and `messages.stream`
+| Provider | Python | TypeScript |
+| --- | --- | --- |
+| OpenAI | `wrap_openai(client)` | `wrapOpenAI(client)` |
+| Anthropic | `wrap_anthropic(client)` | `wrapAnthropic(client)` |
+| Google Gemini | `wrap_gemini(client)` | `wrapGemini(client)` |
+| Mistral | `wrap_mistral(client)` | `wrapMistral(client)` |
+| AWS Bedrock | `wrap_bedrock(client)` | `wrapBedrock(client)` |
 
 ## Layer 2 — Agent Frameworks (automatic agent integrations)
 
 Hook into an agent framework to trace the full lifecycle: LLM calls, tool invocations, sub-agent handoffs, guardrails, and related steps—without instrumenting each call yourself.
 
-Supported stacks include **LangGraph**, **Google ADK**, **Claude Agent SDK**, **CrewAI**, and **OpenAI Agents SDK**.
+Supported stacks include **LangGraph**, **LangChain**, **DeepAgents**, **Google ADK**, **Claude Agent SDK**, **CrewAI**, **OpenAI Agents SDK**, and **Vercel AI SDK**. Availability varies by language; see the [integration matrix](/tracing/integrations/overview).
 
 ## Layer 3 — Manual instrumentation (full control)
 
 Define exactly what gets traced, how spans are named, and what metadata you attach.
 
-- `@pandaprobe.trace` and `@pandaprobe.span` decorators
-- `pandaprobe.start_trace()` and `t.span()` context managers
+- Python: `@pandaprobe.trace`, `@pandaprobe.span`, `pandaprobe.start_trace()`, and `t.span()`
+- TypeScript: `@trace`, `@span`, `withTrace()`, `withSpan()`, and `startTrace()`
 
 ## When to use each layer
 
