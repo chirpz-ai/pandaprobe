@@ -17,19 +17,49 @@ icon: "/assets/providers/langchain.svg"
     uv add "pandaprobe[langchain]"
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe langchain @langchain/openai @langchain/core
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe langchain @langchain/openai @langchain/core
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe langchain @langchain/openai @langchain/core
+    ```
+  </Tab>
 </Tabs>
 
 ### Setup
 
-```python
-from pandaprobe.integrations.langchain import LangChainCallbackHandler
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    from pandaprobe.integrations.langchain import LangChainCallbackHandler
 
-handler = LangChainCallbackHandler(
-    session_id="conversation-123",
-    user_id="user-abc",
-    tags=["production"],
-)
-```
+    handler = LangChainCallbackHandler(
+        session_id="conversation-123",
+        user_id="user-abc",
+        tags=["production"],
+    )
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { LangChainCallbackHandler } from "pandaprobe/integrations/langchain";
+
+    const handler = new LangChainCallbackHandler({
+      sessionId: "conversation-123",
+      userId: "user-abc",
+      tags: ["production"],
+    });
+    ```
+  </Tab>
+</Tabs>
 
 <Tip>
   We recommend using UUIDs for `session_id` and `user_id` so traces can be grouped reliably across runs.
@@ -39,7 +69,7 @@ handler = LangChainCallbackHandler(
 
 The handler works with both `langchain.agents.create_agent` and plain LCEL pipelines (`prompt | model | parser`). Pass it via LangChain's `config["callbacks"]`:
 
-```python
+```python title="Python"
 from langchain.agents import create_agent
 
 agent = create_agent(
@@ -51,6 +81,13 @@ result = agent.invoke(
     {"messages": [{"role": "user", "content": "Hello!"}]},
     config={"callbacks": [handler]},
 )
+```
+
+```ts title="TypeScript"
+const result = await chain.invoke(
+  { question: "Hello!" },
+  { callbacks: [handler] },
+);
 ```
 
 <Warning>
@@ -78,7 +115,7 @@ Token usage is extracted from LangChain's `usage_metadata` (primary) or legacy `
 
 This example builds a LangChain agent via `create_agent` with one tool and traces it via `LangChainCallbackHandler`:
 
-```python
+```python title="Python"
 from langchain.agents import create_agent
 from langchain.tools import tool
 
@@ -136,7 +173,7 @@ This produces a trace with: `CHAIN` (root, named "LangChain") → `AGENT` (`tool
 
 The handler also works for plain LCEL chains. The trace is named "LangChain" by default (the underlying `RunnableSequence` name is rewritten) so LCEL runs are labeled consistently with agent runs.
 
-```python
+```python title="Python"
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
@@ -151,4 +188,25 @@ result = chain.invoke(
     {"topic": "pandas"},
     config={"callbacks": [handler]},
 )
+```
+
+```ts title="TypeScript LCEL"
+import { StringOutputParser } from "@langchain/core/output_parsers";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { ChatOpenAI } from "@langchain/openai";
+import { flush } from "pandaprobe";
+import { LangChainCallbackHandler } from "pandaprobe/integrations/langchain";
+
+const prompt = ChatPromptTemplate.fromMessages([
+  ["system", "You are concise."],
+  ["user", "{question}"],
+]);
+const chain = prompt.pipe(new ChatOpenAI({ model: "gpt-4o-mini" })).pipe(new StringOutputParser());
+const handler = new LangChainCallbackHandler({ tags: ["lcel"] });
+
+console.log(await chain.invoke(
+  { question: "What is the capital of France?" },
+  { callbacks: [handler] },
+));
+await flush();
 ```
