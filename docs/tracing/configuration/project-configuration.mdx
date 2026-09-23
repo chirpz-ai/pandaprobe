@@ -1,30 +1,47 @@
 ---
 title: "Project Configuration"
-description: "Configure the SDK programmatically with pandaprobe.init()"
+description: "Configure the Python and TypeScript SDKs programmatically"
 icon: "settings"
 ---
 
-While environment variables are the recommended way to configure PandaProbe, you can also configure the SDK programmatically using `pandaprobe.init()`.
+While environment variables are the recommended way to configure PandaProbe, you can also configure either SDK programmatically.
 
 ### Basic programmatic configuration
 
-```python
-import pandaprobe
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    import pandaprobe
 
-pandaprobe.init(
-    api_key="your-api-key",
-    project_name="my-project",
-    endpoint="https://api.pandaprobe.com",
-    environment="production",
-    release="v1.2.3",
-)
-```
+    pandaprobe.init(
+        api_key="your-api-key",
+        project_name="my-project",
+        endpoint="https://api.pandaprobe.com",
+        environment="production",
+        release="v1.2.3",
+    )
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { init } from "pandaprobe";
+
+    init({
+      apiKey: "your-api-key",
+      projectName: "my-project",
+      endpoint: "https://api.pandaprobe.com",
+      environment: "production",
+      release: "v1.2.3",
+    });
+    ```
+  </Tab>
+</Tabs>
 
 ### Precedence rules
 
-Parameters passed to `pandaprobe.init()` always take precedence over environment variables:
+Parameters passed to `init` always take precedence over environment variables:
 
-```python
+```python title="Python"
 # Even if PANDAPROBE_ENDPOINT is set in the environment,
 # this will use the explicitly provided endpoint:
 pandaprobe.init(
@@ -38,11 +55,13 @@ Precedence order (highest to lowest):
 2. `PANDAPROBE_*` environment variables
 3. SDK defaults
 
+TypeScript uses camelCase option names. Python uses snake_case.
+
 ### SdkConfig fields
 
 The resolved configuration is stored as a frozen `SdkConfig` dataclass. You can inspect it via the client:
 
-```python
+```python title="Python"
 client = pandaprobe.init(api_key="...", project_name="...")
 print(client.config.endpoint)       # "https://api.pandaprobe.com"
 print(client.config.batch_size)     # 10
@@ -62,15 +81,17 @@ print(client.config.flush_interval) # 5.0
 | `max_queue_size` | `int` | `1000` |
 | `debug` | `bool` | `False` |
 
+The equivalent TypeScript `SdkConfig` fields are `apiKey`, `projectName`, `endpoint`, `environment`, `release`, `enabled`, `batchSize`, `flushInterval`, `maxQueueSize`, and `debug`.
+
 <Warning>
-  When `enabled=True`, both `api_key` and `project_name` are required. The SDK raises `ValueError` at initialization if either is missing.
+  When tracing is enabled, both the API key and project name are required. Python raises `ValueError`; TypeScript throws `Error` if either value is missing.
 </Warning>
 
 ### Re-initialization
 
 Calling `pandaprobe.init()` when a client already exists shuts down the previous client and creates a new one:
 
-```python
+```python title="Python"
 pandaprobe.init(project_name="project-a")
 # ... traces go to project-a ...
 
@@ -78,14 +99,28 @@ pandaprobe.init(project_name="project-b")
 # ... traces now go to project-b ...
 ```
 
+TypeScript behaves the same way:
+
+```ts title="TypeScript"
+import { init } from "pandaprobe";
+
+init({ projectName: "project-a" });
+// Traces go to project-a.
+
+init({ projectName: "project-b" });
+// Traces now go to project-b.
+```
+
 ### Auto-initialization
 
 If you don't call `pandaprobe.init()`, the SDK auto-initializes from environment variables on first use:
 
-```python
+```python title="Python"
 # No init() call needed if env vars are set:
 with pandaprobe.start_trace("my-trace") as t:
     ...
 ```
 
 Auto-initialization is attempted once. If it fails (for example, missing API key), subsequent calls to `get_client()` return `None` and convenience functions like `flush()` and `shutdown()` silently no-op.
+
+TypeScript also auto-initializes once on first use. If initialization fails, `getClient()` returns `null`; `flush()`, `shutdown()`, and `score()` safely no-op until `init()` is called.
