@@ -1,17 +1,19 @@
 ---
 title: "Installation"
-description: "Install the PandaProbe Python SDK and configure your environment"
+description: "Install the PandaProbe Python or TypeScript SDK and configure your environment"
 icon: "download"
 ---
 
 ### Prerequisites
 
-- Python 3.10 or later
+- Python 3.10 or later for the Python SDK, or Node.js 18 or later for the TypeScript SDK
 - A PandaProbe account with an API key
 
-### Install the SDK
+<Note>
+  Some optional provider and framework packages require a newer Node.js version. Follow the engine requirements of the integrations you install.
+</Note>
 
-Base install:
+### Install the SDK
 
 <Tabs>
   <Tab title="pip">
@@ -24,39 +26,77 @@ Base install:
     uv add pandaprobe
     ```
   </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install pandaprobe
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe
+    ```
+  </Tab>
 </Tabs>
 
-Optional extras:
+### Install provider and framework dependencies
 
-| Extra | Install Command | Description |
-| --- | --- | --- |
-| OpenAI | `pip install "pandaprobe[openai]"` | Traces Chat Completions and Responses API |
-| Anthropic | `pip install "pandaprobe[anthropic]"` | Traces Messages API |
-| Gemini | `pip install "pandaprobe[gemini]"` | Traces generate_content API |
-| LangGraph | `pip install "pandaprobe[langgraph]"` | LangGraph callback handler |
-| Google ADK | `pip install "pandaprobe[google-adk]"` | Google Agent Development Kit adapter |
-| Claude Agent SDK | `pip install "pandaprobe[claude-agent-sdk]"` | Claude Agent SDK adapter |
-| CrewAI | `pip install "pandaprobe[crewai]"` | CrewAI adapter |
-| OpenAI Agents | `pip install "pandaprobe[openai-agents]"` | OpenAI Agents SDK adapter |
-
-Install multiple extras:
+PandaProbe keeps provider and framework SDKs optional. Install only the packages used by your application.
 
 <Tabs>
-  <Tab title="pip">
-    ```bash
-    pip install "pandaprobe[openai,anthropic,gemini]"
-    ```
+  <Tab title="Python">
+    | Integration | Install command |
+    | --- | --- |
+    | OpenAI | `pip install "pandaprobe[openai]"` |
+    | Anthropic | `pip install "pandaprobe[anthropic]"` |
+    | Gemini | `pip install "pandaprobe[gemini]"` |
+    | Mistral | `pip install "pandaprobe[mistral]"` |
+    | LiteLLM | `pip install "pandaprobe[litellm]"` |
+    | AWS Bedrock | `pip install "pandaprobe[bedrock]"` |
+    | LangGraph | `pip install "pandaprobe[langgraph]"` |
+    | LangChain | `pip install "pandaprobe[langchain]"` |
+    | DeepAgents | `pip install "pandaprobe[deepagents]"` |
+    | Google ADK | `pip install "pandaprobe[google-adk]"` |
+    | Claude Agent SDK | `pip install "pandaprobe[claude-agent-sdk]"` |
+    | CrewAI | `pip install "pandaprobe[crewai]"` |
+    | OpenAI Agents SDK | `pip install "pandaprobe[openai-agents]"` |
+
+    With uv, replace `pip install` with `uv add`. You can combine extras, for example `uv add "pandaprobe[openai,anthropic,gemini]"`.
   </Tab>
-  <Tab title="uv">
+  <Tab title="TypeScript">
+    | Integration | Additional packages |
+    | --- | --- |
+    | OpenAI | `openai` |
+    | Anthropic | `@anthropic-ai/sdk` |
+    | Gemini | `@google/genai` |
+    | Mistral | `@mistralai/mistralai` |
+    | AWS Bedrock | `@aws-sdk/client-bedrock-runtime` |
+    | LangGraph | `@langchain/langgraph @langchain/openai @langchain/core` |
+    | LangChain | `langchain @langchain/openai @langchain/core` |
+    | DeepAgents | `deepagents langchain @langchain/core @langchain/openai @langchain/langgraph @langchain/langgraph-checkpoint @langchain/langgraph-sdk` and a compatible `langsmith` release |
+    | Claude Agent SDK | `@anthropic-ai/claude-agent-sdk` |
+    | OpenAI Agents SDK | `@openai/agents` |
+    | Vercel AI SDK | `ai @ai-sdk/openai` |
+
     ```bash
-    uv add "pandaprobe[openai,anthropic,gemini]"
+    npm install pandaprobe openai
+    # or: yarn add pandaprobe openai
+    # or: pnpm add pandaprobe openai
     ```
   </Tab>
 </Tabs>
+
+<Note>
+  LiteLLM, CrewAI, and Google ADK integrations are currently Python-only. Vercel AI SDK integration is TypeScript-only.
+</Note>
 
 ### Configure environment variables
 
-Minimum required setup:
+Minimum required setup for both SDKs:
 
 ```bash
 export PANDAPROBE_API_KEY="your-api-key"
@@ -64,14 +104,24 @@ export PANDAPROBE_PROJECT_NAME="my-project"
 ```
 
 <Tip>
-  You can also configure the SDK programmatically via `pandaprobe.init()`. See [Project Configuration](/tracing/configuration/project-configuration) for details.
+  You can also configure the SDK programmatically with Python's `pandaprobe.init(...)` or TypeScript's `init({...})`. See [Project Configuration](/tracing/configuration/project-configuration).
 </Tip>
 
-For the full list of variables, see [Environment variables](/tracing/configuration/environment-variables).
+For the full list of variables, see [Environment Variables](/tracing/configuration/environment-variables).
 
 ### Verify installation
 
-```python
-import pandaprobe
-print(pandaprobe.__version__)
-```
+<Tabs>
+  <Tab title="Python">
+    ```python title="Python"
+    import pandaprobe
+    print(pandaprobe.__version__)
+    ```
+  </Tab>
+  <Tab title="TypeScript">
+    ```ts title="TypeScript"
+    import { VERSION } from "pandaprobe";
+    console.log(VERSION);
+    ```
+  </Tab>
+</Tabs>
