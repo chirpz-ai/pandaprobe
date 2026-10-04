@@ -26,12 +26,14 @@ from uuid import uuid4
 import pytest
 import stripe
 
-from app.core.billing.entities import Subscription, UsageRecord
+from app.core.billing.entities import OverageDetail, Subscription, UsageRecord
 from app.registry.constants import SubscriptionPlan, SubscriptionStatus
+from app.registry.exceptions import PandaProbeError
 from app.services.billing_service import (
     STRIPE_API_VERSION,
     BillingService,
     _invoice_subscription_id,
+    _invoice_period,
 )
 
 # ---------------------------------------------------------------------------
@@ -51,6 +53,8 @@ _DAHLIA_INVOICE = {
     "status": "paid",
     "amount_paid": 0,
     "billing_reason": "subscription_cycle",
+    "period_start": int(datetime(2026, 7, 28, tzinfo=timezone.utc).timestamp()),
+    "period_end": int(datetime(2026, 8, 28, tzinfo=timezone.utc).timestamp()),
     "parent": {
         "quote_details": None,
         "subscription_details": {"metadata": {}, "subscription": _SUB_ID},
@@ -113,6 +117,8 @@ def test_pinned_version_is_a_dahlia_generation_version() -> None:
         # Invoice
         (stripe.Invoice, "id"),
         (stripe.Invoice, "parent"),
+        (stripe.Invoice, "period_start"),
+        (stripe.Invoice, "period_end"),
         # Distinguishes a renewal from a signup invoice; without it the handler
         # cannot tell whether a period is closing or opening.
         (stripe.Invoice, "billing_reason"),
@@ -218,6 +224,7 @@ def _arrange_paid_invoice(svc: BillingService, monkeypatch: pytest.MonkeyPatch) 
         updated_at=now,
     )
     monkeypatch.setattr(svc, "report_overages_to_stripe", AsyncMock(return_value=False))
+    monkeypatch.setattr(svc, "calculate_unreported_overages", AsyncMock(return_value=OverageDetail()))
     item = MagicMock(current_period_start=1790000000, current_period_end=1792592000)
     monkeypatch.setattr(stripe.Subscription, "retrieve", lambda *a, **k: MagicMock(items=MagicMock(data=[item])))
     return sub
@@ -290,14 +297,17 @@ async def test_invoice_payment_failed_marks_past_due(svc: BillingService) -> Non
 
 async def test_invoice_created_reaches_the_overage_sweep(svc: BillingService, monkeypatch: pytest.MonkeyPatch) -> None:
     """The last-chance sweep that kept each period's trailing overage billable."""
-    sub = _subscription()
-    svc._repo.get_subscription_by_stripe_subscription.return_value = sub
+    sub = _arrange_paid_invoice(svc, monkeypatch)
+    monkeypatch.setattr(svc, "calculate_unreported_overages", AsyncMock(return_value=OverageDetail(total_cost=1)))
+    monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="draft"))
     reporter = AsyncMock(return_value=False)
     monkeypatch.setattr(svc, "report_overages_to_stripe", reporter)
 
     await svc.handle_invoice_created({"object": _invoice(_DAHLIA_INVOICE)})
 
-    reporter.assert_awaited_once_with(sub.org_id)
+    reporter.assert_awaited_once_with(
+        sub.org_id, period_start=sub.current_period_start, invoice_id=_DAHLIA_INVOICE["id"]
+    )
 
 
 @pytest.mark.parametrize(
@@ -309,3 +319,39 @@ async def test_handlers_skip_invoices_with_no_subscription(svc: BillingService, 
     await getattr(svc, handler_name)({"object": _invoice(_ONE_OFF_INVOICE)})
 
     svc._repo.get_subscription_by_stripe_subscription.assert_not_awaited()
+
+
+@pytest.mark.parametrize("bounds", [(None, None), (0, 1), (2, 1), (1, 1), ("1", 2), (True, 2)])
+def test_renewal_period_cannot_fall_back_to_current_subscription(bounds):
+    start, end = bounds
+    with pytest.raises(PandaProbeError, match="no valid billing period"):
+        _invoice_period(_invoice({**_DAHLIA_INVOICE, "period_start": start, "period_end": end}))
+
+
+@pytest.mark.parametrize("missing", [True, False])
+async def test_missing_or_mismatched_history_is_not_marked_billed(svc, monkeypatch, missing):
+    _arrange_paid_invoice(svc, monkeypatch)
+    usage = svc._repo.get_current_usage_record.return_value
+    if missing:
+        svc._repo.get_current_usage_record.return_value = None
+    else:
+        usage.period_end = datetime(2026, 9, 28, tzinfo=timezone.utc)
+    with pytest.raises(PandaProbeError, match="reconciliation required"):
+        await svc.handle_invoice_paid({"object": _invoice(_DAHLIA_INVOICE)})
+    svc._repo.mark_billed.assert_not_awaited()
+
+
+async def test_invoice_commit_finishes_before_overage_lock_release(svc, monkeypatch):
+    _arrange_paid_invoice(svc, monkeypatch)
+    sequence = []
+
+    async def commit():
+        sequence.append("commit")
+
+    async def release(org_id):
+        sequence.append("release")
+
+    svc._session.commit.side_effect = commit
+    monkeypatch.setattr(svc, "release_overage_lock", release)
+    await svc.handle_invoice_paid({"object": _invoice(_DAHLIA_INVOICE)})
+    assert sequence[:2] == ["commit", "release"]
