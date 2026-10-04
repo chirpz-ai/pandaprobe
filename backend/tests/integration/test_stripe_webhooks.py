@@ -36,6 +36,8 @@ from app.registry.constants import SubscriptionPlan, SubscriptionStatus
 from app.registry.settings import settings
 from app.services.billing_service import BillingService
 from app.services.usage_service import UsageService
+from app.services.billing_reporting_service import BillingReportingService
+from app.infrastructure.db.repositories.billing_report_repo import BillingReportRepository
 
 from .conftest import TEST_ORG_ID
 
@@ -371,7 +373,7 @@ async def test_renewal_reports_old_redis_counters_to_exact_draft_once(
     ).status_code == 200
     await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, old_start), mapping={"traces": 6000})
     await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, new_start), mapping={"traces": 9000})
-    create_item = MagicMock()
+    create_item = MagicMock(return_value=MagicMock(id="ii_draft"))
     monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
     monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="draft"))
     invoice = _dahlia_invoice(status="draft")
@@ -380,7 +382,7 @@ async def test_renewal_reports_old_redis_counters_to_exact_draft_once(
     assert create_item.call_count == 1
     assert create_item.call_args.kwargs["invoice"] == invoice["id"]
     assert create_item.call_args.kwargs["amount"] == 400
-    assert f":{int(old_start.timestamp())}:traces:6000" in create_item.call_args.kwargs["idempotency_key"]
+    assert create_item.call_args.kwargs["period"]["start"] == int(old_start.timestamp())
     assert (await deliver(_event("invoice.paid", {**invoice, "status": "paid"}))).status_code == 200
     repo = BillingRepository(db_session)
     old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
@@ -393,23 +395,28 @@ async def test_renewal_reports_old_redis_counters_to_exact_draft_once(
 
 
 @pytest.mark.parametrize("event_type", ["invoice.created", "invoice.paid"])
-async def test_late_invoice_with_missing_overage_is_not_silently_closed(
-    deliver, db_session, paid_subscription, monkeypatch, event_type
+async def test_late_invoice_saves_carryover_instead_of_failing(
+    deliver, db_session, paid_subscription, stub_stripe_subscription, monkeypatch, event_type
 ):
     old_start, old_end = paid_subscription
     repo = BillingRepository(db_session)
     await repo.upsert_usage_counters(TEST_ORG_ID, old_start, old_end, trace_count=6000)
     await db_session.commit()
-    create_item = MagicMock()
+    create_item = MagicMock(return_value=MagicMock(id="ii_carryover"))
     monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
     monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="paid"))
     # Even an old invoice.created payload still claiming draft must check live state.
     response = await deliver(_event(event_type, _dahlia_invoice(status="draft")))
-    assert response.status_code == 500
-    assert "reconciliation required" in response.json()["detail"]
+    assert response.status_code == 200
     old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
-    assert not old.billed and old.reported_trace_count == 0
-    create_item.assert_not_called()
+    assert old.billed is (event_type == "invoice.paid")
+    for report_id in await BillingReportRepository(db_session).pending_ids():
+        assert await BillingReportingService(db_session).deliver(report_id)
+    assert create_item.call_count == 1
+    assert "invoice" not in create_item.call_args.kwargs
+    assert create_item.call_args.kwargs["subscription"] == _STRIPE_SUB_ID
+    old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
+    assert old.reported_trace_count == 6000
 
 
 @pytest.mark.parametrize("event_type", ["invoice.created", "invoice.paid"])
@@ -450,18 +457,22 @@ async def test_partial_stripe_failure_retries_same_invoice_and_idempotency_keys(
     repo = BillingRepository(db_session)
     await repo.upsert_usage_counters(TEST_ORG_ID, start, end, trace_count=6000, trace_eval_count=6000)
     await db_session.commit()
-    create_item = MagicMock(side_effect=[None, PandaProbeError("simulated Stripe failure"), None, None])
+    create_item = MagicMock(
+        side_effect=[MagicMock(id="ii_first"), PandaProbeError("simulated Stripe failure"), MagicMock(id="ii_second")]
+    )
     monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
     monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="draft"))
     invoice = _dahlia_invoice(status="draft")
     body = _event("invoice.created", invoice)
-    assert (await deliver(body)).status_code == 500
+    assert (await deliver(body)).status_code == 200
     old = await repo.get_current_usage_record(TEST_ORG_ID, start)
     assert old.reported_trace_count == old.reported_trace_eval_count == 0
     assert not old.billed
     assert (await deliver(body)).status_code == 200
+    for report_id in await BillingReportRepository(db_session).pending_ids():
+        assert await BillingReportingService(db_session).deliver(report_id)
     calls = create_item.call_args_list
-    assert calls[0] == calls[2] and calls[1] == calls[3]
+    assert len(calls) == 3 and calls[1] == calls[2]
     assert all(call.kwargs["invoice"] == invoice["id"] for call in calls)
     old = await repo.get_current_usage_record(TEST_ORG_ID, start)
     assert old.reported_trace_count == old.reported_trace_eval_count == 6000
