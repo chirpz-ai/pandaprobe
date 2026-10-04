@@ -98,6 +98,16 @@ def test_pinned_version_is_a_dahlia_generation_version() -> None:
     assert STRIPE_API_VERSION.endswith(".dahlia")
 
 
+def test_invoice_item_create_accepts_subscription_scope() -> None:
+    """Do not confuse removed response fields with supported create parameters."""
+    from stripe.params import InvoiceItemCreateParams
+
+    # The version-specific API reference also documents subscription scoping:
+    # https://docs.stripe.com/api/invoiceitems/create?api-version=2026-03-25.dahlia
+    assert "subscription" in InvoiceItemCreateParams.__annotations__
+    assert "invoice" in InvoiceItemCreateParams.__annotations__
+
+
 @pytest.mark.parametrize(
     ("cls", "field"),
     [

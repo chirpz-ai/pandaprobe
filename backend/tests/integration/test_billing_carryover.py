@@ -346,3 +346,70 @@ async def test_expired_recovery_scan_is_bounded(db_session, paid_subscription, f
     assert scanned == 1000
     assert (await _reports(db_session))[0].status == "needs_review"
     assert not fake_stripe.calls
+
+
+@pytest.mark.parametrize("invoice", [None, "in_draft"])
+async def test_reserved_request_uses_supported_stripe_create_parameters(db_session, paid_subscription, invoice):
+    from stripe.params import InvoiceItemCreateParams
+
+    report = await _stage(db_session, paid_subscription, invoice=invoice)
+    params = report.requests["traces"]
+    # idempotency_key is an SDK request option, not a form-body parameter.
+    assert set(params) - {"idempotency_key"} <= InvoiceItemCreateParams.__annotations__.keys()
+    assert params["subscription"] == report.stripe_subscription_id
+    assert params.get("invoice") == invoice
+
+
+async def test_core_update_advances_report_timestamp(db_session, paid_subscription):
+    report = await _stage(db_session, paid_subscription)
+    repo = BillingReportRepository(db_session)
+    old = datetime.now(timezone.utc) - timedelta(days=1)
+    await repo.update(report.id, updated_at=old)
+    await db_session.commit()
+
+    before = datetime.now(timezone.utc)
+    await repo.update(report.id, last_error="temporary Stripe failure")
+    await db_session.commit()
+    stored = (await _reports(db_session))[0]
+    assert stored.updated_at >= before
+    assert stored.updated_at > old
+
+
+async def test_failed_batch_yields_to_newer_pending_reports(db_session, paid_subscription, monkeypatch):
+    """The first 200 failures must not monopolize the next dispatch batch."""
+    from uuid import uuid4
+
+    first = await _stage(db_session, paid_subscription)
+    repo = BillingReportRepository(db_session)
+    old = datetime.now(timezone.utc) - timedelta(days=1)
+    await repo.update(first.id, updated_at=old)
+    for index in range(200):
+        await repo.create(
+            id=uuid4(),
+            usage_record_id=first.usage_record_id,
+            stripe_customer_id=first.stripe_customer_id,
+            stripe_subscription_id=first.stripe_subscription_id,
+            snapshot_trace_count=first.snapshot_trace_count,
+            snapshot_trace_eval_count=first.snapshot_trace_eval_count,
+            snapshot_session_eval_count=first.snapshot_session_eval_count,
+            pricing=first.pricing,
+            requests=first.requests,
+            updated_at=old + timedelta(seconds=index + 1),
+        )
+    await db_session.commit()
+    original = await repo.pending_ids()
+    all_ids = await repo.pending_ids(limit=201)
+    assert len(original) == 200
+    waiting = all_ids[-1]
+    assert waiting not in original
+
+    # Fail before the first create attempt, exercising deliver_safely's Core
+    # error update rather than relying on another update to refresh the clock.
+    async def fail_delivery(self, report_id):
+        raise RuntimeError("Stripe unavailable")
+
+    monkeypatch.setattr(BillingReportingService, "deliver", fail_delivery)
+    service = BillingReportingService(db_session)
+    for report_id in original:
+        assert not await service.deliver_safely(report_id)
+    assert (await repo.pending_ids())[0] == waiting
