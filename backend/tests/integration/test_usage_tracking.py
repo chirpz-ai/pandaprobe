@@ -539,7 +539,8 @@ async def test_report_overages_advances_watermark(db_session, redis_client):
 
     billing_svc = BillingService(db_session, redis_client=redis_client)
 
-    with patch("stripe.InvoiceItem.create"):
+    with patch("stripe.InvoiceItem.create") as mock_create:
+        mock_create.return_value.id = "ii_watermark"
         result = await billing_svc.report_overages_to_stripe(TEST_ORG_ID)
     await db_session.commit()
 
@@ -574,6 +575,7 @@ async def test_report_overages_idempotent_on_second_call(db_session, redis_clien
     billing_svc = BillingService(db_session, redis_client=redis_client)
 
     with patch("stripe.InvoiceItem.create") as mock_create:
+        mock_create.return_value.id = "ii_idempotent"
         await billing_svc.report_overages_to_stripe(TEST_ORG_ID)
         await db_session.commit()
 
