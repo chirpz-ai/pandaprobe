@@ -918,6 +918,86 @@ async def _dispatch_overage_billing() -> dict[str, Any]:
     return {"status": "dispatched", "count": len(org_ids)}
 
 
+@celery.task(name="dispatch_billing_reports")
+def dispatch_billing_reports() -> dict[str, int]:
+    """Recover durable intents and check recently closed periods for late counters."""
+    return asyncio.run(_dispatch_billing_reports())
+
+
+async def _dispatch_billing_reports() -> dict[str, int]:
+    from datetime import datetime, timedelta, timezone
+
+    from app.infrastructure.db.repositories.billing_report_repo import BillingReportRepository
+    from app.registry.constants import USAGE_KEY_BUFFER_DAYS
+
+    async with _dispatch_once("billing_reports") as claimed:
+        if not claimed:
+            return {"dispatched": 0}
+        async with _worker_session() as session:
+            repo = BillingReportRepository(session)
+            pending = await repo.pending_ids()
+            closures = await repo.recent_closures(datetime.now(timezone.utc) - timedelta(days=USAGE_KEY_BUFFER_DAYS))
+        for report_id in pending:
+            deliver_billing_report.delay(str(report_id))
+        for org_id, start, end, report_id in closures:
+            check_closed_billing_period.delay(str(org_id), start.isoformat(), end.isoformat(), str(report_id))
+        return {"dispatched": len(pending) + len(closures)}
+
+
+@celery.task(name="deliver_billing_report", rate_limit="10/s", soft_time_limit=300, time_limit=360)
+def deliver_billing_report(report_id: str) -> bool:
+    """Deliver one bounded batch; the DB dispatcher retries failures on its next tick."""
+    return asyncio.run(_deliver_billing_report(report_id))
+
+
+async def _deliver_billing_report(report_id: str) -> bool:
+    from uuid import UUID
+
+    from app.services.billing_reporting_service import BillingReportingService
+    from app.services.billing_service import _ensure_stripe_configured
+
+    _ensure_stripe_configured()
+    async with _worker_session() as session:
+        return await BillingReportingService(session).deliver_safely(UUID(report_id))
+
+
+@celery.task(name="check_closed_billing_period")
+def check_closed_billing_period(org_id: str, start: str, end: str, report_id: str) -> None:
+    """Catch delayed increments without reopening the usage period or rebilling history."""
+    asyncio.run(_check_closed_billing_period(org_id, start, end, report_id))
+
+
+async def _check_closed_billing_period(org_id: str, start: str, end: str, report_id: str) -> None:
+    from datetime import datetime, timezone
+    from uuid import UUID
+
+    import redis.asyncio as aioredis
+
+    from app.infrastructure.db.repositories.billing_repo import BillingRepository
+    from app.infrastructure.db.repositories.billing_report_repo import BillingReportRepository
+    from app.services.billing_reporting_service import BillingReportingService
+    from app.services.usage_service import UsageService
+
+    async with _worker_session() as session:
+        repo = BillingReportRepository(session)
+        marker = await repo.lock_report(UUID(report_id))
+        if marker is None:
+            return
+        sub = await BillingRepository(session).get_subscription_by_org(UUID(org_id))
+        if sub is None:
+            return
+        redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        try:
+            await UsageService(redis_client, session).sync_to_database(
+                sub.org_id, period_start=datetime.fromisoformat(start), period_end=datetime.fromisoformat(end)
+            )
+            await BillingReportingService(session).stage(sub, datetime.fromisoformat(start), allow_closed=True)
+            await repo.update(marker.id, updated_at=datetime.now(timezone.utc))
+            await session.commit()
+        finally:
+            await redis_client.aclose()
+
+
 @celery.task(
     name="bill_single_org",
     bind=True,
