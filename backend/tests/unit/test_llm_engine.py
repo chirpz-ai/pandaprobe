@@ -112,7 +112,9 @@ async def test_new_gemini_judges_use_litellm_structured_output(model, monkeypatc
     url, body = requests[0]
     assert f"/models/{model.split('/', 1)[1]}:generateContent" in url
     if model.startswith("vertex_ai/"):
-        assert "aiplatform.googleapis.com/" in url
+        parsed_url = httpx.URL(url)
+        assert parsed_url.scheme == "https"
+        assert parsed_url.host == "aiplatform.googleapis.com"
         assert "/locations/global/" in url
     assert body["generationConfig"]["response_mime_type"] == "application/json"
     assert "score" in body["generationConfig"]["response_json_schema"]["properties"]
