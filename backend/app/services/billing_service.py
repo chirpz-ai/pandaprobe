@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
-from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID, uuid4
 
 import redis.asyncio as aioredis
@@ -314,84 +313,20 @@ class BillingService:
     async def report_overages_to_stripe(
         self, org_id: UUID, *, period_start: datetime | None = None, invoice_id: str | None = None
     ) -> bool:
-        """Create Stripe InvoiceItems for the unreported overage delta.
+        """Reserve charges durably before attempting Stripe; failures remain retryable."""
+        from app.services.billing_reporting_service import BillingReportingService
 
-        Ordering: Stripe items are created **before** the watermark is
-        advanced.  Each ``InvoiceItem.create`` call carries a
-        deterministic ``idempotency_key`` derived from the org, period,
-        category, and snapshot count so that a retry with the same
-        watermark state is a no-op at Stripe's end (24-hour window).
-
-        Returns ``True`` when items were created.
-        """
         sub = await self._repo.get_subscription_by_org(org_id)
         if sub is None or sub.stripe_customer_id is None:
             return False
-
-        period_start = period_start or sub.current_period_start
-        overages = await self.calculate_unreported_overages(org_id, period_start=period_start)
-        if overages.total_cost <= 0:
-            return False
-
-        period_ts = int(period_start.timestamp())
-
-        items: list[tuple[str, int, Decimal, str]] = []
-        if overages.trace_overage > 0:
-            items.append(
-                (
-                    "Trace overage",
-                    overages.trace_overage,
-                    overages.trace_overage_cost,
-                    f"traces:{overages.snapshot_trace_count}",
-                )
-            )
-        if overages.trace_eval_overage > 0:
-            items.append(
-                (
-                    "Trace eval overage",
-                    overages.trace_eval_overage,
-                    overages.trace_eval_overage_cost,
-                    f"trace_evals:{overages.snapshot_trace_eval_count}",
-                )
-            )
-        if overages.session_eval_overage > 0:
-            items.append(
-                (
-                    "Session eval overage",
-                    overages.session_eval_overage,
-                    overages.session_eval_overage_cost,
-                    f"session_evals:{overages.snapshot_session_eval_count}",
-                )
-            )
-
-        for description, qty, cost, key_suffix in items:
-            amount_cents = int((cost * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-            stripe.InvoiceItem.create(
-                customer=sub.stripe_customer_id,
-                amount=amount_cents,
-                currency="usd",
-                description=f"{description} ({qty} units @ ${OVERAGE_UNIT_PRICE}/unit)",
-                idempotency_key=f"pp:overage:{org_id}:{period_ts}:{key_suffix}",
-                **({"invoice": invoice_id} if invoice_id else {}),
-            )
-
-        await self._repo.update_reported_usage(
-            org_id=org_id,
-            period_start=period_start,
-            reported_trace_count=overages.snapshot_trace_count,
-            reported_trace_eval_count=overages.snapshot_trace_eval_count,
-            reported_session_eval_count=overages.snapshot_session_eval_count,
+        reporting = BillingReportingService(self._session)
+        report = await reporting.stage(
+            sub,
+            period_start or sub.current_period_start,
+            invoice_id=invoice_id,
         )
-
-        logger.info(
-            "overages_reported",
-            org_id=str(org_id),
-            total_cost=str(overages.total_cost),
-            trace_delta=overages.trace_overage,
-            eval_delta=overages.trace_eval_overage,
-            sess_delta=overages.session_eval_overage,
-        )
-        return True
+        await self._session.commit()
+        return await reporting.deliver_safely(report.id) if report else False
 
     # -- Webhook event handlers -----------------------------------------------
 
@@ -457,8 +392,8 @@ class BillingService:
         """Process ``invoice.created`` -- last-chance overage capture.
 
         Stripe fires this ~1 hour before the invoice is finalized.
-        Items added here land on THIS invoice rather than spilling to
-        the next billing period.
+        Target this invoice while it is still draft. If it has finalized,
+        preserve the charge as carryover for the next subscription invoice.
         """
         obj = event_data["object"]
         if getattr(obj, "billing_reason", None) != _RENEWAL_BILLING_REASON:
@@ -480,15 +415,7 @@ class BillingService:
         try:
             usage = await self._sync_invoice_period(sub, obj)
             if not usage.billed:
-                overages = await self.calculate_unreported_overages(sub.org_id, period_start=usage.period_start)
-                if overages.total_cost > 0:
-                    # A redelivery still says draft even if Stripe has since finalized it.
-                    invoice = stripe.Invoice.retrieve(obj.id)
-                    if invoice.status != "draft":
-                        raise PandaProbeError("Invoice finalized with unreported usage; reconciliation required.")
-                    await self.report_overages_to_stripe(
-                        sub.org_id, period_start=usage.period_start, invoice_id=obj.id
-                    )
+                await self.report_overages_to_stripe(sub.org_id, period_start=usage.period_start, invoice_id=obj.id)
             await self._session.commit()
         finally:
             await self.release_overage_lock(sub.org_id)
@@ -509,6 +436,11 @@ class BillingService:
             logger.warning("invoice_paid_unknown_subscription", subscription_id=subscription_id)
             return
 
+        # Resolve the subscription before taking usage locks or staging charges.
+        # Renewal and its reporting obligations are then committed together.
+        stripe_sub = stripe.Subscription.retrieve(subscription_id)
+        new_start, new_end = _get_sub_period(stripe_sub)
+
         # Only a renewal closes a period: ``calculate_unreported_overages`` skips
         # billed records, so closing the period a signup invoice *opens* would make
         # that customer's whole first month of overage unbillable.
@@ -516,26 +448,27 @@ class BillingService:
             if not await self.acquire_overage_lock(sub.org_id):
                 raise PandaProbeError("Overage reporting is busy; retry the invoice webhook.")
             try:
+                from app.services.billing_reporting_service import BillingReportingService
+
                 usage = await self._sync_invoice_period(sub, obj)
                 if not usage.billed:
-                    overages = await self.calculate_unreported_overages(sub.org_id, period_start=usage.period_start)
-                    if overages.total_cost > 0:
-                        # A paid invoice is immutable. Do not silently push this debt
-                        # onto another month or falsely label it fully reported.
-                        raise PandaProbeError("Paid invoice has unreported usage; reconciliation required.")
+                    await BillingReportingService(self._session).stage(
+                        sub,
+                        usage.period_start,
+                        closing_invoice_id=invoice_id,
+                    )
                     await self._repo.mark_billed(sub.org_id, usage.period_start, invoice_id)
+                await self._repo.advance_period(sub.org_id, new_start, new_end)
+                await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
+                await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.ACTIVE.value)
                 await self._session.commit()
             finally:
                 await self.release_overage_lock(sub.org_id)
-
-        # Advance to the new billing period
-        stripe_sub = stripe.Subscription.retrieve(subscription_id)
-        new_start, new_end = _get_sub_period(stripe_sub)
-
-        await self._repo.advance_period(sub.org_id, new_start, new_end)
-        await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
-        await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.ACTIVE.value)
-        await self._session.commit()
+        else:
+            await self._repo.advance_period(sub.org_id, new_start, new_end)
+            await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
+            await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.ACTIVE.value)
+            await self._session.commit()
         await self._warm_sub_cache(sub.org_id)
         logger.info("invoice_paid", org_id=str(sub.org_id), invoice_id=invoice_id)
 
