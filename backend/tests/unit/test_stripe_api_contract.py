@@ -224,6 +224,7 @@ def _arrange_paid_invoice(svc: BillingService, monkeypatch: pytest.MonkeyPatch) 
         updated_at=now,
     )
     monkeypatch.setattr(svc, "report_overages_to_stripe", AsyncMock(return_value=False))
+    monkeypatch.setattr("app.services.billing_reporting_service.BillingReportingService.stage", AsyncMock())
     monkeypatch.setattr(svc, "calculate_unreported_overages", AsyncMock(return_value=OverageDetail()))
     item = MagicMock(current_period_start=1790000000, current_period_end=1792592000)
     monkeypatch.setattr(stripe.Subscription, "retrieve", lambda *a, **k: MagicMock(items=MagicMock(data=[item])))
