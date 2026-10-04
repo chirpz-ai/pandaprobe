@@ -7,7 +7,18 @@ rss: true
 
 Release history for the **PandaProbe Core Platform**.
 
-Current version: `v0.6.1`
+Current version: `v0.7.0`
+
+<Update label="v0.7.0" description="2026-10-04" tags={["Billing", "Evaluation", "Dashboard"]}>
+  ### Durable billing and evaluation improvements
+
+  - Added the `billing_reports` table to preserve overage charges and retry Stripe reporting independently of billing-period closure.
+  - Fixed trailing usage blocking renewal, with duplicate-reporting safeguards and follow-up checks for delayed usage.
+  - Updated judge options to Gemini 3.5 Flash-Lite, Gemini 3.8 Flash, GPT-6 Luna, and Claude Haiku 4.5, and upgraded LiteLLM for GPT-6 support.
+  - Made evaluation-run names optional for selected traces and sessions, and moved the name field below the model selector in both creation sidebars.
+
+  **Upgrade note:** Apply the database migration before new billing code runs. Avoid overlapping legacy and durable billing reporters during rollout, and preserve outstanding billing reports when planning a rollback.
+</Update>
 
 <Update label="v0.6.1" description="2026-08-25" tags={["Reliability", "Bug fixes"]}>
   ### Redis and billing reliability
