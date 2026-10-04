@@ -61,6 +61,10 @@ celery.conf.beat_schedule = {
         "task": "dispatch_overage_billing",
         "schedule": 21600.0,
     },
+    "dispatch-billing-reports": {
+        "task": "dispatch_billing_reports",
+        "schedule": 300.0,
+    },
     "dispatch-hobby-reset": {
         "task": "dispatch_hobby_reset",
         "schedule": 21600.0,
