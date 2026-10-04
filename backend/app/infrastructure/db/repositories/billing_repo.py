@@ -133,10 +133,14 @@ class BillingRepository:
         return list(rows)
 
     async def advance_period(self, org_id: UUID, new_start: datetime, new_end: datetime) -> None:
-        """Move a subscription to a new billing period."""
+        """Move forward only: delayed webhooks must not rewind a subscription."""
         stmt = (
             update(SubscriptionModel)
-            .where(SubscriptionModel.org_id == org_id)
+            .where(
+                SubscriptionModel.org_id == org_id,
+                SubscriptionModel.current_period_start <= new_start,
+                SubscriptionModel.current_period_end <= new_end,
+            )
             .values(
                 current_period_start=new_start,
                 current_period_end=new_end,
