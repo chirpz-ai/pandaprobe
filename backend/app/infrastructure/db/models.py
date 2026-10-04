@@ -523,6 +523,39 @@ class SubscriptionModel(Base):
     __table_args__ = (Index("ix_subscriptions_org_id", "org_id"),)
 
 
+class BillingReportModel(Base):
+    """Durable overage intent, independent of whether its usage period is closed."""
+
+    __tablename__ = "billing_reports"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    usage_record_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("usage_records.id", ondelete="CASCADE"), nullable=False
+    )
+    stripe_customer_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    closing_invoice_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    snapshot_trace_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot_trace_eval_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot_session_eval_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    pricing: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    requests: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    attempted_at: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    stripe_item_ids: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_billing_reports_status_created", "status", "created_at"),
+        Index("ix_billing_reports_usage_record", "usage_record_id"),
+        UniqueConstraint("usage_record_id", "closing_invoice_id", name="uq_billing_report_closure"),
+    )
+
+
 class UsageRecordModel(Base):
     """Aggregated usage counters for a single billing period."""
 
