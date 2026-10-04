@@ -61,6 +61,27 @@ class PlanConfig(BaseModel):
     monthly_price_cents: int = Field(description="Base monthly price in USD cents")
 
 
+class BillingReport(BaseModel):
+    """An immutable usage snapshot plus recoverable Stripe delivery state."""
+
+    id: UUID
+    usage_record_id: UUID
+    stripe_customer_id: str
+    stripe_subscription_id: str | None
+    closing_invoice_id: str | None
+    snapshot_trace_count: int
+    snapshot_trace_eval_count: int
+    snapshot_session_eval_count: int
+    pricing: dict[str, Any]
+    requests: dict[str, Any]
+    attempted_at: dict[str, str]
+    stripe_item_ids: dict[str, str]
+    status: str
+    last_error: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
 class UsageSummary(BaseModel):
     """Current-period usage snapshot returned to the API caller."""
 
