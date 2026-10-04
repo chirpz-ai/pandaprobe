@@ -260,19 +260,6 @@ export function EvalRunCreateSidebar({
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="px-4 py-3 border-b border-border">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
-              Name
-            </label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Eval run name (optional)"
-              className="h-8 text-xs"
-              disabled={submitting}
-            />
-          </div>
-
-          <div className="px-4 py-3 border-b border-border">
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
                 Metrics <span className="text-error">*</span>
@@ -414,6 +401,19 @@ export function EvalRunCreateSidebar({
                 {extractErrorMessage(providersQuery.error)}
               </p>
             )}
+          </div>
+
+          <div className="px-4 py-3 border-b border-border">
+            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+              Name (optional)
+            </label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Eval run name (optional)"
+              className="h-8 text-xs"
+              disabled={submitting}
+            />
           </div>
 
           {mode === "session" && (

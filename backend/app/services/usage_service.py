@@ -202,22 +202,28 @@ class UsageService:
         if not plan_cfg.monitoring_allowed:
             raise QuotaExceededError(f"Monitoring is not available on your {sub.plan} plan. Please upgrade.")
 
-    async def sync_to_database(self, org_id: UUID) -> None:
-        """Persist Redis counters into the ``usage_records`` table."""
+    async def sync_to_database(
+        self, org_id: UUID, *, period_start: datetime | None = None, period_end: datetime | None = None
+    ) -> None:
+        """Persist Redis counters for the current or an explicitly selected period."""
         billing_repo = BillingRepository(self._session)
-        sub = await billing_repo.get_subscription_by_org(org_id)
-        if sub is None:
-            return
+        if (period_start is None) != (period_end is None):
+            raise ValueError("Both period bounds are required.")
+        if period_start is None:
+            sub = await billing_repo.get_subscription_by_org(org_id)
+            if sub is None:
+                return
+            period_start, period_end = sub.current_period_start, sub.current_period_end
 
-        usage_key = self._usage_key(org_id, sub.current_period_start)
+        usage_key = self._usage_key(org_id, period_start)
         raw = await self._redis.hgetall(usage_key)  # type: ignore[union-attr]
         if not raw:
             return
 
         await billing_repo.upsert_usage_counters(
             org_id=org_id,
-            period_start=sub.current_period_start,
-            period_end=sub.current_period_end,
+            period_start=period_start,
+            period_end=period_end,
             trace_count=int(raw.get("traces", 0)),
             trace_eval_count=int(raw.get("trace_evals", 0)),
             session_eval_count=int(raw.get("session_evals", 0)),

@@ -4,8 +4,8 @@ authors:
   - family-names: Tayebati
     given-names: Sina
 title: pandaprobe
-version: 0.1.0
-date-released: "2026-02-16"
+version: 0.7.0
+date-released: "2026-10-04"
 url: https://pandaprobe.com
 repository-code: https://github.com/chirpz-ai/pandaprobe
 license: Apache-2.0

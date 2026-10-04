@@ -3,7 +3,7 @@
   "info": {
     "title": "PandaProbe API",
     "description": "Open-source agent engineering platform \u2014 trace LLM calls, evaluate agent performance, and monitor AI pipelines.",
-    "version": "0.1.0",
+    "version": "0.7.0",
     "contact": {
       "name": "PandaProbe",
       "url": "https://www.pandaprobe.com",

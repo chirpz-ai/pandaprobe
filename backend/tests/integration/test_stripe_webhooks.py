@@ -17,10 +17,12 @@ import hmac
 import json
 import time
 from datetime import datetime, timezone
+from itertools import permutations
 from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+import redis.asyncio as aioredis
 import stripe
 from httpx import AsyncClient, Response
 from sqlalchemy import delete
@@ -32,11 +34,22 @@ from app.infrastructure.redis.client import redis_pool
 from app.infrastructure.redis.locks import acquire_owned_lock
 from app.registry.constants import SubscriptionPlan, SubscriptionStatus
 from app.registry.settings import settings
+from app.services.billing_service import BillingService
+from app.services.usage_service import UsageService
+from app.services.billing_reporting_service import BillingReportingService
+from app.infrastructure.db.repositories.billing_report_repo import BillingReportRepository
 
 from .conftest import TEST_ORG_ID
 
 _WEBHOOK_PATH = "/webhooks/stripe"
 _STRIPE_SUB_ID = "sub_webhook_verify"
+
+
+@pytest.fixture
+async def redis_client():
+    """Use the same isolated Redis database as webhook handlers."""
+    async with aioredis.Redis(connection_pool=redis_pool) as client:
+        yield client
 
 
 @pytest.fixture(autouse=True)
@@ -88,6 +101,8 @@ def _dahlia_invoice(**overrides) -> dict:
         "status": "paid",
         "amount_paid": 0,
         "billing_reason": "subscription_cycle",
+        "period_start": int(datetime(2026, 7, 28, tzinfo=timezone.utc).timestamp()),
+        "period_end": int(datetime(2026, 8, 28, tzinfo=timezone.utc).timestamp()),
         "parent": {
             "quote_details": None,
             "subscription_details": {"metadata": {}, "subscription": _STRIPE_SUB_ID},
@@ -313,3 +328,151 @@ async def test_duplicate_delivery_is_processed_once(
 
     # The original period is still the one marked billed.
     assert (await repo.get_current_usage_record(TEST_ORG_ID, period_start)) is not None
+
+
+def _subscription_updated(start: datetime, end: datetime) -> dict:
+    return {
+        "id": _STRIPE_SUB_ID,
+        "object": "subscription",
+        "status": "active",
+        "items": {
+            "data": [{"current_period_start": int(start.timestamp()), "current_period_end": int(end.timestamp())}]
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    "order", list(permutations(["invoice.created", "invoice.paid", "customer.subscription.updated"]))
+)
+async def test_renewal_event_order_never_closes_new_month(
+    deliver, db_session, paid_subscription, stub_stripe_subscription, order
+):
+    old_start, _ = paid_subscription
+    new_start, new_end = stub_stripe_subscription
+    repo = BillingRepository(db_session)
+    # The five-minute sync may already have created the next month's row.
+    await repo.get_or_create_usage_record(TEST_ORG_ID, new_start, new_end)
+    await db_session.commit()
+    invoice = _dahlia_invoice()
+    for event_type in order:
+        obj = _subscription_updated(new_start, new_end) if event_type.startswith("customer.") else invoice
+        assert (await deliver(_event(event_type, obj))).status_code == 200
+    old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
+    new = await repo.get_current_usage_record(TEST_ORG_ID, new_start)
+    assert old.billed and old.stripe_invoice_id == invoice["id"]
+    assert not new.billed and new.stripe_invoice_id is None
+
+
+async def test_renewal_reports_old_redis_counters_to_exact_draft_once(
+    deliver, db_session, redis_client, paid_subscription, stub_stripe_subscription, monkeypatch
+):
+    old_start, _ = paid_subscription
+    new_start, new_end = stub_stripe_subscription
+    assert (
+        await deliver(_event("customer.subscription.updated", _subscription_updated(new_start, new_end)))
+    ).status_code == 200
+    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, old_start), mapping={"traces": 6000})
+    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, new_start), mapping={"traces": 9000})
+    create_item = MagicMock(return_value=MagicMock(id="ii_draft"))
+    monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
+    monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="draft"))
+    invoice = _dahlia_invoice(status="draft")
+    for _ in range(2):  # distinct event IDs, not just the route's duplicate filter
+        assert (await deliver(_event("invoice.created", invoice))).status_code == 200
+    assert create_item.call_count == 1
+    assert create_item.call_args.kwargs["invoice"] == invoice["id"]
+    assert create_item.call_args.kwargs["amount"] == 400
+    assert create_item.call_args.kwargs["period"]["start"] == int(old_start.timestamp())
+    assert (await deliver(_event("invoice.paid", {**invoice, "status": "paid"}))).status_code == 200
+    repo = BillingRepository(db_session)
+    old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
+    assert old.trace_count == old.reported_trace_count == 6000
+    assert old.billed and old.stripe_invoice_id == invoice["id"]
+    # New-period reporting must remain enabled after closing the previous month.
+    await UsageService(redis_client, db_session).sync_to_database(TEST_ORG_ID)
+    remaining = await BillingService(db_session).calculate_unreported_overages(TEST_ORG_ID)
+    assert remaining.trace_overage == 4000
+
+
+@pytest.mark.parametrize("event_type", ["invoice.created", "invoice.paid"])
+async def test_late_invoice_saves_carryover_instead_of_failing(
+    deliver, db_session, paid_subscription, stub_stripe_subscription, monkeypatch, event_type
+):
+    old_start, old_end = paid_subscription
+    repo = BillingRepository(db_session)
+    await repo.upsert_usage_counters(TEST_ORG_ID, old_start, old_end, trace_count=6000)
+    await db_session.commit()
+    create_item = MagicMock(return_value=MagicMock(id="ii_carryover"))
+    monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
+    monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="paid"))
+    # Even an old invoice.created payload still claiming draft must check live state.
+    response = await deliver(_event(event_type, _dahlia_invoice(status="draft")))
+    assert response.status_code == 200
+    old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
+    assert old.billed is (event_type == "invoice.paid")
+    for report_id in await BillingReportRepository(db_session).pending_ids():
+        assert await BillingReportingService(db_session).deliver(report_id)
+    assert create_item.call_count == 1
+    assert "invoice" not in create_item.call_args.kwargs
+    assert create_item.call_args.kwargs["subscription"] == _STRIPE_SUB_ID
+    old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
+    assert old.reported_trace_count == 6000
+
+
+@pytest.mark.parametrize("event_type", ["invoice.created", "invoice.paid"])
+async def test_busy_overage_lock_allows_same_event_retry(
+    deliver, db_session, redis_client, paid_subscription, stub_stripe_subscription, event_type
+):
+    from app.registry.constants import OVERAGE_LOCK_PREFIX
+
+    key = f"{OVERAGE_LOCK_PREFIX}{TEST_ORG_ID}"
+    await redis_client.set(key, "other-owner", ex=60)
+    body = _event(event_type, _dahlia_invoice())
+    assert (await deliver(body)).status_code == 500
+    old = await BillingRepository(db_session).get_current_usage_record(TEST_ORG_ID, paid_subscription[0])
+    assert not old.billed
+    assert await redis_client.get(key) == "other-owner"
+    await redis_client.delete(key)
+    assert (await deliver(body)).status_code == 200
+
+
+async def test_delayed_subscription_event_cannot_rewind_period(
+    deliver, db_session, paid_subscription, stub_stripe_subscription
+):
+    new_start, new_end = stub_stripe_subscription
+    for start, end in [stub_stripe_subscription, paid_subscription]:
+        assert (
+            await deliver(_event("customer.subscription.updated", _subscription_updated(start, end)))
+        ).status_code == 200
+    sub = await BillingRepository(db_session).get_subscription_by_org(TEST_ORG_ID)
+    assert (sub.current_period_start, sub.current_period_end) == (new_start, new_end)
+
+
+async def test_partial_stripe_failure_retries_same_invoice_and_idempotency_keys(
+    deliver, db_session, paid_subscription, monkeypatch
+):
+    from app.registry.exceptions import PandaProbeError
+
+    start, end = paid_subscription
+    repo = BillingRepository(db_session)
+    await repo.upsert_usage_counters(TEST_ORG_ID, start, end, trace_count=6000, trace_eval_count=6000)
+    await db_session.commit()
+    create_item = MagicMock(
+        side_effect=[MagicMock(id="ii_first"), PandaProbeError("simulated Stripe failure"), MagicMock(id="ii_second")]
+    )
+    monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
+    monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="draft"))
+    invoice = _dahlia_invoice(status="draft")
+    body = _event("invoice.created", invoice)
+    assert (await deliver(body)).status_code == 200
+    old = await repo.get_current_usage_record(TEST_ORG_ID, start)
+    assert old.reported_trace_count == old.reported_trace_eval_count == 0
+    assert not old.billed
+    assert (await deliver(body)).status_code == 200
+    for report_id in await BillingReportRepository(db_session).pending_ids():
+        assert await BillingReportingService(db_session).deliver(report_id)
+    calls = create_item.call_args_list
+    assert len(calls) == 3 and calls[1] == calls[2]
+    assert all(call.kwargs["invoice"] == invoice["id"] for call in calls)
+    old = await repo.get_current_usage_record(TEST_ORG_ID, start)
+    assert old.reported_trace_count == old.reported_trace_eval_count == 6000

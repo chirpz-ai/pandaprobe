@@ -8,14 +8,13 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
-from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID, uuid4
 
 import redis.asyncio as aioredis
 import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.billing.entities import OverageDetail, Subscription
+from app.core.billing.entities import OverageDetail, Subscription, UsageRecord
 from app.core.billing.plans import OVERAGE_UNIT_PRICE, get_plan_config
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.redis.locks import acquire_owned_lock, release_owned_lock
@@ -141,6 +140,15 @@ def _get_sub_period(stripe_sub: object) -> tuple[datetime, datetime]:
     )
 
 
+def _invoice_period(invoice: object) -> tuple[datetime, datetime]:
+    """Read the ending renewal period, never the subscription's mutable period."""
+    start = getattr(invoice, "period_start", None)
+    end = getattr(invoice, "period_end", None)
+    if type(start) is not int or type(end) is not int or not 0 < start < end:
+        raise PandaProbeError("Renewal invoice has no valid billing period; reconciliation required.")
+    return datetime.fromtimestamp(start, timezone.utc), datetime.fromtimestamp(end, timezone.utc)
+
+
 class BillingService:
     """Orchestrates Stripe billing operations and overage calculations."""
 
@@ -253,7 +261,9 @@ class BillingService:
 
     # -- Overage calculation --------------------------------------------------
 
-    async def calculate_unreported_overages(self, org_id: UUID) -> OverageDetail:
+    async def calculate_unreported_overages(
+        self, org_id: UUID, *, period_start: datetime | None = None
+    ) -> OverageDetail:
         """Calculate NEW overage charges not yet reported to Stripe.
 
         Uses a high-water mark (``reported_*_count``) to compute only
@@ -267,7 +277,7 @@ class BillingService:
         if not plan_cfg.pay_as_you_go:
             return OverageDetail()
 
-        usage = await self._repo.get_current_usage_record(org_id, sub.current_period_start)
+        usage = await self._repo.get_current_usage_record(org_id, period_start or sub.current_period_start)
         if usage is None or usage.billed:
             return OverageDetail()
 
@@ -300,83 +310,23 @@ class BillingService:
             snapshot_session_eval_count=usage.session_eval_count,
         )
 
-    async def report_overages_to_stripe(self, org_id: UUID) -> bool:
-        """Create Stripe InvoiceItems for the unreported overage delta.
+    async def report_overages_to_stripe(
+        self, org_id: UUID, *, period_start: datetime | None = None, invoice_id: str | None = None
+    ) -> bool:
+        """Reserve charges durably before attempting Stripe; failures remain retryable."""
+        from app.services.billing_reporting_service import BillingReportingService
 
-        Ordering: Stripe items are created **before** the watermark is
-        advanced.  Each ``InvoiceItem.create`` call carries a
-        deterministic ``idempotency_key`` derived from the org, period,
-        category, and snapshot count so that a retry with the same
-        watermark state is a no-op at Stripe's end (24-hour window).
-
-        Returns ``True`` when items were created.
-        """
         sub = await self._repo.get_subscription_by_org(org_id)
         if sub is None or sub.stripe_customer_id is None:
             return False
-
-        overages = await self.calculate_unreported_overages(org_id)
-        if overages.total_cost <= 0:
-            return False
-
-        period_ts = int(sub.current_period_start.timestamp())
-
-        items: list[tuple[str, int, Decimal, str]] = []
-        if overages.trace_overage > 0:
-            items.append(
-                (
-                    "Trace overage",
-                    overages.trace_overage,
-                    overages.trace_overage_cost,
-                    f"traces:{overages.snapshot_trace_count}",
-                )
-            )
-        if overages.trace_eval_overage > 0:
-            items.append(
-                (
-                    "Trace eval overage",
-                    overages.trace_eval_overage,
-                    overages.trace_eval_overage_cost,
-                    f"trace_evals:{overages.snapshot_trace_eval_count}",
-                )
-            )
-        if overages.session_eval_overage > 0:
-            items.append(
-                (
-                    "Session eval overage",
-                    overages.session_eval_overage,
-                    overages.session_eval_overage_cost,
-                    f"session_evals:{overages.snapshot_session_eval_count}",
-                )
-            )
-
-        for description, qty, cost, key_suffix in items:
-            amount_cents = int((cost * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-            stripe.InvoiceItem.create(
-                customer=sub.stripe_customer_id,
-                amount=amount_cents,
-                currency="usd",
-                description=f"{description} ({qty} units @ ${OVERAGE_UNIT_PRICE}/unit)",
-                idempotency_key=f"pp:overage:{org_id}:{period_ts}:{key_suffix}",
-            )
-
-        await self._repo.update_reported_usage(
-            org_id=org_id,
-            period_start=sub.current_period_start,
-            reported_trace_count=overages.snapshot_trace_count,
-            reported_trace_eval_count=overages.snapshot_trace_eval_count,
-            reported_session_eval_count=overages.snapshot_session_eval_count,
+        reporting = BillingReportingService(self._session)
+        report = await reporting.stage(
+            sub,
+            period_start or sub.current_period_start,
+            invoice_id=invoice_id,
         )
-
-        logger.info(
-            "overages_reported",
-            org_id=str(org_id),
-            total_cost=str(overages.total_cost),
-            trace_delta=overages.trace_overage,
-            eval_delta=overages.trace_eval_overage,
-            sess_delta=overages.session_eval_overage,
-        )
-        return True
+        await self._session.commit()
+        return await reporting.deliver_safely(report.id) if report else False
 
     # -- Webhook event handlers -----------------------------------------------
 
@@ -418,14 +368,36 @@ class BillingService:
         await self._warm_sub_cache(org_id)
         logger.info("checkout_completed", org_id=str(org_id), plan=plan.value)
 
+    async def _sync_invoice_period(self, sub: Subscription, obj: object) -> UsageRecord:
+        """Sync the ending period; missing or mismatched history needs reconciliation."""
+        period_start, period_end = _invoice_period(obj)
+        usage = await self._repo.get_current_usage_record(sub.org_id, period_start)
+        if usage is not None and usage.period_end != period_end:
+            raise PandaProbeError("Invoice period does not match usage history; reconciliation required.")
+        if usage is not None and usage.billed:
+            return usage
+        if self._redis is not None:
+            from app.services.usage_service import UsageService
+
+            await UsageService(self._redis, self._session).sync_to_database(
+                sub.org_id, period_start=period_start, period_end=period_end
+            )
+            await self._session.flush()
+        usage = await self._repo.get_current_usage_record(sub.org_id, period_start)
+        if usage is None:
+            raise PandaProbeError("Invoice usage history is missing; reconciliation required.")
+        return usage
+
     async def handle_invoice_created(self, event_data: dict) -> None:
         """Process ``invoice.created`` -- last-chance overage capture.
 
         Stripe fires this ~1 hour before the invoice is finalized.
-        Items added here land on THIS invoice rather than spilling to
-        the next billing period.
+        Target this invoice while it is still draft. If it has finalized,
+        preserve the charge as carryover for the next subscription invoice.
         """
         obj = event_data["object"]
+        if getattr(obj, "billing_reason", None) != _RENEWAL_BILLING_REASON:
+            return
         subscription_id = _invoice_subscription_id(obj)
         if not subscription_id:
             return
@@ -438,26 +410,20 @@ class BillingService:
         if not plan_cfg.pay_as_you_go:
             return
 
-        if self._redis is not None:
-            from app.services.usage_service import UsageService
-
-            usage_svc = UsageService(self._redis, self._session)
-            await usage_svc.sync_to_database(sub.org_id)
-            await self._session.flush()
-
-        if await self.acquire_overage_lock(sub.org_id):
-            try:
-                await self.report_overages_to_stripe(sub.org_id)
-                await self._session.commit()
-            finally:
-                await self.release_overage_lock(sub.org_id)
-        else:
+        if not await self.acquire_overage_lock(sub.org_id):
+            raise PandaProbeError("Overage reporting is busy; retry the invoice webhook.")
+        try:
+            usage = await self._sync_invoice_period(sub, obj)
+            if not usage.billed:
+                await self.report_overages_to_stripe(sub.org_id, period_start=usage.period_start, invoice_id=obj.id)
             await self._session.commit()
+        finally:
+            await self.release_overage_lock(sub.org_id)
 
         logger.info("invoice_created_overages_synced", org_id=str(sub.org_id))
 
     async def handle_invoice_paid(self, event_data: dict) -> None:
-        """Process ``invoice.paid`` -- final overage report, then advance billing period."""
+        """Close the invoice's ending period without billing a different month."""
         obj = event_data["object"]
         subscription_id = _invoice_subscription_id(obj)
         invoice_id = obj.id
@@ -470,38 +436,39 @@ class BillingService:
             logger.warning("invoice_paid_unknown_subscription", subscription_id=subscription_id)
             return
 
-        # Final sync: flush Redis counters to DB so the delta calc is up-to-date
-        if self._redis is not None:
-            from app.services.usage_service import UsageService
-
-            usage_svc = UsageService(self._redis, self._session)
-            await usage_svc.sync_to_database(sub.org_id)
-            await self._session.flush()
-
-        # Report any remaining unreported overages for the ending period.
-        # Items created here land on the *next* invoice (this one is already paid).
-        if await self.acquire_overage_lock(sub.org_id):
-            try:
-                await self.report_overages_to_stripe(sub.org_id)
-            finally:
-                await self.release_overage_lock(sub.org_id)
+        # Resolve the subscription before taking usage locks or staging charges.
+        # Renewal and its reporting obligations are then committed together.
+        stripe_sub = stripe.Subscription.retrieve(subscription_id)
+        new_start, new_end = _get_sub_period(stripe_sub)
 
         # Only a renewal closes a period: ``calculate_unreported_overages`` skips
         # billed records, so closing the period a signup invoice *opens* would make
         # that customer's whole first month of overage unbillable.
         if getattr(obj, "billing_reason", None) == _RENEWAL_BILLING_REASON:
-            old_usage = await self._repo.get_current_usage_record(sub.org_id, sub.current_period_start)
-            if old_usage and not old_usage.billed:
-                await self._repo.mark_billed(sub.org_id, sub.current_period_start, invoice_id)
+            if not await self.acquire_overage_lock(sub.org_id):
+                raise PandaProbeError("Overage reporting is busy; retry the invoice webhook.")
+            try:
+                from app.services.billing_reporting_service import BillingReportingService
 
-        # Advance to the new billing period
-        stripe_sub = stripe.Subscription.retrieve(subscription_id)
-        new_start, new_end = _get_sub_period(stripe_sub)
-
-        await self._repo.advance_period(sub.org_id, new_start, new_end)
-        await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
-        await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.ACTIVE.value)
-        await self._session.commit()
+                usage = await self._sync_invoice_period(sub, obj)
+                if not usage.billed:
+                    await BillingReportingService(self._session).stage(
+                        sub,
+                        usage.period_start,
+                        closing_invoice_id=invoice_id,
+                    )
+                    await self._repo.mark_billed(sub.org_id, usage.period_start, invoice_id)
+                await self._repo.advance_period(sub.org_id, new_start, new_end)
+                await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
+                await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.ACTIVE.value)
+                await self._session.commit()
+            finally:
+                await self.release_overage_lock(sub.org_id)
+        else:
+            await self._repo.advance_period(sub.org_id, new_start, new_end)
+            await self._repo.get_or_create_usage_record(sub.org_id, new_start, new_end)
+            await self._repo.update_subscription(sub.org_id, status=SubscriptionStatus.ACTIVE.value)
+            await self._session.commit()
         await self._warm_sub_cache(sub.org_id)
         logger.info("invoice_paid", org_id=str(sub.org_id), invoice_id=invoice_id)
 
@@ -565,10 +532,12 @@ class BillingService:
             first_item = items[0]
             period_start = getattr(first_item, "current_period_start", None)
             period_end = getattr(first_item, "current_period_end", None)
-            if period_start:
-                updates["current_period_start"] = datetime.fromtimestamp(period_start, tz=timezone.utc)
-            if period_end:
-                updates["current_period_end"] = datetime.fromtimestamp(period_end, tz=timezone.utc)
+            if period_start and period_end:
+                await self._repo.advance_period(
+                    sub.org_id,
+                    datetime.fromtimestamp(period_start, tz=timezone.utc),
+                    datetime.fromtimestamp(period_end, tz=timezone.utc),
+                )
 
         await self._repo.update_subscription(sub.org_id, **updates)
         await self._session.commit()

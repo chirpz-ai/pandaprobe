@@ -127,15 +127,13 @@ export function EvaluationSidebar({
   };
 
   const canSubmit =
-    !submitting &&
-    name.trim().length > 0 &&
-    selectedMetrics.size > 0 &&
-    targetIds.length > 0;
+    !submitting && selectedMetrics.size > 0 && targetIds.length > 0;
 
   async function handleSubmit() {
     if (!canSubmit) return;
 
     const metricList = Array.from(selectedMetrics);
+    const trimmedName = name.trim();
     const modelId =
       selectedModel !== DEFAULT_MODEL_VALUE ? selectedModel : undefined;
 
@@ -146,7 +144,7 @@ export function EvaluationSidebar({
         const body: CreateBatchEvalRunRequest = {
           trace_ids: targetIds,
           metrics: metricList,
-          name: name.trim(),
+          ...(trimmedName ? { name: trimmedName } : {}),
           ...(modelId ? { model: modelId } : {}),
         };
         response = await createBatchTraceRun(body);
@@ -154,7 +152,7 @@ export function EvaluationSidebar({
         const body: CreateBatchSessionEvalRunRequest = {
           session_ids: targetIds,
           metrics: metricList,
-          name: name.trim(),
+          ...(trimmedName ? { name: trimmedName } : {}),
           ...(modelId ? { model: modelId } : {}),
           ...(customizeWeights ? { signal_weights: weights } : {}),
         };
@@ -231,19 +229,6 @@ export function EvaluationSidebar({
                 )}
               </div>
             )}
-          </div>
-
-          <div className="px-4 py-3 border-b border-border">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
-              Name <span className="text-error">*</span>
-            </label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Eval run name"
-              className="h-8 text-xs"
-              disabled={submitting}
-            />
           </div>
 
           <div className="px-4 py-3 border-b border-border">
@@ -338,6 +323,19 @@ export function EvaluationSidebar({
                 {extractErrorMessage(providersQuery.error)}
               </p>
             )}
+          </div>
+
+          <div className="px-4 py-3 border-b border-border">
+            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+              Name (optional)
+            </label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Eval run name (optional)"
+              className="h-8 text-xs"
+              disabled={submitting}
+            />
           </div>
 
           {mode === "session" && (
