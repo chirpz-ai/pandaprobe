@@ -31,7 +31,7 @@ dependencies = [
     "stripe>=15.1.0",
     "resend>=2.30.0",
     "httpx>=0.28.0",
-    "posthog>=7.0.0",
+    "posthog>=7.18.0",
 ]
 
 [dependency-groups]
