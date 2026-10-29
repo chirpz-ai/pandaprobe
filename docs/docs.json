@@ -82,77 +82,13 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Introduction",
-        "icon": "book-open",
-        "groups": [
-          {
-            "group": "Overview",
-            "pages": [
-              "introduction/welcome",
-              "introduction/architecture"
-            ]
-          },
-          {
-            "group": "Tools",
-            "pages": [
-              "introduction/cli",
-              "introduction/agent-skill"
-            ]
-          }
+        "tab": "Overview",
+        "pages": [
+          "overview"
         ]
       },
       {
-        "tab": "Harness",
-        "icon": "refresh-ccw-dot",
-        "groups": [
-          {
-            "group": "Get Started",
-            "pages": [
-              "harness/get-started/quickstart",
-              "harness/get-started/concepts",
-              "harness/get-started/how-it-works"
-            ]
-          },
-          {
-            "group": "The Self-Heal Loop",
-            "pages": [
-              "harness/loop/evaluation",
-              "harness/loop/notices-and-mailbox",
-              "harness/loop/repair-agent",
-              "harness/loop/agent-toolset",
-              "harness/loop/rules-and-retrieval"
-            ]
-          },
-          {
-            "group": "Closing the Loop",
-            "pages": [
-              "harness/closed-loop/rule-validation",
-              "harness/closed-loop/outcome-verifier",
-              "harness/closed-loop/eval-set-and-replay",
-              "harness/closed-loop/regression-runs",
-              "harness/closed-loop/calibration"
-            ]
-          },
-          {
-            "group": "Integrations",
-            "pages": [
-              "harness/integrations/custom-loops",
-              "harness/integrations/frameworks"
-            ]
-          },
-          {
-            "group": "Reference",
-            "pages": [
-              "harness/reference/configuration",
-              "harness/reference/security",
-              "harness/reference/cost-and-reliability",
-              "harness/reference/migration-v09"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Tracing",
+        "tab": "Trace",
         "icon": "activity",
         "groups": [
           {
@@ -164,36 +100,41 @@
             ]
           },
           {
-            "group": "Tracing",
+            "group": "Tracing setup",
             "pages": [
-              "tracing/overview",
               {
-                "group": "LLM Providers",
-                "icon": "package",
+                "group": "Integrations",
                 "pages": [
-                  "tracing/wrappers/overview",
-                  "tracing/wrappers/openai",
-                  "tracing/wrappers/anthropic",
-                  "tracing/wrappers/google-gemini",
-                  "tracing/wrappers/mistral",
-                  "tracing/wrappers/litellm",
-                  "tracing/wrappers/bedrock"
-                ]
-              },
-              {
-                "group": "Agent Frameworks",
-                "icon": "link",
-                "pages": [
-                  "tracing/integrations/overview",
-                  "tracing/integrations/langgraph",
-                  "tracing/integrations/langchain",
-                  "tracing/integrations/deepagents",
-                  "tracing/integrations/crewai",
-                  "tracing/integrations/google-adk",
-                  "tracing/integrations/claude-agent-sdk",
-                  "tracing/integrations/openai-agents-sdk",
-                  "tracing/integrations/vercel-ai"
-                ]
+                  {
+                    "group": "LLM Providers",
+                    "icon": "package",
+                    "pages": [
+                      "tracing/wrappers/overview",
+                      "tracing/wrappers/openai",
+                      "tracing/wrappers/anthropic",
+                      "tracing/wrappers/google-gemini",
+                      "tracing/wrappers/mistral",
+                      "tracing/wrappers/litellm",
+                      "tracing/wrappers/bedrock"
+                    ]
+                  },
+                  {
+                    "group": "Agent Frameworks",
+                    "icon": "link",
+                    "pages": [
+                      "tracing/integrations/overview",
+                      "tracing/integrations/langgraph",
+                      "tracing/integrations/langchain",
+                      "tracing/integrations/deepagents",
+                      "tracing/integrations/crewai",
+                      "tracing/integrations/google-adk",
+                      "tracing/integrations/claude-agent-sdk",
+                      "tracing/integrations/openai-agents-sdk",
+                      "tracing/integrations/vercel-ai"
+                    ]
+                  }
+                ],
+                "icon": "plug"
               },
               {
                 "group": "Manual Instrumentation",
@@ -206,7 +147,6 @@
               },
               "tracing/sessions",
               "tracing/users",
-              "tracing/scoring",
               {
                 "group": "Configuration",
                 "icon": "cog",
@@ -222,7 +162,7 @@
         ]
       },
       {
-        "tab": "Evaluation",
+        "tab": "Evaluate",
         "icon": "flask-conical",
         "groups": [
           {
@@ -234,17 +174,23 @@
             ]
           },
           {
-            "group": "Trace Evaluation",
+            "group": "Evaluation types",
             "pages": [
-              "evaluation/trace-evaluation/introduction",
-              "evaluation/trace-evaluation/metrics"
-            ]
-          },
-          {
-            "group": "Agent Evaluation",
-            "pages": [
-              "evaluation/agent-evaluation/introduction",
-              "evaluation/agent-evaluation/metrics"
+              {
+                "group": "Trace Evaluation",
+                "pages": [
+                  "evaluation/trace-evaluation/introduction",
+                  "evaluation/trace-evaluation/metrics",
+                  "evaluation/trace-evaluation/scoring"
+                ]
+              },
+              {
+                "group": "Session Evaluation",
+                "pages": [
+                  "evaluation/session-evaluation/introduction",
+                  "evaluation/session-evaluation/metrics"
+                ]
+              }
             ]
           },
           {
@@ -259,117 +205,249 @@
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "Reflect",
+        "icon": "undo-dot",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "reflect/quickstart",
+              "reflect/concepts"
+            ]
+          },
+          {
+            "group": "Using Reflect",
+            "pages": [
+              "reflect/rules-and-memory",
+              "reflect/validation",
+              {
+                "group": "Integrations",
+                "icon": "link",
+                "pages": [
+                  "reflect/frameworks",
+                  "reflect/integrations/langchain",
+                  "reflect/integrations/langgraph",
+                  "reflect/integrations/deepagents",
+                  "reflect/integrations/openai-agents-sdk",
+                  "reflect/integrations/claude-agent-sdk",
+                  "reflect/integrations/google-adk",
+                  "reflect/integrations/crewai",
+                  "reflect/integrations/vercel-ai",
+                  "reflect/custom-loops"
+                ]
+              },
+              {
+                "group": "Configuration",
+                "icon": "cog",
+                "pages": [
+                  "reflect/configuration",
+                  "reflect/operations"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
         "icon": "terminal",
-        "openapi": "openapi.json",
+        "openapi": "reference/api/openapi.json",
         "groups": [
           {
             "group": "Overview",
             "pages": [
-              "api-reference/introduction"
+              "reference/overview"
             ]
           },
           {
-            "group": "Traces",
+            "group": "SDKs",
             "pages": [
+              {
+                "group": "Python SDK",
+                "pages": [
+                  "reference/python/overview",
+                  "reference/python/client",
+                  "reference/python/configuration",
+                  {
+                    "group": "Tracing",
+                    "pages": [
+                      "reference/python/tracing",
+                      "reference/python/data",
+                      "reference/python/wrappers",
+                      "reference/python/integrations"
+                    ]
+                  },
+                  {
+                    "group": "Platform API",
+                    "pages": [
+                      "reference/python/platform-client",
+                      "reference/python/platform-models",
+                      "reference/python/platform-errors"
+                    ]
+                  },
+                  {
+                    "group": "Reflect",
+                    "pages": [
+                      "reference/python/reflect-runtime",
+                      "reference/python/reflect-config",
+                      "reference/python/reflect-execution",
+                      "reference/python/reflect-validation",
+                      "reference/python/reflect-models"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "TypeScript SDK",
+                "pages": [
+                  "reference/typescript/overview",
+                  "reference/typescript/client",
+                  "reference/typescript/configuration",
+                  {
+                    "group": "Tracing",
+                    "pages": [
+                      "reference/typescript/tracing",
+                      "reference/typescript/data",
+                      "reference/typescript/wrappers",
+                      "reference/typescript/integrations"
+                    ]
+                  },
+                  {
+                    "group": "Platform API",
+                    "pages": [
+                      "reference/typescript/platform-client",
+                      "reference/typescript/platform-models",
+                      "reference/typescript/platform-errors"
+                    ]
+                  },
+                  {
+                    "group": "Reflect",
+                    "pages": [
+                      "reference/typescript/reflect-runtime",
+                      "reference/typescript/reflect-config",
+                      "reference/typescript/reflect-execution",
+                      "reference/typescript/reflect-validation",
+                      "reference/typescript/reflect-models"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "group": "HTTP API",
+            "pages": [
+              "reference/api/introduction",
               {
                 "group": "Traces",
                 "pages": [
-                  "POST /traces",
-                  "GET /traces",
-                  "GET /traces/analytics",
-                  "GET /traces/users",
-                  "POST /traces/batch/delete",
-                  "POST /traces/batch/tags",
-                  "GET /traces/{trace_id}",
-                  "PATCH /traces/{trace_id}",
-                  "DELETE /traces/{trace_id}",
-                  "POST /traces/{trace_id}/spans",
-                  "PATCH /traces/{trace_id}/spans/{span_id}"
+                  {
+                    "group": "Traces",
+                    "pages": [
+                      "POST /traces",
+                      "GET /traces",
+                      "GET /traces/analytics",
+                      "GET /traces/users",
+                      "POST /traces/batch/delete",
+                      "POST /traces/batch/tags",
+                      "GET /traces/{trace_id}",
+                      "PATCH /traces/{trace_id}",
+                      "DELETE /traces/{trace_id}",
+                      "POST /traces/{trace_id}/spans",
+                      "PATCH /traces/{trace_id}/spans/{span_id}"
+                    ]
+                  },
+                  {
+                    "group": "Sessions",
+                    "pages": [
+                      "GET /sessions",
+                      "GET /sessions/analytics",
+                      "GET /sessions/{session_id}",
+                      "DELETE /sessions/{session_id}"
+                    ]
+                  }
                 ]
               },
               {
-                "group": "Sessions",
+                "group": "Evaluations",
                 "pages": [
-                  "GET /sessions",
-                  "GET /sessions/analytics",
-                  "GET /sessions/{session_id}",
-                  "DELETE /sessions/{session_id}"
+                  {
+                    "group": "Trace Eval Runs",
+                    "pages": [
+                      "GET /evaluations/providers",
+                      "GET /evaluations/trace-metrics",
+                      "GET /evaluations/trace-runs/template",
+                      "POST /evaluations/trace-runs",
+                      "GET /evaluations/trace-runs",
+                      "POST /evaluations/trace-runs/batch",
+                      "GET /evaluations/trace-runs/{run_id}",
+                      "DELETE /evaluations/trace-runs/{run_id}",
+                      "POST /evaluations/trace-runs/{run_id}/retry",
+                      "GET /evaluations/trace-runs/{run_id}/scores"
+                    ]
+                  },
+                  {
+                    "group": "Trace Scores",
+                    "pages": [
+                      "POST /evaluations/trace-scores",
+                      "GET /evaluations/trace-scores",
+                      "GET /evaluations/trace-scores/{trace_id}",
+                      "PATCH /evaluations/trace-scores/{score_id}",
+                      "DELETE /evaluations/trace-scores/{score_id}",
+                      "GET /evaluations/analytics/trace-scores/summary",
+                      "GET /evaluations/analytics/trace-scores/trend",
+                      "GET /evaluations/analytics/trace-scores/distribution"
+                    ]
+                  },
+                  {
+                    "group": "Session Eval Runs",
+                    "pages": [
+                      "GET /evaluations/session-metrics",
+                      "POST /evaluations/session-runs",
+                      "GET /evaluations/session-runs",
+                      "POST /evaluations/session-runs/batch",
+                      "GET /evaluations/session-runs/{run_id}",
+                      "DELETE /evaluations/session-runs/{run_id}",
+                      "POST /evaluations/session-runs/{run_id}/retry",
+                      "GET /evaluations/session-runs/{run_id}/scores"
+                    ]
+                  },
+                  {
+                    "group": "Session Scores",
+                    "pages": [
+                      "GET /evaluations/session-scores",
+                      "GET /evaluations/session-scores/{session_id}",
+                      "DELETE /evaluations/session-scores/{score_id}",
+                      "GET /evaluations/analytics/session-scores/summary",
+                      "GET /evaluations/analytics/session-scores/trend",
+                      "GET /evaluations/analytics/session-scores/distribution",
+                      "GET /evaluations/analytics/session-scores/history/{session_id}",
+                      "GET /evaluations/analytics/session-scores/comparison"
+                    ]
+                  },
+                  {
+                    "group": "Monitors",
+                    "pages": [
+                      "POST /evaluations/monitors",
+                      "GET /evaluations/monitors",
+                      "GET /evaluations/monitors/{monitor_id}",
+                      "PATCH /evaluations/monitors/{monitor_id}",
+                      "DELETE /evaluations/monitors/{monitor_id}",
+                      "POST /evaluations/monitors/{monitor_id}/pause",
+                      "POST /evaluations/monitors/{monitor_id}/resume",
+                      "POST /evaluations/monitors/{monitor_id}/trigger",
+                      "GET /evaluations/monitors/{monitor_id}/runs"
+                    ]
+                  }
                 ]
               }
             ]
           },
           {
-            "group": "Evaluations",
+            "group": "Tools",
             "pages": [
-              {
-                "group": "Trace Eval Runs",
-                "pages": [
-                  "GET /evaluations/providers",
-                  "GET /evaluations/trace-metrics",
-                  "GET /evaluations/trace-runs/template",
-                  "POST /evaluations/trace-runs",
-                  "GET /evaluations/trace-runs",
-                  "POST /evaluations/trace-runs/batch",
-                  "GET /evaluations/trace-runs/{run_id}",
-                  "DELETE /evaluations/trace-runs/{run_id}",
-                  "POST /evaluations/trace-runs/{run_id}/retry",
-                  "GET /evaluations/trace-runs/{run_id}/scores"
-                ]
-              },
-              {
-                "group": "Trace Scores",
-                "pages": [
-                  "POST /evaluations/trace-scores",
-                  "GET /evaluations/trace-scores",
-                  "GET /evaluations/trace-scores/{trace_id}",
-                  "PATCH /evaluations/trace-scores/{score_id}",
-                  "DELETE /evaluations/trace-scores/{score_id}",
-                  "GET /evaluations/analytics/trace-scores/summary",
-                  "GET /evaluations/analytics/trace-scores/trend",
-                  "GET /evaluations/analytics/trace-scores/distribution"
-                ]
-              },
-              {
-                "group": "Session Eval Runs",
-                "pages": [
-                  "GET /evaluations/session-metrics",
-                  "POST /evaluations/session-runs",
-                  "GET /evaluations/session-runs",
-                  "POST /evaluations/session-runs/batch",
-                  "GET /evaluations/session-runs/{run_id}",
-                  "DELETE /evaluations/session-runs/{run_id}",
-                  "POST /evaluations/session-runs/{run_id}/retry",
-                  "GET /evaluations/session-runs/{run_id}/scores"
-                ]
-              },
-              {
-                "group": "Session Scores",
-                "pages": [
-                  "GET /evaluations/session-scores",
-                  "GET /evaluations/session-scores/{session_id}",
-                  "DELETE /evaluations/session-scores/{score_id}",
-                  "GET /evaluations/analytics/session-scores/summary",
-                  "GET /evaluations/analytics/session-scores/trend",
-                  "GET /evaluations/analytics/session-scores/distribution",
-                  "GET /evaluations/analytics/session-scores/history/{session_id}",
-                  "GET /evaluations/analytics/session-scores/comparison"
-                ]
-              },
-              {
-                "group": "Monitors",
-                "pages": [
-                  "POST /evaluations/monitors",
-                  "GET /evaluations/monitors",
-                  "GET /evaluations/monitors/{monitor_id}",
-                  "PATCH /evaluations/monitors/{monitor_id}",
-                  "DELETE /evaluations/monitors/{monitor_id}",
-                  "POST /evaluations/monitors/{monitor_id}/pause",
-                  "POST /evaluations/monitors/{monitor_id}/resume",
-                  "POST /evaluations/monitors/{monitor_id}/trigger",
-                  "GET /evaluations/monitors/{monitor_id}/runs"
-                ]
-              }
+              "reference/tools/cli",
+              "reference/tools/agent-skill"
             ]
           }
         ]
@@ -380,7 +458,6 @@
         "pages": [
           "changelog/python-sdk",
           "changelog/typescript-sdk",
-          "changelog/harness",
           "changelog/core-service",
           "changelog/cli"
         ]
@@ -398,27 +475,19 @@
     },
     {
       "source": "/get-started/welcome",
-      "destination": "/introduction/welcome"
+      "destination": "/overview"
     },
     {
       "source": "/tools/cli",
-      "destination": "/introduction/cli"
-    },
-    {
-      "source": "/overview/welcome",
-      "destination": "/introduction/welcome"
-    },
-    {
-      "source": "/overview/architecture",
-      "destination": "/introduction/architecture"
+      "destination": "/reference/tools/cli"
     },
     {
       "source": "/overview/cli",
-      "destination": "/introduction/cli"
+      "destination": "/reference/tools/cli"
     },
     {
       "source": "/overview/agent-skill",
-      "destination": "/introduction/agent-skill"
+      "destination": "/reference/tools/agent-skill"
     },
     {
       "source": "/tracing/concepts",
@@ -435,6 +504,42 @@
     {
       "source": "/get-started/installation",
       "destination": "/tracing/get-started/installation"
+    },
+    {
+      "source": "/api-reference/introduction",
+      "destination": "/reference/api/introduction"
+    },
+    {
+      "source": "/introduction/welcome",
+      "destination": "/overview"
+    },
+    {
+      "source": "/overview/welcome",
+      "destination": "/overview"
+    },
+    {
+      "source": "/tracing/scoring",
+      "destination": "/evaluation/trace-evaluation/scoring"
+    },
+    {
+      "source": "/tracing/overview",
+      "destination": "/tracing/get-started/quickstart"
+    },
+    {
+      "source": "/evaluation/agent-evaluation/introduction",
+      "destination": "/evaluation/session-evaluation/introduction"
+    },
+    {
+      "source": "/evaluation/agent-evaluation/metrics",
+      "destination": "/evaluation/session-evaluation/metrics"
+    },
+    {
+      "source": "/introduction/cli",
+      "destination": "/reference/tools/cli"
+    },
+    {
+      "source": "/introduction/agent-skill",
+      "destination": "/reference/tools/agent-skill"
     }
   ],
   "seo": {
@@ -442,8 +547,8 @@
       "canonical": "https://docs.pandaprobe.com",
       "charset": "UTF-8",
       "viewport": "width=device-width, initial-scale=1.0",
-      "description": "PandaProbe is an open-source agent engineering platform. Traces, evals, metrics, and live monitoring to debug and improve your AI agents.",
-      "keywords": "PandaProbe, AI agents, agent engineering, agent observability, agent tracing, agent evaluation, OpenAI tracing, Anthropic tracing, Google Gemini tracing, Mistral, LiteLLM, Bedrock, LangGraph, LangChain, DeepAgents, CrewAI, Google ADK, Python SDK, open source, agent debugging, agent monitoring",
+      "description": "PandaProbe is an open-source agent engineering platform. Trace execution, evaluate behavior, and use Reflect to develop independently tested guidance for AI agents.",
+      "keywords": "PandaProbe, AI agents, agent engineering, agent observability, agent tracing, session evaluation, OpenAI tracing, Anthropic tracing, Google Gemini tracing, Mistral, LiteLLM, Bedrock, LangGraph, LangChain, DeepAgents, CrewAI, Google ADK, Python SDK, open source, agent debugging, agent monitoring, PandaProbe Reflect, TypeScript SDK, agent memory",
       "author": "Chirpz AI team",
       "robots": "index, follow",
       "googlebot": "index, follow",
