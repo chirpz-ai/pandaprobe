@@ -1,0 +1,510 @@
+---
+title: "Reflect runtime"
+description: "Run the agent, evaluate evidence, continue reflection, and inspect outcomes"
+---
+
+Reflect coordinates **Detect → Notify → Reflect → Validate** around an explicit agent invocation. The same task agent receives failure evidence and proposes filesystem changes; independent validation owns acceptance.
+
+`run` returns the original task result after evaluation and any triggered reflection. It does not replace the task answer with the reflection answer. Task exceptions propagate. Validation settles separately so replay can acquire resources released by the task.
+
+Native agent construction attaches the supplied `reflect_bash` tool and memory instructions. A generic asynchronous callback receives an `Invocation` and must pass its instructions/tool to the model and enforce phase permissions itself. See the [quickstart](/reflect/quickstart), [native integrations](/reflect/frameworks), and [custom loop guide](/reflect/custom-loops).
+
+Use unique execution IDs and related-work session IDs. Importing Reflect alone starts no work; constructing it opens its configured persistent workspace. Close Reflect and then the tracing client. An externally supplied platform client remains caller-owned.
+
+Import `Reflect` from `pandaprobe/reflect`; alias it to `ReflectRuntime` when also using JavaScript’s built-in Reflect. Await `agent(...)`, `tool(...)`, `run(...)`, and `close()`. Supported native framework identifiers and agent options are listed below.
+
+## On this page
+
+[Agent](#agent), [AgentOptions](#agentoptions), [Framework](#framework), [NativeAgent](#nativeagent), [Reflect](#reflect), [ReflectInit](#reflectinit), [SubmissionOptions](#submissionoptions).
+
+## Example
+
+This function accepts your native agent builder. It must include the tracing integration and use `reflect.agent(...)` to attach Reflect tooling; see the [framework guides](/reflect/frameworks).
+
+```ts
+import { Client } from "pandaprobe";
+import { Reflect as ReflectRuntime, type NativeAgent } from "pandaprobe/reflect";
+
+async function runSupport(
+  buildAgent: (reflect: ReflectRuntime, client: Client) => Promise<NativeAgent>,
+) {
+  const client = new Client();
+  const reflect = new ReflectRuntime(client, { config: { workspace: "./agent-memory" } });
+  try {
+    const agent = await buildAgent(reflect, client);
+    const result = await reflect.run(agent, "Help with my return.", { sessionId: "customer-42" });
+    for (const proposal of reflect.proposals()) console.log(proposal.id, proposal.status);
+    return result;
+  } finally {
+    await reflect.close();
+    await client.shutdown();
+  }
+}
+```
+
+## `Agent`
+
+```ts
+import type { Agent } from "pandaprobe/reflect";
+```
+
+Type parameters: `I = any`, `R = any`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/integrations.ts#L11)
+
+```text
+Agent<I = any, R = any> = ((request: Invocation<I>) => Promise<R>) | NativeAgent<I, R>
+```
+
+## `AgentOptions`
+
+```ts
+import type { AgentOptions } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/integrations.ts#L12)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `framework` | `"langchain" \| "langgraph" \| "deepagents" \| "openai-agents" \| "claude-agent-sdk" \| "vercel-ai"` | Required |
+| `options` | `Record<string, any> \| undefined` | Optional |
+| `invokeOptions` | `Record<string, any> \| undefined` | Optional |
+
+## `Framework`
+
+```ts
+import type { Framework } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/integrations.ts#L3)
+
+```text
+Framework = | "generic"
+  | "langchain"
+  | "langgraph"
+  | "deepagents"
+  | "openai-agents"
+  | "claude-agent-sdk"
+  | "vercel-ai"
+```
+
+## `NativeAgent`
+
+```ts
+import type { NativeAgent } from "pandaprobe/reflect";
+```
+
+Type parameters: `I = any`, `R = any`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/integrations.ts#L17)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `native` | `any` | Optional; read-only |
+| `framework` | `Framework` | Required; read-only |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="invokeReflect">
+
+```text
+invokeReflect(request: Invocation<I>, options?: Record<string, any>): Promise<R>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `request` | `Invocation<I>` | Required |
+| `options` | `Record<string, any>` | Optional |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `Reflect`
+
+```ts
+import { Reflect } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/runtime.ts#L58)
+
+### Constructor
+
+```text
+new Reflect(client?: Client, options?: ReflectInit): Reflect
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `Client` | Optional |
+| `options` | `ReflectInit` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `client` | `Client` | Instance value; read-only |
+| `config` | `ReflectConfig` | Instance value; read-only |
+| `workspace` | `Workspace` | Instance value; read-only |
+| `api` | `PlatformClient` | `new PlatformClient(this.client)`; read-only |
+| `validator` | `Validator` | Instance value; read-only |
+| `signal` | `AbortSignal` | Instance value; read-only |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="withCurrent">
+
+Advanced adapter lifecycle hook. Ordinary applications use run/execution and the settlement methods so attribution, scheduling, and cleanup stay paired. Do not expose this hook to the agent.
+
+```text
+withCurrent<T>(execution: Execution, callback: () => T): T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `execution` | `Execution` | Required |
+| `callback` | `() => T` | Required |
+
+</Accordion>
+
+<Accordion title="assertOpen">
+
+Advanced adapter lifecycle hook. Ordinary applications use run/execution and the settlement methods so attribution, scheduling, and cleanup stay paired. Do not expose this hook to the agent.
+
+```text
+assertOpen(): void
+```
+
+</Accordion>
+
+<Accordion title="trackExecution">
+
+Advanced adapter lifecycle hook. Ordinary applications use run/execution and the settlement methods so attribution, scheduling, and cleanup stay paired. Do not expose this hook to the agent.
+
+```text
+trackExecution(execution: Execution): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `execution` | `Execution` | Required |
+
+</Accordion>
+
+<Accordion title="untrackExecution">
+
+Advanced adapter lifecycle hook. Ordinary applications use run/execution and the settlement methods so attribution, scheduling, and cleanup stay paired. Do not expose this hook to the agent.
+
+```text
+untrackExecution(execution: Execution): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `execution` | `Execution` | Required |
+
+</Accordion>
+
+<Accordion title="execution">
+
+The callback must encompass actual work, including consuming streams.
+
+```text
+execution<T>(options: ExecutionOptions, callback: (execution: Execution) => Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `ExecutionOptions` | Required |
+| `callback` | `(execution: Execution) => Promise<T>` | Required |
+
+</Accordion>
+
+<Accordion title="bash">
+
+```text
+bash(command: string): Promise<string>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `command` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="tool">
+
+Returns the supplied tool in a generic or native framework format. The generic tool accepts a command string and must run inside an active Reflect boundary.
+
+```text
+tool(framework?: Framework): Promise<any>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `framework` | `Framework` | `"generic"` |
+
+</Accordion>
+
+<Accordion title="agent">
+
+Builds a supported native agent with Reflect tools and memory integration. Pass the framework’s factory/constructor and its native options; do not also add reflect_bash manually.
+
+```text
+agent(factory: any, options: AgentOptions): Promise<NativeAgent>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `factory` | `any` | Required |
+| `options` | `AgentOptions` | Required |
+
+</Accordion>
+
+<Accordion title="submitTraces">
+
+Schedules evaluation for completed trace references; identities must belong to the same project. Reusing a trace under a different execution ID is rejected.
+
+```text
+submitTraces(traceIds: string[], options: SubmissionOptions): Promise<EvaluationOutcome>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `traceIds` | `string[]` | Required |
+| `options` | `SubmissionOptions` | Required |
+
+</Accordion>
+
+<Accordion title="waitExport">
+
+```text
+waitExport(options?: { timeout?: number; }): Promise<void>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `{ timeout?: number }` | `{}` |
+
+</Accordion>
+
+<Accordion title="settleEvaluation">
+
+Waits for evaluation evidence for this execution. A caller wait deadline can leave the underlying run pending.
+
+```text
+settleEvaluation(
+  executionId: string,
+  options?: { timeout?: number; signal?: AbortSignal; },
+): Promise<EvaluationOutcome>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `executionId` | `string` | Required |
+| `options` | `{ timeout?: number; signal?: AbortSignal }` | `{}` |
+
+</Accordion>
+
+<Accordion title="resumeEvaluations">
+
+Resumes persisted pending evaluation work after restart; known evaluation IDs are polled instead of recreated.
+
+```text
+resumeEvaluations(): Promise<EvaluationOutcome>[]
+```
+
+</Accordion>
+
+<Accordion title="continueReflection">
+
+Uses the supplied host continuation when evaluation has produced a failure notice. Delayed feedback does not automatically restart an agent.
+
+```text
+continueReflection(
+  executionId: string,
+  continuation: Agent,
+  options?: { input?: unknown; previousResult?: unknown; signal?: AbortSignal; },
+): Promise<ProposalOutcome>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `executionId` | `string` | Required |
+| `continuation` | `Agent` | Required |
+| `options` | `{ input?: unknown; previousResult?: unknown; signal?: AbortSignal }` | `{}` |
+
+</Accordion>
+
+<Accordion title="settleReflection">
+
+Waits for an already scheduled reflection checkpoint. A caller wait timeout is distinct from the checkpoint’s execution deadline.
+
+```text
+settleReflection(
+  executionId: string,
+  options?: { timeout?: number; signal?: AbortSignal; },
+): Promise<ProposalOutcome>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `executionId` | `string` | Required |
+| `options` | `{ timeout?: number; signal?: AbortSignal }` | `{}` |
+
+</Accordion>
+
+<Accordion title="run">
+
+```text
+run<I, R>(
+  agent: Agent<I, R>,
+  input: I,
+  options: ExecutionOptions & { invokeOptions?: Record<string, unknown>; },
+): Promise<R>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `agent` | `Agent<I, R>` | Required |
+| `input` | `I` | Required |
+| `options` | `ExecutionOptions & { invokeOptions?: Record<string, unknown> }` | Required |
+
+</Accordion>
+
+<Accordion title="report">
+
+Returns the execution’s task, evaluation, reflection, and proposal outcomes. Does not infer business success from task completion.
+
+```text
+report(executionId: string): ExecutionReport
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `executionId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="proposals">
+
+Returns persisted proposals, including their lifecycle state and decision evidence.
+
+```text
+proposals(): RuleProposal[]
+```
+
+</Accordion>
+
+<Accordion title="scheduleValidation">
+
+Advanced adapter lifecycle hook. Ordinary applications use run/execution and the settlement methods so attribution, scheduling, and cleanup stay paired. Do not expose this hook to the agent.
+
+```text
+scheduleValidation(outcome: ProposalOutcome): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `outcome` | `ProposalOutcome` | Required |
+
+</Accordion>
+
+<Accordion title="validate">
+
+```text
+validate(
+  proposalId: string,
+  options: { cases: ReplayCase[]; replay: Replay; signal?: AbortSignal; },
+): Promise<ValidationVerdict>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `proposalId` | `string` | Required |
+| `options` | `{ cases: ReplayCase[]; replay: Replay; signal?: AbortSignal }` | Required |
+
+</Accordion>
+
+<Accordion title="settleValidation">
+
+```text
+settleValidation(options?: { timeout?: number; signal?: AbortSignal; }): Promise<boolean>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `{ timeout?: number; signal?: AbortSignal }` | `{}` |
+
+</Accordion>
+
+<Accordion title="trialExecution">
+
+```text
+trialExecution<T>(
+  proposalId: string,
+  options: { arm: "control" | "candidate"; sessionId?: string; signal?: AbortSignal; },
+  callback: (execution: Execution) => Promise<T>,
+): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `proposalId` | `string` | Required |
+| `options` | `{ arm: "control" \| "candidate"; sessionId?: string; signal?: AbortSignal }` | Required |
+| `callback` | `(execution: Execution) => Promise<T>` | Required |
+
+</Accordion>
+
+<Accordion title="close">
+
+Cancels owned work, bounds the shutdown wait, and closes an owned platform client. It does not close a caller-supplied platform client or the tracing client.
+
+```text
+close(): Promise<void>
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## `ReflectInit`
+
+```ts
+import type { ReflectInit } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/runtime.ts#L52)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `config` | `Partial<{ workspace: string; traceVisibilityTimeout: number; evaluationTimeout: number; pollInterval: number; evaluationMaxRuns: number \| null; evaluationMaxTraces: number; evaluationSampleRate: number; maxConcurrency: number; cooldownSeconds: number; reflectionTimeout: number; shutdownTimeout: number; reflectionMaxCommands: number; shellTimeout: number; shellMaxCommands: number; shellMaxLoopIterations: number; shellMemoryBytes: number; commandMaxBytes: number; outputMaxBytes: number; executionOutputMaxBytes: number; contextMaxBytes: number; ruleMaxBytes: number; rulesMaxBytes: number; rulesMaxCount: number; evidenceMaxBytes: number; thresholds: Record<string, number>; diagnosticMetrics: readonly string[]; stallWindow: number; minimumProgress: number; regressionDrop: number; validationMinCases: number; validationMinImprovement: number; validationRegressionTolerance: number; validationTimeout: number; }> \| ReflectConfig \| undefined` | Optional |
+| `api` | `PlatformClient \| undefined` | Optional |
+| `replay` | `Replay \| undefined` | Optional |
+| `cases` | `ReplayCase<unknown>[] \| undefined` | Optional |
+
+## `SubmissionOptions`
+
+Supporting contract used by the API below; it is not a separate package export.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/evaluation.ts#L20)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `executionId` | `string` | Required |
+| `sessionId` | `string` | Required |
+| `completed` | `boolean \| undefined` | Optional |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.
