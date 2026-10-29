@@ -1,0 +1,150 @@
+---
+title: "Provider wrappers"
+description: "Instrument provider clients while preserving their native calls and results"
+---
+
+Wrap the provider client before using it. Calls retain their native arguments, results, exceptions, and streaming behavior. Instrumented calls attach to the active trace or create a standalone trace when needed. Finish or close streams so their trace can be finalized.
+
+Provider packages are optional. Install the provider you use alongside `pandaprobe`; the wrapper does not replace the provider's own API reference. These functions instrument model calls, while the [framework integrations](/tracing/integrations/overview) also capture agent/tool structure.
+
+Provider helpers are available from `pandaprobe.wrappers` and their provider submodules. `wrap_litellm()` is the exception to instance wrapping: it instruments module-level completion functions. Bedrock async support depends on the supplied native client.
+
+## On this page
+
+[wrap_anthropic](#wrap_anthropic), [wrap_bedrock](#wrap_bedrock), [wrap_gemini](#wrap_gemini), [wrap_litellm](#wrap_litellm), [wrap_mistral](#wrap_mistral), [wrap_openai](#wrap_openai).
+
+## Example
+
+Install the provider extra with `pip install "pandaprobe[openai]"` or `uv add "pandaprobe[openai]"`. Set both PandaProbe and OpenAI credentials before making model calls.
+
+```python
+from openai import OpenAI
+from pandaprobe.wrappers import wrap_openai
+
+model_client = wrap_openai(OpenAI())
+# Use model_client.chat.completions.create(...) as usual.
+```
+
+## `wrap_anthropic`
+
+```python
+from pandaprobe.wrappers import wrap_anthropic
+```
+
+Also exported from `pandaprobe.wrappers.anthropic`.
+
+Instrument an `anthropic.Anthropic` or `anthropic.AsyncAnthropic` client.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/wrappers/anthropic/wrapper.py#L24)
+
+```text
+wrap_anthropic(client: T) -> T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+## `wrap_bedrock`
+
+```python
+from pandaprobe.wrappers import wrap_bedrock
+```
+
+Also exported from `pandaprobe.wrappers.bedrock`.
+
+Instrument a `boto3` / `aioboto3` `bedrock-runtime` client.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/wrappers/bedrock/wrapper.py#L39)
+
+```text
+wrap_bedrock(client: T) -> T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+## `wrap_gemini`
+
+```python
+from pandaprobe.wrappers import wrap_gemini
+```
+
+Also exported from `pandaprobe.wrappers.gemini`.
+
+Instrument a `google.genai.Client` for automatic LLM span tracing.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/wrappers/gemini/wrapper.py#L23)
+
+```text
+wrap_gemini(client: T) -> T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+## `wrap_litellm`
+
+```python
+from pandaprobe.wrappers import wrap_litellm
+```
+
+Also exported from `pandaprobe.wrappers.litellm`.
+
+Instrument the LiteLLM SDK for automatic LLM span tracing.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/wrappers/litellm/wrapper.py#L34)
+
+```text
+wrap_litellm(litellm_module: Any | None=None) -> Any
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `litellm_module` | `Any \| None` | `None` |
+
+## `wrap_mistral`
+
+```python
+from pandaprobe.wrappers import wrap_mistral
+```
+
+Also exported from `pandaprobe.wrappers.mistral`.
+
+Instrument a `mistralai.Mistral` client for automatic LLM span tracing.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/wrappers/mistral/wrapper.py#L23)
+
+```text
+wrap_mistral(client: T) -> T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+## `wrap_openai`
+
+```python
+from pandaprobe.wrappers import wrap_openai
+```
+
+Also exported from `pandaprobe.wrappers.openai`.
+
+Instrument an `openai.OpenAI` or `openai.AsyncOpenAI` client.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/wrappers/openai/wrapper.py#L27)
+
+```text
+wrap_openai(client: T) -> T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python). See the [import index](/reference/python/overview#public-import-index) for available entry points.
