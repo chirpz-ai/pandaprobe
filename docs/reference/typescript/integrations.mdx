@@ -1,0 +1,1079 @@
+---
+title: "Framework integrations"
+description: "Callbacks, adapters, and native agent tracing hooks"
+---
+
+These APIs enable tracing. They do not enable reflection by themselves. Use the same explicit client for tracing and Reflect when combining them.
+
+LangChain, LangGraph, and DeepAgents use callback handlers passed to native invocation configuration. Their inherited callback methods are framework hooks; applications normally construct a handler once and let the framework call it. The callback contracts below include those inherited SDK methods.
+
+Other integrations use the framework's adapter, processor, query wrapper, or agent wrapper. Register instrumentation once at application startup. See [Reflect integrations](/reflect/frameworks) for memory tooling and reflection continuation.
+
+Await OpenAI Agents `instrument()` or use its processor factory with the native SDK. Claude integration wraps the query function because ESM modules cannot be patched like Python modules. Vercel model middleware instruments LLM calls; `wrapVercelAgent` adds the agent/step/tool hierarchy. Google ADK and CrewAI are not TypeScript exports.
+
+## On this page
+
+[AdapterOptions](#adapteroptions), [ClaudeAgentSDKAdapter](#claudeagentsdkadapter), [DeepAgentsCallbackHandler](#deepagentscallbackhandler), [LangChainCallbackHandler](#langchaincallbackhandler), [LangGraphCallbackHandler](#langgraphcallbackhandler), [OpenAIAgentsAdapter](#openaiagentsadapter), [TraceProcessor](#traceprocessor), [VercelAgentOptions](#vercelagentoptions), [VercelMiddlewareOptions](#vercelmiddlewareoptions), [pandaProbeMiddleware](#pandaprobemiddleware), [wrapClaudeAgentQuery](#wrapclaudeagentquery), [wrapVercelAgent](#wrapvercelagent).
+
+## Example
+
+```ts
+import { Client } from "pandaprobe";
+import { LangChainCallbackHandler } from "pandaprobe/integrations/langchain";
+
+const client = new Client();
+const handler = new LangChainCallbackHandler({ client });
+const invocationConfig = { callbacks: [handler] };
+// Pass invocationConfig to your native agent invocation.
+// Keep client alive for the agent's lifetime, then await client.shutdown().
+```
+
+Full native setup examples are in the [tracing integrations](/tracing/integrations/overview) and [Reflect integrations](/reflect/frameworks).
+
+## `AdapterOptions`
+
+```ts
+import type { AdapterOptions } from "pandaprobe/integrations/langchain";
+```
+
+Also exported from `pandaprobe/integrations/langgraph`, `pandaprobe/integrations/deepagents`, `pandaprobe/integrations/claude-agent-sdk`, `pandaprobe/integrations/openai-agents`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/base.ts#L59)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `client` | `Client \| null \| undefined` | Optional |
+| `sessionId` | `string \| null \| undefined` | Optional |
+| `userId` | `string \| null \| undefined` | Optional |
+| `tags` | `string[] \| undefined` | Optional |
+| `metadata` | `Record<string, unknown> \| undefined` | Optional |
+
+## `ClaudeAgentSDKAdapter`
+
+```ts
+import { ClaudeAgentSDKAdapter } from "pandaprobe/integrations/claude-agent-sdk";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/claude-agent-sdk/adapter.ts#L58)
+
+### Constructor
+
+```text
+new ClaudeAgentSDKAdapter(options?: AdapterOptions): ClaudeAgentSDKAdapter
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `AdapterOptions` | `{}` |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="wrapQuery">
+
+Wrap the SDK `query` function so each call is traced.
+
+```text
+wrapQuery(query: QueryFn): QueryFn
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `query` | `QueryFn` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `DeepAgentsCallbackHandler`
+
+```ts
+import { DeepAgentsCallbackHandler } from "pandaprobe/integrations/deepagents";
+```
+
+DeepAgents callback handler. A deep agent is a LangGraph compiled graph under
+the hood, so the standard LangChain callback interface captures the full
+trace tree (including sub-agent invocations). Pass via
+`config: &#123; callbacks: [handler] &#125;`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/deepagents/callback.ts#L13)
+
+### Constructor
+
+```text
+new DeepAgentsCallbackHandler(options?: AdapterOptions): DeepAgentsCallbackHandler
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `AdapterOptions` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `name` | `"PandaProbeDeepAgentsCallbackHandler"` | `"PandaProbeDeepAgentsCallbackHandler"`; read-only; Required by LangChain's CallbackHandlerMethods. |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="handleChainStart">
+
+```text
+handleChainStart(
+  chain: Any,
+  inputs: Any,
+  runId: string,
+  parentRunId?: string,
+  _tags?: string[],
+  _metadata?: Any,
+  _runType?: string,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `chain` | `Any` | Required |
+| `inputs` | `Any` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `_runType` | `string` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleChainEnd">
+
+```text
+handleChainEnd(outputs: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `outputs` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleChainError">
+
+```text
+handleChainError(error: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleLLMStart">
+
+```text
+handleLLMStart(
+  llm: Any,
+  prompts: string[],
+  runId: string,
+  parentRunId?: string,
+  extraParams?: Any,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `llm` | `Any` | Required |
+| `prompts` | `string[]` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `extraParams` | `Any` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleChatModelStart">
+
+```text
+handleChatModelStart(
+  llm: Any,
+  messages: Any[],
+  runId: string,
+  parentRunId?: string,
+  extraParams?: Any,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `llm` | `Any` | Required |
+| `messages` | `Any[]` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `extraParams` | `Any` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleLLMEnd">
+
+```text
+handleLLMEnd(output: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `output` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleLLMError">
+
+```text
+handleLLMError(error: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleToolStart">
+
+```text
+handleToolStart(
+  tool: Any,
+  input: Any,
+  runId: string,
+  parentRunId?: string,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `tool` | `Any` | Required |
+| `input` | `Any` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleToolEnd">
+
+```text
+handleToolEnd(output: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `output` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleToolError">
+
+```text
+handleToolError(error: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleRetrieverStart">
+
+```text
+handleRetrieverStart(
+  retriever: Any,
+  query: Any,
+  runId: string,
+  parentRunId?: string,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `retriever` | `Any` | Required |
+| `query` | `Any` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleRetrieverEnd">
+
+```text
+handleRetrieverEnd(documents: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `documents` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `LangChainCallbackHandler`
+
+```ts
+import { LangChainCallbackHandler } from "pandaprobe/integrations/langchain";
+```
+
+LangChain callback handler for `create_agent`, LCEL chains, and custom
+Runnables. Pass via `config: &#123; callbacks: [handler] &#125;`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/langchain/callback.ts#L11)
+
+### Constructor
+
+```text
+new LangChainCallbackHandler(options?: AdapterOptions): LangChainCallbackHandler
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `AdapterOptions` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `name` | `"PandaProbeLangChainCallbackHandler"` | `"PandaProbeLangChainCallbackHandler"`; read-only; Required by LangChain's CallbackHandlerMethods. |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="handleChainStart">
+
+```text
+handleChainStart(
+  chain: Any,
+  inputs: Any,
+  runId: string,
+  parentRunId?: string,
+  _tags?: string[],
+  _metadata?: Any,
+  _runType?: string,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `chain` | `Any` | Required |
+| `inputs` | `Any` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `_runType` | `string` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleChainEnd">
+
+```text
+handleChainEnd(outputs: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `outputs` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleChainError">
+
+```text
+handleChainError(error: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleLLMStart">
+
+```text
+handleLLMStart(
+  llm: Any,
+  prompts: string[],
+  runId: string,
+  parentRunId?: string,
+  extraParams?: Any,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `llm` | `Any` | Required |
+| `prompts` | `string[]` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `extraParams` | `Any` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleChatModelStart">
+
+```text
+handleChatModelStart(
+  llm: Any,
+  messages: Any[],
+  runId: string,
+  parentRunId?: string,
+  extraParams?: Any,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `llm` | `Any` | Required |
+| `messages` | `Any[]` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `extraParams` | `Any` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleLLMEnd">
+
+```text
+handleLLMEnd(output: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `output` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleLLMError">
+
+```text
+handleLLMError(error: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleToolStart">
+
+```text
+handleToolStart(
+  tool: Any,
+  input: Any,
+  runId: string,
+  parentRunId?: string,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `tool` | `Any` | Required |
+| `input` | `Any` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleToolEnd">
+
+```text
+handleToolEnd(output: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `output` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleToolError">
+
+```text
+handleToolError(error: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleRetrieverStart">
+
+```text
+handleRetrieverStart(
+  retriever: Any,
+  query: Any,
+  runId: string,
+  parentRunId?: string,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `retriever` | `Any` | Required |
+| `query` | `Any` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleRetrieverEnd">
+
+```text
+handleRetrieverEnd(documents: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `documents` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `LangGraphCallbackHandler`
+
+```ts
+import { LangGraphCallbackHandler } from "pandaprobe/integrations/langgraph";
+```
+
+LangGraph callback handler that maps graph events to PandaProbe traces.
+Pass via `config: &#123; callbacks: [handler] &#125;`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/langgraph/callback.ts#L9)
+
+### Constructor
+
+```text
+new LangGraphCallbackHandler(options?: AdapterOptions): LangGraphCallbackHandler
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `AdapterOptions` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `name` | `"PandaProbeLangGraphCallbackHandler"` | `"PandaProbeLangGraphCallbackHandler"`; read-only; Required by LangChain's CallbackHandlerMethods. |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="handleChainStart">
+
+```text
+handleChainStart(
+  chain: Any,
+  inputs: Any,
+  runId: string,
+  parentRunId?: string,
+  _tags?: string[],
+  _metadata?: Any,
+  _runType?: string,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `chain` | `Any` | Required |
+| `inputs` | `Any` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `_runType` | `string` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleChainEnd">
+
+```text
+handleChainEnd(outputs: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `outputs` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleChainError">
+
+```text
+handleChainError(error: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleLLMStart">
+
+```text
+handleLLMStart(
+  llm: Any,
+  prompts: string[],
+  runId: string,
+  parentRunId?: string,
+  extraParams?: Any,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `llm` | `Any` | Required |
+| `prompts` | `string[]` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `extraParams` | `Any` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleChatModelStart">
+
+```text
+handleChatModelStart(
+  llm: Any,
+  messages: Any[],
+  runId: string,
+  parentRunId?: string,
+  extraParams?: Any,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `llm` | `Any` | Required |
+| `messages` | `Any[]` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `extraParams` | `Any` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleLLMEnd">
+
+```text
+handleLLMEnd(output: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `output` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleLLMError">
+
+```text
+handleLLMError(error: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleToolStart">
+
+```text
+handleToolStart(
+  tool: Any,
+  input: Any,
+  runId: string,
+  parentRunId?: string,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `tool` | `Any` | Required |
+| `input` | `Any` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleToolEnd">
+
+```text
+handleToolEnd(output: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `output` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleToolError">
+
+```text
+handleToolError(error: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="handleRetrieverStart">
+
+```text
+handleRetrieverStart(
+  retriever: Any,
+  query: Any,
+  runId: string,
+  parentRunId?: string,
+  _tags?: string[],
+  _metadata?: Any,
+  runName?: string,
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `retriever` | `Any` | Required |
+| `query` | `Any` | Required |
+| `runId` | `string` | Required |
+| `parentRunId` | `string` | Optional |
+| `_tags` | `string[]` | Optional |
+| `_metadata` | `Any` | Optional |
+| `runName` | `string` | Optional |
+
+</Accordion>
+
+<Accordion title="handleRetrieverEnd">
+
+```text
+handleRetrieverEnd(documents: Any, runId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `documents` | `Any` | Required |
+| `runId` | `string` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `OpenAIAgentsAdapter`
+
+```ts
+import { OpenAIAgentsAdapter } from "pandaprobe/integrations/openai-agents";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/openai-agents/adapter.ts#L64)
+
+### Constructor
+
+```text
+new OpenAIAgentsAdapter(options?: AdapterOptions): OpenAIAgentsAdapter
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `AdapterOptions` | `{}` |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="createTraceProcessor">
+
+Build the tracing processor object (register it with the Agents SDK).
+
+```text
+createTraceProcessor(): TraceProcessor
+```
+
+</Accordion>
+
+<Accordion title="instrument">
+
+Register the processor with the `@openai/agents` SDK. Returns true on
+success, false if the SDK is unavailable or exposes no known hook.
+
+```text
+instrument(): Promise<boolean>
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## `TraceProcessor`
+
+```ts
+import type { TraceProcessor } from "pandaprobe/integrations/openai-agents";
+```
+
+The TracingProcessor object shape expected by `@openai/agents`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/openai-agents/adapter.ts#L48)
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="onTraceStart">
+
+```text
+onTraceStart(trace: Any): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `trace` | `Any` | Required |
+
+</Accordion>
+
+<Accordion title="onTraceEnd">
+
+```text
+onTraceEnd(trace: Any): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `trace` | `Any` | Required |
+
+</Accordion>
+
+<Accordion title="onSpanStart">
+
+```text
+onSpanStart(span: Any): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `span` | `Any` | Required |
+
+</Accordion>
+
+<Accordion title="onSpanEnd">
+
+```text
+onSpanEnd(span: Any): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `span` | `Any` | Required |
+
+</Accordion>
+
+<Accordion title="forceFlush">
+
+</Accordion>
+
+<Accordion title="shutdown">
+
+</Accordion>
+
+</AccordionGroup>
+
+## `VercelAgentOptions`
+
+```ts
+import type { VercelAgentOptions } from "pandaprobe/integrations/vercel-ai";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/vercel-ai/adapter.ts#L6)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `name` | `string \| undefined` | Optional |
+| `client` | `Client \| null \| undefined` | Optional |
+| `sessionId` | `string \| null \| undefined` | Optional |
+| `userId` | `string \| null \| undefined` | Optional |
+| `tags` | `string[] \| undefined` | Optional |
+| `metadata` | `Record<string, unknown> \| undefined` | Optional |
+
+## `VercelMiddlewareOptions`
+
+```ts
+import type { VercelMiddlewareOptions } from "pandaprobe/integrations/vercel-ai";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/vercel-ai/middleware.ts#L21)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `name` | `string \| undefined` | Optional; Span/trace name (default "vercel-ai-generate"). |
+
+## `pandaProbeMiddleware`
+
+```ts
+import { pandaProbeMiddleware } from "pandaprobe/integrations/vercel-ai";
+```
+
+Build a PandaProbe middleware object for the AI SDK's `wrapLanguageModel`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/vercel-ai/middleware.ts#L58)
+
+```text
+pandaProbeMiddleware(
+  options?: VercelMiddlewareOptions,
+): { wrapGenerate: ({ doGenerate, params, model }: Any) => Promise<Any>; wrapStream: ({ doStream, params, model }: Any) => Promise<Any>; }
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `VercelMiddlewareOptions` | `{}` |
+
+## `wrapClaudeAgentQuery`
+
+```ts
+import { wrapClaudeAgentQuery } from "pandaprobe/integrations/claude-agent-sdk";
+```
+
+Wrap the Claude Agent SDK `query` function so each call is traced.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/claude-agent-sdk/adapter.ts#L287)
+
+```text
+wrapClaudeAgentQuery(query: QueryFn, options?: AdapterOptions): QueryFn
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `query` | `QueryFn` | Required |
+| `options` | `AdapterOptions` | `{}` |
+
+## `wrapVercelAgent`
+
+```ts
+import { wrapVercelAgent } from "pandaprobe/integrations/vercel-ai";
+```
+
+Instrument a native ToolLoopAgent instance or constructor without changing its public types.
+
+Type parameters: `T extends object`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/integrations/vercel-ai/adapter.ts#L12)
+
+```text
+wrapVercelAgent<T extends object>(agent: T, options?: VercelAgentOptions): T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `agent` | `T` | Required |
+| `options` | `VercelAgentOptions` | `{}` |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.
