@@ -102,7 +102,7 @@ Evaluates whether the arguments passed to each tool call were correct for the us
 | Stage | What happens | Output schema |
 |---|---|---|
 | **1. Extract** | LLM identifies the user input and all tool calls with their parameters and reasoning from the trace. | `user_input` (string), `tool_calls` (list of name/parameters/reasoning) |
-| **2. Verdicts** | LLM evaluates each tool call individually, returning a `yes`/`no` verdict on whether its arguments correctly address the task. | `verdicts` (list of verdict + reason) |
+| **2. Verdicts** | LLM returns `yes`/`no` for task arguments and `neutral` for Reflect rule and memory operations, when present. | `verdicts` (list of verdict + reason) |
 | **3. Reason** | LLM produces a concise overall explanation from the score and list of incorrect-call reasons. | `reason` (string) |
 
 ### Score calculation
@@ -110,10 +110,10 @@ Evaluates whether the arguments passed to each tool call were correct for the us
 The score is computed deterministically from the verdicts:
 
 ```
-score = correct_count / total_verdicts
+score = yes_count / (yes_count + no_count)
 ```
 
-If a trace has no tool calls, the metric returns a perfect 1.0 score (nothing to evaluate).
+Neutral verdicts remain in the metadata but do not affect the score. If there are no task arguments to evaluate, the metric returns 1.0 (nothing to evaluate); this is not evidence of task completion.
 
 ### Metadata returned
 
@@ -374,7 +374,7 @@ This lets you balance cost and accuracy — use a faster model for quick checks 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Agent Evaluation Metrics" icon="bot" href="/evaluation/agent-evaluation/metrics">
+  <Card title="Session Evaluation Metrics" icon="bot" href="/evaluation/session-evaluation/metrics">
     Learn about session-level aggregation metrics.
   </Card>
   <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
