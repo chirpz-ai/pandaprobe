@@ -1,0 +1,97 @@
+---
+title: "Configuration"
+description: "Tracing credentials, environment settings, and resolved client options"
+---
+
+Explicit constructor options override `PANDAPROBE_*` environment variables. The resolved configuration is immutable. The tracing client requires an API key and project name when enabled; platform API access requires both even if tracing is disabled.
+
+| Environment variable | Default |
+| --- | --- |
+| `PANDAPROBE_API_KEY` | Unset |
+| `PANDAPROBE_PROJECT_NAME` | Unset |
+| `PANDAPROBE_ENDPOINT` | `https://api.pandaprobe.com` |
+| `PANDAPROBE_ENVIRONMENT` | Unset |
+| `PANDAPROBE_RELEASE` | Unset |
+| `PANDAPROBE_ENABLED` | `true` |
+| `PANDAPROBE_BATCH_SIZE` | `10` |
+| `PANDAPROBE_FLUSH_INTERVAL` | `5` seconds |
+| `PANDAPROBE_MAX_QUEUE_SIZE` | `1000` |
+| `PANDAPROBE_DEBUG` | `false` |
+
+Boolean environment settings recognize `true`, `1`, and `yes` as true. Provider credentials belong to the provider SDK. Reflect reuses the same PandaProbe identity; its policy settings are documented separately.
+
+
+
+## On this page
+
+[SdkConfig](#sdkconfig), [resolve_config](#resolve_config).
+
+## `SdkConfig`
+
+```python
+from pandaprobe.config import SdkConfig
+```
+
+Immutable SDK configuration resolved from env vars + constructor kwargs.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/config.py#L42)
+
+Construct with the fields below as arguments. Defaults apply when omitted.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `api_key` | `str \| None` | `None` |
+| `project_name` | `str \| None` | `None` |
+| `endpoint` | `str` | `'https://api.pandaprobe.com'` |
+| `environment` | `str \| None` | `None` |
+| `release` | `str \| None` | `None` |
+| `enabled` | `bool` | `True` |
+| `batch_size` | `int` | `10` |
+| `flush_interval` | `float` | `5.0` |
+| `max_queue_size` | `int` | `1000` |
+| `debug` | `bool` | `False` |
+
+## `resolve_config`
+
+```python
+from pandaprobe.config import resolve_config
+```
+
+Build an `SdkConfig` by merging constructor kwargs over env vars.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/config.py#L70)
+
+```text
+resolve_config(
+  *,
+  api_key: str | None=None,
+  project_name: str | None=None,
+  endpoint: str | None=None,
+  environment: str | None=None,
+  release: str | None=None,
+  enabled: bool | None=None,
+  batch_size: int | None=None,
+  flush_interval: float | None=None,
+  max_queue_size: int | None=None,
+  debug: bool | None=None,
+) -> SdkConfig
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `api_key` | `str \| None` | `None`; keyword only |
+| `project_name` | `str \| None` | `None`; keyword only |
+| `endpoint` | `str \| None` | `None`; keyword only |
+| `environment` | `str \| None` | `None`; keyword only |
+| `release` | `str \| None` | `None`; keyword only |
+| `enabled` | `bool \| None` | `None`; keyword only |
+| `batch_size` | `int \| None` | `None`; keyword only |
+| `flush_interval` | `float \| None` | `None`; keyword only |
+| `max_queue_size` | `int \| None` | `None`; keyword only |
+| `debug` | `bool \| None` | `None`; keyword only |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python). See the [import index](/reference/python/overview#public-import-index) for available entry points.
