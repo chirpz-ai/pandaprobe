@@ -1,0 +1,136 @@
+---
+title: "Custom loops"
+description: "Integrate a custom agent, graph, or stream through explicit execution boundaries"
+icon: "code"
+---
+
+Use a [native integration](/reflect/frameworks) when it fits your agent. For another framework or a custom loop, provide an asynchronous callback that accepts an `Invocation`.
+
+## Connect your agent
+
+The callback receives task input, phase, current instructions, and—during reflection—feedback and the previous result. It must actually give those instructions and the supplied tool to the model.
+
+In this integration template, `run_model_loop` / `runModelLoop` and the business tools are your application code. They must translate the tool callbacks into the model's native format and reject unavailable tools in the dispatcher. The example wraps the call in a trace; keep your existing model/tool instrumentation for diagnostic detail.
+
+<CodeGroup>
+```python title="Python"
+from pandaprobe.reflect import Invocation
+
+reflect_bash = reflect.tool()  # async (command: str) -> str
+
+
+async def invoke(request: Invocation):
+    tools = {"reflect_bash": reflect_bash}
+    if request.phase != "reflection":
+        tools.update(business_tools)
+    message = request.feedback if request.phase == "reflection" else request.input
+    with client.trace("support", input={"messages": [{"role": "user", "content": message}]}) as trace:
+        result = await run_model_loop(
+            message=message,
+            instructions=request.instructions,
+            previous_result=request.previous_result,
+            tools=tools,
+        )
+        trace.set_output({"messages": [{"role": "assistant", "content": result}]})
+        return result
+
+
+result = await reflect.run(invoke, "Help with my return.", session_id="customer-42")
+```
+
+```ts title="TypeScript"
+import type { Invocation } from "pandaprobe/reflect";
+
+const reflectBash = await reflect.tool(); // async (command: string) => string
+
+async function invoke(request: Invocation<string>) {
+  const tools = request.phase === "reflection"
+    ? { reflect_bash: reflectBash }
+    : { ...businessTools, reflect_bash: reflectBash };
+  const message = request.phase === "reflection" ? request.feedback : request.input;
+  return client.trace("support", {
+    input: { messages: [{ role: "user", content: message }] },
+  }).run(async trace => {
+    const result = await runModelLoop({
+      message, instructions: request.instructions,
+      previousResult: request.previousResult, tools, signal: request.signal,
+    });
+    trace.setOutput({ messages: [{ role: "assistant", content: result }] });
+    return result;
+  });
+}
+
+const result = await reflect.run(invoke, "Help with my return.", { sessionId: "customer-42" });
+```
+</CodeGroup>
+
+`run()` returns the task result. A failure notice can cause a second invocation with phase `reflection`; that phase's reply does not replace the task reply. During validation, use the fresh assigned state and avoid replaying task conversation history.
+
+The generic interface cannot enforce restrictions inside arbitrary host code. During reflection, expose and execute only `reflect_bash`; do not leave domain actions reachable through a hidden dispatcher or unrestricted host shell. Refresh current instructions at your model checkpoints if the agent edits active memory during the loop.
+
+## Streaming and custom boundaries
+
+Use an explicit boundary when you control the graph or stream. Consume the stream inside it so final traces belong to that execution:
+
+<CodeGroup>
+```python title="Python"
+async with reflect.execution(session_id="customer-42") as execution:
+    async for event in stream_agent(
+        instructions=execution.instructions(),
+        reflect_tool=reflect.tool(),
+    ):
+        send_to_ui(event)
+execution_id = execution.id
+```
+
+```ts title="TypeScript"
+let executionId = "";
+await reflect.execution({ sessionId: "customer-42" }, async execution => {
+  executionId = execution.id;
+  const stream = streamAgent({
+    instructions: execution.instructions(),
+    reflectTool: await reflect.tool(),
+    signal: execution.signal,
+  });
+  for await (const event of stream) sendToUI(event);
+});
+```
+</CodeGroup>
+
+`execution()` seals working changes and schedules evaluation. It does **not** call your agent again. Once you have the completed task result/history, continue explicitly:
+
+<CodeGroup>
+```python title="Python"
+outcome = await reflect.continue_reflection(
+    execution_id, invoke, input=original_input, previous_result=completed_result,
+)
+```
+
+```ts title="TypeScript"
+const outcome = await reflect.continueReflection(executionId, invoke, {
+  input: originalInput, previousResult: completedResult,
+});
+```
+</CodeGroup>
+
+This also supports feedback that becomes available after the original agent returned. Reflect does not restart an agent without a host-supplied continuation. Pass the history needed by your loop, or let its native session own that history; do not append both copies.
+
+## Submit already completed traces
+
+An application that already knows its trace IDs can submit them directly:
+
+<CodeGroup>
+```python title="Python"
+evaluation = await reflect.submit_traces(
+    completed_trace_ids, execution_id="turn-unique-id", session_id="customer-42", completed=True,
+)
+```
+
+```ts title="TypeScript"
+const evaluation = await reflect.submitTraces(completedTraceIds, {
+  executionId: "turn-unique-id", sessionId: "customer-42", completed: true,
+});
+```
+</CodeGroup>
+
+Use real task trace UUIDs from the same project, a unique execution identity, and a meaningful application boundary. A session name alone cannot identify an execution. Reusing the same trace under a different execution ID is rejected. Submission evaluates evidence; it does not provide conversation history, tools, or a replay environment.
