@@ -1,10 +1,10 @@
 ---
 title: "Evaluation Approaches"
-description: "Choose between trace-level and agent (session-level) evaluation for measuring the quality of your AI agents."
+description: "Choose between trace-level and session-level evaluation for measuring the quality of your AI agents."
 icon: "lightbulb"
 ---
 
-PandaProbe evaluation answers two fundamentally different questions about your agents. **Trace evaluation** scores a single interaction. **Agent evaluation** scores an entire session — a full agent lifecycle made up of many traces.
+PandaProbe evaluation answers two fundamentally different questions about your agents. **Trace evaluation** scores a single interaction. **Session evaluation** scores an entire session — a full agent lifecycle made up of many traces.
 
 Both approaches use the same underlying eval-run mechanism (filters, metrics, scores, monitors), but the unit they evaluate and the questions they answer are different.
 
@@ -16,7 +16,7 @@ Both approaches use the same underlying eval-run mechanism (filters, metrics, sc
 
     Scores individual traces for task completion, tool use, arguments, planning, coherence, loops, and related quality signals.
   </Card>
-  <Card title="Agent Evaluation" icon="bot" href="/evaluation/agent-evaluation/introduction">
+  <Card title="Session Evaluation" icon="bot" href="/evaluation/session-evaluation/introduction">
     **"How reliable is this agent across an entire session?"**
 
     Scores sessions by aggregating trace-level signals across the full agent lifecycle, capturing reliability, consistency, and worst-case failures.
@@ -54,11 +54,11 @@ Use trace evaluation when you want to inspect or regress-test individual interac
 
 Most trace metrics use **LLM-as-judge**: they extract clean inputs from the trace, ask a judge LLM for a structured verdict, then store the score with a reason and metadata. A couple of metrics (`coherence`, `loop_detection`) use deterministic embedding or similarity analysis instead.
 
-## Agent (session) evaluation
+## Session evaluation
 
 A **session** is the unit for an agent lifecycle — an entire conversation, a multi-step workflow, a support ticket, or an autonomous job. Sessions are groups of traces that share the same `session_id`.
 
-Agent evaluation is **session-level** evaluation. Instead of judging one trace, it aggregates signals from all traces in the session to answer broader questions:
+Session evaluation aggregates signals from all traces in a session to answer broader questions:
 
 - Did the agent stay reliable across the whole task?
 - Did quality degrade over a conversation?
@@ -111,7 +111,7 @@ Beyond one-off eval runs, PandaProbe supports **monitors**: recurring evaluation
   <Card title="Trace Evaluation" icon="route" href="/evaluation/trace-evaluation/introduction">
     Dive into trace-level metrics and how they're computed.
   </Card>
-  <Card title="Agent Evaluation" icon="bot" href="/evaluation/agent-evaluation/introduction">
+  <Card title="Session Evaluation" icon="bot" href="/evaluation/session-evaluation/introduction">
     Learn about session-level aggregation and signals.
   </Card>
   <Card title="Set Up Evaluation" icon="cog" href="/evaluation/setup/introduction">
