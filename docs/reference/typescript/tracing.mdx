@@ -1,0 +1,880 @@
+---
+title: "Tracing and context"
+description: "Decorators, trace and span contexts, session propagation, and trace capture"
+---
+
+A trace represents one application invocation; spans record work inside it. Use a trace's span factory or decorators so parentage and context are established automatically. Exceptions from traced application code propagate after recording an error.
+
+Trace input contains the current turn's user message; trace output contains the final assistant message. LLM spans can contain the full model message history. Session and user scopes propagate attribution; they do not store an agent conversation.
+
+Trace capture observes IDs submitted by existing instrumentation. It does not create traces or wait for export/persistence. Consume streams inside the capture/execution boundary. A capture is single-use; late descendant work retains attribution but is no longer added to the closed capture's ID list.
+
+Use `withTrace`/`withSpan` for callback functions or `trace`/`span` for native class-method decorators (legacy and Stage 3 forms). A `TraceContext` can own a callback with `run`, or be explicitly entered and ended. Always finish explicit contexts. Session/user callback scopes use AsyncLocalStorage. `TraceCapture` is a type-only root export: obtain it from `client.captureTraces(...)` and call `run(...)`.
+
+## On this page
+
+[SpanContext](#spancontext), [SpanContextOptions](#spancontextoptions), [SpanDecoratorOptions](#spandecoratoroptions), [TraceCapture](#tracecapture), [TraceCaptureOptions](#tracecaptureoptions), [TraceContext](#tracecontext), [TraceContextOptions](#tracecontextoptions), [TraceDecoratorOptions](#tracedecoratoroptions), [WithSpanOptions](#withspanoptions), [WithTraceOptions](#withtraceoptions), [getCurrentTrace](#getcurrenttrace), [getSpanStack](#getspanstack), [session](#session), [setSession](#setsession), [setUser](#setuser), [span](#span), [startTrace](#starttrace), [trace](#trace), [user](#user), [withSpan](#withspan), [withTrace](#withtrace).
+
+## Example
+
+```ts
+import { Client, session, user } from "pandaprobe";
+
+const client = new Client();
+try {
+  await session("customer-42", () => user("user-7", async () => {
+    const capture = client.captureTraces();
+    await capture.run(async () => {
+      await client.trace("lookup").run(async trace => {
+        await trace.span("policy", { kind: "TOOL" }).run(async span => {
+          span.setInput({ order_id: "ORDER-101" });
+          span.setOutput({ refundable: "merchandise" });
+        });
+      });
+    });
+    console.log(capture.traceIds); // Submission IDs, not persistence confirmation.
+  }));
+} finally {
+  await client.shutdown();
+}
+```
+
+## `SpanContext`
+
+```ts
+import { SpanContext } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/tracing/span.ts#L22)
+
+### Constructor
+
+```text
+new SpanContext(traceCtx: TraceContext, name: string, options?: SpanContextOptions): SpanContext
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `traceCtx` | `TraceContext` | Required |
+| `name` | `string` | Required |
+| `options` | `SpanContextOptions` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `spanId` | `string` | Instance value; read-only |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="getOutput">
+
+The output recorded on this span (used to mirror it onto standalone traces).
+
+```text
+getOutput(): unknown
+```
+
+</Accordion>
+
+<Accordion title="getTraceContext">
+
+The trace this span belongs to (used to attach sibling/child tool spans).
+
+```text
+getTraceContext(): TraceContext
+```
+
+</Accordion>
+
+<Accordion title="start">
+
+Enter the span: record start time, set parent, push onto the trace's stack.
+
+```text
+start(): SpanContext
+```
+
+</Accordion>
+
+<Accordion title="end">
+
+End the span: record end time/status, finalize, pop from the trace's stack.
+
+```text
+end(error?: unknown): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `unknown` | Optional |
+
+</Accordion>
+
+<Accordion title="run">
+
+Run *fn* within this span (callback form).
+
+```text
+run<T>(fn: (span: SpanContext) => T | Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `fn` | `(span: SpanContext) => T \| Promise<T>` | Required |
+
+</Accordion>
+
+<Accordion title="instrument">
+
+Wrap a sync-or-async invocation in this span (decorator form). Sets the
+given *input*, captures the return value as output, and preserves the
+original return type (sync stays sync, async stays async).
+
+```text
+instrument<T>(invoke: () => T, input: unknown): T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `invoke` | `() => T` | Required |
+| `input` | `unknown` | Required |
+
+</Accordion>
+
+<Accordion title="setInput">
+
+Sets the recorded input. Trace and LLM inputs use the messages schema; other span kinds may use domain values.
+
+```text
+setInput(input: unknown): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `input` | `unknown` | Required |
+
+</Accordion>
+
+<Accordion title="setOutput">
+
+Sets the recorded output. Trace and LLM outputs use the messages schema; other span kinds may use domain values.
+
+```text
+setOutput(output: unknown): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `output` | `unknown` | Required |
+
+</Accordion>
+
+<Accordion title="setTokenUsage">
+
+Records supplied token counts and additional numeric usage. This setter does not measure token use itself.
+
+```text
+setTokenUsage(
+  usage: { promptTokens?: number; completionTokens?: number; [key: string]: number | undefined; },
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `usage` | `{ promptTokens?: number; completionTokens?: number; [key: string]: number \| undefined }` | Required |
+
+</Accordion>
+
+<Accordion title="setModel">
+
+Records the model identifier for this span.
+
+```text
+setModel(model: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `model` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="setModelParameters">
+
+Records the supplied model invocation parameters.
+
+```text
+setModelParameters(params: Record<string, unknown>): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `params` | `Record<string, unknown>` | Required |
+
+</Accordion>
+
+<Accordion title="setCost">
+
+Records supplied total cost and any additional named cost components. It does not look up provider prices.
+
+```text
+setCost(cost: { total: number; [key: string]: number; }): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `cost` | `{ total: number; [key: string]: number }` | Required |
+
+</Accordion>
+
+<Accordion title="setCompletionStartTime">
+
+Records the time completion output began, such as the first streamed token.
+
+```text
+setCompletionStartTime(ts: Date): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `ts` | `Date` | Required |
+
+</Accordion>
+
+<Accordion title="setError">
+
+Records an error message and sets the span status to ERROR.
+
+```text
+setError(error: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `string` | Required |
+
+</Accordion>
+
+<Accordion title="setMetadata">
+
+Merges metadata into the current record; existing keys with the same name are replaced.
+
+```text
+setMetadata(metadata: Record<string, unknown>): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `metadata` | `Record<string, unknown>` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `SpanContextOptions`
+
+```ts
+import type { SpanContextOptions } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/tracing/span.ts#L16)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `kind` | `SpanKind \| undefined` | Optional |
+| `model` | `string \| null \| undefined` | Optional |
+| `metadata` | `Record<string, unknown> \| undefined` | Optional |
+
+## `SpanDecoratorOptions`
+
+```ts
+import type { SpanDecoratorOptions } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/decorators.ts#L112)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `name` | `string \| undefined` | Optional |
+| `kind` | `SpanKind \| undefined` | Optional |
+| `model` | `string \| null \| undefined` | Optional |
+| `metadata` | `Record<string, unknown> \| undefined` | Optional |
+
+## `TraceCapture`
+
+```ts
+import type { TraceCapture } from "pandaprobe";
+```
+
+Observes submissions, without creating traces or guaranteeing persistence.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/tracing/capture.ts#L11)
+
+### Constructor
+
+```text
+new TraceCapture(storage: AsyncLocalStorage<TraceCapture>, options?: TraceCaptureOptions): TraceCapture
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `storage` | `AsyncLocalStorage<TraceCapture>` | Required |
+| `options` | `TraceCaptureOptions` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `traceIds` | `string[]` | `[]`; read-only |
+| `overflow` | `boolean` | `false` |
+| `closed` | `boolean` | `false` |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="run">
+
+```text
+run<T>(callback: (capture: TraceCapture) => T | Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `callback` | `(capture: TraceCapture) => T \| Promise<T>` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `TraceCaptureOptions`
+
+```ts
+import type { TraceCaptureOptions } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/tracing/capture.ts#L4)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `metadata` | `Record<string, unknown> \| undefined` | Optional |
+| `sessionId` | `string \| undefined` | Optional |
+| `maxTraces` | `number \| undefined` | Optional |
+| `onSubmit` | `((payload: Record<string, unknown>) => unknown) \| undefined` | Optional |
+
+## `TraceContext`
+
+```ts
+import { TraceContext } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/tracing/context.ts#L45)
+
+### Constructor
+
+```text
+new TraceContext(client: TraceClient, name: string, options?: TraceContextOptions): TraceContext
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `TraceClient` | Required |
+| `name` | `string` | Required |
+| `options` | `TraceContextOptions` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `spanStack` | `string[]` | `[]`; read-only |
+| `traceId` | `string` | Instance value; read-only |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="start">
+
+Enter the trace context imperatively. Pair with `end()`.
+
+```text
+start(enterStore?: boolean): TraceContext
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `enterStore` | `boolean` | `true` |
+
+</Accordion>
+
+<Accordion title="end">
+
+End the trace, finalize, and restore the previous ambient context.
+
+```text
+end(error?: unknown): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `error` | `unknown` | Optional |
+
+</Accordion>
+
+<Accordion title="run">
+
+Run *fn* within this trace's context (callback form).
+
+```text
+run<T>(fn: (ctx: TraceContext) => T | Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `fn` | `(ctx: TraceContext) => T \| Promise<T>` | Required |
+
+</Accordion>
+
+<Accordion title="instrument">
+
+Wrap a sync-or-async invocation in this trace's context (decorator form).
+
+```text
+instrument<T>(invoke: () => T, captureOutput: boolean): T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `invoke` | `() => T` | Required |
+| `captureOutput` | `boolean` | Required |
+
+</Accordion>
+
+<Accordion title="span">
+
+```text
+span(name: string, options?: SpanContextOptions): SpanContext
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `name` | `string` | Required |
+| `options` | `SpanContextOptions` | `{}` |
+
+</Accordion>
+
+<Accordion title="setOutput">
+
+Sets the recorded output. Trace and LLM outputs use the messages schema; other span kinds may use domain values.
+
+```text
+setOutput(output: unknown): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `output` | `unknown` | Required |
+
+</Accordion>
+
+<Accordion title="setInput">
+
+Sets the recorded input. Trace and LLM inputs use the messages schema; other span kinds may use domain values.
+
+```text
+setInput(input: unknown): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `input` | `unknown` | Required |
+
+</Accordion>
+
+<Accordion title="setMetadata">
+
+Merges metadata into the current record; existing keys with the same name are replaced.
+
+```text
+setMetadata(metadata: Record<string, unknown>): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `metadata` | `Record<string, unknown>` | Required |
+
+</Accordion>
+
+<Accordion title="setStatus">
+
+Sets the trace status using a supported TraceStatus value.
+
+```text
+setStatus(status: TraceStatus): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `status` | `TraceStatus` | Required |
+
+</Accordion>
+
+<Accordion title="addSpanData">
+
+```text
+addSpanData(spanData: SpanData): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `spanData` | `SpanData` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `TraceContextOptions`
+
+```ts
+import type { TraceContextOptions } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/tracing/context.ts#L37)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `input` | `unknown` | Optional |
+| `sessionId` | `string \| null \| undefined` | Optional |
+| `userId` | `string \| null \| undefined` | Optional |
+| `tags` | `string[] \| undefined` | Optional |
+| `metadata` | `Record<string, unknown> \| undefined` | Optional |
+
+## `TraceDecoratorOptions`
+
+```ts
+import type { TraceDecoratorOptions } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/decorators.ts#L104)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `name` | `string \| undefined` | Optional |
+| `sessionId` | `string \| null \| undefined` | Optional |
+| `userId` | `string \| null \| undefined` | Optional |
+| `tags` | `string[] \| undefined` | Optional |
+| `metadata` | `Record<string, unknown> \| undefined` | Optional |
+
+## `WithSpanOptions`
+
+```ts
+import type { WithSpanOptions } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/decorators.ts#L42)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `kind` | `SpanKind \| undefined` | Optional |
+| `model` | `string \| null \| undefined` | Optional |
+| `metadata` | `Record<string, unknown> \| undefined` | Optional |
+
+## `WithTraceOptions`
+
+```ts
+import type { WithTraceOptions } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/decorators.ts#L34)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `input` | `unknown` | Optional |
+| `sessionId` | `string \| null \| undefined` | Optional |
+| `userId` | `string \| null \| undefined` | Optional |
+| `tags` | `string[] \| undefined` | Optional |
+| `metadata` | `Record<string, unknown> \| undefined` | Optional |
+
+## `getCurrentTrace`
+
+```ts
+import { getCurrentTrace } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/tracing/context.ts#L28)
+
+```text
+getCurrentTrace(): TraceContext | null
+```
+
+## `getSpanStack`
+
+```ts
+import { getSpanStack } from "pandaprobe";
+```
+
+The span stack of the active trace (each trace owns its own stack).
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/tracing/context.ts#L33)
+
+```text
+getSpanStack(): string[]
+```
+
+## `session`
+
+```ts
+import { session } from "pandaprobe";
+```
+
+Run *fn* with a session ID set for its scope (the callback analog of Python's
+`with pandaprobe.session(id):`).
+
+Type parameters: `T`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/index.ts#L81)
+
+```text
+session<T>(sessionId: string, fn: () => T | Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `sessionId` | `string` | Required |
+| `fn` | `() => T \| Promise<T>` | Required |
+
+## `setSession`
+
+```ts
+import { setSession } from "pandaprobe";
+```
+
+Set the session ID for the current context.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/index.ts#L70)
+
+```text
+setSession(sessionId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `sessionId` | `string` | Required |
+
+## `setUser`
+
+```ts
+import { setUser } from "pandaprobe";
+```
+
+Set the user ID for the current context.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/index.ts#L90)
+
+```text
+setUser(userId: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `userId` | `string` | Required |
+
+## `span`
+
+```ts
+import { span } from "pandaprobe";
+```
+
+Method decorator that wraps a class method in a `SpanContext`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/decorators.ts#L258)
+
+```text
+span(options?: SpanDecoratorOptions): CompatibleMethodDecorator
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `SpanDecoratorOptions` | Optional |
+
+```text
+span<This, Args extends unknown[], Result>(
+  value: DecoratedMethod<This, Args, Result>,
+  context: ClassMethodDecoratorContext<This, DecoratedMethod<This, Args, Result>>,
+): DecoratedMethod<This, Args, Result>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `value` | `DecoratedMethod<This, Args, Result>` | Required |
+| `context` | `ClassMethodDecoratorContext<This, DecoratedMethod<This, Args, Result>>` | Required |
+
+```text
+span(target: LegacyTarget, propertyKey: string | symbol, descriptor: PropertyDescriptor): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `target` | `LegacyTarget` | Required |
+| `propertyKey` | `string \| symbol` | Required |
+| `descriptor` | `PropertyDescriptor` | Required |
+
+## `startTrace`
+
+```ts
+import { startTrace } from "pandaprobe";
+```
+
+Start a new trace and return its `TraceContext`, already entered.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/decorators.ts#L54)
+
+```text
+startTrace(name: string, options?: WithTraceOptions): TraceContext
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `name` | `string` | Required |
+| `options` | `WithTraceOptions` | `{}` |
+
+## `trace`
+
+```ts
+import { trace } from "pandaprobe";
+```
+
+Method decorator that wraps a class method in a `TraceContext`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/decorators.ts#L235)
+
+```text
+trace(options?: TraceDecoratorOptions): CompatibleMethodDecorator
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `TraceDecoratorOptions` | Optional |
+
+```text
+trace<This, Args extends unknown[], Result>(
+  value: DecoratedMethod<This, Args, Result>,
+  context: ClassMethodDecoratorContext<This, DecoratedMethod<This, Args, Result>>,
+): DecoratedMethod<This, Args, Result>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `value` | `DecoratedMethod<This, Args, Result>` | Required |
+| `context` | `ClassMethodDecoratorContext<This, DecoratedMethod<This, Args, Result>>` | Required |
+
+```text
+trace(target: LegacyTarget, propertyKey: string | symbol, descriptor: PropertyDescriptor): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `target` | `LegacyTarget` | Required |
+| `propertyKey` | `string \| symbol` | Required |
+| `descriptor` | `PropertyDescriptor` | Required |
+
+## `user`
+
+```ts
+import { user } from "pandaprobe";
+```
+
+Run *fn* with a user ID set for its scope (concurrency-safe, run-based).
+
+Type parameters: `T`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/index.ts#L95)
+
+```text
+user<T>(userId: string, fn: () => T | Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `userId` | `string` | Required |
+| `fn` | `() => T \| Promise<T>` | Required |
+
+## `withSpan`
+
+```ts
+import { withSpan } from "pandaprobe";
+```
+
+Run *fn* inside a span on the active trace (callback form).
+
+Type parameters: `T`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/decorators.ts#L82)
+
+```text
+withSpan<T>(name: string, fn: (span: SpanContext) => T | Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `name` | `string` | Required |
+| `fn` | `(span: SpanContext) => T \| Promise<T>` | Required |
+
+```text
+withSpan<T>(name: string, options: WithSpanOptions, fn: (span: SpanContext) => T | Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `name` | `string` | Required |
+| `options` | `WithSpanOptions` | Required |
+| `fn` | `(span: SpanContext) => T \| Promise<T>` | Required |
+
+## `withTrace`
+
+```ts
+import { withTrace } from "pandaprobe";
+```
+
+Run *fn* inside a new trace (callback form).
+
+Type parameters: `T`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/decorators.ts#L59)
+
+```text
+withTrace<T>(name: string, fn: (ctx: TraceContext) => T | Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `name` | `string` | Required |
+| `fn` | `(ctx: TraceContext) => T \| Promise<T>` | Required |
+
+```text
+withTrace<T>(name: string, options: WithTraceOptions, fn: (ctx: TraceContext) => T | Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `name` | `string` | Required |
+| `options` | `WithTraceOptions` | Required |
+| `fn` | `(ctx: TraceContext) => T \| Promise<T>` | Required |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.
