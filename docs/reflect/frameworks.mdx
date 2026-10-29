@@ -1,0 +1,43 @@
+---
+title: "Framework integrations"
+description: "Choose the setup guide for your agent framework"
+icon: "blocks"
+---
+
+Reflect works alongside your framework’s existing PandaProbe tracing integration. It supplies one filesystem tool, composes current memory instructions, and continues the same agent at a reflection checkpoint when evaluations identify a failure.
+
+## Choose your framework
+
+Each guide includes installation, credentials, a complete integration, and the framework-specific conversation and replay behavior.
+
+| Framework | Python | TypeScript |
+| --- | --- | --- |
+| [LangChain](/reflect/integrations/langchain) | `create_agent` | `createAgent` |
+| [LangGraph](/reflect/integrations/langgraph) | `create_react_agent` | `createReactAgent` |
+| [DeepAgents](/reflect/integrations/deepagents) | `create_deep_agent` | `createDeepAgent` |
+| [OpenAI Agents SDK](/reflect/integrations/openai-agents-sdk) | Existing `Agent` | `Agent` factory |
+| [Claude Agent SDK](/reflect/integrations/claude-agent-sdk) | `ClaudeAgentOptions` | Wrapped `query` |
+| [Google ADK](/reflect/integrations/google-adk) | `LlmAgent` / `Runner` | — |
+| [CrewAI](/reflect/integrations/crewai) | Existing `Agent` / `Crew` | — |
+| [Vercel AI SDK](/reflect/integrations/vercel-ai) | — | `ToolLoopAgent` in AI SDK 6/7 |
+
+## The integration pattern
+
+1. **Enable tracing with your existing integration.** Use a callback, adapter, or wrapper and pass the same PandaProbe client to Reflect.
+2. **Attach Reflect to the native agent.** Factory-based integrations use `reflect.agent(...)`. Some Python frameworks accept an existing agent or options object directly through `reflect.run(...)`.
+3. **Run through an explicit boundary.** `reflect.run(...)` captures the task’s traces, evaluates them, and invokes the supported reflection continuation. It returns the original task result.
+4. **Provide validation before publishing guidance.** Supply fresh replay environments and an independent outcome verifier. Proposal generation alone does not publish a shared rule.
+
+The guides handle the native differences: callback placement, factory arguments, session/checkpoint ownership, and framework authentication. You do not need to select a shell provider or add `reflect_bash` manually when using these integrations.
+
+## Shared behavior
+
+- You keep your model, prompt, business tools, and native task result.
+- Reflection exposes only Reflect filesystem administration through the supported native integration.
+- Accepted rules are shared through the persistent workspace. Native conversation history and session notes are separate.
+- Python configuration uses snake_case; TypeScript uses camelCase. Persisted records in both languages use snake_case.
+- Keep complete stream consumption inside an [explicit execution boundary](/reflect/custom-loops#streaming-and-custom-boundaries) when forwarding tokens to a UI.
+
+Python Reflect supports Python 3.10+; individual frameworks may require a newer version. Use Node.js 22+ for the TypeScript native examples. Reflect needs a filesystem and native shell/lock binaries; browser and edge runtimes are not supported.
+
+For a custom framework or compiled graph that does not match a native integration, use [Custom loops](/reflect/custom-loops). For the acceptance process, see [Validate guidance](/reflect/validation).
