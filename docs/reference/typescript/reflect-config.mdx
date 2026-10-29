@@ -1,0 +1,174 @@
+---
+title: "Reflect configuration"
+description: "Workspace, evaluation, shell, context, and validation options"
+---
+
+Start with defaults. These options govern Reflect policy, not the task model/provider. Durations are seconds and sizes count UTF-8 bytes. `PANDAPROBE_REFLECT_WORKSPACE` supplies the default workspace; explicit configuration takes precedence.
+
+There is **no default daily evaluation-run cap**. An explicit positive count limits workspace-wide creation attempts per UTC day, including diagnostic/failed/uncertain creates. Polling known runs does not consume another creation attempt.
+
+Scores and probability settings must be finite in `[0, 1]`; timeouts must be finite and positive; capacities/counts must be positive integers. Cooldown can be zero. Thresholds must contain named metrics. Size limits govern the supplied shell and active files, not the framework's entire history or model bill.
+
+See [Reflect settings](/reflect/configuration) for how these controls interact. Both languages persist records using snake_case; configuration parameter naming follows the language.
+
+
+
+## On this page
+
+[ReflectConfig](#reflectconfig), [ReflectOptions](#reflectoptions), [ResolvedReflectConfig](#resolvedreflectconfig).
+
+## `ReflectConfig`
+
+```ts
+import { ReflectConfig } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/config.ts#L39)
+
+### Constructor
+
+```text
+new ReflectConfig(options?: ReflectOptions): ReflectConfig
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `ReflectOptions` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `workspace` | `string` | `".pandaprobe/reflect"`; read-only; Base directory, followed by an identity partition; `PANDAPROBE_REFLECT_WORKSPACE` overrides the default |
+| `traceVisibilityTimeout` | `number` | `30`; read-only; Wait for terminal persisted trace evidence |
+| `evaluationTimeout` | `number` | `120`; read-only; Evaluation create/wait budgets |
+| `pollInterval` | `number` | `1`; read-only; Poll interval |
+| `evaluationMaxRuns` | `number \| null` | `null`; read-only; Optional creation-attempt cap per UTC day |
+| `evaluationMaxTraces` | `number` | `32`; read-only; Maximum trace references for one execution |
+| `evaluationSampleRate` | `number` | `1`; read-only; Fraction admitted by deterministic execution-ID sampling |
+| `maxConcurrency` | `number` | `4`; read-only; Concurrent evaluation orchestration per runtime |
+| `cooldownSeconds` | `number` | `60`; read-only; Repeated failure-signature cooldown |
+| `reflectionTimeout` | `number` | `60`; read-only; Host reflection continuation deadline |
+| `shutdownTimeout` | `number` | `5`; read-only; Bounded cancellation wait |
+| `reflectionMaxCommands` | `number` | `8`; read-only; Tool-call allowance at the reflection checkpoint |
+| `shellTimeout` | `number` | `5`; read-only; Interpreter call deadline |
+| `shellMaxCommands` | `number` | `2000`; read-only; Interpreter command limit |
+| `shellMaxLoopIterations` | `number` | `5000`; read-only; Interpreter loop limit |
+| `shellMemoryBytes` | `number` | `16 * 1024 * 1024`; read-only; Interpreter memory |
+| `commandMaxBytes` | `number` | `16 * 1024`; read-only; Tool command input |
+| `outputMaxBytes` | `number` | `12 * 1024`; read-only; One tool response |
+| `executionOutputMaxBytes` | `number` | `96 * 1024`; read-only; Cumulative output, including guard/error replies |
+| `contextMaxBytes` | `number` | `8 * 1024`; read-only; Active notes |
+| `ruleMaxBytes` | `number` | `8 * 1024`; read-only; One rule |
+| `rulesMaxBytes` | `number` | `512 * 1024`; read-only; Active rule corpus |
+| `rulesMaxCount` | `number` | `256`; read-only; Active rule count |
+| `evidenceMaxBytes` | `number` | `64 * 1024`; read-only; Assigned diagnostic presentation |
+| `thresholds` | `Record<string, number>` | `{ task_completion: 0.5, coherence: 0.5 }`; read-only; Primary metrics and strict failure thresholds |
+| `diagnosticMetrics` | `readonly string[]` | `["tool_correctness", "argument_correctness"]`; read-only; Follow-up diagnosis after a notice |
+| `stallWindow` | `number` | `5`; read-only; Score-history window |
+| `minimumProgress` | `number` | `0.02`; read-only; Stall variation cutoff |
+| `regressionDrop` | `number` | `0.15`; read-only; Previous-score drop cutoff |
+| `validationMinCases` | `number` | `3`; read-only; Distinct paired cases |
+| `validationMinImprovement` | `number` | `0.05`; read-only; Mean non-protected metric improvement |
+| `validationRegressionTolerance` | `number` | `0.02`; read-only; Allowed per-case metric decrease |
+| `validationTimeout` | `number` | `120`; read-only; Replay collection deadline |
+
+## `ReflectOptions`
+
+```ts
+import type { ReflectOptions } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/config.ts#L37)
+
+All fields below are optional overrides.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `workspace` | `string \| undefined` | `".pandaprobe/reflect"`; Base directory, followed by an identity partition; `PANDAPROBE_REFLECT_WORKSPACE` overrides the default |
+| `traceVisibilityTimeout` | `number \| undefined` | `30`; Wait for terminal persisted trace evidence |
+| `evaluationTimeout` | `number \| undefined` | `120`; Evaluation create/wait budgets |
+| `pollInterval` | `number \| undefined` | `1`; Poll interval |
+| `evaluationMaxRuns` | `number \| null \| undefined` | `null`; Optional creation-attempt cap per UTC day |
+| `evaluationMaxTraces` | `number \| undefined` | `32`; Maximum trace references for one execution |
+| `evaluationSampleRate` | `number \| undefined` | `1`; Fraction admitted by deterministic execution-ID sampling |
+| `maxConcurrency` | `number \| undefined` | `4`; Concurrent evaluation orchestration per runtime |
+| `cooldownSeconds` | `number \| undefined` | `60`; Repeated failure-signature cooldown |
+| `reflectionTimeout` | `number \| undefined` | `60`; Host reflection continuation deadline |
+| `shutdownTimeout` | `number \| undefined` | `5`; Bounded cancellation wait |
+| `reflectionMaxCommands` | `number \| undefined` | `8`; Tool-call allowance at the reflection checkpoint |
+| `shellTimeout` | `number \| undefined` | `5`; Interpreter call deadline |
+| `shellMaxCommands` | `number \| undefined` | `2000`; Interpreter command limit |
+| `shellMaxLoopIterations` | `number \| undefined` | `5000`; Interpreter loop limit |
+| `shellMemoryBytes` | `number \| undefined` | `16 * 1024 * 1024`; Interpreter memory |
+| `commandMaxBytes` | `number \| undefined` | `16 * 1024`; Tool command input |
+| `outputMaxBytes` | `number \| undefined` | `12 * 1024`; One tool response |
+| `executionOutputMaxBytes` | `number \| undefined` | `96 * 1024`; Cumulative output, including guard/error replies |
+| `contextMaxBytes` | `number \| undefined` | `8 * 1024`; Active notes |
+| `ruleMaxBytes` | `number \| undefined` | `8 * 1024`; One rule |
+| `rulesMaxBytes` | `number \| undefined` | `512 * 1024`; Active rule corpus |
+| `rulesMaxCount` | `number \| undefined` | `256`; Active rule count |
+| `evidenceMaxBytes` | `number \| undefined` | `64 * 1024`; Assigned diagnostic presentation |
+| `thresholds` | `Record<string, number> \| undefined` | `{ task_completion: 0.5, coherence: 0.5 }`; Primary metrics and strict failure thresholds |
+| `diagnosticMetrics` | `readonly string[] \| undefined` | `["tool_correctness", "argument_correctness"]`; Follow-up diagnosis after a notice |
+| `stallWindow` | `number \| undefined` | `5`; Score-history window |
+| `minimumProgress` | `number \| undefined` | `0.02`; Stall variation cutoff |
+| `regressionDrop` | `number \| undefined` | `0.15`; Previous-score drop cutoff |
+| `validationMinCases` | `number \| undefined` | `3`; Distinct paired cases |
+| `validationMinImprovement` | `number \| undefined` | `0.05`; Mean non-protected metric improvement |
+| `validationRegressionTolerance` | `number \| undefined` | `0.02`; Allowed per-case metric decrease |
+| `validationTimeout` | `number \| undefined` | `120`; Replay collection deadline |
+
+## `ResolvedReflectConfig`
+
+```ts
+import type { ResolvedReflectConfig } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/config.ts#L38)
+
+All fields below are read-only resolved values.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `workspace` | `string` | `".pandaprobe/reflect"`; Base directory, followed by an identity partition; `PANDAPROBE_REFLECT_WORKSPACE` overrides the default |
+| `traceVisibilityTimeout` | `number` | `30`; Wait for terminal persisted trace evidence |
+| `evaluationTimeout` | `number` | `120`; Evaluation create/wait budgets |
+| `pollInterval` | `number` | `1`; Poll interval |
+| `evaluationMaxRuns` | `number \| null` | `null`; Optional creation-attempt cap per UTC day |
+| `evaluationMaxTraces` | `number` | `32`; Maximum trace references for one execution |
+| `evaluationSampleRate` | `number` | `1`; Fraction admitted by deterministic execution-ID sampling |
+| `maxConcurrency` | `number` | `4`; Concurrent evaluation orchestration per runtime |
+| `cooldownSeconds` | `number` | `60`; Repeated failure-signature cooldown |
+| `reflectionTimeout` | `number` | `60`; Host reflection continuation deadline |
+| `shutdownTimeout` | `number` | `5`; Bounded cancellation wait |
+| `reflectionMaxCommands` | `number` | `8`; Tool-call allowance at the reflection checkpoint |
+| `shellTimeout` | `number` | `5`; Interpreter call deadline |
+| `shellMaxCommands` | `number` | `2000`; Interpreter command limit |
+| `shellMaxLoopIterations` | `number` | `5000`; Interpreter loop limit |
+| `shellMemoryBytes` | `number` | `16 * 1024 * 1024`; Interpreter memory |
+| `commandMaxBytes` | `number` | `16 * 1024`; Tool command input |
+| `outputMaxBytes` | `number` | `12 * 1024`; One tool response |
+| `executionOutputMaxBytes` | `number` | `96 * 1024`; Cumulative output, including guard/error replies |
+| `contextMaxBytes` | `number` | `8 * 1024`; Active notes |
+| `ruleMaxBytes` | `number` | `8 * 1024`; One rule |
+| `rulesMaxBytes` | `number` | `512 * 1024`; Active rule corpus |
+| `rulesMaxCount` | `number` | `256`; Active rule count |
+| `evidenceMaxBytes` | `number` | `64 * 1024`; Assigned diagnostic presentation |
+| `thresholds` | `Record<string, number>` | `{ task_completion: 0.5, coherence: 0.5 }`; Primary metrics and strict failure thresholds |
+| `diagnosticMetrics` | `readonly string[]` | `["tool_correctness", "argument_correctness"]`; Follow-up diagnosis after a notice |
+| `stallWindow` | `number` | `5`; Score-history window |
+| `minimumProgress` | `number` | `0.02`; Stall variation cutoff |
+| `regressionDrop` | `number` | `0.15`; Previous-score drop cutoff |
+| `validationMinCases` | `number` | `3`; Distinct paired cases |
+| `validationMinImprovement` | `number` | `0.05`; Mean non-protected metric improvement |
+| `validationRegressionTolerance` | `number` | `0.02`; Allowed per-case metric decrease |
+| `validationTimeout` | `number` | `120`; Replay collection deadline |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.
