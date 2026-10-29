@@ -19,10 +19,12 @@ class ToolCallContext(BaseModel):
 class ArgumentCorrectnessVerdict(BaseModel):
     """Per-tool-call verdict from the judge."""
 
-    verdict: Literal["yes", "no"] = Field(description="Whether arguments are correct")
+    verdict: Literal["yes", "no", "neutral"] = Field(
+        description="Task argument correctness, or neutral for Reflect rule and memory operations",
+    )
     reason: str | None = Field(
         default=None,
-        description="Explanation if verdict is no",
+        description="Explanation if verdict is no or neutral",
     )
 
 
