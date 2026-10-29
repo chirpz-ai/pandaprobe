@@ -1,0 +1,184 @@
+---
+title: "Replay and validation"
+description: "Independent outcomes, paired replay, controlled trials, and acceptance"
+---
+
+Supply reproducible cases, a fresh business environment for every arm, and an independent verifier. The agent's statement that it succeeded is not an outcome measurement.
+
+Each case compares control rules with candidate rules under fresh identities and active memory. Defaults require three distinct pairs including a protected successful control, complete normalized metric evidence, no success regression, no per-case metric decrease beyond `0.02`, and mean non-protected improvement of at least `0.05`. A strict reduction in guidance bytes can qualify as maintenance under the same non-regression checks.
+
+Return scores for every configured threshold metric and an explicit boolean success. Incomplete evidence stays pending. Acceptance publishes a new immutable revision; it is evidence under tested conditions, not a permanent guarantee.
+
+Use `Reflect.validate` for replay. The `validator` property exposes lower-level replay, assessment, and controlled-trial recording for host code. Do not expose acceptance methods to the proposing agent. See [Validate guidance](/reflect/validation) for the integration recipe.
+
+
+
+## On this page
+
+[Outcome](#outcome), [Replay](#replay), [ReplayCase](#replaycase), [ReplayRequest](#replayrequest), [Validator](#validator).
+
+## `Outcome`
+
+```python
+from pandaprobe.reflect import Outcome
+```
+
+Host-verifier evidence. None/empty is insufficient, never a success.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/validation.py#L39)
+
+Construct with the fields below as arguments. Defaults apply when omitted.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `scores` | `dict[str, float]` | `factory: dict` |
+| `success` | `bool \| None` | `None` |
+| `evidence` | `dict[str, Any]` | `factory: dict` |
+
+## `Replay`
+
+```python
+from pandaprobe.reflect.validation import Replay
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/validation.py#L77)
+
+```text
+Replay = Callable[[ReplayRequest], Awaitable[Outcome]]
+```
+
+## `ReplayCase`
+
+```python
+from pandaprobe.reflect import ReplayCase
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/validation.py#L26)
+
+Construct with the fields below as arguments. Defaults apply when omitted.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `str` | Required |
+| `input` | `Any` | Required |
+| `protected` | `bool` | `False` |
+
+## `ReplayRequest`
+
+```python
+from pandaprobe.reflect import ReplayRequest
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/validation.py#L62)
+
+Construct with the fields below as arguments. Defaults apply when omitted.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `case` | `ReplayCase` | Required |
+| `execution` | `Execution` | Required |
+| `arm` | `Literal['control', 'candidate']` | Required |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="run">
+
+Invoke the same host agent on fresh input, without recursive evaluation.
+
+```text
+async run(agent: Any, **kwargs: Any) -> Any
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `agent` | `Any` | Required |
+| `kwargs` | `Any` | Additional arguments |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `Validator`
+
+```python
+from pandaprobe.reflect.validation import Validator
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/validation.py#L80)
+
+### Constructor
+
+```text
+Validator(runtime: Reflect)
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `runtime` | `Reflect` | Required |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `runtime` | `Reflect` | Instance value; Instance attribute. |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="replay">
+
+```text
+async replay(proposal_id: str, cases: list[ReplayCase], replay: Replay) -> ValidationVerdict
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `proposal_id` | `str` | Required |
+| `cases` | `list[ReplayCase]` | Required |
+| `replay` | `Replay` | Required |
+
+</Accordion>
+
+<Accordion title="assess">
+
+Assesses supplied paired rows against acceptance policy. Assessment alone does not publish a revision; use runtime validation or recorded trials.
+
+```text
+assess(proposal: RuleProposal, rows: list[dict[str, Any]], *, mode: str) -> ValidationVerdict
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `proposal` | `RuleProposal` | Required |
+| `rows` | `list[dict[str, Any]]` | Required |
+| `mode` | `str` | Required; keyword only |
+
+</Accordion>
+
+<Accordion title="record_trial">
+
+Records independently measured paired trial evidence and applies the same acceptance policy used for replay.
+
+```text
+record_trial(proposal_id: str, case: TrialCase | dict[str, Any]) -> ValidationVerdict
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `proposal_id` | `str` | Required |
+| `case` | `TrialCase \| dict[str, Any]` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python). See the [import index](/reference/python/overview#public-import-index) for available entry points.
