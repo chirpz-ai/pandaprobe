@@ -1,0 +1,32 @@
+---
+title: "Reference"
+description: "HTTP endpoints and complete Python and TypeScript SDK contracts"
+---
+
+Choose the interface you use. The SDK references cover public imports, constructors, methods, options, models, errors, and tracing/Reflect lifecycle contracts. The HTTP reference covers the platform's server endpoints.
+
+<CardGroup cols={3}>
+  <Card title="Python SDK" icon="code" href="/reference/python/overview">
+    Client, tracing, providers, frameworks, platform resources, and Reflect.
+  </Card>
+  <Card title="TypeScript SDK" icon="code" href="/reference/typescript/overview">
+    Package exports, native integrations, types, platform resources, and Reflect.
+  </Card>
+  <Card title="HTTP API" icon="terminal" href="/reference/api/introduction">
+    Authentication, traces, sessions, evaluations, scores, and monitors.
+  </Card>
+</CardGroup>
+
+## Which reference do I need?
+
+| Task | Reference |
+| --- | --- |
+| Instrument model or agent execution | SDK tracing, provider wrappers, and framework integrations |
+| Look up a method, argument, default, or return type | Python or TypeScript SDK reference |
+| Read traces or run evaluations from application code | SDK platform client and resources |
+| Add persistent memory and independent rule validation | SDK Reflect reference |
+| Call the platform directly or use a server operation without a typed SDK resource | HTTP API reference |
+
+SDK signatures and fields come from the package source and include links to their declarations. HTTP endpoint pages continue to be generated from the core service's `openapi.json`.
+
+For step-by-step integration, use the [Trace quickstart](/tracing/get-started/quickstart), [Evaluate quickstart](/evaluation/get-started/quickstart), or [Reflect quickstart](/reflect/quickstart).
