@@ -1,0 +1,161 @@
+---
+title: "Python SDK"
+description: "Public imports, classes, functions, options, and data contracts for the Python package"
+---
+
+The `pandaprobe` package includes tracing, native platform access, and opt-in Reflect. This reference lists the public imports and their complete source-declared signatures, options, and fields. For a first integration, start with [Trace](/tracing/get-started/quickstart) or [Reflect](/reflect/quickstart).
+
+```bash
+pip install pandaprobe
+# or
+uv add pandaprobe
+```
+
+Python 3.10+ is supported. Install only the provider/framework extras you use; Reflect uses the optional `[reflect]` extra. Some frameworks require newer Python versions.
+
+## Find an API
+
+| Area | Reference |
+| --- | --- |
+| [Client](/reference/python/client) | Initialize tracing, submit traces and scores, and manage export lifecycle |
+| [Configuration](/reference/python/configuration) | Tracing credentials, environment settings, and resolved client options |
+| [Tracing and context](/reference/python/tracing) | Decorators, trace and span contexts, session propagation, and trace capture |
+| [Trace data](/reference/python/data) | Trace, span, score, and message contracts |
+| [Provider wrappers](/reference/python/wrappers) | Instrument provider clients while preserving their native calls and results |
+| [Framework integrations](/reference/python/integrations) | Callbacks, adapters, and native agent tracing hooks |
+| [Platform client](/reference/python/platform-client) | Read persisted traces and create or poll evaluation runs |
+| [Platform models](/reference/python/platform-models) | Typed trace evidence, evaluation runs, metrics, and scores |
+| [Platform errors](/reference/python/platform-errors) | Distinguish failed requests, deadlines, insufficient evidence, and uncertain creation |
+| [Reflect runtime](/reference/python/reflect-runtime) | Run the agent, evaluate evidence, continue reflection, and inspect outcomes |
+| [Reflect configuration](/reference/python/reflect-config) | Workspace, evaluation, shell, context, and validation options |
+| [Execution and invocation](/reference/python/reflect-execution) | Execution boundaries, attribution, active memory, and host callbacks |
+| [Replay and validation](/reference/python/reflect-validation) | Independent outcomes, paired replay, controlled trials, and acceptance |
+| [Rules and results](/reference/python/reflect-models) | Persistent rules, proposals, notices, reports, and validation records |
+
+## Reading the contracts
+
+Signatures and field tables are generated from the SDK source. Defaults are shown where declared; an instance property without a declared default is not necessarily a constructor input. Framework callbacks are shown for completeness and are normally called by the framework. Helper types used by an API are identified when they are not separately exported.
+
+This reference covers package APIs and their supporting contracts, not private transport workers, workspace mutation internals, or third-party SDK methods. Source links identify the exact code snapshot used to generate each entry. See the HTTP API reference for the complete server endpoint surface.
+
+## Public import index
+
+| Import path | Export | Details |
+| --- | --- | --- |
+| `pandaprobe` | `Client` | [Client](/reference/python/client#client) |
+| `pandaprobe` | `ScoreDataType` | [ScoreDataType](/reference/python/data#scoredatatype) |
+| `pandaprobe` | `SpanKind` | [SpanKind](/reference/python/data#spankind) |
+| `pandaprobe` | `SpanStatusCode` | [SpanStatusCode](/reference/python/data#spanstatuscode) |
+| `pandaprobe` | `TraceStatus` | [TraceStatus](/reference/python/data#tracestatus) |
+| `pandaprobe` | `__version__` | [__version__](/reference/python/client#__version__) |
+| `pandaprobe` | `flush` | [flush](/reference/python/client#flush) |
+| `pandaprobe` | `get_client` | [get_client](/reference/python/client#get_client) |
+| `pandaprobe` | `init` | [init](/reference/python/client#init) |
+| `pandaprobe` | `score` | [score](/reference/python/client#score) |
+| `pandaprobe` | `session` | [session](/reference/python/tracing#session) |
+| `pandaprobe` | `set_session` | [set_session](/reference/python/tracing#set_session) |
+| `pandaprobe` | `set_user` | [set_user](/reference/python/tracing#set_user) |
+| `pandaprobe` | `shutdown` | [shutdown](/reference/python/client#shutdown) |
+| `pandaprobe` | `span` | [span](/reference/python/tracing#span) |
+| `pandaprobe` | `start_trace` | [start_trace](/reference/python/tracing#start_trace) |
+| `pandaprobe` | `trace` | [trace](/reference/python/tracing#trace) |
+| `pandaprobe` | `user` | [user](/reference/python/tracing#user) |
+| `pandaprobe.api` | `ApiDeadlineExceeded` | [ApiDeadlineExceeded](/reference/python/platform-errors#apideadlineexceeded) |
+| `pandaprobe.api` | `ApiError` | [ApiError](/reference/python/platform-errors#apierror) |
+| `pandaprobe.api` | `AuthenticationError` | [AuthenticationError](/reference/python/platform-errors#authenticationerror) |
+| `pandaprobe.api` | `CreationOutcomeUnknown` | [CreationOutcomeUnknown](/reference/python/platform-errors#creationoutcomeunknown) |
+| `pandaprobe.api` | `EvaluationFailed` | [EvaluationFailed](/reference/python/platform-errors#evaluationfailed) |
+| `pandaprobe.api` | `EvaluationResult` | [EvaluationResult](/reference/python/platform-models#evaluationresult) |
+| `pandaprobe.api` | `EvaluationRun` | [EvaluationRun](/reference/python/platform-models#evaluationrun) |
+| `pandaprobe.api` | `InsufficientEvidence` | [InsufficientEvidence](/reference/python/platform-errors#insufficientevidence) |
+| `pandaprobe.api` | `InvalidResponseError` | [InvalidResponseError](/reference/python/platform-errors#invalidresponseerror) |
+| `pandaprobe.api` | `Metric` | [Metric](/reference/python/platform-models#metric) |
+| `pandaprobe.api` | `NotFoundError` | [NotFoundError](/reference/python/platform-errors#notfounderror) |
+| `pandaprobe.api` | `PlatformClient` | [PlatformClient](/reference/python/platform-client#platformclient) |
+| `pandaprobe.api` | `PlatformError` | [PlatformError](/reference/python/platform-errors#platformerror) |
+| `pandaprobe.api` | `RateLimitError` | [RateLimitError](/reference/python/platform-errors#ratelimiterror) |
+| `pandaprobe.api` | `Score` | [Score](/reference/python/platform-models#score) |
+| `pandaprobe.api` | `Span` | [Span](/reference/python/platform-models#span) |
+| `pandaprobe.api` | `Trace` | [Trace](/reference/python/platform-models#trace) |
+| `pandaprobe.api` | `TracePage` | [TracePage](/reference/python/platform-models#tracepage) |
+| `pandaprobe.api` | `TraceSummary` | [TraceSummary](/reference/python/platform-models#tracesummary) |
+| `pandaprobe.api` | `TransportError` | [TransportError](/reference/python/platform-errors#transporterror) |
+| `pandaprobe.api.models` | `ApiModel` | [ApiModel](/reference/python/platform-models#apimodel) |
+| `pandaprobe.api.models` | `EvaluationRequest` | [EvaluationRequest](/reference/python/platform-models#evaluationrequest) |
+| `pandaprobe.api.resources` | `Evaluations` | [Evaluations](/reference/python/platform-client#evaluations) |
+| `pandaprobe.api.resources` | `Traces` | [Traces](/reference/python/platform-client#traces) |
+| `pandaprobe.config` | `SdkConfig` | [SdkConfig](/reference/python/configuration#sdkconfig) |
+| `pandaprobe.config` | `resolve_config` | [resolve_config](/reference/python/configuration#resolve_config) |
+| `pandaprobe.integrations.claude_agent_sdk` | `ClaudeAgentSDKAdapter` | [ClaudeAgentSDKAdapter](/reference/python/integrations#claudeagentsdkadapter) |
+| `pandaprobe.integrations.crewai` | `CrewAIAdapter` | [CrewAIAdapter](/reference/python/integrations#crewaiadapter) |
+| `pandaprobe.integrations.deepagents` | `DeepAgentsCallbackHandler` | [DeepAgentsCallbackHandler](/reference/python/integrations#deepagentscallbackhandler) |
+| `pandaprobe.integrations.google_adk` | `GoogleADKAdapter` | [GoogleADKAdapter](/reference/python/integrations#googleadkadapter) |
+| `pandaprobe.integrations.langchain` | `LangChainCallbackHandler` | [LangChainCallbackHandler](/reference/python/integrations#langchaincallbackhandler) |
+| `pandaprobe.integrations.langgraph` | `LangGraphCallbackHandler` | [LangGraphCallbackHandler](/reference/python/integrations#langgraphcallbackhandler) |
+| `pandaprobe.integrations.langgraph.utils` | `_ROLE_MAP` | [_ROLE_MAP](/reference/python/integrations#_role_map) |
+| `pandaprobe.integrations.langgraph.utils` | `_normalize_content_blocks` | [_normalize_content_blocks](/reference/python/integrations#_normalize_content_blocks) |
+| `pandaprobe.integrations.langgraph.utils` | `_normalize_role` | [_normalize_role](/reference/python/integrations#_normalize_role) |
+| `pandaprobe.integrations.langgraph.utils` | `extract_model_parameters` | [extract_model_parameters](/reference/python/integrations#extract_model_parameters) |
+| `pandaprobe.integrations.langgraph.utils` | `extract_name` | [extract_name](/reference/python/integrations#extract_name) |
+| `pandaprobe.integrations.langgraph.utils` | `extract_reasoning_from_generation` | [extract_reasoning_from_generation](/reference/python/integrations#extract_reasoning_from_generation) |
+| `pandaprobe.integrations.langgraph.utils` | `extract_token_usage` | [extract_token_usage](/reference/python/integrations#extract_token_usage) |
+| `pandaprobe.integrations.langgraph.utils` | `normalize_langchain_input` | [normalize_langchain_input](/reference/python/integrations#normalize_langchain_input) |
+| `pandaprobe.integrations.langgraph.utils` | `normalize_langchain_output` | [normalize_langchain_output](/reference/python/integrations#normalize_langchain_output) |
+| `pandaprobe.integrations.langgraph.utils` | `normalize_llm_generation_output` | [normalize_llm_generation_output](/reference/python/integrations#normalize_llm_generation_output) |
+| `pandaprobe.integrations.langgraph.utils` | `normalize_type_to_role` | [normalize_type_to_role](/reference/python/integrations#normalize_type_to_role) |
+| `pandaprobe.integrations.langgraph.utils` | `safe_output` | [safe_output](/reference/python/integrations#safe_output) |
+| `pandaprobe.integrations.openai_agents` | `OpenAIAgentsAdapter` | [OpenAIAgentsAdapter](/reference/python/integrations#openaiagentsadapter) |
+| `pandaprobe.reflect` | `EvaluationOutcome` | [EvaluationOutcome](/reference/python/reflect-models#evaluationoutcome) |
+| `pandaprobe.reflect` | `Execution` | [Execution](/reference/python/reflect-execution#execution) |
+| `pandaprobe.reflect` | `ExecutionReport` | [ExecutionReport](/reference/python/reflect-models#executionreport) |
+| `pandaprobe.reflect` | `Invocation` | [Invocation](/reference/python/reflect-execution#invocation) |
+| `pandaprobe.reflect` | `Outcome` | [Outcome](/reference/python/reflect-validation#outcome) |
+| `pandaprobe.reflect` | `ProposalOutcome` | [ProposalOutcome](/reference/python/reflect-models#proposaloutcome) |
+| `pandaprobe.reflect` | `Reflect` | [Reflect](/reference/python/reflect-runtime#reflect) |
+| `pandaprobe.reflect` | `ReflectConfig` | [ReflectConfig](/reference/python/reflect-config#reflectconfig) |
+| `pandaprobe.reflect` | `ReplayCase` | [ReplayCase](/reference/python/reflect-validation#replaycase) |
+| `pandaprobe.reflect` | `ReplayRequest` | [ReplayRequest](/reference/python/reflect-validation#replayrequest) |
+| `pandaprobe.reflect` | `Rule` | [Rule](/reference/python/reflect-models#rule) |
+| `pandaprobe.reflect` | `RuleProposal` | [RuleProposal](/reference/python/reflect-models#ruleproposal) |
+| `pandaprobe.reflect` | `TrialArm` | [TrialArm](/reference/python/reflect-models#trialarm) |
+| `pandaprobe.reflect` | `TrialCase` | [TrialCase](/reference/python/reflect-models#trialcase) |
+| `pandaprobe.reflect` | `ValidationVerdict` | [ValidationVerdict](/reference/python/reflect-models#validationverdict) |
+| `pandaprobe.reflect.models` | `FailureNotice` | [FailureNotice](/reference/python/reflect-models#failurenotice) |
+| `pandaprobe.reflect.validation` | `Replay` | [Replay](/reference/python/reflect-validation#replay) |
+| `pandaprobe.reflect.validation` | `Validator` | [Validator](/reference/python/reflect-validation#validator) |
+| `pandaprobe.schemas` | `ScoreData` | [ScoreData](/reference/python/data#scoredata) |
+| `pandaprobe.schemas` | `ScoreDataType` | [ScoreDataType](/reference/python/data#scoredatatype) |
+| `pandaprobe.schemas` | `SpanData` | [SpanData](/reference/python/data#spandata) |
+| `pandaprobe.schemas` | `SpanKind` | [SpanKind](/reference/python/data#spankind) |
+| `pandaprobe.schemas` | `SpanStatusCode` | [SpanStatusCode](/reference/python/data#spanstatuscode) |
+| `pandaprobe.schemas` | `TraceData` | [TraceData](/reference/python/data#tracedata) |
+| `pandaprobe.schemas` | `TraceStatus` | [TraceStatus](/reference/python/data#tracestatus) |
+| `pandaprobe.tracing` | `SpanContext` | [SpanContext](/reference/python/tracing#spancontext) |
+| `pandaprobe.tracing` | `TraceContext` | [TraceContext](/reference/python/tracing#tracecontext) |
+| `pandaprobe.tracing.capture` | `TraceCapture` | [TraceCapture](/reference/python/tracing#tracecapture) |
+| `pandaprobe.tracing.context` | `get_current_trace` | [get_current_trace](/reference/python/tracing#get_current_trace) |
+| `pandaprobe.tracing.context` | `get_span_stack` | [get_span_stack](/reference/python/tracing#get_span_stack) |
+| `pandaprobe.tracing.session` | `get_current_session_id` | [get_current_session_id](/reference/python/tracing#get_current_session_id) |
+| `pandaprobe.tracing.session` | `get_current_user_id` | [get_current_user_id](/reference/python/tracing#get_current_user_id) |
+| `pandaprobe.tracing.session` | `reset_current_session_id` | [reset_current_session_id](/reference/python/tracing#reset_current_session_id) |
+| `pandaprobe.tracing.session` | `reset_current_user_id` | [reset_current_user_id](/reference/python/tracing#reset_current_user_id) |
+| `pandaprobe.tracing.session` | `set_current_session_id` | [set_current_session_id](/reference/python/tracing#set_current_session_id) |
+| `pandaprobe.tracing.session` | `set_current_user_id` | [set_current_user_id](/reference/python/tracing#set_current_user_id) |
+| `pandaprobe.validation` | `extract_last_assistant_message` | [extract_last_assistant_message](/reference/python/data#extract_last_assistant_message) |
+| `pandaprobe.validation` | `extract_last_user_message` | [extract_last_user_message](/reference/python/data#extract_last_user_message) |
+| `pandaprobe.validation` | `validate_messages_format` | [validate_messages_format](/reference/python/data#validate_messages_format) |
+| `pandaprobe.validation` | `warn_if_invalid_messages` | [warn_if_invalid_messages](/reference/python/data#warn_if_invalid_messages) |
+| `pandaprobe.wrappers` | `wrap_anthropic` | [wrap_anthropic](/reference/python/wrappers#wrap_anthropic) |
+| `pandaprobe.wrappers` | `wrap_bedrock` | [wrap_bedrock](/reference/python/wrappers#wrap_bedrock) |
+| `pandaprobe.wrappers` | `wrap_gemini` | [wrap_gemini](/reference/python/wrappers#wrap_gemini) |
+| `pandaprobe.wrappers` | `wrap_litellm` | [wrap_litellm](/reference/python/wrappers#wrap_litellm) |
+| `pandaprobe.wrappers` | `wrap_mistral` | [wrap_mistral](/reference/python/wrappers#wrap_mistral) |
+| `pandaprobe.wrappers` | `wrap_openai` | [wrap_openai](/reference/python/wrappers#wrap_openai) |
+| `pandaprobe.wrappers.anthropic` | `wrap_anthropic` | [wrap_anthropic](/reference/python/wrappers#wrap_anthropic) |
+| `pandaprobe.wrappers.bedrock` | `wrap_bedrock` | [wrap_bedrock](/reference/python/wrappers#wrap_bedrock) |
+| `pandaprobe.wrappers.gemini` | `wrap_gemini` | [wrap_gemini](/reference/python/wrappers#wrap_gemini) |
+| `pandaprobe.wrappers.litellm` | `wrap_litellm` | [wrap_litellm](/reference/python/wrappers#wrap_litellm) |
+| `pandaprobe.wrappers.mistral` | `wrap_mistral` | [wrap_mistral](/reference/python/wrappers#wrap_mistral) |
+| `pandaprobe.wrappers.openai` | `wrap_openai` | [wrap_openai](/reference/python/wrappers#wrap_openai) |
+
+[Source snapshot](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python).
