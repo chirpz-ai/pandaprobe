@@ -1,0 +1,220 @@
+---
+title: "Execution and invocation"
+description: "Execution boundaries, attribution, active memory, and host callbacks"
+---
+
+An execution pins rule state, working files, trace attribution, and a unique identity. Obtain it from the runtime's execution or trial factory. An execution is single-use; do not manually switch its role to bypass validation assignment.
+
+An `Invocation` is the generic host callback input. Its current instructions include the filesystem contract and active memory. During reflection, the callback also receives feedback and the prior result. Deliver instructions to the actual model, and expose only Reflect filesystem administration during reflection.
+
+Ending a task execution seals changes and schedules evaluation; it does not itself invoke a continuation. Use the runtime's explicit continuation for delayed feedback. Accepted rules, trial candidates, active session notes, and native framework conversation history are separate state.
+
+Use `await reflect.execution(options, callback)` so cleanup is paired with the callback. The invocation carries an AbortSignal; propagate it through your host loop. Cancellation is cooperative. The underlying Execution lifecycle methods support advanced hosts, but ordinary callers should use runtime factories.
+
+## On this page
+
+[Execution](#execution), [ExecutionOptions](#executionoptions), [Invocation](#invocation), [Phase](#phase).
+
+## `Execution`
+
+```ts
+import { Execution } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/execution.ts#L32)
+
+### Constructor
+
+```text
+new Execution(runtime: ReflectRuntime, options: InternalExecutionOptions): Execution
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `runtime` | `ReflectRuntime` | Required |
+| `options` | `InternalExecutionOptions` | Required |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `string` | `identifier()`; read-only |
+| `sessionId` | `string` | Instance value; read-only |
+| `completed` | `boolean` | `true`; read-only |
+| `signal` | `AbortSignal` | Instance value; read-only |
+| `baseRevision` | `string` | `runtime.workspace.state().head` |
+| `role` | `Phase` | `"task"` |
+| `traceIds` | `string[]` | `[]` |
+| `proposal` | `ProposalOutcome` | `proposalOutcome("no_proposal", "No checkpoint completed")` |
+| `status` | `string` | `"created"` |
+| `taskStatus` | `string` | `"created"` |
+| `phaseTraces` | `Partial<Record<Phase, string[]>>` | `{}` |
+| `shell` | `ReflectShell` | Instance value |
+| `runtime` | `ReflectRuntime` | Instance value; read-only |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="checkpoint">
+
+Persists the execution's working snapshot. The runtime normally owns this checkpoint; persistence does not publish accepted guidance.
+
+```text
+checkpoint(files?: Record<string, string>, context?: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `files` | `Record<string, string>` | `this.shell.files()` |
+| `context` | `string` | `this.shell.context()` |
+
+</Accordion>
+
+<Accordion title="instructions">
+
+```text
+instructions(): string
+```
+
+</Accordion>
+
+<Accordion title="seal">
+
+Captures rule changes as a proposal against the pinned base revision and checkpoints the execution. It does not accept or publish the proposed rule.
+
+```text
+seal(options?: { evidenceIds?: string[]; rationale?: string; }): ProposalOutcome
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `{ evidenceIds?: string[]; rationale?: string }` | `{}` |
+
+</Accordion>
+
+<Accordion title="activate">
+
+```text
+activate<T>(role: Phase, callback: () => Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `role` | `Phase` | Required |
+| `callback` | `() => Promise<T>` | Required |
+
+</Accordion>
+
+<Accordion title="run">
+
+```text
+run<T>(callback: (execution: Execution) => Promise<T>): Promise<T>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `callback` | `(execution: Execution) => Promise<T>` | Required |
+
+</Accordion>
+
+<Accordion title="close">
+
+```text
+close(): Promise<void>
+```
+
+</Accordion>
+
+<Accordion title="create">
+
+Static method on `Execution`.
+
+```text
+create(runtime: ReflectRuntime, options: InternalExecutionOptions): Promise<Execution>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `runtime` | `ReflectRuntime` | Required |
+| `options` | `InternalExecutionOptions` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `ExecutionOptions`
+
+```ts
+import type { ExecutionOptions } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/execution.ts#L19)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `sessionId` | `string` | Required |
+| `executionId` | `string \| undefined` | Optional |
+| `completed` | `boolean \| undefined` | Optional |
+| `signal` | `AbortSignal \| undefined` | Optional |
+
+## `Invocation`
+
+```ts
+import { Invocation } from "pandaprobe/reflect";
+```
+
+Type parameters: `I = unknown`, `R = unknown`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/runtime.ts#L37)
+
+### Constructor
+
+```text
+new Invocation<I = unknown, R = unknown>(
+  input: I,
+  execution: Execution,
+  phase?: Phase,
+  previousResult?: R | undefined,
+  feedback?: string | undefined,
+  signal?: AbortSignal,
+): Invocation<I, R>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `input` | `I` | Required |
+| `execution` | `Execution` | Required |
+| `phase` | `Phase` | `"task"` |
+| `previousResult` | `R \| undefined` | `undefined` |
+| `feedback` | `string \| undefined` | `undefined` |
+| `signal` | `AbortSignal` | `execution.signal` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `input` | `I` | Instance value; read-only |
+| `execution` | `Execution` | Instance value; read-only |
+| `phase` | `Phase` | `"task"`; read-only |
+| `previousResult` | `R \| undefined` | `undefined`; read-only |
+| `feedback` | `string \| undefined` | `undefined`; read-only |
+| `signal` | `AbortSignal` | `execution.signal`; read-only |
+| `instructions` | `string` | Instance value; read-only |
+
+## `Phase`
+
+```ts
+import type { Phase } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/execution.ts#L18)
+
+```text
+Phase = "task" | "reflection" | "validation"
+```
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.
