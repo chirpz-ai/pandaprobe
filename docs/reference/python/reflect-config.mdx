@@ -1,0 +1,70 @@
+---
+title: "Reflect configuration"
+description: "Workspace, evaluation, shell, context, and validation options"
+---
+
+Start with defaults. These options govern Reflect policy, not the task model/provider. Durations are seconds and sizes count UTF-8 bytes. `PANDAPROBE_REFLECT_WORKSPACE` supplies the default workspace; explicit configuration takes precedence.
+
+There is **no default daily evaluation-run cap**. An explicit positive count limits workspace-wide creation attempts per UTC day, including diagnostic/failed/uncertain creates. Polling known runs does not consume another creation attempt.
+
+Scores and probability settings must be finite in `[0, 1]`; timeouts must be finite and positive; capacities/counts must be positive integers. Cooldown can be zero. Thresholds must contain named metrics. Size limits govern the supplied shell and active files, not the framework's entire history or model bill.
+
+See [Reflect settings](/reflect/configuration) for how these controls interact. Both languages persist records using snake_case; configuration parameter naming follows the language.
+
+
+
+## On this page
+
+[ReflectConfig](#reflectconfig).
+
+## `ReflectConfig`
+
+```python
+from pandaprobe.reflect import ReflectConfig
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/config.py#L12)
+
+Construct with the fields below as arguments. Defaults apply when omitted.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `workspace` | `Path \| str \| None` | `None`; Base directory, followed by an identity partition; `PANDAPROBE_REFLECT_WORKSPACE` overrides the default |
+| `trace_visibility_timeout` | `float` | `30.0`; Wait for terminal persisted trace evidence |
+| `evaluation_timeout` | `float` | `120.0`; Evaluation create/wait budgets |
+| `poll_interval` | `float` | `1.0`; Poll interval |
+| `evaluation_max_runs` | `int \| None` | `None`; Optional creation-attempt cap per UTC day |
+| `evaluation_max_traces` | `int` | `32`; Maximum trace references for one execution |
+| `evaluation_sample_rate` | `float` | `1.0`; Fraction admitted by deterministic execution-ID sampling |
+| `max_concurrency` | `int` | `4`; Concurrent evaluation orchestration per runtime |
+| `cooldown_seconds` | `float` | `60.0`; Repeated failure-signature cooldown |
+| `reflection_timeout` | `float` | `60.0`; Host reflection continuation deadline |
+| `shutdown_timeout` | `float` | `5.0`; Bounded cancellation wait |
+| `reflection_max_commands` | `int` | `8`; Tool-call allowance at the reflection checkpoint |
+| `shell_timeout` | `float` | `5.0`; Interpreter call deadline |
+| `shell_max_commands` | `int` | `2000`; Interpreter command limit |
+| `shell_max_loop_iterations` | `int` | `5000`; Interpreter loop limit |
+| `shell_memory_bytes` | `int` | `16 * 1024 * 1024`; Interpreter memory |
+| `command_max_bytes` | `int` | `16 * 1024`; Tool command input |
+| `output_max_bytes` | `int` | `12 * 1024`; One tool response |
+| `execution_output_max_bytes` | `int` | `96 * 1024`; Cumulative output, including guard/error replies |
+| `context_max_bytes` | `int` | `8 * 1024`; Active notes |
+| `rule_max_bytes` | `int` | `8 * 1024`; One rule |
+| `rules_max_bytes` | `int` | `512 * 1024`; Active rule corpus |
+| `rules_max_count` | `int` | `256`; Active rule count |
+| `evidence_max_bytes` | `int` | `64 * 1024`; Assigned diagnostic presentation |
+| `thresholds` | `dict[str, float]` | `factory: lambda: {'task_completion': 0.5, 'coherence': 0.5}`; Primary metrics and strict failure thresholds |
+| `diagnostic_metrics` | `tuple[str, ...]` | `('tool_correctness', 'argument_correctness')`; Follow-up diagnosis after a notice |
+| `stall_window` | `int` | `5`; Score-history window |
+| `minimum_progress` | `float` | `0.02`; Stall variation cutoff |
+| `regression_drop` | `float` | `0.15`; Previous-score drop cutoff |
+| `validation_min_cases` | `int` | `3`; Distinct paired cases |
+| `validation_min_improvement` | `float` | `0.05`; Mean non-protected metric improvement |
+| `validation_regression_tolerance` | `float` | `0.02`; Allowed per-case metric decrease |
+| `validation_timeout` | `float` | `120.0`; Replay collection deadline |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python). See the [import index](/reference/python/overview#public-import-index) for available entry points.
