@@ -1,0 +1,185 @@
+---
+title: "Quickstart"
+description: "Give your agent persistent guidance and a bounded reflection checkpoint"
+icon: "rocket"
+---
+
+PandaProbe Reflect gives your agent a persistent rule filesystem and feedback from evaluated failures. The same agent proposes reusable guidance; independent validation decides which changes become shared rules.
+
+Keep your model, prompts, business tools, and tracing setup. Reflect is part of the Python and TypeScript `pandaprobe` SDKs.
+
+<Steps>
+  <Step title="Install">
+    This example uses PandaProbe Reflect + LangChain. Use Python 3.10+ or Node.js 22+. Choose your package manager:
+
+    <Tabs>
+    <Tab title="pip">
+    ```bash
+    pip install "pandaprobe[reflect,langchain]" langchain-openai
+    ```
+    </Tab>
+    <Tab title="uv">
+    ```bash
+    uv add "pandaprobe[reflect,langchain]" langchain-openai
+    ```
+    </Tab>
+    <Tab title="npm">
+    ```bash
+    npm install pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 langchain @langchain/core @langchain/langgraph @langchain/openai
+    ```
+    </Tab>
+    <Tab title="yarn">
+    ```bash
+    yarn add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 langchain @langchain/core @langchain/langgraph @langchain/openai
+    ```
+    </Tab>
+    <Tab title="pnpm">
+    ```bash
+    pnpm add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 langchain @langchain/core @langchain/langgraph @langchain/openai
+    ```
+    </Tab>
+    </Tabs>
+
+    These packages provide the embedded shell and filesystem locks. For another framework, use its [integration guide](/reflect/frameworks).
+  </Step>
+  <Step title="Set credentials">
+    Use a [PandaProbe account](https://app.pandaprobe.com) with an API key, project, and evaluation access, plus credentials for your model provider.
+
+    ```bash
+    export PANDAPROBE_API_KEY="your-pandaprobe-api-key"
+    export PANDAPROBE_PROJECT_NAME="support-agent"
+    export OPENAI_API_KEY="your-openai-api-key"
+    ```
+
+    Self-hosted deployments also set `PANDAPROBE_ENDPOINT` to their API base URL. Reflect reuses the tracing client's configuration.
+  </Step>
+  <Step title="Run an agent with Reflect">
+    This agent looks up a return policy and keeps an in-memory conversation checkpoint. The callback records traces; Reflect adds its filesystem tool and memory instructions.
+
+    <CodeGroup>
+    ```python title="Python"
+    import asyncio
+    from uuid import uuid4
+
+    from langchain.agents import create_agent
+    from langchain_core.tools import tool
+    from langchain_openai import ChatOpenAI
+    from langgraph.checkpoint.memory import InMemorySaver
+    from pandaprobe import Client
+    from pandaprobe.integrations.langchain import LangChainCallbackHandler
+    from pandaprobe.reflect import Reflect
+
+
+    @tool
+    def lookup_return_policy(order_id: str) -> str:
+        """Look up the standard-return policy for an order."""
+        return f"Order {order_id}: refund merchandise paid; outbound shipping is nonrefundable."
+
+
+    async def main():
+        client = Client()
+        try:
+            async with Reflect(client) as reflect:
+                agent = reflect.agent(
+                    create_agent,
+                    model=ChatOpenAI(model="gpt-6-luna", reasoning_effort="none"),
+                    system_prompt="Help customers with returns. Look up policy before answering.",
+                    tools=[lookup_return_policy],
+                    checkpointer=InMemorySaver(),
+                )
+                execution_id = uuid4().hex
+                result = await reflect.run(
+                    agent,
+                    "What can I get back when I return order ORDER-101?",
+                    session_id="customer-42",
+                    execution_id=execution_id,
+                    config={"callbacks": [LangChainCallbackHandler(client=client)]},
+                )
+                print(result["messages"][-1].content)
+                print(reflect.report(execution_id).model_dump_json(indent=2))
+        finally:
+            client.shutdown()
+
+
+    asyncio.run(main())
+    ```
+
+    ```ts title="TypeScript"
+    import { randomUUID } from "node:crypto";
+    import { createAgent } from "langchain";
+    import { tool } from "@langchain/core/tools";
+    import { ChatOpenAI } from "@langchain/openai";
+    import { MemorySaver } from "@langchain/langgraph";
+    import { Client } from "pandaprobe";
+    import { LangChainCallbackHandler } from "pandaprobe/integrations/langchain";
+    import { Reflect as ReflectRuntime } from "pandaprobe/reflect";
+
+    const lookupReturnPolicy = tool(
+      async ({ order_id }: { order_id: string }) =>
+        `Order ${order_id}: refund merchandise paid; outbound shipping is nonrefundable.`,
+      {
+        name: "lookup_return_policy",
+        description: "Look up the standard-return policy for an order.",
+        schema: {
+          type: "object",
+          properties: { order_id: { type: "string" } },
+          required: ["order_id"],
+          additionalProperties: false,
+        },
+      },
+    );
+
+    async function main() {
+      const client = new Client();
+      const reflect = new ReflectRuntime(client);
+      try {
+        const agent = await reflect.agent(createAgent, {
+          framework: "langchain",
+          options: {
+            model: new ChatOpenAI({ model: "gpt-6-luna", reasoning: { effort: "none" } }),
+            systemPrompt: "Help customers with returns. Look up policy before answering.",
+            tools: [lookupReturnPolicy],
+            checkpointer: new MemorySaver(),
+          },
+          invokeOptions: { callbacks: [new LangChainCallbackHandler({ client })] },
+        });
+        const executionId = randomUUID();
+        const result = await reflect.run(agent, "What can I get back when I return order ORDER-101?", {
+          sessionId: "customer-42", executionId,
+        });
+        console.log(result.messages.at(-1)?.content);
+        console.log(JSON.stringify(reflect.report(executionId), null, 2));
+      } finally {
+        await reflect.close();
+        await client.shutdown();
+      }
+    }
+
+    main().catch(error => { console.error(error); process.exitCode = 1; });
+    ```
+    </CodeGroup>
+
+    Keep your existing tracing integration. Reflect captures those traces to evaluate the execution.
+  </Step>
+  <Step title="Read the result">
+    `run()` returns the original task result after bounded evaluation and, when a failure notice is produced, a reflection checkpoint. During reflection, the agent inspects evidence and proposes changes to its working rules.
+
+    - A healthy task may produce no notice or proposal.
+    - `report(...)` separates evaluation, reflection, and proposal status.
+    - Rules and evidence persist under `.pandaprobe/reflect/` by default. Reuse the workspace across restarts.
+    - Use a unique execution ID for each invocation. Reuse a session ID and native checkpoint for related conversation turns.
+
+    <Note>
+      This enables proposal generation. Shared rules are accepted only after [independent validation](/reflect/validation). Evaluation and reflection add API/model calls, latency, and cost.
+    </Note>
+  </Step>
+</Steps>
+
+<CardGroup cols={2}>
+  <Card title="Validate a proposal" icon="badge-check" href="/reflect/validation">
+    Compare fresh control and candidate executions with your own verifier.
+  </Card>
+  <Card title="Choose your framework" icon="blocks" href="/reflect/frameworks">
+    Follow the setup guide for your agent's native framework.
+  </Card>
+</CardGroup>
