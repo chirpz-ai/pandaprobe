@@ -1,0 +1,311 @@
+---
+title: "Trace data"
+description: "Trace, span, score, and message contracts"
+---
+
+These are trace-export records, not the platform read models. Construct them for low-level submission through the tracing client, or let contexts and framework integrations construct them.
+
+The wire representation uses snake_case, string enum values, and ISO-8601 timestamps. Serialization omits selected null/empty fields as defined by each record's serializer. Trace and LLM-span input/output use `{"messages": [{"role": "user", "content": "..."}]}`; other span kinds can carry domain-specific values.
+
+Token usage records prompt/completion/total tokens and may include provider-specific numeric usage. Cost is a dictionary of monetary amounts; the SDK does not calculate missing provider prices.
+
+Export records are Pydantic models. Required fields and defaults are shown below; `to_api_dict()` performs wire serialization. Standard Pydantic construction and serialization methods remain available. Validation helpers report malformed message structure; they do not validate business correctness.
+
+## On this page
+
+[ScoreData](#scoredata), [ScoreDataType](#scoredatatype), [SpanData](#spandata), [SpanKind](#spankind), [SpanStatusCode](#spanstatuscode), [TraceData](#tracedata), [TraceStatus](#tracestatus), [extract_last_assistant_message](#extract_last_assistant_message), [extract_last_user_message](#extract_last_user_message), [validate_messages_format](#validate_messages_format), [warn_if_invalid_messages](#warn_if_invalid_messages).
+
+## Example
+
+```python
+from datetime import datetime, timezone
+from pandaprobe.schemas import SpanData, SpanKind, TraceData
+
+now = datetime.now(timezone.utc)
+record = TraceData(
+    name="lookup", started_at=now, ended_at=now,
+    spans=[SpanData(name="policy", kind=SpanKind.TOOL, started_at=now, ended_at=now)],
+)
+payload = record.to_api_dict()
+print(payload["trace_id"])
+```
+
+## `ScoreData`
+
+```python
+from pandaprobe.schemas import ScoreData
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/schemas.py#L174)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `trace_id` | `UUID` | Required |
+| `name` | `str` | Required |
+| `value` | `str` | Required |
+| `data_type` | `ScoreDataType` | `ScoreDataType.NUMERIC` |
+| `source` | `str` | `'PROGRAMMATIC'` |
+| `reason` | `str \| None` | `None` |
+| `metadata` | `dict[str, Any]` | `factory: dict` |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="to_api_dict">
+
+```text
+to_api_dict() -> dict[str, Any]
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## `ScoreDataType`
+
+```python
+from pandaprobe import ScoreDataType
+```
+
+Also exported from `pandaprobe.schemas`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/schemas.py#L51)
+
+### Values
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `NUMERIC` | `str` | `'NUMERIC'` |
+| `BOOLEAN` | `str` | `'BOOLEAN'` |
+| `CATEGORICAL` | `str` | `'CATEGORICAL'` |
+
+## `SpanData`
+
+```python
+from pandaprobe.schemas import SpanData
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/schemas.py#L62)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `span_id` | `UUID` | `factory: uuid4` |
+| `parent_span_id` | `UUID \| None` | `None` |
+| `name` | `str` | Required; min_length=1; max_length=512 |
+| `kind` | `SpanKind` | `SpanKind.OTHER` |
+| `status` | `SpanStatusCode` | `SpanStatusCode.UNSET` |
+| `input` | `Any \| None` | `None` |
+| `output` | `Any \| None` | `None` |
+| `model` | `str \| None` | `None`; max_length=255 |
+| `token_usage` | `dict[str, int] \| None` | `None` |
+| `metadata` | `dict[str, Any]` | `factory: dict` |
+| `started_at` | `datetime` | Required |
+| `ended_at` | `datetime \| None` | `None` |
+| `error` | `str \| None` | `None` |
+| `completion_start_time` | `datetime \| None` | `None` |
+| `model_parameters` | `dict[str, Any] \| None` | `None` |
+| `cost` | `dict[str, float] \| None` | `None` |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="to_api_dict">
+
+Serialize to a dict matching the backend POST /traces span schema.
+
+```text
+to_api_dict() -> dict[str, Any]
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## `SpanKind`
+
+```python
+from pandaprobe import SpanKind
+```
+
+Also exported from `pandaprobe.schemas`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/schemas.py#L28)
+
+### Values
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `AGENT` | `str` | `'AGENT'` |
+| `TOOL` | `str` | `'TOOL'` |
+| `LLM` | `str` | `'LLM'` |
+| `RETRIEVER` | `str` | `'RETRIEVER'` |
+| `CHAIN` | `str` | `'CHAIN'` |
+| `EMBEDDING` | `str` | `'EMBEDDING'` |
+| `OTHER` | `str` | `'OTHER'` |
+
+## `SpanStatusCode`
+
+```python
+from pandaprobe import SpanStatusCode
+```
+
+Also exported from `pandaprobe.schemas`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/schemas.py#L38)
+
+### Values
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `UNSET` | `str` | `'UNSET'` |
+| `OK` | `str` | `'OK'` |
+| `ERROR` | `str` | `'ERROR'` |
+
+## `TraceData`
+
+```python
+from pandaprobe.schemas import TraceData
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/schemas.py#L120)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `trace_id` | `UUID` | `factory: uuid4` |
+| `name` | `str` | Required; min_length=1; max_length=512 |
+| `status` | `TraceStatus` | `TraceStatus.COMPLETED` |
+| `input` | `Any \| None` | `None` |
+| `output` | `Any \| None` | `None` |
+| `metadata` | `dict[str, Any]` | `factory: dict` |
+| `started_at` | `datetime` | Required |
+| `ended_at` | `datetime \| None` | `None` |
+| `session_id` | `str \| None` | `None`; max_length=255 |
+| `user_id` | `str \| None` | `None`; max_length=255 |
+| `tags` | `list[str]` | `factory: list` |
+| `environment` | `str \| None` | `None`; max_length=255 |
+| `release` | `str \| None` | `None`; max_length=255 |
+| `spans` | `list[SpanData]` | `factory: list`; max_length=500 |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="to_api_dict">
+
+Serialize to a dict matching the backend POST /traces schema.
+
+```text
+to_api_dict() -> dict[str, Any]
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## `TraceStatus`
+
+```python
+from pandaprobe import TraceStatus
+```
+
+Also exported from `pandaprobe.schemas`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/schemas.py#L44)
+
+### Values
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `PENDING` | `str` | `'PENDING'` |
+| `RUNNING` | `str` | `'RUNNING'` |
+| `COMPLETED` | `str` | `'COMPLETED'` |
+| `ERROR` | `str` | `'ERROR'` |
+
+## `extract_last_assistant_message`
+
+```python
+from pandaprobe.validation import extract_last_assistant_message
+```
+
+Extract only the last assistant message from a messages structure.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/validation.py#L119)
+
+```text
+extract_last_assistant_message(output_data: Any) -> Any
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `output_data` | `Any` | Required |
+
+## `extract_last_user_message`
+
+```python
+from pandaprobe.validation import extract_last_user_message
+```
+
+Extract only the last user message from a messages structure.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/validation.py#L98)
+
+```text
+extract_last_user_message(input_data: Any) -> Any
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `input_data` | `Any` | Required |
+
+## `validate_messages_format`
+
+```python
+from pandaprobe.validation import validate_messages_format
+```
+
+Validate that *data* follows the standard messages schema.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/validation.py#L18)
+
+```text
+validate_messages_format(data: Any, label: str) -> None
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `data` | `Any` | Required |
+| `label` | `str` | Required |
+
+## `warn_if_invalid_messages`
+
+```python
+from pandaprobe.validation import warn_if_invalid_messages
+```
+
+Log a warning if *data* doesn't follow the messages schema.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/validation.py#L72)
+
+```text
+warn_if_invalid_messages(data: Any, label: str) -> None
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `data` | `Any` | Required |
+| `label` | `str` | Required |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python). See the [import index](/reference/python/overview#public-import-index) for available entry points.
