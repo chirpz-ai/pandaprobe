@@ -1,0 +1,53 @@
+---
+title: "Overview"
+mode: "custom"
+description: "Trace, evaluate, and improve AI agents with tested guidance"
+---
+
+<div id="overview-content" className="mx-auto w-full max-w-7xl px-6 py-12 sm:px-10 lg:px-12 lg:py-16">
+<div className="prose prose-gray dark:prose-invert max-w-none">
+
+# Overview
+
+Trace, evaluate, and improve AI agents with tested guidance.
+
+## What is PandaProbe?
+
+PandaProbe is an open-source agent engineering platform. Capture what your agents do, measure their behavior, and turn evaluated failures into guidance they can use in later executions.
+
+The product stack is **Trace → Evaluate → Reflect**. Use each capability independently or connect them into a feedback loop.
+
+<div className="not-prose my-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+  <Card title="Trace" icon="activity" href="/tracing/get-started/quickstart">
+    Capture model calls, tools, workflow steps, and custom logic as structured traces.
+  </Card>
+  <Card title="Evaluate" icon="flask-conical" href="/evaluation/get-started/quickstart">
+    Score traces and sessions. Monitor new executions for quality and regressions.
+  </Card>
+  <Card title="Reflect" icon="refresh-ccw" href="/reflect/quickstart">
+    Give your agent failure evidence and persistent memory. Independently validate proposed rules before sharing them.
+  </Card>
+</div>
+
+## Start with your existing agent
+
+The Python and TypeScript SDKs support provider wrappers, framework integrations, and manual instrumentation. Keep your model, prompts, business tools, and execution environment.
+
+Reflect adds one isolated filesystem tool to supported agents. The same agent can retrieve guidance, maintain working memory, and reflect at bounded checkpoints. Your verifier supplies outcome evidence, and the SDK applies the validation policy before publishing a change. Generating a plausible reflection alone is not proof of improvement.
+
+## Choose your next step
+
+<div className="not-prose my-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+  <Card title="Install the SDK" icon="download" href="/tracing/get-started/installation">
+    Set up Python or TypeScript with your provider and framework.
+  </Card>
+  <Card title="Schedule evaluations" icon="clock" href="/evaluation/setup/scheduling">
+    Check new traces and sessions automatically with monitors.
+  </Card>
+  <Card title="Try Reflect" icon="rocket" href="/reflect/quickstart">
+    Add persistent guidance and reflection to a traced agent.
+  </Card>
+</div>
+
+</div>
+</div>
