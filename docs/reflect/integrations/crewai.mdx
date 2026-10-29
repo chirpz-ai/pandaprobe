@@ -1,0 +1,97 @@
+---
+title: "CrewAI"
+description: "Add Reflect to CrewAI with native tracing, tools, and continuation"
+icon: "/assets/providers/crewai-color.svg"
+---
+
+Pass your existing CrewAI Agent or Crew to Reflect. It creates an invocation copy, adds its filesystem tool and memory, and uses CrewAI’s asynchronous execution path.
+
+## Installation
+
+Python only; use Python 3.11+ for this CrewAI example. Install Reflect together with the framework and model provider used below.
+
+<Tabs>
+<Tab title="pip">
+```bash
+pip install "pandaprobe[reflect,crewai]"
+```
+</Tab>
+<Tab title="uv">
+```bash
+uv add "pandaprobe[reflect,crewai]"
+```
+</Tab>
+</Tabs>
+
+## Credentials
+
+```bash
+export PANDAPROBE_API_KEY="your-pandaprobe-api-key"
+export PANDAPROBE_PROJECT_NAME="support-agent"
+export OPENAI_API_KEY="your-provider-api-key"
+```
+
+For a self-hosted platform, also set `PANDAPROBE_ENDPOINT` to your API base URL. Reflect uses the same client configuration as tracing.
+
+## Enable Reflect
+
+This example creates a policy assistant. Add your own domain tools where indicated; Reflect supplies `reflect_bash` automatically.
+
+```python title="Python"
+import asyncio
+
+from crewai import Agent, Crew, LLM, Task
+from pandaprobe.integrations.crewai import CrewAIAdapter
+from pandaprobe import Client
+from pandaprobe.reflect import Reflect
+
+
+async def main():
+    client = Client()
+    try:
+        CrewAIAdapter(client=client).instrument()
+        async with Reflect(client) as reflect:
+            support = Agent(
+                role="Support specialist",
+                goal="Explain return policies accurately",
+                backstory="For standard returns, refund merchandise paid and exclude outbound shipping. Explain the policy clearly.",
+                llm=LLM(model="openai/gpt-6-luna"),
+                tools=[],  # Your CrewAI business tools go here.
+                allow_delegation=False,
+            )
+            task = Task(
+                description="Answer the customer question: {question}",
+                expected_output="A concise answer explaining the refundable amount.",
+                agent=support,
+            )
+            crew = Crew(agents=[support], tasks=[task])
+            result = await reflect.run(
+                crew, {"question": "I paid $65 for an item and $7 for shipping. What is refundable?"}, session_id="customer-42",
+            )
+            print(result.raw)
+    finally:
+        client.shutdown()
+
+
+asyncio.run(main())
+```
+
+## How the integration behaves
+
+Keep the [CrewAI tracing adapter](/tracing/integrations/crewai) enabled. A standalone Agent takes text/messages; a Crew takes its native inputs dictionary, as shown above.
+
+### Crews and reflection
+
+Give the final task an explicit `agent`. That agent performs the reflection checkpoint; Reflect does not rerun the whole crew. Reflection restricts its tools, disables delegation/code execution, and bounds iterations.
+
+Reflect reserves the input name `pandaprobe_reflect_active_memory` for current instructions. Do not supply that key yourself. Filesystem tool caching is disabled because its working state can change.
+
+### Conversations and replay
+
+Keep business state and native crew context under application control. A Reflect session ID groups evidence; it does not automatically recreate prior crew outputs. Build fresh business fixtures and native task state for each replay arm.
+
+`run()` returns the task's native result after evaluation and any triggered reflection. A healthy answer may produce no proposal. The workspace persists accepted guidance and pending proposals across restarts.
+
+## Validate learned rules
+
+Add [independent replay or controlled trials](/reflect/validation) before proposed changes can become shared accepted guidance. Reset your business environment and conversation for each validation arm. See [Rules and memory](/reflect/rules-and-memory) for the working filesystem and session notes.
