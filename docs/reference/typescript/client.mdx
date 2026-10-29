@@ -1,0 +1,276 @@
+---
+title: "Client"
+description: "Initialize tracing, submit traces and scores, and manage export lifecycle"
+---
+
+The tracing client owns configuration and a background export queue. Use an explicit client when an application needs separate identities; use the module-level helpers for the global client. Initialization does not activate Reflect.
+
+Client construction resolves credentials from arguments and environment variables. Missing API key or project name raises when tracing is enabled. The global getter attempts environment initialization once and returns no client if it cannot initialize. Reinitializing the global client shuts down its predecessor.
+
+`score` submits a programmatic score; it does not start a platform evaluation. Scores use a string value, including numeric values such as `"0.95"`. Export completion is separate from platform persistence and evaluation completion.
+
+See [tracing quickstart](/tracing/get-started/quickstart) for provider/framework setup.
+
+Await `flush()` and `shutdown()`. `Client` does not install itself as the global client; `init()` does. Global helpers return promises where the underlying operation is asynchronous.
+
+## On this page
+
+[Client](#client), [VERSION](#version), [flush](#flush), [getClient](#getclient), [init](#init), [score](#score), [shutdown](#shutdown).
+
+## Example
+
+```ts
+import { Client } from "pandaprobe";
+
+const client = new Client(); // Resolves PANDAPROBE_* credentials.
+try {
+  const trace = client.trace("support", {
+    input: { messages: [{ role: "user", content: "Hello" }] },
+  });
+  await trace.run(async current => {
+    current.setOutput({ messages: [{ role: "assistant", content: "How can I help?" }] });
+  });
+  client.score(trace.traceId, "review", "1", { reason: "Reviewed by the application" });
+} finally {
+  await client.shutdown();
+}
+```
+
+## `Client`
+
+```ts
+import { Client } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/client.ts#L71)
+
+### Constructor
+
+```text
+new Client(options?: ConfigOptions): Client
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `ConfigOptions` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `enabled` | `boolean` | Instance value; read-only |
+| `config` | `SdkConfig` | Instance value; read-only |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="trace">
+
+Create a new `TraceContext`.
+
+```text
+trace(name: string, options?: TraceContextOptions): TraceContext
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `name` | `string` | Required |
+| `options` | `TraceContextOptions` | `{}` |
+
+</Accordion>
+
+<Accordion title="logTrace">
+
+Queues a prebuilt trace record for export. This is asynchronous ingestion, not confirmation that the trace is persisted.
+
+```text
+logTrace(traceData: TraceData): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `traceData` | `TraceData` | Required |
+
+</Accordion>
+
+<Accordion title="captureTraces">
+
+Capture existing submissions inside an explicit asynchronous application boundary.
+
+```text
+captureTraces(options?: TraceCaptureOptions): TraceCapture
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `TraceCaptureOptions` | `{}` |
+
+</Accordion>
+
+<Accordion title="score">
+
+Submit a programmatic score for a trace.
+
+```text
+score(
+  traceId: string,
+  name: string,
+  value: string,
+  options?: { dataType?: ScoreDataType; reason?: string | null; metadata?: Record<string, unknown>; },
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `traceId` | `string` | Required |
+| `name` | `string` | Required |
+| `value` | `string` | Required |
+| `options` | `{ dataType?: ScoreDataType; reason?: string \| null; metadata?: Record<string, unknown> }` | `{}` |
+
+</Accordion>
+
+<Accordion title="flush">
+
+Block until all queued items are sent.
+
+```text
+flush(timeout?: number): Promise<void>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `timeout` | `number` | `30.0` |
+
+</Accordion>
+
+<Accordion title="shutdown">
+
+Flush remaining items and release resources.
+
+```text
+shutdown(): Promise<void>
+```
+
+</Accordion>
+
+<Accordion title="onError">
+
+Registers a callback for export transport errors. Errors inside the callback are caught by the SDK.
+
+```text
+onError(callback: (exc: unknown) => void): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `callback` | `(exc: unknown) => void` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `VERSION`
+
+```ts
+import { VERSION } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/version.ts#L1)
+
+Type: `"0.5.0"`.
+
+Value: `"0.5.0"`.
+
+## `flush`
+
+```ts
+import { flush } from "pandaprobe";
+```
+
+Block until all queued items are sent (delegates to the global client).
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/index.ts#L32)
+
+```text
+flush(timeout?: number): Promise<void>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `timeout` | `number` | `30.0` |
+
+## `getClient`
+
+```ts
+import { getClient } from "pandaprobe";
+```
+
+Return the current global client.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/client.ts#L38)
+
+```text
+getClient(): Client | null
+```
+
+## `init`
+
+```ts
+import { init } from "pandaprobe";
+```
+
+Configure and set the global PandaProbe client singleton.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/client.ts#L21)
+
+```text
+init(options?: ConfigOptions): Client
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `ConfigOptions` | `{}` |
+
+## `score`
+
+```ts
+import { score } from "pandaprobe";
+```
+
+Submit a programmatic score for a trace (delegates to the global client).
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/index.ts#L48)
+
+```text
+score(
+  traceId: string,
+  name: string,
+  value: string,
+  options?: { dataType?: ScoreDataType; reason?: string | null; metadata?: Record<string, unknown>; },
+): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `traceId` | `string` | Required |
+| `name` | `string` | Required |
+| `value` | `string` | Required |
+| `options` | `{ dataType?: ScoreDataType; reason?: string \| null; metadata?: Record<string, unknown> }` | `{}` |
+
+## `shutdown`
+
+```ts
+import { shutdown } from "pandaprobe";
+```
+
+Flush remaining items and release resources (delegates to the global client).
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/index.ts#L40)
+
+```text
+shutdown(): Promise<void>
+```
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.
