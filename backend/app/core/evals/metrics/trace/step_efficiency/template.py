@@ -9,7 +9,7 @@ import json
 import textwrap
 from typing import Any
 
-from app.core.evals.metrics.utils import HARNESS_TOOL_GUIDANCE
+from app.core.evals.metrics.utils import REFLECT_TOOL_GUIDANCE
 
 
 class StepEfficiencyTemplate:
@@ -45,17 +45,13 @@ class StepEfficiencyTemplate:
             Given the user's task and the full trace of how an agent executed it, \
             score how efficiently (minimally) the agent accomplished the task.
 
-            Evaluate:
+            Evaluate task-directed steps:
             - Unnecessary actions: Did the agent take steps that were not needed?
             - Redundant steps: Did the agent repeat or duplicate work?
             - Minimal action principle: Could the task have been done with fewer steps?
             - Resource economy: Did the agent use more tools, calls, or iterations than necessary?
 
-            {HARNESS_TOOL_GUIDANCE}
-            Judge efficiency over the task-directed steps only. Do not count \
-            harness meta-tool calls as unnecessary, redundant, or superfluous \
-            steps, and do not lower the score for their presence or number.
-
+            {REFLECT_TOOL_GUIDANCE}
             Scoring guide:
             - 1.0 = Perfectly efficient; minimal steps, no redundancy.
             - 0.75 = Mostly efficient with minor redundancy.

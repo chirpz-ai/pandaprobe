@@ -5,29 +5,14 @@ from __future__ import annotations
 import json
 import textwrap
 
-#: Short guidance for LLM judge prompts: Harness/meta-tool calls (like `harness_*`)
-#: are infrastructure, not task attempts. Judge them as neutral—exclude from scoring,
-#: do not penalize or reward, and only score actual task-directed actions.
-HARNESS_TOOL_GUIDANCE = textwrap.dedent("""\
-    Harness tools: the agent may run inside a harness that offers meta-tools
-    for its own operation — retrieving learned guidance or rules, reading or
-    acknowledging diagnostic notices, checking a rule's status, or inspecting an
-    earlier trace. Names are commonly prefixed (for example `harness_*`), and
-    such a call reads or acknowledges harness state rather than acting on the
-    user's task.
-
-    Judge these as NEUTRAL:
-    - Do not treat them as incorrect, irrelevant, or mis-selected tools, and do
-      not count them as unnecessary, redundant, or inefficient steps. Consulting
-      guidance before acting is expected behaviour, not a mistake.
-    - Exclude them from the assessment rather than rewarding them. They earn no
-      credit, and a trace containing only harness calls with no attempt at the
-      user's task still scores poorly for the missing attempt.
-    - A trace whose visible work is entirely harness calls has not yet attempted
-      the task: score the task-directed work present, and if there is none, say
-      the trace shows no task-directed activity rather than that the wrong tools
-      were chosen.
-    - Judge only the task-directed actions on their own merits.
+#: Reflect rule and memory operations are neutral; task-directed mistakes remain assessable.
+REFLECT_TOOL_GUIDANCE = textwrap.dedent("""\
+    PandaProbe Reflect is optional. When present, `reflect_bash` (or
+    `mcp__pandaprobe_reflect__reflect_bash`) may read guidance or manage an
+    isolated memory filesystem. Treat these Reflect rule and memory operations
+    as neutral: no credit or penalty for their presence, absence, frequency,
+    or cost. Judge task actions and outcomes normally; using these tools for
+    a task action does not exempt mistakes.
 """)
 
 
