@@ -9,7 +9,7 @@ icon: "rocket"
 
   - A PandaProbe account. Sign up at [app.pandaprobe.com](https://app.pandaprobe.com).
   - At least one **trace** captured in your project. If you haven't set up tracing yet, follow the [Observability Quickstart](/tracing/get-started/quickstart) first.
-  - For agent (session) evaluation: traces grouped under the same `session_id`.
+  - For session evaluation: traces grouped under the same `session_id`.
 </Note>
 
 <Info>
@@ -68,9 +68,13 @@ If you have traces grouped under a `session_id`, you can evaluate the entire age
     Learn how eval runs, metrics, scores, signals, and monitors fit together.
   </Card>
   <Card title="Evaluation Approaches" icon="lightbulb" href="/evaluation/get-started/evaluation-approaches">
-    Understand when to use trace vs. agent (session) evaluation.
+    Understand when to use trace vs. session evaluation.
   </Card>
   <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
     Create eval runs programmatically from CI, notebooks, or internal tools.
   </Card>
 </CardGroup>
+
+## Connect evaluation to Reflect
+
+[Reflect](/reflect/quickstart) brings evaluated failure evidence back to your agent, records proposed rules, and uses your independent verifier before publishing shared guidance.
