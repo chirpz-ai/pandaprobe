@@ -1,0 +1,91 @@
+---
+title: "Operations"
+description: "Inspect outcomes, wait for the right phase, and operate persistent workspaces"
+icon: "activity"
+---
+
+Reflect keeps task execution, evaluation, reflection, and validation outcomes separate. Start with the execution report rather than inferring success from a proposed rule or a completed model call.
+
+## Inspect a run
+
+<CodeGroup>
+```python title="Python"
+report = reflect.report(execution_id)
+print(report.model_dump_json(indent=2))
+for proposal in reflect.proposals():
+    print(proposal.id, proposal.status, proposal.decision)
+```
+
+```ts title="TypeScript"
+console.log(JSON.stringify(reflect.report(executionId), null, 2));
+for (const proposal of reflect.proposals()) {
+  console.log(proposal.id, proposal.status, proposal.decision);
+}
+```
+</CodeGroup>
+
+Reports include task status, task trace IDs, evaluation status/scores/notice, reflection outcome, and related proposals. Validation decisions retain their reason and paired evidence. Workspace events and execution snapshots provide the local audit trail.
+
+| Record | Possible statuses |
+| --- | --- |
+| Evaluation | `evaluated`, `skipped`, `pending`, `insufficient`, `failed`, `creation_unknown`, `cancelled` |
+| Proposal generation | `proposed`, `duplicate`, `no_proposal`, `invalid`, `conflict`, `timed_out`, `failed`, `cancelled` |
+| Proposal lifecycle | `candidate`, `pending`, `accepted`, `rejected` |
+
+`task_status` describes execution, not independently verified business success. A completed reflection checkpoint may still produce no proposal or an error. Read the nested outcome and reason.
+
+## Wait for the right phase
+
+| Python | TypeScript | What it waits for |
+| --- | --- | --- |
+| `wait_export(timeout=30)` | `waitExport({ timeout: 30 })` | Existing SDK trace export |
+| `settle_evaluation(id, timeout=120)` | `settleEvaluation(id, { timeout: 120 })` | Evaluation evidence for one execution |
+| `settle_reflection(id, timeout=60)` | `settleReflection(id, { timeout: 60 })` | An already scheduled reflection checkpoint |
+| `settle_validation(timeout=120)` | `settleValidation({ timeout: 120 })` | Scheduled validations; returns whether waiting finished |
+| `aclose()` | `close()` | Cancel owned work and close owned API resources |
+
+Await these methods. Export completion does not prove that asynchronous platform persistence or evaluation has finished. A settlement wait timeout can leave underlying work running; it is not the same as shutting down the runtime.
+
+`run()` coordinates task/evaluation/reflection, but validation settles separately. Release task resources before waiting for replay, and settle required validation before closing Reflect. Close your SDK client separately when the application shuts down.
+
+## Tracing and cost
+
+Task, reflection, and validation traces carry `pandaprobe.reflect` metadata with their role, execution ID, and original task session. Internal work uses separate session attribution and is excluded from recursive task detection. Its model/tool usage still belongs in total operational cost.
+
+Reflect uses the SDK's native HTTP resources for platform operations. Primary evaluation, optional diagnosis, reflection model calls, and paired replay all add work. Sampling and the [configuration budgets](/reflect/configuration) bound different parts of that work; no one setting is a complete monetary cap.
+
+The reusable API is also available independently as `pandaprobe.api.PlatformClient` in Python and `PlatformClient` from `pandaprobe/api` in TypeScript. It has a separate HTTP lifecycle from trace export and reuses your client's resolved configuration.
+
+## Common outcomes
+
+| Symptom | What to check |
+| --- | --- |
+| No task traces / insufficient evidence | Enable the existing tracing integration, use the same client, and consume streams inside the boundary |
+| Trace was exported but is not found yet | Export acceptance precedes persistence; check the visibility timeout and eventual trace status |
+| Business verifier found failure but no notice | Inspect platform scores, strict thresholds, sampling, and cooldowns; equality is not a breach |
+| Proposal was not created | Read `reflection.status` and `reason`; unchanged, duplicate, invalid, timed-out, and failed outcomes are distinct |
+| Validation is pending | Check complete pairs, required metrics, protected control success, replay errors/timeouts, improvement, and base revision |
+| Rule exists but is not used | Check that the correct accepted workspace is open and that the agent has/read the supplied tool and current instructions |
+| Empty or truncated Bash output | Check output allowance, closed execution, exit code, and truncation metadata; empty text alone does not establish failure |
+| Provider call fails or times out | Inspect its original error and provider limits; task, reflection, replay, and provider deadlines are separate |
+| Native dependency cannot load | Install the documented shell/lock packages and a supported native platform/runtime |
+
+A successful task result is preserved if later reflection fails. An exception from the task itself propagates; Reflect does not replace it with a reflection answer or automatically continue the failed invocation.
+
+## Recovery and uncertain evaluation creation
+
+Known evaluation run IDs are persisted and polled. Use `resume_evaluations()` / `resumeEvaluations()` after restart, or settle a particular pending execution. Safe reads have bounded retries; evaluation creation is sent once.
+
+If a create response is lost, the SDK cannot know whether the server created a billable run. It records `creation_unknown` and refuses an automatic replacement. Inspect the platform and local record before deciding how to recover. The current API has no idempotency-key contract; deleting the claim and retrying can create a duplicate.
+
+Late feedback needs [an explicit continuation](/reflect/custom-loops). An interrupted claimed reflection checkpoint is not silently re-entered across restart because arbitrary host code may have side effects.
+
+## Storage and isolation
+
+Persist the [workspace](/reflect/rules-and-memory#the-durable-workspace-on-disk) on a local volume with appropriate access controls. It contains trace-derived evidence and agent-authored text; apply your application's data-retention policy and avoid storing credentials in rules or notes.
+
+Accepted revisions are immutable and published under locks with atomic writes. A stale candidate cannot overwrite the current head. Corrupt authoritative records should be investigated, not deleted to reset the loop. Rule-size limits do not remove historical revisions, events, or evidence; plan retention and backups separately.
+
+The supplied shell cannot mount host storage or publish an accepted revision. It does not constrain other privileged host tools or callbacks. For multi-process applications, use consistent policy with a local shared workspace whose locking semantics you control; do not assume an object store or network mount behaves like local disk.
+
+Cancellation is cooperative. Closing Reflect prevents later supplied-tool mutations and bounds its shutdown wait, but cannot force arbitrary host code to stop or undo an accepted provider request.
