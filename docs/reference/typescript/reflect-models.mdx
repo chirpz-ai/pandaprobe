@@ -1,0 +1,244 @@
+---
+title: "Rules and results"
+description: "Persistent rules, proposals, notices, reports, and validation records"
+---
+
+These records separate proposal generation, evaluation, acceptance, and independently verified outcomes. Persisted names remain snake_case in both languages.
+
+Rules are relative Markdown files. Each needs a title, an `Applies to: ...` line, and behavioral guidance. A proposal records a change set against a specific accepted base revision; a null change deletes a file. Ordinary fresh executions receive accepted rules, while candidates are visible during authoring and explicit trials.
+
+| Layer | Status values |
+| --- | --- |
+| Evaluation | `evaluated`, `skipped`, `pending`, `insufficient`, `failed`, `creation_unknown`, `cancelled` |
+| Proposal generation | `proposed`, `duplicate`, `no_proposal`, `invalid`, `conflict`, `timed_out`, `failed`, `cancelled` |
+| Proposal lifecycle | `candidate`, `pending`, `accepted`, `rejected` |
+
+Task completion in an execution report describes runtime execution; use an independent verifier for business success. A reported rationale is agent-authored evidence, not proof of improvement.
+
+`Rule` is a runtime class; most result records are interfaces returned by Reflect, not constructors. `RuleProposal.changes` maps paths to rule records or null deletions. Internal record builders are not package exports.
+
+## On this page
+
+[EvaluationOutcome](#evaluationoutcome), [ExecutionReport](#executionreport), [FailureNotice](#failurenotice), [ProposalOutcome](#proposaloutcome), [Rule](#rule), [RuleProposal](#ruleproposal), [TrialArm](#trialarm), [TrialCase](#trialcase), [ValidationVerdict](#validationverdict).
+
+## Example
+
+```ts
+import { Rule } from "pandaprobe/reflect";
+
+const rule = new Rule({
+  path: "refunds/standard.md",
+  text: "# Standard returns\nApplies to: standard return refunds\nExclude outbound shipping.\n",
+});
+console.log(rule.scope, rule.applicability, rule.version);
+```
+
+Constructing a rule does not publish it. Agent-authored filesystem changes become proposals; independent validation decides acceptance.
+
+## `EvaluationOutcome`
+
+```ts
+import type { EvaluationOutcome } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/models.ts#L96)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `execution_id` | `string` | Required; read-only |
+| `status` | `"pending" \| "failed" \| "cancelled" \| "evaluated" \| "skipped" \| "insufficient" \| "creation_unknown"` | Required; read-only |
+| `run_ids` | `string[]` | Required; read-only |
+| `scores` | `Record<string, number>` | Required; read-only |
+| `notice` | `FailureNotice \| null` | Required; read-only |
+| `reason` | `string` | Required; read-only |
+
+## `ExecutionReport`
+
+```ts
+import type { ExecutionReport } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/models.ts#L126)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `execution_id` | `string` | Required; read-only |
+| `session_id` | `string` | Required; read-only |
+| `task_status` | `string` | Required; read-only |
+| `trace_ids` | `string[]` | Required; read-only |
+| `evaluation` | `EvaluationOutcome \| null` | Required; read-only |
+| `reflection` | `ProposalOutcome \| null` | Required; read-only |
+| `proposals` | `RuleProposal[]` | Required; read-only |
+
+## `FailureNotice`
+
+Supporting contract used by the API below; it is not a separate package export.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/models.ts#L86)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `string` | Required; read-only |
+| `execution_id` | `string` | Required; read-only |
+| `session_id` | `string` | Required; read-only |
+| `trace_ids` | `string[]` | Required; read-only |
+| `scores` | `Record<string, number>` | Required; read-only |
+| `reasons` | `Record<string, string>` | Required; read-only |
+| `signatures` | `string[]` | Required; read-only |
+| `created_at` | `string` | Required; read-only |
+
+## `ProposalOutcome`
+
+```ts
+import type { ProposalOutcome } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/models.ts#L58)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `status` | `"proposed" \| "duplicate" \| "no_proposal" \| "invalid" \| "conflict" \| "timed_out" \| "failed" \| "cancelled"` | Required; read-only |
+| `proposal` | `RuleProposal \| null` | Required; read-only |
+| `reason` | `string` | Required; read-only |
+| `rationale` | `string` | Required; read-only |
+
+## `Rule`
+
+```ts
+import { Rule } from "pandaprobe/reflect";
+```
+
+Persisted records keep Python's schema-v1 field names. Host options use camelCase.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/models.ts#L6)
+
+### Constructor
+
+```text
+new Rule(value: { path: string; text: string; }): Rule
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `value` | `{ path: string; text: string }` | Required |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `path` | `string` | Instance value; read-only |
+| `text` | `string` | Instance value; read-only |
+| `version` | `string` | Instance value; read-only |
+| `scope` | `string` | Instance value; read-only |
+| `applicability` | `string` | Instance value; read-only |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="safePath">
+
+Static method on `Rule`.
+
+```text
+safePath(path: string): void
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `path` | `string` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `RuleProposal`
+
+```ts
+import type { RuleProposal } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/models.ts#L45)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `string` | Required; read-only |
+| `base_revision` | `string` | Required; read-only |
+| `changes` | `Record<string, Rule \| null>` | Required; read-only |
+| `fingerprint` | `string` | Required; read-only |
+| `session_id` | `string` | Required; read-only |
+| `execution_id` | `string` | Required; read-only |
+| `evidence_ids` | `string[]` | Required; read-only |
+| `created_at` | `string` | Required; read-only |
+| `status` | `"candidate" \| "pending" \| "accepted" \| "rejected"` | Required; read-only |
+| `rationale` | `string` | Required; read-only |
+| `decision` | `ValidationVerdict \| null` | Required; read-only |
+
+## `TrialArm`
+
+```ts
+import type { TrialArm } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/models.ts#L111)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `execution_id` | `string` | Required; read-only |
+| `scores` | `Record<string, number>` | Required; read-only |
+| `success` | `boolean \| null` | Required; read-only |
+| `evidence` | `Record<string, unknown>` | Required; read-only |
+| `candidate_ids` | `string[]` | Required; read-only |
+
+## `TrialCase`
+
+```ts
+import type { TrialCase } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/models.ts#L118)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `case_id` | `string` | Required; read-only |
+| `base_revision` | `string` | Required; read-only |
+| `input_hash` | `string` | Required; read-only |
+| `protected` | `boolean` | Required; read-only |
+| `control` | `TrialArm \| undefined` | Optional; read-only |
+| `candidate` | `TrialArm \| undefined` | Optional; read-only |
+
+## `ValidationVerdict`
+
+```ts
+import type { ValidationVerdict } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/models.ts#L78)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `proposal_id` | `string` | Required; read-only |
+| `outcome` | `"pending" \| "accepted" \| "rejected"` | Required; read-only |
+| `reason` | `string` | Required; read-only |
+| `mode` | `"replay" \| "trial"` | Required; read-only |
+| `cases` | `TrialCase[]` | Required; read-only |
+| `created_at` | `string` | Required; read-only |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.
