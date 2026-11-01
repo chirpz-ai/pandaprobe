@@ -76,7 +76,7 @@ All site configuration lives in `docs.json`. Key settings:
 | Setting | Description |
 |---|---|
 | `theme` | Mintlify theme (`aspen`) |
-| `colors` | Brand colors (primary: `#056196`) |
+| `colors` | Neutral accents (`#18181B` / `#E4E4E7`); blue (`#2F86FF`) reserved for primary button backgrounds in `style.css` |
 | `background.color.dark` | Dark mode background (`#0c0c0b`) |
 | `logo` | Logo images for light/dark mode |
 | `navigation` | Full sidebar and tab structure |
@@ -92,6 +92,10 @@ See the [Mintlify docs.json reference](https://mintlify.com/docs/organize/settin
 - Keep product tabs ordered Trace → Evaluate → Reflect.
 - Use matching `Python` / `TypeScript` titles in `<CodeGroup>` for language examples; identify application-provided helpers explicitly.
 - Check SDK signatures and released versions before publishing examples. Reflect acceptance requires independent outcomes, not a model-generated explanation.
+
+### Overview component
+
+The setup prompt and copy controls live directly in `overview.mdx`. Keep the inline `OnboardingPrompt` export as one continuous block, without blank lines or standalone JavaScript comments: the current Mintlify preview failed to compile the spaced version on a fresh startup even though `mint validate` passed. After changing this component, restart `mint dev`, open `/overview`, and check both copy buttons; hot reload alone is not sufficient verification.
 
 ## Adding a New Page
 
