@@ -8,9 +8,9 @@
   },
   "favicon": "/assets/logo/favicon.ico",
   "colors": {
-    "primary": "#056196",
-    "light": "#056196",
-    "dark": "#056196"
+    "primary": "#18181B",
+    "light": "#E4E4E7",
+    "dark": "#18181B"
   },
   "background": {
     "color": {
@@ -68,7 +68,7 @@
     ],
     "primary": {
       "type": "button",
-      "label": "Try PandaProbe",
+      "label": "Dashboard",
       "href": "https://app.pandaprobe.com/"
     }
   },
@@ -206,7 +206,7 @@
       },
       {
         "tab": "Reflect",
-        "icon": "undo-dot",
+        "icon": "repeat",
         "groups": [
           {
             "group": "Get Started",
@@ -474,10 +474,6 @@
       "destination": "/evaluation/get-started/concepts"
     },
     {
-      "source": "/get-started/welcome",
-      "destination": "/overview"
-    },
-    {
       "source": "/tools/cli",
       "destination": "/reference/tools/cli"
     },
@@ -508,14 +504,6 @@
     {
       "source": "/api-reference/introduction",
       "destination": "/reference/api/introduction"
-    },
-    {
-      "source": "/introduction/welcome",
-      "destination": "/overview"
-    },
-    {
-      "source": "/overview/welcome",
-      "destination": "/overview"
     },
     {
       "source": "/tracing/scoring",
