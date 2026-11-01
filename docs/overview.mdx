@@ -1,53 +1,121 @@
 ---
 title: "Overview"
 mode: "custom"
-description: "Trace, evaluate, and improve AI agents with tested guidance"
+description: "PandaProbe records what happened, evaluates what worked, and turns the evidence into tested guidance for future runs."
 ---
 
-<div id="overview-content" className="mx-auto w-full max-w-7xl px-6 py-12 sm:px-10 lg:px-12 lg:py-16">
-<div className="prose prose-gray dark:prose-invert max-w-none">
+export const OnboardingPrompt = ({ buttonOnly = false }) => {
+  const onboardingPrompt = "# You are onboarding this project to PandaProbe\n\nPandaProbe is an open-source platform for tracing, evaluating, and improving AI agents. Its Python and TypeScript SDKs connect to your existing agent, model providers, and tools. The product has three layers: Trace records what happened, Evaluate measures whether it worked, and Reflect helps the agent turn mistakes into reusable guidance.\n\nReflect gives the agent a persistent rule filesystem and feedback from evaluated failures. The agent proposes changes to its guidance; independent validation decides which changes become shared rules for future runs. It does not automatically accept its own advice or guarantee future success.\n\n## What you can add\n\n| Capability | What it provides | Use when |\n|---|---|---|\n| Trace | Execution timelines with model calls, tool calls, inputs, outputs, errors, and usage | Understand or debug an agent run |\n| Sessions | Related traces grouped under one session ID | Follow a conversation or multi-step task across runs |\n| Evaluate | Trace and session metrics, plus programmatic trace scores | Measure task quality and identify failures |\n| Reflect | Failure feedback, working memory, and independently validated rules | Help an agent learn from recurring mistakes |\n\nA trace represents an execution; spans represent the work inside it. Sessions group related executions. Traces and evaluations belong to a project within your PandaProbe organization. Reflect also uses a durable workspace to store rules and validation history.\n\nStart by making one existing agent observable. Add Evaluate and Reflect according to the project's needs.\n\n## Step 1: Find the right integration\n\nIdentify the agent entry point, language, framework, and model provider. Explain briefly where PandaProbe fits in this project, using concrete files and the table below.\n\n| Existing code | Integration approach |\n|---|---|\n| LangChain, LangGraph, DeepAgents, or OpenAI Agents SDK | Use the framework's PandaProbe tracing integration |\n| Claude Agent SDK | Use the Python adapter or TypeScript query wrapper |\n| Google ADK or CrewAI | Use the Python framework integration |\n| Vercel AI SDK | Use the TypeScript middleware |\n| Direct model-provider calls | Wrap the existing provider client |\n| Custom agent loop or application tools | Use manual tracing for work not already captured |\n\nIf there are multiple agents, ask which one to start with. If there is no agent code, describe two or three concrete uses for PandaProbe in the intended application and ask which to build.\n\nDocumentation index: https://docs.pandaprobe.com/llms.txt\nFramework integrations: https://docs.pandaprobe.com/tracing/integrations/overview\nProvider wrappers: https://docs.pandaprobe.com/tracing/wrappers/overview\nSDK reference: https://docs.pandaprobe.com/reference/overview\n\nRead the matching integration guide before implementing. Use its language-specific APIs and check compatibility with the installed SDK. Python and TypeScript do not have identical framework coverage or signatures.\n\n## Step 2: Connect to PandaProbe\n\nUse an account and API key from https://app.pandaprobe.com, or the user's self-hosted deployment.\n\nRequired environment variables:\n- `PANDAPROBE_API_KEY`: the organization's API key.\n- `PANDAPROBE_PROJECT_NAME`: the project that should receive this agent's traces.\n- `PANDAPROBE_ENDPOINT`: the API base URL, only when overriding the hosted endpoint.\n\nKeep the agent's existing model-provider credentials. Store keys in server-side environment configuration; never hardcode or print them. If the PandaProbe key or project name is missing, ask the user to configure it locally. Continue with integration code, but wait for credentials before attempting a live run.\n\nInstall the `pandaprobe` package using the project's package manager. Add only the provider or framework dependencies required by the chosen integration. Python offers optional extras; TypeScript uses separate optional dependencies.\n\nInstallation: https://docs.pandaprobe.com/tracing/get-started/installation\n\n## Step 3: Trace a real agent execution\n\nAttach the integration to the existing agent. Keep its model, prompts, tools, and application behavior. Prefer framework instrumentation over separately wrapping calls it already captures. Add manual spans only for missing custom work, and attach a session ID when runs belong to one conversation or task.\n\nRun a small example with synthetic input through the instrumented entry point. Flush pending traces before a short-lived process exits: `pandaprobe.flush()` in Python or `await flush()` in TypeScript when using the default client. Follow the documented lifecycle for explicit clients and long-running services.\n\nConfirm the trace appears in the intended project and inspect its span hierarchy, inputs, outputs, and errors. Show the user the trace ID or dashboard link and explain what is now visible. If a live run is blocked, state what remains unverified.\n\nTracing quickstart: https://docs.pandaprobe.com/tracing/get-started/quickstart\n\n## Step 4: Choose what success means\n\nRecommend a small evaluation suited to this agent's task. Use trace metrics for individual executions and session metrics for behavior across related runs. If the application already has a deterministic check or an external outcome signal, consider recording it as a programmatic trace score.\n\nExplain the selected metrics and judge-model requirements. Run the evaluation when the user wants it enabled, then inspect completed scores and explanations. A queued evaluation is not a result. Recurring monitors are a separate choice.\n\nEvaluation quickstart: https://docs.pandaprobe.com/evaluation/get-started/quickstart\nProgrammatic scoring: https://docs.pandaprobe.com/evaluation/trace-evaluation/scoring\n\n## Step 5: Add reflection where it is useful\n\nFor recurring failures, explain how Reflect could help this agent and ask whether to enable it. Reflect is included in the same SDK: `pandaprobe.reflect` in Python and `pandaprobe/reflect` in TypeScript.\n\nFollow the matching framework guide to equip the host agent and run it through an explicit Reflect execution boundary. Reuse its tracing client. Native integrations supply the `reflect_bash` filesystem tool; the agent can search accepted rules, maintain session notes, and propose guidance at a reflection checkpoint.\n\nBefore publishing shared guidance, provide reproducible cases, fresh business state, and an independent verifier of task outcomes. Reflect compares baseline and candidate behavior before accepting a rule change. Session notes are working memory, not validated shared rules.\n\nReflect requires a supported filesystem/native runtime, not a browser or edge environment. If the runtime or validation setup is missing, explain what the project needs before enabling it.\n\nReflect quickstart: https://docs.pandaprobe.com/reflect/quickstart\nFramework guides: https://docs.pandaprobe.com/reflect/frameworks\nRules and memory: https://docs.pandaprobe.com/reflect/rules-and-memory\nValidation: https://docs.pandaprobe.com/reflect/validation\n\nFinish by showing how to run the integrated agent, where to inspect its traces, and which evaluation or reflection capabilities are enabled.";
+  const highlightedPrompt = onboardingPrompt.split("\n").map((line, lineIndex) => {
+    const heading = line.match(/^(#{1,2} )(.*)$/);
+    const content = heading ? (
+      <><span className="overview-prompt-marker">{heading[1]}</span><span className="overview-prompt-heading">{heading[2]}</span></>
+    ) : line.split(/(`[^`]+`|https?:\/\/[^\s]+)/g).map((token, tokenIndex) => (
+      <span key={tokenIndex} className={token.startsWith("`") ? "overview-prompt-code" : token.startsWith("https://") ? "overview-prompt-url" : undefined}>{token}</span>
+    ));
+    return <span key={lineIndex}>{content}{lineIndex < onboardingPrompt.split("\n").length - 1 ? "\n" : ""}</span>;
+  });
+  const compact = !buttonOnly;
+  const [status, setStatus] = useState("idle");
+  useEffect(() => {
+    if (status === "idle") return;
+    const timer = setTimeout(() => setStatus("idle"), 4000);
+    return () => clearTimeout(timer);
+  }, [status]);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(onboardingPrompt);
+      setStatus("copied");
+    } catch {
+      setStatus("error");
+    }
+  };
+  const message = status === "copied" ? "Prompt copied" : status === "error" ? "Copy failed. Select and copy the prompt text manually." : "";
+  const copyControl = (
+    <span className="overview-copy-control">
+      <button
+        type="button"
+        className={compact ? "overview-copy-icon" : "overview-button overview-primary"}
+        onClick={copy}
+        aria-label={compact ? "Copy setup prompt" : undefined}
+        title={compact ? "Copy setup prompt" : undefined}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {status === "copied" ? <path d="m5 12 4 4L19 6" /> : <><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>}
+        </svg>
+        {!compact && <span>{status === "copied" ? "Copied" : "Copy prompt"}</span>}
+      </button>
+      <span className={status === "error" ? "overview-copy-error" : "overview-sr-only"} role="status">{message}</span>
+    </span>
+  );
+  return buttonOnly ? copyControl : (
+    <div className="overview-setup" role="region" aria-label="PandaProbe setup prompt">
+      <div className="overview-prompt-header">
+        <span className="overview-prompt-filename">setup-prompt.md</span>
+        {copyControl}
+      </div>
+      <div className="overview-prompt-panel">
+        <pre className="overview-prompt-text" tabIndex={0} aria-label="Setup instructions for your coding agent">{highlightedPrompt}</pre>
+      </div>
+    </div>
+  );
+};
 
-# Overview
+<div id="overview-content">
+  <section className="overview-hero" aria-labelledby="overview-title">
+    <div>
+      <h1 id="overview-title">Build agents that reflect on mistakes.</h1>
+      <p className="overview-description">
+        PandaProbe records what happened, evaluates what worked, and turns the evidence into tested guidance for future runs.
+      </p>
+      <div className="overview-actions">
+        <OnboardingPrompt buttonOnly />
+        <a className="overview-button" href="/tracing/get-started/quickstart">Read the quickstart</a>
+      </div>
+    </div>
+    <OnboardingPrompt />
+  </section>
 
-Trace, evaluate, and improve AI agents with tested guidance.
-
-## What is PandaProbe?
-
-PandaProbe is an open-source agent engineering platform. Capture what your agents do, measure their behavior, and turn evaluated failures into guidance they can use in later executions.
-
-The product stack is **Trace → Evaluate → Reflect**. Use each capability independently or connect them into a feedback loop.
-
-<div className="not-prose my-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-  <Card title="Trace" icon="activity" href="/tracing/get-started/quickstart">
-    Capture model calls, tools, workflow steps, and custom logic as structured traces.
-  </Card>
-  <Card title="Evaluate" icon="flask-conical" href="/evaluation/get-started/quickstart">
-    Score traces and sessions. Monitor new executions for quality and regressions.
-  </Card>
-  <Card title="Reflect" icon="refresh-ccw" href="/reflect/quickstart">
-    Give your agent failure evidence and persistent memory. Independently validate proposed rules before sharing them.
-  </Card>
-</div>
-
-## Start with your existing agent
-
-The Python and TypeScript SDKs support provider wrappers, framework integrations, and manual instrumentation. Keep your model, prompts, business tools, and execution environment.
-
-Reflect adds one isolated filesystem tool to supported agents. The same agent can retrieve guidance, maintain working memory, and reflect at bounded checkpoints. Your verifier supplies outcome evidence, and the SDK applies the validation policy before publishing a change. Generating a plausible reflection alone is not proof of improvement.
-
-## Choose your next step
-
-<div className="not-prose my-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-  <Card title="Install the SDK" icon="download" href="/tracing/get-started/installation">
-    Set up Python or TypeScript with your provider and framework.
-  </Card>
-  <Card title="Schedule evaluations" icon="clock" href="/evaluation/setup/scheduling">
-    Check new traces and sessions automatically with monitors.
-  </Card>
-  <Card title="Try Reflect" icon="rocket" href="/reflect/quickstart">
-    Add persistent guidance and reflection to a traced agent.
-  </Card>
-</div>
-
-</div>
+  <section className="overview-section" aria-labelledby="overview-start">
+    <h2 id="overview-start">Where to start</h2>
+    <p>Trace executions, evaluate outcomes, and reflect on mistakes with Python or TypeScript.</p>
+    <div className="overview-paths">
+      <div className="overview-path">
+        <a className="overview-image" href="/tracing/get-started/quickstart" aria-label="Tracing quickstart"><span aria-hidden="true"><Icon icon="activity" size={36} /></span></a>
+        <div className="overview-path-body">
+        <h3>Trace</h3>
+        <p>Capture model calls, tools, and workflow steps to see what happened.</p>
+        <ul>
+          <li><a href="/tracing/get-started/quickstart"><span className="overview-link-icon" aria-hidden="true"><Icon icon="rocket" size={15} /></span><span>Tracing quickstart</span></a></li>
+          <li><a href="/tracing/get-started/concepts"><span className="overview-link-icon" aria-hidden="true"><Icon icon="layers" size={15} /></span><span>Concepts</span></a></li>
+          <li><a href="/tracing/integrations/overview"><span className="overview-link-icon" aria-hidden="true"><Icon icon="plug" size={15} /></span><span>Integrations</span></a></li>
+        </ul>
+        </div>
+      </div>
+      <div className="overview-path">
+        <a className="overview-image" href="/evaluation/get-started/quickstart" aria-label="Evaluation quickstart"><span aria-hidden="true"><Icon icon="flask-conical" size={36} /></span></a>
+        <div className="overview-path-body">
+        <h3>Evaluate</h3>
+        <p>Score traces and sessions to understand what worked and what failed.</p>
+        <ul>
+          <li><a href="/evaluation/get-started/quickstart"><span className="overview-link-icon" aria-hidden="true"><Icon icon="rocket" size={15} /></span><span>Evaluation quickstart</span></a></li>
+          <li><a href="/evaluation/trace-evaluation/introduction"><span className="overview-link-icon" aria-hidden="true"><Icon icon="chart-no-axes-combined" size={15} /></span><span>Trace evaluation</span></a></li>
+          <li><a href="/evaluation/session-evaluation/introduction"><span className="overview-link-icon" aria-hidden="true"><Icon icon="messages-square" size={15} /></span><span>Session evaluation</span></a></li>
+        </ul>
+        </div>
+      </div>
+      <div className="overview-path">
+        <a className="overview-image" href="/reflect/quickstart" aria-label="Reflect quickstart"><span aria-hidden="true"><Icon icon="repeat" size={36} /></span></a>
+        <div className="overview-path-body">
+        <h3>Reflect</h3>
+        <p>Turn failure evidence into guidance your agent can reflect on and self-improve.</p>
+        <ul>
+          <li><a href="/reflect/quickstart"><span className="overview-link-icon" aria-hidden="true"><Icon icon="rocket" size={15} /></span><span>Reflect quickstart</span></a></li>
+          <li><a href="/reflect/concepts"><span className="overview-link-icon" aria-hidden="true"><Icon icon="repeat" size={15} /></span><span>How Reflect works</span></a></li>
+          <li><a href="/reflect/rules-and-memory"><span className="overview-link-icon" aria-hidden="true"><Icon icon="notebook-pen" size={15} /></span><span>Using Reflect</span></a></li>
+        </ul>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
