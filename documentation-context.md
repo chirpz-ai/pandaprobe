@@ -99,16 +99,6 @@ The core checker was removed deliberately. Production Reflect has no exact-text 
 - The former default daily cap of 100 evaluation creations was removed. The count is uncapped by default, with an explicit optional cap and other sampling/concurrency controls. This is separate from service quotas and model-provider limits.
 - Monitoring and scheduled evaluation are platform capabilities, not prerequisites for the default reflection loop.
 
-## Judge-prompt treatment
-
-The latest backend prompt changes use the explicit term **“Reflect rule and memory operations.”** Reflect is optional; such operations may be absent from a trace. Their presence, absence, frequency, and cost are neutral for the task judges. Actual task actions and mistakes remain assessable, even when attempted through a Reflect-named tool.
-
-Step efficiency assesses task-directed steps. Argument correctness can return `neutral` for Reflect rule and memory operations; neutral verdicts remain in metadata but are excluded from the score denominator. The existing nothing-to-evaluate convention returns 1.0 when no task arguments remain, with an explanatory reason; that is not proof of task completion.
-
-This scoring policy does not remove actual token usage, latency, or monetary cost from tracing and operational reporting. The earlier wording that penalized Reflect administration frequency/cost was intentionally replaced with the shorter neutral policy.
-
-The initial successful live examples ran against the older production judge prompts, which already contained Harness-neutrality notes. They demonstrated selected task-completion and independently verified refund outcomes, not that every judge metric was calibrated or that the revised prompts were deployed. The recent prompt/scoring changes passed 64 evaluation unit tests; no new live judge comparison was performed in that refinement.
-
 ## Current documentation structure
 
 The site is Mintlify with the **Aspen** theme and Lucide icons. Its top navigation is **Overview → Trace → Evaluate → Reflect → Reference → Changelog**.
