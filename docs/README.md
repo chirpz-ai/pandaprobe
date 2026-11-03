@@ -1,6 +1,6 @@
 # PandaProbe Documentation
 
-This directory contains the PandaProbe documentation site, built with [Mintlify](https://mintlify.com/).
+The `docs/` directory contains the PandaProbe documentation site, built with [Mintlify](https://mintlify.com/).
 
 ## Prerequisites
 
@@ -57,7 +57,7 @@ docs/
 ├── docs.json             # Theme, navigation, branding, and API routes
 ├── _tools/sdk-reference/ # SDK reference maintenance tools (excluded from publishing)
 ├── assets/               # Logos, provider icons, and evaluation media
-├── overview.mdx          # Single product overview page
+├── overview/index.mdx    # Product overview and inline setup-prompt component
 ├── tracing/              # Provider/framework/manual tracing in both SDKs
 ├── evaluation/           # Metrics, UI/API setup, and scheduled monitors
 ├── reflect/              # Quickstart, guides, and compact runtime reference
@@ -95,7 +95,7 @@ See the [Mintlify docs.json reference](https://mintlify.com/docs/organize/settin
 
 ### Overview component
 
-The setup prompt and copy controls live directly in `overview.mdx`. Keep the inline `OnboardingPrompt` export as one continuous block, without blank lines or standalone JavaScript comments: the current Mintlify preview failed to compile the spaced version on a fresh startup even though `mint validate` passed. After changing this component, restart `mint dev`, open `/overview`, and check both copy buttons; hot reload alone is not sufficient verification.
+The setup prompt and copy controls live directly in `overview/index.mdx`. Keep the inline `OnboardingPrompt` export as one continuous block, without blank lines or standalone JavaScript comments: the current Mintlify preview failed to compile the spaced version on a fresh startup even though `mint validate` passed. After changing this component, restart `mint dev`, open `/overview`, and check both copy buttons; hot reload alone is not sufficient verification.
 
 ## Adding a New Page
 
