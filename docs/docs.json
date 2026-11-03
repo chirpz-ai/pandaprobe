@@ -176,9 +176,9 @@
           {
             "group": "Evaluation types",
             "pages": [
-              "evaluation/introduction",
-              "evaluation/metrics",
-              "evaluation/scoring"
+              "evaluation/types/introduction",
+              "evaluation/types/metrics",
+              "evaluation/types/scoring"
             ]
           },
           {

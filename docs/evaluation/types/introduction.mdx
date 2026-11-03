@@ -21,7 +21,7 @@ Seven metrics use **LLM-as-judge** analysis. Most separate extraction from judgm
 
 The ninth trace metric, **loop detection**, compares an output with recent outputs in the same session. It combines semantic and lexical similarity and runs as a session-evaluation signal. It is not available for standalone trace runs.
 
-See [trace metrics](/evaluation/metrics#trace-metrics) for the calculations, scoring guides, and metadata for each metric.
+See [trace metrics](/evaluation/types/metrics#trace-metrics) for the calculations, scoring guides, and metadata for each metric.
 
 ## Session evaluation
 
@@ -48,7 +48,7 @@ Both session metrics use the same default signal weights:
 | `tool_correctness` | 0.8 | Tool selection quality |
 | `coherence` | 1.0 | Input-output alignment |
 
-You can customize these weights in the dashboard or pass `signal_weights` through the API or CLI. See [session metrics](/evaluation/metrics#session-metrics) for the formulas and missing-signal behavior.
+You can customize these weights in the dashboard or pass `signal_weights` through the API or CLI. See [session metrics](/evaluation/types/metrics#session-metrics) for the formulas and missing-signal behavior.
 
 ## Read the result
 
@@ -63,10 +63,10 @@ Score `status` describes whether computation succeeded. A `SUCCESS` status can a
 ## Next steps
 
 <CardGroup cols={3}>
-  <Card title="Metrics" href="/evaluation/metrics">
+  <Card title="Metrics" href="/evaluation/types/metrics">
     Compare all trace and session metrics and inspect their calculations.
   </Card>
-  <Card title="Programmatic Scoring" href="/evaluation/scoring">
+  <Card title="Programmatic Scoring" href="/evaluation/types/scoring">
     Attach your own checks or feedback to a trace.
   </Card>
   <Card title="Set Up Evaluation" href="/evaluation/setup/introduction">
