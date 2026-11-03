@@ -4,11 +4,21 @@ description: "Create and manage evaluation runs programmatically using the Panda
 icon: "terminal"
 ---
 
-All evaluation features are accessible through the REST API at `/evaluations`. This page covers every endpoint for running trace-level and session-level evaluations.
+Evaluation endpoints live under `/evaluations`. The paths below are relative to `https://api.pandaprobe.com` for PandaProbe Cloud, or your self-hosted API endpoint.
 
 <Note>
-All endpoints require authentication via **API key** with `X-API-Key` and `X-Project-Name` headers.
+For server-side API access, send your API key in `X-API-Key` and project name in `X-Project-Name`. The dashboard uses bearer authentication with the active project context.
 </Note>
+
+For example, list the available trace metrics using credentials from your environment:
+
+```bash
+curl --fail-with-body "https://api.pandaprobe.com/evaluations/trace-metrics" \
+  -H "X-API-Key: $PANDAPROBE_API_KEY" \
+  -H "X-Project-Name: $PANDAPROBE_PROJECT_NAME"
+```
+
+Send `Content-Type: application/json` when posting the request bodies shown below. See the [HTTP API reference](/reference/api/introduction) for generated endpoint schemas.
 
 ## Discover available metrics
 
@@ -20,7 +30,7 @@ Before creating eval runs, check which metrics are available.
 GET /evaluations/trace-metrics
 ```
 
-Returns all registered trace-level metrics:
+Returns metrics available for standalone trace runs. `loop_detection` is excluded because it requires session context. Example entries:
 
 ```json
 [
@@ -119,7 +129,7 @@ Resolves traces matching your filters, samples them, and dispatches background e
   "name": "Weekly production eval",
   "status": "PENDING",
   "metric_names": ["task_completion", "tool_correctness", "step_efficiency"],
-  "total_traces": 150,
+  "total_targets": 150,
   "evaluated_count": 0,
   "failed_count": 0,
   "created_at": "2026-03-29T10:00:00Z",
@@ -171,7 +181,7 @@ Evaluate specific traces by ID instead of using filters.
 GET /evaluations/trace-runs/{run_id}
 ```
 
-Check the progress of an eval run. Poll this endpoint until `status` is `COMPLETED` or `FAILED`.
+Check the progress of an eval run. Poll this endpoint until `status` is `COMPLETED` or `FAILED`, then inspect `failed_count` and the individual scores. `COMPLETED` can include failed computations; a score's `SUCCESS` status describes computation, not whether its value meets your quality bar.
 
 ### List eval runs
 
@@ -489,7 +499,7 @@ Returns the metric's full info (including prompt previews), default filters, sam
   <Card title="Scheduling Evaluations" icon="clock" href="/evaluation/setup/scheduling">
     Set up automated recurring evaluations with monitors.
   </Card>
-  <Card title="Trace Metrics Reference" icon="ruler" href="/evaluation/trace-evaluation/metrics">
-    Detailed documentation for each trace metric.
+  <Card title="Metrics" icon="chart-no-axes-combined" href="/evaluation/metrics">
+    Calculations and metadata for trace and session metrics.
   </Card>
 </CardGroup>

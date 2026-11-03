@@ -59,7 +59,7 @@ docs/
 ├── assets/               # Logos, provider icons, and evaluation media
 ├── overview/index.mdx    # Product overview and inline setup-prompt component
 ├── tracing/              # Provider/framework/manual tracing in both SDKs
-├── evaluation/           # Metrics, UI/API setup, and scheduled monitors
+├── evaluation/           # Unified metrics, scoring, UI/API/CLI setup, and monitors
 ├── reflect/              # Quickstart, guides, and compact runtime reference
 ├── reference/            # Central API and SDK references
 │   ├── api/              # HTTP introduction and openapi.json endpoint source

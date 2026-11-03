@@ -170,27 +170,15 @@
             "pages": [
               "evaluation/get-started/quickstart",
               "evaluation/get-started/concepts",
-              "evaluation/get-started/evaluation-approaches"
+              "evaluation/get-started/evaluation-methods"
             ]
           },
           {
             "group": "Evaluation types",
             "pages": [
-              {
-                "group": "Trace Evaluation",
-                "pages": [
-                  "evaluation/trace-evaluation/introduction",
-                  "evaluation/trace-evaluation/metrics",
-                  "evaluation/trace-evaluation/scoring"
-                ]
-              },
-              {
-                "group": "Session Evaluation",
-                "pages": [
-                  "evaluation/session-evaluation/introduction",
-                  "evaluation/session-evaluation/metrics"
-                ]
-              }
+              "evaluation/introduction",
+              "evaluation/metrics",
+              "evaluation/scoring"
             ]
           },
           {
@@ -199,6 +187,7 @@
               "evaluation/setup/introduction",
               "evaluation/setup/run-eval-ui",
               "evaluation/setup/run-eval-api",
+              "evaluation/setup/run-eval-cli",
               "evaluation/setup/scheduling"
             ]
           }
@@ -466,10 +455,6 @@
   },
   "redirects": [
     {
-      "source": "/evaluation/overview",
-      "destination": "/evaluation/get-started/evaluation-approaches"
-    },
-    {
       "source": "/evaluation/concepts",
       "destination": "/evaluation/get-started/concepts"
     },
@@ -506,20 +491,8 @@
       "destination": "/reference/api/introduction"
     },
     {
-      "source": "/tracing/scoring",
-      "destination": "/evaluation/trace-evaluation/scoring"
-    },
-    {
       "source": "/tracing/overview",
       "destination": "/tracing/get-started/quickstart"
-    },
-    {
-      "source": "/evaluation/agent-evaluation/introduction",
-      "destination": "/evaluation/session-evaluation/introduction"
-    },
-    {
-      "source": "/evaluation/agent-evaluation/metrics",
-      "destination": "/evaluation/session-evaluation/metrics"
     },
     {
       "source": "/introduction/cli",

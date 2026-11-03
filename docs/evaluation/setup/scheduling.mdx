@@ -4,14 +4,7 @@ description: "Set up automated recurring evaluation monitors with custom cadence
 icon: "clock"
 ---
 
-Evaluation **monitors** automate recurring evaluations. Instead of manually creating eval runs, a monitor saves your target type, metrics, filters, sampling rate, and cadence, then creates eval runs automatically in the background.
-
-Use monitors for recurring workflows such as:
-
-- Daily production trace quality checks
-- Weekly session reliability audits
-- Regression monitoring after releases
-- Continuous evaluation of high-value users, tags, or environments
+Evaluation **monitors** save a target type, metrics, filters, sampling rate, and cadence, then create eval runs on that schedule. Use them for daily trace checks, weekly session reviews, or ongoing production monitoring.
 
 ## Dashboard setup
 
@@ -54,15 +47,16 @@ When creating a monitor from the dashboard, configure:
 - **Cadence**: how often PandaProbe creates a new eval run.
 - **Model**: optional model selection for LLM-as-judge metrics.
 - **Customize signal weights**: optional for session monitors.
+- **Skip run if no new data since last run**: enables `only_if_changed` (on by default).
 
 ### Filters
 
 <Tabs>
   <Tab title="Trace monitors">
-    Trace monitors can filter by fields such as **Started after**, **Started before**, **Status**, **Trace ID**, **Session ID**, **User**, and **Tags**.
+    Trace monitors support **Started after**, **Started before**, **Trace status**, **Trace name contains**, **Session ID**, **User ID**, and **Tags**.
   </Tab>
   <Tab title="Session monitors">
-    Session monitors can filter by fields such as **Started after**, **Started before**, **Session ID**, **User**, **Tags**, error status, and minimum trace count.
+    Session monitors support **Started after**, **Started before**, **User ID**, **Has error**, **Tags**, and **Min traces per session**.
   </Tab>
 </Tabs>
 
@@ -78,7 +72,7 @@ Use sampling to control evaluation cost and volume for large projects.
 
 ## API setup
 
-You can also create and manage monitors through the API.
+Use the [API authentication setup](/evaluation/setup/run-eval-api). Paths below are relative to `https://api.pandaprobe.com` or your self-hosted API endpoint.
 
 ### Create a monitor
 
@@ -139,6 +133,34 @@ POST /evaluations/monitors
 }
 ```
 
+## CLI setup
+
+After [installing and authenticating the CLI](/evaluation/setup/run-eval-cli#prerequisites), create a monitor with the same metrics and filters:
+
+```bash
+pandaprobe evals monitors create \
+  --target trace \
+  --name "Daily production quality" \
+  --metrics task_completion,tool_correctness \
+  --status COMPLETED \
+  --tags production \
+  --cadence daily \
+  --sampling-rate 0.3
+```
+
+For a session monitor, use `--target session` with session metrics such as `agent_reliability`. The CLI also supports `--signal-weights` for session monitors and `--only-if-changed=false` to disable the new-data check.
+
+```bash
+pandaprobe evals monitors list
+pandaprobe evals monitors get "your-monitor-id"
+pandaprobe evals monitors runs "your-monitor-id"
+pandaprobe evals monitors pause "your-monitor-id"
+pandaprobe evals monitors resume "your-monitor-id"
+pandaprobe evals monitors trigger "your-monitor-id"
+```
+
+See the [CLI monitor reference](/reference/tools/cli#monitors) for update and delete commands.
+
 ## Cadence options
 
 Monitors support predefined intervals and custom cron expressions.
@@ -152,9 +174,13 @@ Monitors support predefined intervals and custom cron expressions.
 | `cron:0 6 * * 1-5` | Weekdays at 6:00 AM UTC |
 | `cron:0 */4 * * *` | Every 4 hours |
 
+Predefined intervals schedule the next run relative to creation or the previous scheduling event. Use a cron expression when you need a fixed time of day. Cron schedules use UTC.
+
 ## The `only_if_changed` flag
 
-When `only_if_changed` is `true`, PandaProbe skips a scheduled run if no new traces or sessions have arrived since the previous run. This helps avoid re-evaluating the same data unnecessarily.
+When `only_if_changed` is `true` (the default), PandaProbe checks for traces whose `started_at` is later than the monitor's previous run time. For session monitors, those traces must have a session ID. The check also applies the configured date, user, and tag filters.
+
+This decides whether to run; it does not restrict evaluation to new data. Once triggered, the run evaluates the monitor's full filtered and sampled target set. Changes to older traces alone do not satisfy the new-data check.
 
 Set it to `false` when you want the monitor to run on every cadence tick, even if the underlying data has not changed.
 
@@ -165,7 +191,7 @@ Monitors have two states:
 | Status | Description |
 |---|---|
 | `ACTIVE` | The monitor runs on schedule and creates eval runs at each cadence tick |
-| `PAUSED` | The schedule is suspended and no new runs are created |
+| `PAUSED` | Scheduled runs are suspended; a manual trigger is still available |
 
 Common API operations:
 

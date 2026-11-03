@@ -1,19 +1,20 @@
 ---
 title: "Quickstart"
-description: "Run your first evaluation against captured traces or sessions in under 2 minutes"
+description: "Run your first evaluation in under 2 minutes"
 icon: "rocket"
 ---
+
+## Prerequisites
 
 <Note>
   Before you begin, make sure you have:
 
   - A PandaProbe account. Sign up at [app.pandaprobe.com](https://app.pandaprobe.com).
-  - At least one **trace** captured in your project. If you haven't set up tracing yet, follow the [Observability Quickstart](/tracing/get-started/quickstart) first.
-  - For session evaluation: traces grouped under the same `session_id`.
+  - At least one **trace** captured in your project. If you haven't set up tracing yet, follow the [Tracing Quickstart](/tracing/get-started/quickstart) first.
 </Note>
 
 <Info>
-  PandaProbe Cloud manages the evaluation LLM infrastructure for you. You do not need to bring your own LLM API key to run evaluations in PandaProbe Cloud.
+  PandaProbe Cloud manages the evaluation LLM infrastructure for you. You do not need to bring your own LLM API key to run evaluations.
 </Info>
 
 ## Run your first evaluation
@@ -35,12 +36,16 @@ The fastest way to evaluate is directly from the dashboard. You pick a trace (or
     </Tip>
   </Step>
   <Step title="Submit the run">
-    Click **Submit**. PandaProbe creates an eval run with status `PENDING` and dispatches the work to a background worker. The API responds with `202 Accepted`.
+    Click **Submit**. PandaProbe creates an eval run with status `PENDING` and dispatches the work to a background worker.
   </Step>
   <Step title="Review the score">
-    Open the trace once the run completes. You should see a score with a numeric value, a pass/fail status, a human-readable reason, and structured metadata explaining how the score was produced.
+    Open the trace once the run completes. You should see a score with a numeric value, a computation status, a human-readable reason, and structured metadata explaining how the score was produced. For `task_completion`, `metadata.success` records whether the score meets its threshold.
   </Step>
 </Steps>
+
+<video controls preload="metadata" aria-label="Trace evaluation walkthrough" width="100%">
+  <source src="/assets/evals/traces-eval.mp4" type="video/mp4" />
+</video>
 
 ## Try session evaluation
 
@@ -61,13 +66,17 @@ If you have traces grouped under a `session_id`, you can evaluate the entire age
   </Step>
 </Steps>
 
+<video controls preload="metadata" aria-label="Session evaluation walkthrough" width="100%">
+  <source src="/assets/evals/session-eval.mp4" type="video/mp4" />
+</video>
+
 ## What's next?
 
 <CardGroup cols={3}>
   <Card title="Core Concepts" icon="shapes" href="/evaluation/get-started/concepts">
     Learn how eval runs, metrics, scores, signals, and monitors fit together.
   </Card>
-  <Card title="Evaluation Approaches" icon="lightbulb" href="/evaluation/get-started/evaluation-approaches">
+  <Card title="Evaluation Methods" icon="lightbulb" href="/evaluation/get-started/evaluation-methods">
     Understand when to use trace vs. session evaluation.
   </Card>
   <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
@@ -77,4 +86,4 @@ If you have traces grouped under a `session_id`, you can evaluate the entire age
 
 ## Connect evaluation to Reflect
 
-[Reflect](/reflect/quickstart) brings evaluated failure evidence back to your agent, records proposed rules, and uses your independent verifier before publishing shared guidance.
+[Reflect](/reflect/quickstart) brings evaluated failure evidence back to your agent so it can learn from mistakes.
