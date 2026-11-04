@@ -1,4 +1,4 @@
-This function accepts your native agent builder. It must include the tracing integration and use `reflect.agent(...)` to attach Reflect tooling; see the [framework guides](/reflect/frameworks).
+This function accepts your native agent builder. It must include the tracing integration and use `reflect.agent(...)` to attach Reflect tooling; see the [framework guides](/reflect/integrations/overview).
 
 ```ts
 import { Client } from "pandaprobe";
