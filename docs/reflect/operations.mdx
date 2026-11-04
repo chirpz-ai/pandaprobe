@@ -65,7 +65,7 @@ The reusable API is also available independently as `pandaprobe.api.PlatformClie
 | Business verifier found failure but no notice | Inspect platform scores, strict thresholds, sampling, and cooldowns; equality is not a breach |
 | Proposal was not created | Read `reflection.status` and `reason`; unchanged, duplicate, invalid, timed-out, and failed outcomes are distinct |
 | Validation is pending | Check complete pairs, required metrics, protected control success, replay errors/timeouts, improvement, and base revision |
-| Rule exists but is not used | Check that the correct accepted workspace is open and that the agent has/read the supplied tool and current instructions |
+| Rule exists but is not used | Check the workspace identity, supplied tool, current instructions, and whether the agent retrieved the relevant rules |
 | Empty or truncated Bash output | Check output allowance, closed execution, exit code, and truncation metadata; empty text alone does not establish failure |
 | Provider call fails or times out | Inspect its original error and provider limits; task, reflection, replay, and provider deadlines are separate |
 | Native dependency cannot load | Install the documented shell/lock packages and a supported native platform/runtime |
