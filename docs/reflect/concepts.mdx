@@ -21,10 +21,10 @@ flowchart TD
 
 1. **Detect.** Reflect captures trace IDs inside an explicit application boundary, waits for persisted traces, and requests platform evaluations. Configured thresholds and trajectory signals determine whether to create a notice.
 2. **Notify.** The notice and diagnostic evidence become read-only files assigned to that execution. Judge explanations are evidence to investigate, not unquestionable instructions.
-3. **Reflect.** The same task agent continues at a bounded checkpoint. It searches existing rules and proposes a coherent change through `reflect_bash`, or leaves the rules unchanged.
+3. **Reflect.** Your agent continues at a bounded checkpoint. It searches existing rules and proposes a change through `reflect_bash`, or leaves the rules unchanged.
 4. **Validate.** Your replay or matched trial supplies independently checked outcomes. The SDK compares control and candidate results and publishes an accepted revision only when its criteria are met.
 
-The same model and agent behavior are reused; framework adapters may clone or reconstruct native objects for isolation. There is no separately configured reflection model.
+Reflect reuses your model and agent behavior. Framework adapters may clone or reconstruct native objects to isolate reflection and validation. There is no separately configured reflection model.
 
 ## Who owns what?
 
@@ -43,7 +43,7 @@ Native integrations restrict reflection to memory administration. For a custom l
 - **Session:** related work, such as a customer conversation. A session is not a unique execution.
 - **Workspace:** durable rules, proposals, evidence, and bookkeeping. Multiple sessions can use it; each execution gets an isolated working view.
 
-Choose a boundary that includes the complete work you intend to evaluate. A final task can trigger reflection from a single low score. Intermediate work can use `completed=False` in Python or `completed: false` in TypeScript, allowing trajectory signals without classifying incompleteness alone as final failure.
+Choose a boundary that includes the complete work you intend to evaluate. A completed execution can trigger reflection from a single low score. For intermediate work, use an [explicit execution boundary](/reflect/custom-loops#streaming-and-custom-boundaries) with `completed=False` in Python or `completed: false` in TypeScript. This allows trajectory signals without classifying incompleteness alone as final failure.
 
 ## Detection defaults
 
