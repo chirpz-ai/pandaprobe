@@ -3,11 +3,11 @@ title: "Reflect runtime"
 description: "Run the agent, evaluate evidence, continue reflection, and inspect outcomes"
 ---
 
-Reflect coordinates **Detect → Notify → Reflect → Validate** around an explicit agent invocation. The same task agent receives failure evidence and proposes filesystem changes; independent validation owns acceptance.
+Reflect coordinates **Detect → Notify → Reflect → Validate** around an explicit agent invocation. Your agent receives failure evidence and proposes filesystem changes; independent validation determines whether they become accepted rules.
 
 `run` returns the original task result after evaluation and any triggered reflection. It does not replace the task answer with the reflection answer. Task exceptions propagate. Validation settles separately so replay can acquire resources released by the task.
 
-Native agent construction attaches the supplied `reflect_bash` tool and memory instructions. A generic asynchronous callback receives an `Invocation` and must pass its instructions/tool to the model and enforce phase permissions itself. See the [quickstart](/reflect/quickstart), [native integrations](/reflect/frameworks), and [custom loop guide](/reflect/custom-loops).
+Native agent construction attaches the supplied `reflect_bash` tool and memory instructions. A generic asynchronous callback receives an `Invocation` and must pass its instructions/tool to the model and enforce phase permissions itself. See the [quickstart](/reflect/quickstart), [native integrations](/reflect/integrations/overview), and [custom loop guide](/reflect/custom-loops).
 
 Use unique execution IDs and related-work session IDs. Importing Reflect alone starts no work; constructing it opens its configured persistent workspace. Close Reflect and then the tracing client. An externally supplied platform client remains caller-owned.
 
@@ -19,7 +19,7 @@ Import `Reflect` from `pandaprobe/reflect`; alias it to `ReflectRuntime` when al
 
 ## Example
 
-This function accepts your native agent builder. It must include the tracing integration and use `reflect.agent(...)` to attach Reflect tooling; see the [framework guides](/reflect/frameworks).
+This function accepts your native agent builder. It must include the tracing integration and use `reflect.agent(...)` to attach Reflect tooling; see the [framework guides](/reflect/integrations/overview).
 
 ```ts
 import { Client } from "pandaprobe";
