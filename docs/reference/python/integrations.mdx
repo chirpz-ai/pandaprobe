@@ -7,7 +7,7 @@ These APIs enable tracing. They do not enable reflection by themselves. Use the 
 
 LangChain, LangGraph, and DeepAgents use callback handlers passed to native invocation configuration. Their inherited callback methods are framework hooks; applications normally construct a handler once and let the framework call it. The callback contracts below include those inherited SDK methods.
 
-Other integrations use the framework's adapter, processor, query wrapper, or agent wrapper. Register instrumentation once at application startup. See [Reflect integrations](/reflect/frameworks) for memory tooling and reflection continuation.
+Other integrations use the framework's adapter, processor, query wrapper, or agent wrapper. Register instrumentation once at application startup. See [Reflect integrations](/reflect/integrations/overview) for memory tooling and reflection continuation.
 
 Google ADK, Claude Agent SDK, and CrewAI adapters expose synchronous `instrument()` registration. OpenAI Agents uses its native tracing processor hooks. Framework packages remain optional; constructing/importing a particular integration may require its optional dependency. Constructor `**kwargs` on LangChain-family handlers accepts the shared adapter identity options: `client`, `session_id`, `user_id`, `tags`, and `metadata`. LangGraph utility re-exports are included for completeness; prefer the native callback handler for instrumentation.
 
@@ -28,7 +28,7 @@ invocation_config = {"callbacks": [handler]}
 # Keep client alive for the agent's lifetime, then call client.shutdown().
 ```
 
-Full native setup examples are in the [tracing integrations](/tracing/integrations/overview) and [Reflect integrations](/reflect/frameworks).
+Full native setup examples are in the [tracing integrations](/tracing/integrations/overview) and [Reflect integrations](/reflect/integrations/overview).
 
 ## `ClaudeAgentSDKAdapter`
 
