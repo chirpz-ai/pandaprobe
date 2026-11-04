@@ -70,7 +70,7 @@ Provider packages are optional. Install the provider you use alongside `pandapro
 
 LangChain, LangGraph, and DeepAgents use callback handlers passed to native invocation configuration. Their inherited callback methods are framework hooks; applications normally construct a handler once and let the framework call it. The callback contracts below include those inherited SDK methods.
 
-Other integrations use the framework's adapter, processor, query wrapper, or agent wrapper. Register instrumentation once at application startup. See [Reflect integrations](/reflect/frameworks) for memory tooling and reflection continuation.""",
+Other integrations use the framework's adapter, processor, query wrapper, or agent wrapper. Register instrumentation once at application startup. See [Reflect integrations](/reflect/integrations/overview) for memory tooling and reflection continuation.""",
     "platform-client": """This asynchronous HTTP client reads persisted evidence and starts or polls trace evaluations independently of trace export. It reuses an existing tracing client's resolved endpoint, API key, and project, with a separate lifecycle. Close it separately when you supply it to Reflect.
 
 The SDK currently exposes trace reads and trace evaluation resources. The [HTTP API](/reference/api/introduction) also documents operations such as sessions and monitors that are not typed SDK resources here.
@@ -99,11 +99,11 @@ An evaluation result contains a completed run and usable requested scores. It do
 | `EvaluationFailed` | Evaluation ended `FAILED` or `CANCELLED` |
 | `InsufficientEvidence` | Required trace/metric pairs are missing, duplicated, or unusable |
 """,
-    "reflect-runtime": """Reflect coordinates **Detect → Notify → Reflect → Validate** around an explicit agent invocation. The same task agent receives failure evidence and proposes filesystem changes; independent validation owns acceptance.
+    "reflect-runtime": """Reflect coordinates **Detect → Notify → Reflect → Validate** around an explicit agent invocation. Your agent receives failure evidence and proposes filesystem changes; independent validation determines whether they become accepted rules.
 
 `run` returns the original task result after evaluation and any triggered reflection. It does not replace the task answer with the reflection answer. Task exceptions propagate. Validation settles separately so replay can acquire resources released by the task.
 
-Native agent construction attaches the supplied `reflect_bash` tool and memory instructions. A generic asynchronous callback receives an `Invocation` and must pass its instructions/tool to the model and enforce phase permissions itself. See the [quickstart](/reflect/quickstart), [native integrations](/reflect/frameworks), and [custom loop guide](/reflect/custom-loops).
+Native agent construction attaches the supplied `reflect_bash` tool and memory instructions. A generic asynchronous callback receives an `Invocation` and must pass its instructions/tool to the model and enforce phase permissions itself. See the [quickstart](/reflect/quickstart), [native integrations](/reflect/integrations/overview), and [custom loop guide](/reflect/custom-loops).
 
 Use unique execution IDs and related-work session IDs. Importing Reflect alone starts no work; constructing it opens its configured persistent workspace. Close Reflect and then the tracing client. An externally supplied platform client remains caller-owned.""",
     "reflect-config": """Start with defaults. These options govern Reflect policy, not the task model/provider. Durations are seconds and sizes count UTF-8 bytes. `PANDAPROBE_REFLECT_WORKSPACE` supplies the default workspace; explicit configuration takes precedence.
