@@ -1,0 +1,130 @@
+---
+title: "Provider wrappers"
+description: "Instrument provider clients while preserving their native calls and results"
+---
+
+Wrap the provider client before using it. Calls retain their native arguments, results, exceptions, and streaming behavior. Instrumented calls attach to the active trace or create a standalone trace when needed. Finish or close streams so their trace can be finalized.
+
+Provider packages are optional. Install the provider you use alongside `pandaprobe`; the wrapper does not replace the provider's own API reference. These functions instrument model calls, while the [framework integrations](/tracing/integrations/overview) also capture agent/tool structure.
+
+Import each wrapper from its documented provider subpath. There is no exported `pandaprobe/wrappers` aggregate or TypeScript LiteLLM wrapper. Bedrock instrumentation wraps the native client’s `send` method.
+
+## On this page
+
+[wrapAnthropic](#wrapanthropic), [wrapBedrock](#wrapbedrock), [wrapGemini](#wrapgemini), [wrapMistral](#wrapmistral), [wrapOpenAI](#wrapopenai).
+
+## Example
+
+Install `pandaprobe` and `openai` with npm, yarn, or pnpm. Set both PandaProbe and OpenAI credentials before making model calls.
+
+```ts
+import OpenAI from "openai";
+import { wrapOpenAI } from "pandaprobe/wrappers/openai";
+
+const modelClient = wrapOpenAI(new OpenAI());
+// Use modelClient.chat.completions.create(...) as usual.
+```
+
+## `wrapAnthropic`
+
+```ts
+import { wrapAnthropic } from "pandaprobe/wrappers/anthropic";
+```
+
+Instrument an `Anthropic` client.
+
+Type parameters: `T`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/wrappers/anthropic/wrapper.ts#L15)
+
+```text
+wrapAnthropic<T>(client: T): T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+## `wrapBedrock`
+
+```ts
+import { wrapBedrock } from "pandaprobe/wrappers/bedrock";
+```
+
+Instrument an `@aws-sdk/client-bedrock-runtime` `BedrockRuntimeClient`.
+
+Type parameters: `T`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/wrappers/bedrock/wrapper.ts#L16)
+
+```text
+wrapBedrock<T>(client: T): T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+## `wrapGemini`
+
+```ts
+import { wrapGemini } from "pandaprobe/wrappers/gemini";
+```
+
+Instrument a `GoogleGenAI` client.
+
+Type parameters: `T`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/wrappers/gemini/wrapper.ts#L15)
+
+```text
+wrapGemini<T>(client: T): T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+## `wrapMistral`
+
+```ts
+import { wrapMistral } from "pandaprobe/wrappers/mistral";
+```
+
+Instrument a `Mistral` client.
+
+Type parameters: `T`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/wrappers/mistral/wrapper.ts#L15)
+
+```text
+wrapMistral<T>(client: T): T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+## `wrapOpenAI`
+
+```ts
+import { wrapOpenAI } from "pandaprobe/wrappers/openai";
+```
+
+Instrument an `OpenAI` or `AzureOpenAI` client (sync API is async in JS).
+
+Type parameters: `T`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/wrappers/openai/wrapper.ts#L17)
+
+```text
+wrapOpenAI<T>(client: T): T
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `T` | Required |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.

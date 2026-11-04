@@ -1,0 +1,133 @@
+---
+title: "Claude Agent SDK"
+description: "Add Reflect to Claude Agent SDK with native tracing, tools, and continuation"
+icon: "/assets/providers/claude.svg"
+---
+
+Reflect registers its filesystem tool through an SDK MCP server. Configure Python options before opening a native client; in TypeScript, pass the traced `query` function to Reflect.
+
+## Installation
+
+Python 3.10+ and Node.js 22+ for these examples. Install Reflect together with the framework and model provider used below.
+
+<Tabs>
+<Tab title="pip">
+```bash
+pip install "pandaprobe[reflect,claude-agent-sdk]"
+```
+</Tab>
+<Tab title="uv">
+```bash
+uv add "pandaprobe[reflect,claude-agent-sdk]"
+```
+</Tab>
+<Tab title="npm">
+```bash
+npm install pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 @anthropic-ai/claude-agent-sdk zod
+```
+</Tab>
+<Tab title="yarn">
+```bash
+yarn add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 @anthropic-ai/claude-agent-sdk zod
+```
+</Tab>
+<Tab title="pnpm">
+```bash
+pnpm add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 @anthropic-ai/claude-agent-sdk zod
+```
+</Tab>
+</Tabs>
+
+## Credentials
+
+```bash
+export PANDAPROBE_API_KEY="your-pandaprobe-api-key"
+export PANDAPROBE_PROJECT_NAME="support-agent"
+export ANTHROPIC_API_KEY="your-provider-api-key"
+```
+
+For a self-hosted platform, also set `PANDAPROBE_ENDPOINT` to your API base URL. Reflect uses the same client configuration as tracing.
+
+## Enable Reflect
+
+This example creates a policy assistant. Add your own domain tools where indicated; Reflect supplies `reflect_bash` automatically.
+
+<CodeGroup>
+```python title="Python"
+import asyncio
+
+from claude_agent_sdk import ClaudeAgentOptions
+from pandaprobe.integrations.claude_agent_sdk import ClaudeAgentSDKAdapter
+from pandaprobe import Client
+from pandaprobe.reflect import Reflect
+
+
+async def main():
+    client = Client()
+    try:
+        ClaudeAgentSDKAdapter(client=client).instrument()
+        async with Reflect(client) as reflect:
+            options = ClaudeAgentOptions(
+                model="claude-haiku-5-5",
+                system_prompt="For standard returns, refund merchandise paid and exclude outbound shipping. Explain the policy clearly.",
+                tools=[], max_turns=12,
+                thinking={"type": "disabled"}, effort="low",
+            )
+            messages = await reflect.run(options, "I paid $65 for an item and $7 for shipping. What is refundable?", session_id="customer-42")
+            print(messages[-1].result)
+    finally:
+        client.shutdown()
+
+
+asyncio.run(main())
+```
+
+```ts title="TypeScript"
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import { wrapClaudeAgentQuery } from "pandaprobe/integrations/claude-agent-sdk";
+import { Client } from "pandaprobe";
+import { Reflect as ReflectRuntime } from "pandaprobe/reflect";
+
+async function main() {
+  const client = new Client();
+  const reflect = new ReflectRuntime(client);
+  try {
+    const agent = await reflect.agent(wrapClaudeAgentQuery(query, { client }), {
+      framework: "claude-agent-sdk",
+      options: {
+        model: "claude-haiku-5-5",
+        systemPrompt: "For standard returns, refund merchandise paid and exclude outbound shipping. Explain the policy clearly.",
+        tools: [], maxTurns: 12,
+        thinking: { type: "disabled" }, effort: "low",
+      },
+    });
+    const messages = await reflect.run(agent, "I paid $65 for an item and $7 for shipping. What is refundable?", { sessionId: "customer-42" });
+    const result = messages.find((message: { type: string }) => message.type === "result");
+    console.log(result?.result);
+  } finally {
+    await reflect.close();
+    await client.shutdown();
+  }
+}
+
+main().catch(error => { console.error(error); process.exitCode = 1; });
+```
+</CodeGroup>
+
+## How the integration behaves
+
+Complete the Claude Agent SDK’s native runtime and authentication setup as described in the [tracing guide](/tracing/integrations/claude-agent-sdk). The example disables built-in tools; add your application’s tools/MCP servers through native options when needed. Reflect preserves those task options on copies.
+
+The supplied tool is named `mcp__pandaprobe_reflect__reflect_bash`. The example’s model, thinking, and effort settings are application choices, not Reflect defaults.
+
+### Conversations and replay
+
+Reflection resumes the completed native session with only Reflect’s MCP server/tool and a bounded turn limit. Validation clears session/resume/continue options for a fresh conversation. For ordinary multi-turn tasks, manage native session/resume options yourself; a Reflect session ID alone does not resume Claude history.
+
+The adapter collects query messages, closes owned query/server resources, and surfaces native terminal errors with provider details.
+
+`run()` returns the task's native result after evaluation and any triggered reflection. A healthy answer may produce no proposal. The workspace persists accepted guidance and pending proposals across restarts.
+
+## Validate learned rules
+
+Add [independent replay or controlled trials](/reflect/validation) before proposed changes can become shared accepted guidance. Reset your business environment and conversation for each validation arm. See [Rules and memory](/reflect/rules-and-memory) for the working filesystem and session notes.

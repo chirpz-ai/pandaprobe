@@ -7,7 +7,7 @@ icon: "download"
 ### Prerequisites
 
 - Python 3.10 or later for the Python SDK, or Node.js 18 or later for the TypeScript SDK
-- A PandaProbe account with an API key
+- A PandaProbe account with an API key. [Sign up](https://app.pandaprobe.com) if you don't have an account.
 
 <Note>
   Some optional provider and framework packages require a newer Node.js version. Follow the engine requirements of the integrations you install.
@@ -64,8 +64,6 @@ PandaProbe keeps provider and framework SDKs optional. Install only the packages
     | Claude Agent SDK | `pip install "pandaprobe[claude-agent-sdk]"` |
     | CrewAI | `pip install "pandaprobe[crewai]"` |
     | OpenAI Agents SDK | `pip install "pandaprobe[openai-agents]"` |
-
-    With uv, replace `pip install` with `uv add`. You can combine extras, for example `uv add "pandaprobe[openai,anthropic,gemini]"`.
   </Tab>
   <Tab title="TypeScript">
     | Integration | Additional packages |

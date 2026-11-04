@@ -1,0 +1,632 @@
+---
+title: "Metrics"
+description: "Calculations, scoring guides, and metadata for every trace and session evaluation metric."
+icon: "chart-no-axes-combined"
+---
+
+PandaProbe includes nine trace metrics and two session metrics. Eight trace metrics can run independently; `loop_detection` runs only as a signal during session evaluation.
+
+Built-in scores range from **0 to 1**, with higher values indicating better results on that metric. Each metric defines a default threshold of **0.5**. A score's `SUCCESS` status means computation succeeded; quality is described by its value, reason, and metadata.
+
+| Metric | Target | Method |
+| --- | --- | --- |
+| [Task Completion](#task-completion) | Trace | LLM judge, 2 stages |
+| [Tool Correctness](#tool-correctness) | Trace | LLM judge, 2 stages |
+| [Argument Correctness](#argument-correctness) | Trace | LLM judge, up to 3 stages |
+| [Step Efficiency](#step-efficiency) | Trace | LLM judge, 2 stages |
+| [Confidence](#confidence) | Trace | LLM judge, 1 stage |
+| [Plan Adherence](#plan-adherence) | Trace | LLM judge, up to 3 stages |
+| [Plan Quality](#plan-quality) | Trace | LLM judge, up to 3 stages |
+| [Coherence](#coherence) | Trace | Embedding cosine distance |
+| [Loop Detection](#loop-detection) | Session signal | Semantic and lexical similarity |
+| [Agent Reliability](#agent-reliability) | Session | Maximum weighted risk and top-k aggregation |
+| [Agent Consistency](#agent-consistency) | Session | Weighted root mean square (RMS) |
+
+## Trace metrics
+
+Trace metrics analyze the recorded execution and its spans. Judge-based results depend on the available evidence and selected model; inspect the extracted context and reason when diagnosing a score.
+
+### Task Completion
+
+**Registry name:** `task_completion` · **Default threshold:** 0.5 · **Method:** LLM judge (2-stage)
+
+Evaluates whether the agent accomplished the user's stated objective.
+
+**How it works**
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract** | LLM identifies the user's task and a strictly factual description of what the agent did from the trace. Subjective language (e.g., "successfully") is explicitly excluded. | `task` (string), `outcome` (string) |
+| **2. Score** | LLM compares the extracted task against the actual outcome and scores fulfillment on a 0–1 scale. | `verdict` (float 0–1), `reason` (string) |
+
+**Scoring guide**
+
+| Score | Meaning |
+|---|---|
+| 1.0 | Task perfectly accomplished |
+| 0.75–0.99 | Mostly complete, minor aspects missing |
+| 0.5–0.74 | Partially complete |
+| 0.25–0.49 | Significant gaps in completion |
+| 0.0–0.24 | Task not meaningfully addressed |
+
+<Accordion title="Example metadata">
+
+```json
+{
+  "task": "Book a round-trip flight from SFO to JFK for next Friday",
+  "outcome": "Found 3 available flights, selected the cheapest option, and completed booking confirmation",
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+</Accordion>
+
+### Tool Correctness
+
+**Registry name:** `tool_correctness` · **Default threshold:** 0.5 · **Method:** LLM judge (2-stage)
+
+Evaluates whether the agent selected appropriate tools for its task. Catches over-selection (unnecessary tools), under-selection (missing tools), and mis-selection (wrong tools).
+
+**How it works**
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract** | LLM extracts the user's goal, all tool calls made (name + parameters), and all available tools (name + description) from trace spans. | `user_input`, `tools_called` (list), `available_tools` (list) |
+| **2. Score** | LLM judges tool selection quality considering correct selection, over-selection, under-selection, and mis-selection. | `score` (float 0–1), `reason` (string) |
+
+**What the judge evaluates**
+
+- **Correct selection** — Were the tools used appropriate and sufficient?
+- **Over-selection** — Were unnecessary or redundant tools called?
+- **Under-selection** — Were useful available tools ignored?
+- **Mis-selection** — Were wrong or irrelevant tools chosen?
+
+<Accordion title="Example metadata">
+
+```json
+{
+  "user_input": "Look up the weather in Tokyo and book a restaurant",
+  "tools_called": [
+    {"name": "weather_lookup", "parameters": {"city": "Tokyo"}},
+    {"name": "restaurant_booking", "parameters": {"city": "Tokyo", "cuisine": "sushi"}}
+  ],
+  "available_tools": [
+    {"name": "weather_lookup", "description": "Get weather forecast"},
+    {"name": "restaurant_booking", "description": "Book a restaurant"},
+    {"name": "flight_search", "description": "Search flights"}
+  ],
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+</Accordion>
+
+### Argument Correctness
+
+**Registry name:** `argument_correctness` · **Default threshold:** 0.5 · **Method:** LLM judge (3-stage)
+
+Evaluates whether the arguments passed to each tool call were correct for the user's task. While Tool Correctness checks *which* tools were called, Argument Correctness checks *how* they were called.
+
+**How it works**
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract** | LLM identifies the user input and all tool calls with their parameters and reasoning from the trace. | `user_input` (string), `tool_calls` (list of name/parameters/reasoning) |
+| **2. Verdicts** | LLM returns `yes`/`no` for task arguments and `neutral` for Reflect rule and memory operations, when present. | `verdicts` (list of verdict + reason) |
+| **3. Reason** | LLM produces a concise overall explanation from the score and list of incorrect-call reasons. | `reason` (string) |
+
+**Score calculation**
+
+The score is computed deterministically from the verdicts:
+
+```
+score = yes_count / (yes_count + no_count)
+```
+
+Neutral verdicts remain in the metadata but do not affect the score. If there are no task arguments to evaluate, the metric returns 1.0 (nothing to evaluate); this is not evidence of task completion.
+
+<Accordion title="Example metadata">
+
+```json
+{
+  "user_input": "Find flights from SFO to JFK under $500",
+  "verdicts": [
+    {"verdict": "yes", "reason": null},
+    {"verdict": "no", "reason": "Price filter was set to $1000 instead of $500"}
+  ],
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+</Accordion>
+
+### Step Efficiency
+
+**Registry name:** `step_efficiency` · **Default threshold:** 0.5 · **Method:** LLM judge (2-stage)
+
+Evaluates how efficiently the agent executed its task, penalizing redundant steps, unnecessary tool calls, and speculative work.
+
+**How it works**
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract** | LLM extracts the user's original goal from the trace. | `task` (string) |
+| **2. Score** | LLM scores execution efficiency based on minimality of actions, penalizing redundant steps, unnecessary tool calls, and speculative work. | `score` (float 0–1), `reason` (string) |
+
+**What lowers the score**
+
+- Redundant or duplicate tool calls
+- Unnecessary intermediate steps
+- Speculative work that wasn't needed for the task
+- Overly verbose reasoning chains that don't add value
+
+<Accordion title="Example metadata">
+
+```json
+{
+  "task": "Get the current Bitcoin price",
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+</Accordion>
+
+### Confidence
+
+**Registry name:** `confidence` · **Default threshold:** 0.5 · **Method:** LLM judge (1-stage)
+
+Evaluates whether the agent's actions were decisive, appropriate, and well-founded. This metric is also used as a **signal** for session-level aggregation in `agent_reliability` and `agent_consistency`.
+
+**How it works**
+
+A single LLM call evaluates the entire trace against four criteria:
+
+- **Decisiveness** — Did the agent act without unnecessary hesitation or contradictory steps?
+- **Appropriateness** — Were the actions relevant to the user's goal?
+- **Consistency** — Did the agent maintain a coherent strategy throughout?
+- **Indicators of low confidence** — hedging language, contradictions, unnecessary retries, vague outputs, repeated tool calls with identical parameters, or abandoned strategies
+
+**Scoring guide**
+
+| Score | Meaning |
+|---|---|
+| 1.0 | Fully confident, decisive execution |
+| 0.75 | Minor hesitation or suboptimal strategy |
+| 0.5 | Noticeable indecision or inconsistency |
+| 0.25 | Significant uncertainty, multiple abandoned approaches |
+| 0.0 | Completely uncertain, contradictory actions |
+
+<Accordion title="Example metadata">
+
+```json
+{
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+</Accordion>
+
+### Plan Adherence
+
+**Registry name:** `plan_adherence` · **Default threshold:** 0.5 · **Method:** LLM judge (3-stage)
+
+Evaluates how closely the agent followed its declared or implied plan during execution. Useful for agents that produce a plan before acting.
+
+**How it works**
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract task** | LLM extracts the user's task from the trace (reuses the Step Efficiency extraction prompt). | `task` (string) |
+| **2. Extract plan** | LLM extracts the agent's explicit or implied plan from reasoning/thought fields. The extraction prompt requires trace evidence for each step. | `plan` (list of strings) |
+| **3. Score** | LLM scores how strictly execution followed the plan, checking step order and completeness. | `score` (float 0–1), `reason` (string) |
+
+If no plan is found in the trace, the metric returns **1.0** with an empty `plan`. This means there was no plan to assess, not that planning succeeded.
+
+Metadata includes the extracted `task` and `plan`, along with `threshold` and `success`.
+
+**Scoring guide**
+
+| Score | Meaning |
+|---|---|
+| 1.0 | Perfect adherence — execution matches plan exactly |
+| 0.75 | Nearly all steps in order, minor deviations |
+| 0.5 | Partial adherence, some steps skipped or reordered |
+| 0.25 | Weak adherence, significant deviation from plan |
+| 0.0 | No adherence, execution bears little relation to plan |
+
+**What the judge evaluates**
+
+- Were all planned steps executed?
+- Were steps followed in the intended order?
+- Were there extraneous actions not in the plan?
+- Were any planned steps skipped?
+
+### Plan Quality
+
+**Registry name:** `plan_quality` · **Default threshold:** 0.5 · **Method:** LLM judge (3-stage)
+
+Evaluates the intrinsic quality of the agent's plan, independent of whether the plan was followed. While Plan Adherence checks execution vs. plan, Plan Quality checks whether the plan itself was good.
+
+**How it works**
+
+| Stage | What happens | Output schema |
+|---|---|---|
+| **1. Extract task** | LLM extracts the user's task from the trace. | `task` (string) |
+| **2. Extract plan** | LLM extracts the agent's plan from reasoning fields. | `plan` (list of strings) |
+| **3. Score quality** | LLM scores plan quality based on completeness, logical coherence, optimality, detail level, and alignment with the task. | `score` (float 0–1), `reason` (string) |
+
+If no plan is found, the metric returns **1.0** with an empty `plan`. Inspect the reason before interpreting this as a high-quality plan.
+
+Metadata includes the extracted `task` and `plan`, along with `threshold` and `success`.
+
+**What the judge evaluates**
+
+- **Completeness** — Does the plan address all aspects of the task?
+- **Logical coherence** — Are steps ordered and structured sensibly?
+- **Optimality/efficiency** — Could the plan be streamlined?
+- **Level of detail** — Sufficiently detailed without being overly verbose?
+- **Alignment with task** — Does the plan match the user's intent?
+
+**Scoring guide**
+
+| Score | Meaning |
+|---|---|
+| 1.0 | Excellent plan — complete, coherent, optimal |
+| 0.75 | Good plan — minor flaws or suboptimal choices |
+| 0.5 | Adequate but flawed — works but has notable gaps |
+| 0.25 | Weak plan — significant issues |
+| 0.0 | Inadequate — does not address the task |
+
+### Coherence
+
+**Registry name:** `coherence` · **Default threshold:** 0.5 · **Method:** Embedding distance (no LLM call)
+
+Measures semantic alignment between the trace input and output using embedding-based cosine distance. The calculation is deterministic for fixed embeddings and requires no judge-generation call. Semantic similarity alone does not establish factual correctness.
+
+**How it works**
+
+1. The trace's `input` and `output` are serialized to text
+2. Both texts are embedded using the configured embedding model
+3. The cosine distance between the two embeddings is computed
+4. Score = `1.0 - cosine_distance` (clamped to [0, 1])
+
+A small distance (high score) means the output is semantically aligned with the input. A large distance (low score) suggests the output is unrelated or off-topic.
+
+**Edge cases**
+
+- If either input or output is empty, the metric returns **1.0** with a note explaining coherence was assumed
+- An assumed score for missing input or output is not evidence of coherence.
+- The metric also serves as a **signal** for session-level aggregation
+
+<Accordion title="Example metadata">
+
+```json
+{
+  "coherence_gap": 0.1234,
+  "threshold": 0.5,
+  "success": true
+}
+```
+
+</Accordion>
+
+### Loop Detection
+
+**Registry name:** `loop_detection` · **Default threshold:** 0.5 · **Method:** Hybrid semantic + Jaccard similarity
+
+Detects whether the agent is stuck repeating itself across traces in the same session. This metric **requires session context** — it compares the current trace's output against previous traces.
+
+<Warning>
+Loop Detection is excluded from standalone trace eval runs. It runs automatically as a signal during session-level evaluations.
+</Warning>
+
+**How it works**
+
+1. The current trace's output and the previous traces' outputs (up to a window of 3) are collected
+2. All outputs are embedded using the configured embedding model
+3. For each previous trace, two similarity scores are computed:
+   - **Cosine similarity** (semantic overlap) between embeddings
+   - **Jaccard similarity** (lexical overlap) between tokenized word sets (with stop-word removal)
+4. A **hybrid score** = cosine × Jaccard is computed for each pair
+5. Final score = `1.0 - max(hybrid_scores)` (clamped to [0, 1])
+
+**Why the hybrid approach**
+
+| Scenario | Cosine | Jaccard | Hybrid | Interpretation |
+|---|---|---|---|---|
+| Agent repeating exact same response | High | High | High → Low score | Stuck in a loop |
+| Agent enumerating related items | High | Low | Low → High score | Valid exploration |
+| Completely unrelated outputs | Low | Low | Low → High score | No repetition |
+
+Multiplying cosine and Jaccard similarity lowers the penalty for related outputs with different wording. The final score is high when repetition is low.
+
+With no prior session context, an empty current output, or no nonempty previous outputs, the metric returns **1.0** with an explanatory note because repetition cannot be assessed.
+
+<Accordion title="Example metadata">
+
+```json
+{
+  "window_size": 1,
+  "max_hybrid": 0.722,
+  "comparisons": [
+    {
+      "trace_index": 2,
+      "cosine_similarity": 0.95,
+      "jaccard_similarity": 0.76,
+      "hybrid_score": 0.722
+    }
+  ],
+  "threshold": 0.5,
+  "success": false
+}
+```
+
+</Accordion>
+
+## Session metrics
+
+Session evaluation prepares four trace-level signals before aggregation. The worker reuses available scores and computes missing ones. Aggregation itself makes no LLM or embedding calls.
+
+| Signal | Default weight |
+| --- | --- |
+| `confidence` | 1.0 |
+| `loop_detection` | 1.0 |
+| `tool_correctness` | 0.8 |
+| `coherence` | 1.0 |
+
+Override individual weights with `signal_weights` in a session run, or customize them in the dashboard. Omitted weights retain their defaults. Higher weights increase the associated risk contribution.
+
+### Agent Reliability
+
+**Registry name:** `agent_reliability` · **Default threshold:** 0.5 · **Method:** Max-compose + top-k tail risk
+
+Emphasizes the highest observed signal risks in a session. Use it to find problematic traces that an average score could obscure.
+
+**Algorithm**
+
+For each trace in the session, the metric computes a **per-trace risk** from the precomputed signals:
+
+<Steps>
+  <Step title="Convert signals to risks">
+    Each signal score is inverted to become a risk value:
+
+    ```
+    confidence_risk = 1.0 - confidence_score
+    loop_risk       = 1.0 - loop_detection_score
+    tool_risk       = 1.0 - tool_correctness_score
+    coherence_risk  = 1.0 - coherence_score
+    ```
+  </Step>
+  <Step title="Weight and max-compose per trace">
+    Each risk is multiplied by its signal weight, and the **maximum** weighted risk becomes the trace's risk:
+
+    ```
+    per_trace_risk = max(w_conf × confidence_risk,
+                         w_loop × loop_risk,
+                         w_tool × tool_risk,
+                         w_coh  × coherence_risk)
+    ```
+
+    Only signals that are present for a trace are included — missing signals are skipped, not treated as zero.
+  </Step>
+  <Step title="Top-k tail risk aggregation">
+    Per-trace risks are sorted in descending order. The top 15% (at least 1) are selected:
+
+    ```
+    k = max(1, ceil(num_evaluable_traces × 0.15))
+    mean_top_k = mean(sorted_risks[:k])
+    max_risk   = sorted_risks[0]
+    ```
+  </Step>
+  <Step title="Ensemble and final score">
+    The raw session risk blends the top-k mean with the single worst trace:
+
+    ```
+    raw_risk = 0.9 × mean_top_k + 0.1 × max_risk
+    score    = clamp(1.0 - raw_risk, 0, 1)
+    ```
+  </Step>
+</Steps>
+
+**Why max-compose + top-k**
+
+- **Max-compose** ensures each trace's risk is driven by its worst signal. An agent that has great tool selection but terrible coherence on one trace still gets flagged.
+- **Top-k** focuses on the tail of the distribution. With 100 evaluable traces, the calculation averages the 15 highest risks, then blends in the single highest risk.
+- **The 10% max-risk blend** gives extra weight to the single worst trace, preventing a handful of high-risk traces from being averaged away.
+
+**Flagged traces**
+
+Traces with `per_trace_risk > 0.5` are flagged in the metadata. This lets you quickly identify which specific traces are dragging down the session's reliability score.
+
+<Accordion title="Example metadata">
+
+```json
+{
+  "total_traces_in_session": 2,
+  "traces_evaluated": 2,
+  "raw_risk": 0.72,
+  "signal_weights": {
+    "confidence": 1.0,
+    "loop_detection": 1.0,
+    "tool_correctness": 0.8,
+    "coherence": 1.0
+  },
+  "per_trace_signals": {
+    "trace-id-1": {
+      "confidence_risk": 0.12,
+      "loop_risk": 0.05,
+      "tool_risk": 0.08,
+      "coherence_risk": 0.03,
+      "step_risk": 0.12
+    },
+    "trace-id-7": {
+      "confidence_risk": 0.65,
+      "loop_risk": 0.72,
+      "tool_risk": 0.10,
+      "coherence_risk": 0.15,
+      "step_risk": 0.72
+    }
+  },
+  "flagged_traces": ["trace-id-7"],
+  "aggregation": {
+    "method": "max_compose_top_k",
+    "top_k_percentile": 0.15,
+    "ensemble_weight": 0.1,
+    "mean_top_k_risk": 0.72,
+    "max_risk": 0.72
+  }
+}
+```
+
+</Accordion>
+
+**Interpreting the score**
+
+These ranges are reading aids for the default weights, not measured failure probabilities.
+
+| Score range | Meaning |
+|---|---|
+| 0.9–1.0 | Low aggregated risk; inspect individual traces for exceptions |
+| 0.7–0.89 | Generally reliable — minor risk in a few traces |
+| 0.5–0.69 | Moderate risk — some traces show concerning behavior |
+| 0.3–0.49 | Elevated risk — multiple traces with significant issues |
+| 0.0–0.29 | High aggregated risk in the available signals |
+
+### Agent Consistency
+
+**Registry name:** `agent_consistency` · **Default threshold:** 0.5 · **Method:** Weighted RMS aggregation
+
+Aggregates confidence risk across the session, amplified by loop, tool, and coherence risks. Repeated moderate uncertainty can lower the score even without one extreme trace. With a confidence score of 1.0, the trace contributes zero uncertainty even when other signals are poor; read reliability alongside this metric.
+
+**Algorithm**
+
+<Steps>
+  <Step title="Filter traces">
+    Only traces with a `confidence` signal are included. Traces missing confidence are skipped entirely (unlike reliability, which includes traces with any signal subset).
+  </Step>
+  <Step title="Compute weighted uncertainty per trace">
+    For each trace:
+
+    ```
+    confidence_risk = 1.0 - confidence_score
+
+    penalty = w_loop × (1 - loop_detection)      # if present
+            + w_tool × (1 - tool_correctness)     # if present
+            + w_coh  × (1 - coherence)            # if present
+
+    amplification = 1.0 + penalty
+    weighted_uncertainty = amplification × (w_conf × confidence_risk)
+    ```
+
+    The penalty terms **amplify** the confidence risk. A trace with low confidence *and* poor tool correctness gets a higher uncertainty than one with low confidence alone.
+  </Step>
+  <Step title="RMS aggregation">
+    The root mean square of all weighted uncertainties becomes the raw instability:
+
+    ```
+    rms = sqrt(sum(wu² for wu in weighted_uncertainties) / n)
+    score = clamp(1.0 - rms, 0, 1)
+    ```
+  </Step>
+</Steps>
+
+**Why RMS and amplification**
+
+RMS reflects both magnitude and variation. If every trace has uncertainty 0.3, RMS is 0.3. With uneven uncertainty, squaring gives larger values more influence than a simple average would.
+
+The other signals amplify confidence risk: uncertain execution with poor tool selection or coherence contributes more instability than the same confidence risk with strong supporting signals.
+
+<Accordion title="Example metadata">
+
+```json
+{
+  "total_traces_in_session": 1,
+  "traces_evaluated": 1,
+  "raw_instability": 0.1373,
+  "signal_weights": {
+    "confidence": 1.0,
+    "loop_detection": 1.0,
+    "tool_correctness": 0.8,
+    "coherence": 1.0
+  },
+  "per_trace_signals": {
+    "trace-id-1": {
+      "confidence_risk": 0.12,
+      "loop_risk": 0.05,
+      "tool_risk": 0.08,
+      "coherence_risk": 0.03,
+      "situational_penalty": 0.144,
+      "weighted_uncertainty": 0.1373
+    }
+  },
+  "aggregation": {
+    "method": "weighted_rms",
+    "rms_value": 0.1373
+  }
+}
+```
+
+</Accordion>
+
+**Interpreting the score**
+
+These ranges are reading aids for the default weights, not measured failure probabilities.
+
+| Score range | Meaning |
+|---|---|
+| 0.9–1.0 | Low RMS uncertainty among evaluable traces |
+| 0.7–0.89 | Mild RMS uncertainty |
+| 0.5–0.69 | Moderate RMS uncertainty |
+| 0.3–0.49 | High RMS uncertainty |
+| 0.0–0.29 | Very high RMS uncertainty; inspect compounding signals |
+
+### Reliability vs. Consistency
+
+These two metrics complement each other:
+
+| | Agent Reliability | Agent Consistency |
+|---|---|---|
+| **Focus** | Worst-case failures | Overall stability |
+| **Question** | "Did the agent ever fail badly?" | "Did the agent perform smoothly?" |
+| **Sensitive to** | Highest weighted signal risks | Magnitude and variation of amplified confidence risk |
+| **Signal handling** | Uses any available subset | Requires confidence signal |
+| **Aggregation** | Max-compose + top-k tail risk | Weighted RMS |
+| **Use case** | Prioritize risky steps for review | Investigate accumulated uncertainty |
+
+Read the two scores together. Low reliability points to the worst weighted risks; low consistency points to amplified confidence risk across evaluable traces. Neither score establishes task completion on its own.
+
+### Edge cases
+
+Both metrics use these fallback behaviors:
+
+| Scenario | Score | Reason |
+|---|---|---|
+| No traces or no precomputed signals | 1.0 | "No traces or signals to evaluate." |
+| No evaluable traces after filtering | 1.0 | "No evaluable traces." |
+| Single trace in session | Evaluated normally | Top-k degenerates to k=1 |
+
+<Note>
+  A fallback score of 1.0 for missing data is not evidence of successful behavior. Review the reason, `traces_evaluated`, and signal coverage alongside the score.
+</Note>
+
+## Model and threshold settings
+
+The run's optional `model` field selects the LLM judge. For session evaluation, it applies when computing missing judge-based signals; the worker can reuse existing signal scores. It does not change the embedding model used by coherence or loop detection, or the deterministic session aggregation.
+
+Trace metrics normally include `threshold` and `success` in their metadata. Session metrics return aggregation details instead. Empty-input and other early-return cases may omit threshold metadata. The public eval-run API does not expose a threshold override; apply a custom quality bar when consuming results if needed.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Set Up Evaluation" href="/evaluation/setup/introduction">
+    Run these metrics from the dashboard, API, CLI, or a recurring monitor.
+  </Card>
+  <Card title="Programmatic Scoring" href="/evaluation/types/scoring">
+    Record your own checks and feedback alongside automated results.
+  </Card>
+</CardGroup>

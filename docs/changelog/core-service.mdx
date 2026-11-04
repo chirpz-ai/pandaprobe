@@ -1,7 +1,6 @@
 ---
 title: "Core service"
 description: "Release notes for the PandaProbe Core service"
-icon: "github"
 rss: true
 ---
 
@@ -36,18 +35,6 @@ Current version: `v0.7.0`
   - Added database connection pre-ping and recycling to avoid handing stale pooled connections to requests.
   - Added an expandable span waterfall, fixed long JSON value truncation, and refined the dashboard's dark theme and interaction states.
   - Improved Agent Skill installation and onboarding guidance on the project home page.
-</Update>
-
-<Update label="v0.5.3" description="2026-08-09" tags={["Evaluation"]}>
-  - Refined task-completion scoring for traces that contain only Harness setup activity. These traces are now described as not having attempted the task yet, while subsequent task actions are judged normally.
-</Update>
-
-<Update label="v0.5.2" description="2026-08-09" tags={["Evaluation"]}>
-  ### Harness-aware evaluation
-
-  - Updated trace judges to recognize Harness meta-tools and treat guidance, state checks, notices, and trace inspection as neutral framework activity.
-  - Excluded Harness meta-tools from plan adherence, plan quality, step efficiency, argument correctness, tool correctness, and confidence penalties.
-  - Improved task-completion scoring for partial traces and Harness-only activity.
 </Update>
 
 <Update label="v0.5.1" description="2026-08-08" tags={["Reliability", "Billing"]}>

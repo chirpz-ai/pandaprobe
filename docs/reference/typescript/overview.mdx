@@ -1,0 +1,158 @@
+---
+title: "TypeScript SDK"
+description: "Public imports, classes, functions, options, and data contracts for the TypeScript package"
+---
+
+The `pandaprobe` package includes tracing, native platform access, and opt-in Reflect. This reference lists the public imports and their complete source-declared signatures, options, and fields. For a first integration, start with [Trace](/tracing/get-started/quickstart) or [Reflect](/reflect/quickstart).
+
+```bash
+npm install pandaprobe
+# or
+yarn add pandaprobe
+# or
+pnpm add pandaprobe
+```
+
+The core package supports Node.js 18+ and ESM/CommonJS. Optional framework and native Reflect dependencies may require a newer runtime; the native Reflect examples use Node.js 22+. Import only documented package subpaths.
+
+## Find an API
+
+| Area | Reference |
+| --- | --- |
+| [Client](/reference/typescript/client) | Initialize tracing, submit traces and scores, and manage export lifecycle |
+| [Configuration](/reference/typescript/configuration) | Tracing credentials, environment settings, and resolved client options |
+| [Tracing and context](/reference/typescript/tracing) | Decorators, trace and span contexts, session propagation, and trace capture |
+| [Trace data](/reference/typescript/data) | Trace, span, score, and message contracts |
+| [Provider wrappers](/reference/typescript/wrappers) | Instrument provider clients while preserving their native calls and results |
+| [Framework integrations](/reference/typescript/integrations) | Callbacks, adapters, and native agent tracing hooks |
+| [Platform client](/reference/typescript/platform-client) | Read persisted traces and create or poll evaluation runs |
+| [Platform models](/reference/typescript/platform-models) | Typed trace evidence, evaluation runs, metrics, and scores |
+| [Platform errors](/reference/typescript/platform-errors) | Distinguish failed requests, deadlines, insufficient evidence, and uncertain creation |
+| [Reflect runtime](/reference/typescript/reflect-runtime) | Run the agent, evaluate evidence, continue reflection, and inspect outcomes |
+| [Reflect configuration](/reference/typescript/reflect-config) | Workspace, evaluation, shell, context, and validation options |
+| [Execution and invocation](/reference/typescript/reflect-execution) | Execution boundaries, attribution, active memory, and host callbacks |
+| [Replay and validation](/reference/typescript/reflect-validation) | Independent outcomes, paired replay, controlled trials, and acceptance |
+| [Rules and results](/reference/typescript/reflect-models) | Persistent rules, proposals, notices, reports, and validation records |
+
+## Reading the contracts
+
+Signatures and field tables are generated from the SDK source. Defaults are shown where declared; an instance property without a declared default is not necessarily a constructor input. Framework callbacks are shown for completeness and are normally called by the framework. Helper types used by an API are identified when they are not separately exported.
+
+This reference covers package APIs and their supporting contracts, not private transport workers, workspace mutation internals, or third-party SDK methods. Source links identify the exact code snapshot used to generate each entry. See the HTTP API reference for the complete server endpoint surface.
+
+## Public import index
+
+| Import path | Export | Details |
+| --- | --- | --- |
+| `pandaprobe` | `Client` | [Client](/reference/typescript/client#client) |
+| `pandaprobe` | `ConfigOptions` | [ConfigOptions](/reference/typescript/configuration#configoptions) |
+| `pandaprobe` | `ScoreData` | [ScoreData](/reference/typescript/data#scoredata) |
+| `pandaprobe` | `ScoreDataType` | [ScoreDataType](/reference/typescript/data#scoredatatype) |
+| `pandaprobe` | `SdkConfig` | [SdkConfig](/reference/typescript/configuration#sdkconfig) |
+| `pandaprobe` | `SpanContext` | [SpanContext](/reference/typescript/tracing#spancontext) |
+| `pandaprobe` | `SpanContextOptions` | [SpanContextOptions](/reference/typescript/tracing#spancontextoptions) |
+| `pandaprobe` | `SpanData` | [SpanData](/reference/typescript/data#spandata) |
+| `pandaprobe` | `SpanDecoratorOptions` | [SpanDecoratorOptions](/reference/typescript/tracing#spandecoratoroptions) |
+| `pandaprobe` | `SpanKind` | [SpanKind](/reference/typescript/data#spankind) |
+| `pandaprobe` | `SpanStatusCode` | [SpanStatusCode](/reference/typescript/data#spanstatuscode) |
+| `pandaprobe` | `TraceCapture` | [TraceCapture](/reference/typescript/tracing#tracecapture) |
+| `pandaprobe` | `TraceCaptureOptions` | [TraceCaptureOptions](/reference/typescript/tracing#tracecaptureoptions) |
+| `pandaprobe` | `TraceContext` | [TraceContext](/reference/typescript/tracing#tracecontext) |
+| `pandaprobe` | `TraceContextOptions` | [TraceContextOptions](/reference/typescript/tracing#tracecontextoptions) |
+| `pandaprobe` | `TraceData` | [TraceData](/reference/typescript/data#tracedata) |
+| `pandaprobe` | `TraceDecoratorOptions` | [TraceDecoratorOptions](/reference/typescript/tracing#tracedecoratoroptions) |
+| `pandaprobe` | `TraceStatus` | [TraceStatus](/reference/typescript/data#tracestatus) |
+| `pandaprobe` | `VERSION` | [VERSION](/reference/typescript/client#version) |
+| `pandaprobe` | `WithSpanOptions` | [WithSpanOptions](/reference/typescript/tracing#withspanoptions) |
+| `pandaprobe` | `WithTraceOptions` | [WithTraceOptions](/reference/typescript/tracing#withtraceoptions) |
+| `pandaprobe` | `flush` | [flush](/reference/typescript/client#flush) |
+| `pandaprobe` | `getClient` | [getClient](/reference/typescript/client#getclient) |
+| `pandaprobe` | `getCurrentTrace` | [getCurrentTrace](/reference/typescript/tracing#getcurrenttrace) |
+| `pandaprobe` | `getSpanStack` | [getSpanStack](/reference/typescript/tracing#getspanstack) |
+| `pandaprobe` | `init` | [init](/reference/typescript/client#init) |
+| `pandaprobe` | `score` | [score](/reference/typescript/client#score) |
+| `pandaprobe` | `session` | [session](/reference/typescript/tracing#session) |
+| `pandaprobe` | `setSession` | [setSession](/reference/typescript/tracing#setsession) |
+| `pandaprobe` | `setUser` | [setUser](/reference/typescript/tracing#setuser) |
+| `pandaprobe` | `shutdown` | [shutdown](/reference/typescript/client#shutdown) |
+| `pandaprobe` | `span` | [span](/reference/typescript/tracing#span) |
+| `pandaprobe` | `startTrace` | [startTrace](/reference/typescript/tracing#starttrace) |
+| `pandaprobe` | `trace` | [trace](/reference/typescript/tracing#trace) |
+| `pandaprobe` | `user` | [user](/reference/typescript/tracing#user) |
+| `pandaprobe` | `withSpan` | [withSpan](/reference/typescript/tracing#withspan) |
+| `pandaprobe` | `withTrace` | [withTrace](/reference/typescript/tracing#withtrace) |
+| `pandaprobe/api` | `ApiDeadlineExceeded` | [ApiDeadlineExceeded](/reference/typescript/platform-errors#apideadlineexceeded) |
+| `pandaprobe/api` | `ApiError` | [ApiError](/reference/typescript/platform-errors#apierror) |
+| `pandaprobe/api` | `ApiModel` | [ApiModel](/reference/typescript/platform-models#apimodel) |
+| `pandaprobe/api` | `AuthenticationError` | [AuthenticationError](/reference/typescript/platform-errors#authenticationerror) |
+| `pandaprobe/api` | `CreationOutcomeUnknown` | [CreationOutcomeUnknown](/reference/typescript/platform-errors#creationoutcomeunknown) |
+| `pandaprobe/api` | `EvaluationFailed` | [EvaluationFailed](/reference/typescript/platform-errors#evaluationfailed) |
+| `pandaprobe/api` | `EvaluationRequest` | [EvaluationRequest](/reference/typescript/platform-models#evaluationrequest) |
+| `pandaprobe/api` | `EvaluationResult` | [EvaluationResult](/reference/typescript/platform-models#evaluationresult) |
+| `pandaprobe/api` | `EvaluationRun` | [EvaluationRun](/reference/typescript/platform-models#evaluationrun) |
+| `pandaprobe/api` | `Evaluations` | [Evaluations](/reference/typescript/platform-client#evaluations) |
+| `pandaprobe/api` | `InsufficientEvidence` | [InsufficientEvidence](/reference/typescript/platform-errors#insufficientevidence) |
+| `pandaprobe/api` | `InvalidResponseError` | [InvalidResponseError](/reference/typescript/platform-errors#invalidresponseerror) |
+| `pandaprobe/api` | `Metric` | [Metric](/reference/typescript/platform-models#metric) |
+| `pandaprobe/api` | `NotFoundError` | [NotFoundError](/reference/typescript/platform-errors#notfounderror) |
+| `pandaprobe/api` | `PlatformClient` | [PlatformClient](/reference/typescript/platform-client#platformclient) |
+| `pandaprobe/api` | `PlatformError` | [PlatformError](/reference/typescript/platform-errors#platformerror) |
+| `pandaprobe/api` | `PlatformOptions` | [PlatformOptions](/reference/typescript/platform-client#platformoptions) |
+| `pandaprobe/api` | `RateLimitError` | [RateLimitError](/reference/typescript/platform-errors#ratelimiterror) |
+| `pandaprobe/api` | `RequestOptions` | [RequestOptions](/reference/typescript/platform-client#requestoptions) |
+| `pandaprobe/api` | `Score` | [Score](/reference/typescript/platform-models#score) |
+| `pandaprobe/api` | `Span` | [Span](/reference/typescript/platform-models#span) |
+| `pandaprobe/api` | `Trace` | [Trace](/reference/typescript/platform-models#trace) |
+| `pandaprobe/api` | `TracePage` | [TracePage](/reference/typescript/platform-models#tracepage) |
+| `pandaprobe/api` | `TraceSummary` | [TraceSummary](/reference/typescript/platform-models#tracesummary) |
+| `pandaprobe/api` | `Traces` | [Traces](/reference/typescript/platform-client#traces) |
+| `pandaprobe/api` | `TransportError` | [TransportError](/reference/typescript/platform-errors#transporterror) |
+| `pandaprobe/api` | `numericValue` | [numericValue](/reference/typescript/platform-models#numericvalue) |
+| `pandaprobe/integrations/claude-agent-sdk` | `AdapterOptions` | [AdapterOptions](/reference/typescript/integrations#adapteroptions) |
+| `pandaprobe/integrations/claude-agent-sdk` | `ClaudeAgentSDKAdapter` | [ClaudeAgentSDKAdapter](/reference/typescript/integrations#claudeagentsdkadapter) |
+| `pandaprobe/integrations/claude-agent-sdk` | `wrapClaudeAgentQuery` | [wrapClaudeAgentQuery](/reference/typescript/integrations#wrapclaudeagentquery) |
+| `pandaprobe/integrations/deepagents` | `AdapterOptions` | [AdapterOptions](/reference/typescript/integrations#adapteroptions) |
+| `pandaprobe/integrations/deepagents` | `DeepAgentsCallbackHandler` | [DeepAgentsCallbackHandler](/reference/typescript/integrations#deepagentscallbackhandler) |
+| `pandaprobe/integrations/langchain` | `AdapterOptions` | [AdapterOptions](/reference/typescript/integrations#adapteroptions) |
+| `pandaprobe/integrations/langchain` | `LangChainCallbackHandler` | [LangChainCallbackHandler](/reference/typescript/integrations#langchaincallbackhandler) |
+| `pandaprobe/integrations/langgraph` | `AdapterOptions` | [AdapterOptions](/reference/typescript/integrations#adapteroptions) |
+| `pandaprobe/integrations/langgraph` | `LangGraphCallbackHandler` | [LangGraphCallbackHandler](/reference/typescript/integrations#langgraphcallbackhandler) |
+| `pandaprobe/integrations/openai-agents` | `AdapterOptions` | [AdapterOptions](/reference/typescript/integrations#adapteroptions) |
+| `pandaprobe/integrations/openai-agents` | `OpenAIAgentsAdapter` | [OpenAIAgentsAdapter](/reference/typescript/integrations#openaiagentsadapter) |
+| `pandaprobe/integrations/openai-agents` | `TraceProcessor` | [TraceProcessor](/reference/typescript/integrations#traceprocessor) |
+| `pandaprobe/integrations/vercel-ai` | `VercelAgentOptions` | [VercelAgentOptions](/reference/typescript/integrations#vercelagentoptions) |
+| `pandaprobe/integrations/vercel-ai` | `VercelMiddlewareOptions` | [VercelMiddlewareOptions](/reference/typescript/integrations#vercelmiddlewareoptions) |
+| `pandaprobe/integrations/vercel-ai` | `pandaProbeMiddleware` | [pandaProbeMiddleware](/reference/typescript/integrations#pandaprobemiddleware) |
+| `pandaprobe/integrations/vercel-ai` | `wrapVercelAgent` | [wrapVercelAgent](/reference/typescript/integrations#wrapvercelagent) |
+| `pandaprobe/reflect` | `Agent` | [Agent](/reference/typescript/reflect-runtime#agent) |
+| `pandaprobe/reflect` | `AgentOptions` | [AgentOptions](/reference/typescript/reflect-runtime#agentoptions) |
+| `pandaprobe/reflect` | `EvaluationOutcome` | [EvaluationOutcome](/reference/typescript/reflect-models#evaluationoutcome) |
+| `pandaprobe/reflect` | `Execution` | [Execution](/reference/typescript/reflect-execution#execution) |
+| `pandaprobe/reflect` | `ExecutionOptions` | [ExecutionOptions](/reference/typescript/reflect-execution#executionoptions) |
+| `pandaprobe/reflect` | `ExecutionReport` | [ExecutionReport](/reference/typescript/reflect-models#executionreport) |
+| `pandaprobe/reflect` | `Framework` | [Framework](/reference/typescript/reflect-runtime#framework) |
+| `pandaprobe/reflect` | `Invocation` | [Invocation](/reference/typescript/reflect-execution#invocation) |
+| `pandaprobe/reflect` | `NativeAgent` | [NativeAgent](/reference/typescript/reflect-runtime#nativeagent) |
+| `pandaprobe/reflect` | `Outcome` | [Outcome](/reference/typescript/reflect-validation#outcome) |
+| `pandaprobe/reflect` | `Phase` | [Phase](/reference/typescript/reflect-execution#phase) |
+| `pandaprobe/reflect` | `ProposalOutcome` | [ProposalOutcome](/reference/typescript/reflect-models#proposaloutcome) |
+| `pandaprobe/reflect` | `Reflect` | [Reflect](/reference/typescript/reflect-runtime#reflect) |
+| `pandaprobe/reflect` | `ReflectConfig` | [ReflectConfig](/reference/typescript/reflect-config#reflectconfig) |
+| `pandaprobe/reflect` | `ReflectInit` | [ReflectInit](/reference/typescript/reflect-runtime#reflectinit) |
+| `pandaprobe/reflect` | `ReflectOptions` | [ReflectOptions](/reference/typescript/reflect-config#reflectoptions) |
+| `pandaprobe/reflect` | `Replay` | [Replay](/reference/typescript/reflect-validation#replay) |
+| `pandaprobe/reflect` | `ReplayCase` | [ReplayCase](/reference/typescript/reflect-validation#replaycase) |
+| `pandaprobe/reflect` | `ReplayRequest` | [ReplayRequest](/reference/typescript/reflect-validation#replayrequest) |
+| `pandaprobe/reflect` | `ResolvedReflectConfig` | [ResolvedReflectConfig](/reference/typescript/reflect-config#resolvedreflectconfig) |
+| `pandaprobe/reflect` | `Rule` | [Rule](/reference/typescript/reflect-models#rule) |
+| `pandaprobe/reflect` | `RuleProposal` | [RuleProposal](/reference/typescript/reflect-models#ruleproposal) |
+| `pandaprobe/reflect` | `TrialArm` | [TrialArm](/reference/typescript/reflect-models#trialarm) |
+| `pandaprobe/reflect` | `TrialCase` | [TrialCase](/reference/typescript/reflect-models#trialcase) |
+| `pandaprobe/reflect` | `ValidationVerdict` | [ValidationVerdict](/reference/typescript/reflect-models#validationverdict) |
+| `pandaprobe/wrappers/anthropic` | `wrapAnthropic` | [wrapAnthropic](/reference/typescript/wrappers#wrapanthropic) |
+| `pandaprobe/wrappers/bedrock` | `wrapBedrock` | [wrapBedrock](/reference/typescript/wrappers#wrapbedrock) |
+| `pandaprobe/wrappers/gemini` | `wrapGemini` | [wrapGemini](/reference/typescript/wrappers#wrapgemini) |
+| `pandaprobe/wrappers/mistral` | `wrapMistral` | [wrapMistral](/reference/typescript/wrappers#wrapmistral) |
+| `pandaprobe/wrappers/openai` | `wrapOpenAI` | [wrapOpenAI](/reference/typescript/wrappers#wrapopenai) |
+
+[Source snapshot](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript).

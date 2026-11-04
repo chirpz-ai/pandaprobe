@@ -1,13 +1,23 @@
 ---
 title: "Python SDK"
 description: "Release notes for the PandaProbe Python SDK"
-icon: "package"
 rss: true
 ---
 
 Release history for the **PandaProbe Python SDK**.
 
-Current version: `v0.4.0`
+Current version: `v0.6.0`
+
+<Update label="v0.6.0" description="2026-10-26" tags={["Reflect"]}>
+  ### PandaProbe Reflect
+
+  - Added `pandaprobe.reflect` with optional `[reflect]` dependencies, same-agent reflection, an isolated filesystem tool, and persistent rule revisions.
+  - Added independent paired replay and controlled trials, with protected-success checks before publishing accepted guidance.
+  - Added native platform resources at `pandaprobe.api`, scoped trace capture, and separate task/reflection/validation attribution.
+  - Added native framework integrations and offline/live examples while keeping ordinary tracing opt-in behavior unchanged.
+
+  See the [Reflect quickstart](/reflect/quickstart), [validation guide](/reflect/validation), and [release](https://github.com/chirpz-ai/pandaprobe-sdk/releases/tag/python-v0.6.0).
+</Update>
 
 <Update label="v0.4.0" description="2026-05-18" tags={["Wrappers"]}>
   ### Mistral AI and AWS Bedrock wrappers

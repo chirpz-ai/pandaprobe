@@ -1,0 +1,96 @@
+---
+title: "Vercel AI SDK"
+description: "Add Reflect to Vercel AI SDK with native tracing, tools, and continuation"
+icon: "/assets/providers/vercel.svg"
+---
+
+Use Reflect with a native ToolLoopAgent. Wrap its constructor with PandaProbe tracing, then pass that constructor to Reflect so agent execution and memory use share the same boundary.
+
+## Installation
+
+TypeScript only; use Node.js 22+ and AI SDK 6 or 7. Install Reflect together with the framework and model provider used below.
+
+<Tabs>
+<Tab title="npm">
+```bash
+npm install pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 ai @ai-sdk/openai
+```
+</Tab>
+<Tab title="yarn">
+```bash
+yarn add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 ai @ai-sdk/openai
+```
+</Tab>
+<Tab title="pnpm">
+```bash
+pnpm add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 ai @ai-sdk/openai
+```
+</Tab>
+</Tabs>
+
+## Credentials
+
+```bash
+export PANDAPROBE_API_KEY="your-pandaprobe-api-key"
+export PANDAPROBE_PROJECT_NAME="support-agent"
+export OPENAI_API_KEY="your-provider-api-key"
+```
+
+For a self-hosted platform, also set `PANDAPROBE_ENDPOINT` to your API base URL. Reflect uses the same client configuration as tracing.
+
+## Enable Reflect
+
+This example creates a policy assistant. Add your own domain tools where indicated; Reflect supplies `reflect_bash` automatically.
+
+```ts title="TypeScript"
+import { ToolLoopAgent, stepCountIs, wrapLanguageModel } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { pandaProbeMiddleware, wrapVercelAgent } from "pandaprobe/integrations/vercel-ai";
+import { Client } from "pandaprobe";
+import { Reflect as ReflectRuntime } from "pandaprobe/reflect";
+
+async function main() {
+  const client = new Client();
+  const reflect = new ReflectRuntime(client);
+  try {
+    const model = wrapLanguageModel({
+      model: createOpenAI()("gpt-6-luna"), middleware: pandaProbeMiddleware(),
+    });
+    const agent = await reflect.agent(wrapVercelAgent(ToolLoopAgent, { client }), {
+      framework: "vercel-ai",
+      options: {
+        model, instructions: "For standard returns, refund merchandise paid and exclude outbound shipping. Explain the policy clearly.",
+        tools: {}, // Your native AI SDK business tools go here.
+        stopWhen: stepCountIs(12),
+      },
+    });
+    const result = await reflect.run(agent, "I paid $65 for an item and $7 for shipping. What is refundable?", { sessionId: "customer-42" });
+    console.log(result.text);
+  } finally {
+    await reflect.close();
+    await client.shutdown();
+  }
+}
+
+main().catch(error => { console.error(error); process.exitCode = 1; });
+```
+
+## How the integration behaves
+
+`wrapVercelAgent` records agent, model-step, and actual tool execution as `CHAIN → AGENT → LLM → TOOL`. Model middleware enriches those same model spans; middleware by itself records only model-level activity. See [Vercel tracing](/tracing/integrations/vercel-ai#trace-an-agent).
+
+### Conversations and replay
+
+Reflect constructs a native agent per invocation and preserves your `prepareCall` / `prepareStep` hooks. It composes current memory and restricts reflection to its tool and step budget. Reflection continues completed response messages; fresh validation starts without prior history.
+
+For ordinary multi-turn tasks, pass native conversation messages or use your own history store. A Reflect session ID groups evidence but is not a Vercel conversation store.
+
+### Streaming
+
+For an interactive UI, consume the entire stream inside an [explicit boundary](/reflect/custom-loops#streaming-and-custom-boundaries). The native `invokeOptions: { stream: true }` convenience consumes supported streams and returns the completed result. Complete or cancel streams explicitly; abandoning a consumer is not a completion signal.
+
+`run()` returns the task's native result after evaluation and any triggered reflection. A healthy answer may produce no proposal. The workspace persists accepted guidance and pending proposals across restarts.
+
+## Validate learned rules
+
+Add [independent replay or controlled trials](/reflect/validation) before proposed changes can become shared accepted guidance. Reset your business environment and conversation for each validation arm. See [Rules and memory](/reflect/rules-and-memory) for the working filesystem and session notes.

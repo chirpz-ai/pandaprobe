@@ -10,7 +10,7 @@ import json
 import textwrap
 from typing import Any
 
-from app.core.evals.metrics.utils import HARNESS_TOOL_GUIDANCE
+from app.core.evals.metrics.utils import REFLECT_TOOL_GUIDANCE
 
 
 class TaskCompletionTemplate:
@@ -32,11 +32,9 @@ class TaskCompletionTemplate:
             or "efficiently".  Enumerate each relevant action the trace \
             shows, in plain language.
 
-            {HARNESS_TOOL_GUIDANCE}
-            When describing the outcome, report harness meta-tool activity \
-            plainly as consulting harness state, and keep it distinct from work \
-            directed at the user's task, so the verdict stage can tell the two \
-            apart. Do not describe it as an attempt at the task.
+            {REFLECT_TOOL_GUIDANCE}
+            Report Reflect rule and memory operations separately from task actions;
+            preserve failed task attempts.
 
             IMPORTANT: Return **only** valid JSON with two keys: \
             `task` and `outcome`.
@@ -59,15 +57,8 @@ class TaskCompletionTemplate:
             an outcome that shows no progress or contradicts the task, not for one \
             that is merely incomplete.
 
-            If the outcome consists only of the agent consulting its harness's \
-            own state — retrieving learned guidance or rules, reading or \
-            acknowledging a diagnostic notice, inspecting an earlier trace, \
-            through tools named with a harness prefix such as `harness_` — then \
-            the trace has not yet attempted the task. Score it as showing no task \
-            progress yet and say exactly that in the reason; do not treat it as a \
-            failed or incorrect attempt, and do not credit it as progress either.
-
-            Judge every other action normally.
+            Reflect rule and memory operations alone show no task progress. A proposed
+            rule is not proof that a task failure was corrected.
 
             Return a JSON object with two keys:
             - `verdict`: a float between 0 and 1 (1 = perfectly achieved).

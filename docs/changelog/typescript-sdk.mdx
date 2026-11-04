@@ -1,13 +1,23 @@
 ---
 title: "TypeScript SDK"
 description: "Release notes for the PandaProbe TypeScript SDK"
-icon: "package"
 rss: true
 ---
 
 Release history for the **PandaProbe TypeScript SDK** (`pandaprobe`).
 
-Current version: `v0.4.2`
+Current version: `v0.5.0`
+
+<Update label="v0.5.0" description="2026-10-27" tags={["Reflect"]}>
+  ### PandaProbe Reflect
+
+  - Added `pandaprobe/reflect` with Python-equivalent proposal/validation behavior, persistent rules, active memory, and the supplied isolated shell.
+  - Added native integrations for six frameworks, custom loops, native HTTP resources at `pandaprobe/api`, and scoped trace capture.
+  - Added offline and live examples, independent paired replay, controlled trials, and protected-regression checks.
+  - Added `wrapVercelAgent` for native AI SDK 6/7 agent and tool traces; existing model middleware enriches the same model spans.
+
+  Reflect uses optional native dependencies; the base package still has zero required runtime dependencies. See the [Reflect quickstart](/reflect/quickstart), [validation guide](/reflect/validation), and [release](https://github.com/chirpz-ai/pandaprobe-sdk/releases/tag/typescript-v0.5.0).
+</Update>
 
 <Update label="v0.4.2" description="2026-09-22" tags={["Bug fixes", "Compatibility"]}>
   ### OpenAI Agents trace data

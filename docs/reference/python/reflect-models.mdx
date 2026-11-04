@@ -1,0 +1,283 @@
+---
+title: "Rules and results"
+description: "Persistent rules, proposals, notices, reports, and validation records"
+---
+
+These records separate proposal generation, evaluation, acceptance, and independently verified outcomes. Persisted names remain snake_case in both languages.
+
+Rules are relative Markdown files. Each needs a title, an `Applies to: ...` line, and behavioral guidance. A proposal records a change set against a specific accepted base revision; a null change deletes a file. Ordinary fresh executions receive accepted rules, while candidates are visible during authoring and explicit trials.
+
+| Layer | Status values |
+| --- | --- |
+| Evaluation | `evaluated`, `skipped`, `pending`, `insufficient`, `failed`, `creation_unknown`, `cancelled` |
+| Proposal generation | `proposed`, `duplicate`, `no_proposal`, `invalid`, `conflict`, `timed_out`, `failed`, `cancelled` |
+| Proposal lifecycle | `candidate`, `pending`, `accepted`, `rejected` |
+
+Task completion in an execution report describes runtime execution; use an independent verifier for business success. A reported rationale is agent-authored evidence, not proof of improvement.
+
+Records are frozen Pydantic models with unknown fields rejected. `model_dump()` / `model_dump_json()` serialize them; `model_validate()` reconstructs them. Validators shown below enforce record shape, not behavioral correctness.
+
+## On this page
+
+[EvaluationOutcome](#evaluationoutcome), [ExecutionReport](#executionreport), [FailureNotice](#failurenotice), [ProposalOutcome](#proposaloutcome), [Rule](#rule), [RuleProposal](#ruleproposal), [TrialArm](#trialarm), [TrialCase](#trialcase), [ValidationVerdict](#validationverdict).
+
+## Example
+
+```python
+from pandaprobe.reflect import Rule
+
+rule = Rule(
+    path="refunds/standard.md",
+    text="# Standard returns\nApplies to: standard return refunds\nExclude outbound shipping.\n",
+)
+print(rule.scope, rule.applicability, rule.version)
+```
+
+Constructing a rule does not publish it. Agent-authored filesystem changes become proposals; independent validation decides acceptance.
+
+## `EvaluationOutcome`
+
+```python
+from pandaprobe.reflect import EvaluationOutcome
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/models.py#L110)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `execution_id` | `str` | Required |
+| `status` | `Literal['evaluated', 'skipped', 'pending', 'insufficient', 'failed', 'creation_unknown', 'cancelled']` | Required |
+| `run_ids` | `list[str]` | `factory: list` |
+| `scores` | `dict[str, float]` | `factory: dict` |
+| `notice` | `FailureNotice \| None` | `None` |
+| `reason` | `str` | `''` |
+
+## `ExecutionReport`
+
+```python
+from pandaprobe.reflect import ExecutionReport
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/models.py#L145)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `execution_id` | `str` | Required |
+| `session_id` | `str` | Required |
+| `task_status` | `str` | Required |
+| `trace_ids` | `list[str]` | Required |
+| `evaluation` | `EvaluationOutcome \| None` | `None` |
+| `reflection` | `ProposalOutcome \| None` | `None` |
+| `proposals` | `list[RuleProposal]` | `factory: list` |
+
+## `FailureNotice`
+
+```python
+from pandaprobe.reflect.models import FailureNotice
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/models.py#L99)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `str` | `factory: lambda: uuid4().hex` |
+| `execution_id` | `str` | Required |
+| `session_id` | `str` | Required |
+| `trace_ids` | `list[str]` | Required |
+| `scores` | `dict[str, float]` | Required |
+| `reasons` | `dict[str, str]` | `factory: dict` |
+| `signatures` | `list[str]` | Required |
+| `created_at` | `str` | `factory: utc_now` |
+
+## `ProposalOutcome`
+
+```python
+from pandaprobe.reflect import ProposalOutcome
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/models.py#L83)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `status` | `Literal['proposed', 'duplicate', 'no_proposal', 'invalid', 'conflict', 'timed_out', 'failed', 'cancelled']` | Required |
+| `proposal` | `RuleProposal \| None` | `None` |
+| `reason` | `str` | `''` |
+| `rationale` | `str` | `''` |
+
+## `Rule`
+
+```python
+from pandaprobe.reflect import Rule
+```
+
+One Markdown file. Its directory is its scope; applicability is explicit.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/models.py#L28)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `path` | `str` | Required |
+| `text` | `str` | Required |
+| `version` | `str` | Required; read-only; Read-only property. |
+| `scope` | `str` | Required; read-only; Read-only property. |
+| `applicability` | `str` | Required; read-only; Read-only property. |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="safe_path">
+
+```text
+safe_path(path: str) -> str
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `path` | `str` | Required |
+
+</Accordion>
+
+<Accordion title="applicable_markdown">
+
+```text
+applicable_markdown(text: str) -> str
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `text` | `str` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `RuleProposal`
+
+```python
+from pandaprobe.reflect import RuleProposal
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/models.py#L69)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `str` | `factory: lambda: uuid4().hex` |
+| `base_revision` | `str` | Required |
+| `changes` | `dict[str, Rule \| None]` | Required |
+| `fingerprint` | `str` | Required |
+| `session_id` | `str` | Required |
+| `execution_id` | `str` | Required |
+| `evidence_ids` | `list[str]` | `factory: list` |
+| `created_at` | `str` | `factory: utc_now` |
+| `status` | `Literal['candidate', 'pending', 'accepted', 'rejected']` | `'candidate'` |
+| `rationale` | `str` | `''` |
+| `decision` | `dict[str, Any] \| None` | `None` |
+
+## `TrialArm`
+
+```python
+from pandaprobe.reflect import TrialArm
+```
+
+Host-verified outcome and candidate assignment for one trial arm.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/models.py#L119)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `execution_id` | `str` | Required; min_length=1 |
+| `scores` | `dict[str, StrictFloat]` | `factory: dict` |
+| `success` | `StrictBool \| None` | `None` |
+| `evidence` | `dict[str, Any]` | `factory: dict` |
+| `candidate_ids` | `list[str]` | `factory: list` |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="normalized_scores">
+
+```text
+normalized_scores(scores: dict[str, float]) -> dict[str, float]
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `scores` | `dict[str, float]` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `TrialCase`
+
+```python
+from pandaprobe.reflect import TrialCase
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/models.py#L136)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `case_id` | `str` | Required; min_length=1 |
+| `base_revision` | `str` | Required; min_length=64; max_length=64 |
+| `input_hash` | `str` | `''` |
+| `protected` | `bool` | `False` |
+| `control` | `TrialArm \| None` | `None` |
+| `candidate` | `TrialArm \| None` | `None` |
+
+## `ValidationVerdict`
+
+```python
+from pandaprobe.reflect import ValidationVerdict
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/reflect/models.py#L90)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `proposal_id` | `str` | Required |
+| `outcome` | `Literal['accepted', 'rejected', 'pending']` | Required |
+| `reason` | `str` | Required |
+| `mode` | `Literal['replay', 'trial']` | Required |
+| `cases` | `list[dict[str, Any]]` | `factory: list` |
+| `created_at` | `str` | `factory: utc_now` |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python). See the [import index](/reference/python/overview#public-import-index) for available entry points.

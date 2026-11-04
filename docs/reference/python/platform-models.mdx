@@ -1,0 +1,223 @@
+---
+title: "Platform models"
+description: "Typed trace evidence, evaluation runs, metrics, and scores"
+---
+
+Platform read models preserve the server's snake_case field names in both SDKs. They are separate from trace-export records. Status values and required fields below come from the SDK contracts.
+
+An evaluation result contains a completed run and usable requested scores. It does not by itself demonstrate behavioral improvement. A numeric score is usable only when its status is `SUCCESS`, its data type is `NUMERIC`, and its value parses to a finite number.
+
+Platform models use Pydantic. Read models preserve additive server fields (`extra="allow"`). `Score.numeric_value` is a property. `EvaluationRequest` is available from `pandaprobe.api.models`; ordinary callers use `api.evaluations.create(...)`.
+
+## On this page
+
+[ApiModel](#apimodel), [EvaluationRequest](#evaluationrequest), [EvaluationResult](#evaluationresult), [EvaluationRun](#evaluationrun), [Metric](#metric), [Score](#score), [Span](#span), [Trace](#trace), [TracePage](#tracepage), [TraceSummary](#tracesummary).
+
+## `ApiModel`
+
+```python
+from pandaprobe.api.models import ApiModel
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L12)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+## `EvaluationRequest`
+
+```python
+from pandaprobe.api.models import EvaluationRequest
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L61)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `trace_ids` | `list[UUID]` | Required; min_length=1 |
+| `metrics` | `list[str]` | Required; min_length=1 |
+| `name` | `str \| None` | `None` |
+| `model` | `str \| None` | `None` |
+
+## `EvaluationResult`
+
+```python
+from pandaprobe.api import EvaluationResult
+```
+
+A completed run with a complete set of usable scores, not proof of improvement.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L101)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `run` | `EvaluationRun` | Required |
+| `scores` | `list[Score]` | Required |
+
+## `EvaluationRun`
+
+```python
+from pandaprobe.api import EvaluationRun
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L68)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `UUID` | Required |
+| `status` | `Literal['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']` | Required |
+| `metric_names` | `list[str]` | Required |
+| `total_targets` | `int` | Required; ge=0 |
+| `evaluated_count` | `int` | Required; ge=0 |
+| `failed_count` | `int` | `0`; ge=0 |
+| `target_type` | `str` | Required |
+| `error_message` | `str \| None` | `None` |
+
+## `Metric`
+
+```python
+from pandaprobe.api import Metric
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L55)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `name` | `str` | Required |
+| `description` | `str` | Required |
+| `category` | `str` | Required |
+
+## `Score`
+
+```python
+from pandaprobe.api import Score
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L79)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `UUID` | Required |
+| `trace_id` | `UUID` | Required |
+| `name` | `str` | Required |
+| `value` | `str \| None` | Required |
+| `status` | `Literal['PENDING', 'SUCCESS', 'FAILED']` | Required |
+| `data_type` | `str` | Required |
+| `eval_run_id` | `UUID \| None` | `None` |
+| `reason` | `str \| None` | `None` |
+| `metadata` | `dict[str, Any]` | `factory: dict` |
+| `numeric_value` | `float \| None` | Required; read-only; Read-only property. |
+
+## `Span`
+
+```python
+from pandaprobe.api import Span
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L17)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `span_id` | `UUID` | Required |
+| `trace_id` | `UUID` | Required |
+| `parent_span_id` | `UUID \| None` | `None` |
+| `name` | `str` | Required |
+| `kind` | `str` | Required |
+| `status` | `str` | Required |
+| `input` | `Any` | `None` |
+| `output` | `Any` | `None` |
+| `metadata` | `dict[str, Any]` | `factory: dict` |
+| `error` | `str \| None` | `None` |
+
+## `Trace`
+
+```python
+from pandaprobe.api import Trace
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L40)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `trace_id` | `UUID` | Instance value |
+| `name` | `str` | Instance value |
+| `status` | `Literal['PENDING', 'RUNNING', 'COMPLETED', 'ERROR']` | Instance value |
+| `session_id` | `str \| None` | `None` |
+| `tags` | `list[str]` | `factory: list` |
+| `started_at` | `str` | Instance value |
+| `ended_at` | `str \| None` | `None` |
+| `project_id` | `UUID` | Instance value |
+| `input` | `Any` | `None` |
+| `output` | `Any` | `None` |
+| `metadata` | `dict[str, Any]` | `factory: dict` |
+| `spans` | `list[Span]` | `factory: list` |
+
+## `TracePage`
+
+```python
+from pandaprobe.api import TracePage
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L48)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `items` | `list[TraceSummary]` | Required |
+| `total` | `int` | Required; ge=0 |
+| `limit` | `int` | Required; ge=1 |
+| `offset` | `int` | Required; ge=0 |
+
+## `TraceSummary`
+
+```python
+from pandaprobe.api import TraceSummary
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python/src/pandaprobe/api/models.py#L30)
+
+Construct with keyword fields below. Pydantic validates the model and provides its standard serialization methods.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `trace_id` | `UUID` | Required |
+| `name` | `str` | Required |
+| `status` | `Literal['PENDING', 'RUNNING', 'COMPLETED', 'ERROR']` | Required |
+| `session_id` | `str \| None` | `None` |
+| `tags` | `list[str]` | `factory: list` |
+| `started_at` | `str` | Required |
+| `ended_at` | `str \| None` | `None` |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/python). See the [import index](/reference/python/overview#public-import-index) for available entry points.

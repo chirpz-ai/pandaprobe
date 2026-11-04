@@ -1,0 +1,133 @@
+---
+title: "OpenAI Agents SDK"
+description: "Add Reflect to OpenAI Agents SDK with native tracing, tools, and continuation"
+icon: "/assets/providers/openai.svg"
+---
+
+Reflect uses your native Agent and Runner behavior. Python can accept an existing Agent directly; TypeScript uses the Agent constructor through `reflect.agent(...)`. Both supply Reflect tools on an invocation copy.
+
+## Installation
+
+Python 3.10+ and Node.js 22+ for these examples. Install Reflect together with the framework and model provider used below.
+
+<Tabs>
+<Tab title="pip">
+```bash
+pip install "pandaprobe[reflect,openai-agents]"
+```
+</Tab>
+<Tab title="uv">
+```bash
+uv add "pandaprobe[reflect,openai-agents]"
+```
+</Tab>
+<Tab title="npm">
+```bash
+npm install pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 @openai/agents
+```
+</Tab>
+<Tab title="yarn">
+```bash
+yarn add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 @openai/agents
+```
+</Tab>
+<Tab title="pnpm">
+```bash
+pnpm add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 @openai/agents
+```
+</Tab>
+</Tabs>
+
+## Credentials
+
+```bash
+export PANDAPROBE_API_KEY="your-pandaprobe-api-key"
+export PANDAPROBE_PROJECT_NAME="support-agent"
+export OPENAI_API_KEY="your-provider-api-key"
+```
+
+For a self-hosted platform, also set `PANDAPROBE_ENDPOINT` to your API base URL. Reflect uses the same client configuration as tracing.
+
+## Enable Reflect
+
+This example creates a policy assistant. Add your own domain tools where indicated; Reflect supplies `reflect_bash` automatically.
+
+<CodeGroup>
+```python title="Python"
+import asyncio
+
+from agents import Agent, SQLiteSession
+from pandaprobe.integrations.openai_agents import OpenAIAgentsAdapter
+from pandaprobe import Client
+from pandaprobe.reflect import Reflect
+
+
+async def main():
+    client = Client()
+    try:
+        OpenAIAgentsAdapter(client=client).instrument()
+        async with Reflect(client) as reflect:
+            agent = Agent(
+                name="Support", model="gpt-6-luna",
+                instructions="For standard returns, refund merchandise paid and exclude outbound shipping. Explain the policy clearly.",
+                tools=[],  # Your native function tools go here.
+            )
+            conversation = SQLiteSession("customer-42")
+            result = await reflect.run(
+                agent, "I paid $65 for an item and $7 for shipping. What is refundable?", session_id="customer-42", session=conversation,
+            )
+            print(result.final_output)
+    finally:
+        client.shutdown()
+
+
+asyncio.run(main())
+```
+
+```ts title="TypeScript"
+import { Agent, MemorySession } from "@openai/agents";
+import { OpenAIAgentsAdapter } from "pandaprobe/integrations/openai-agents";
+import { Client } from "pandaprobe";
+import { Reflect as ReflectRuntime } from "pandaprobe/reflect";
+
+async function main() {
+  const client = new Client();
+  const reflect = new ReflectRuntime(client);
+  try {
+    await new OpenAIAgentsAdapter({ client }).instrument();
+    const agent = await reflect.agent(Agent, {
+      framework: "openai-agents",
+      options: {
+        name: "Support", model: "gpt-6-luna",
+        instructions: "For standard returns, refund merchandise paid and exclude outbound shipping. Explain the policy clearly.",
+        tools: [], // Your native function tools go here.
+      },
+      invokeOptions: { session: new MemorySession({ sessionId: "customer-42" }) },
+    });
+    const result = await reflect.run(agent, "I paid $65 for an item and $7 for shipping. What is refundable?", { sessionId: "customer-42" });
+    console.log(result.finalOutput);
+  } finally {
+    await reflect.close();
+    await client.shutdown();
+  }
+}
+
+main().catch(error => { console.error(error); process.exitCode = 1; });
+```
+</CodeGroup>
+
+## How the integration behaves
+
+Register the [tracing adapter](/tracing/integrations/openai-agents-sdk) once at application startup. Do not register another processor for every task or replay factory.
+
+### Conversations and replay
+
+The native session stores conversation history; Reflect’s session ID groups evidence. Reuse the native session for related turns. With a session, reflection adds only new feedback; without one, the completed result supplies continuation history.
+
+During reflection, the invocation copy exposes Reflect administration instead of business tools and handoffs. For validation, build a fresh agent **without** the persistent session, conversation, or previous-response options shown in the task example. Reflect requires independent replay conversations.
+
+`run()` returns the task's native result after evaluation and any triggered reflection. A healthy answer may produce no proposal. The workspace persists accepted guidance and pending proposals across restarts.
+
+## Validate learned rules
+
+Add [independent replay or controlled trials](/reflect/validation) before proposed changes can become shared accepted guidance. Reset your business environment and conversation for each validation arm. See [Rules and memory](/reflect/rules-and-memory) for the working filesystem and session notes.

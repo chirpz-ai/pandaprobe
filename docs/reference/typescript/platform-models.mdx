@@ -1,0 +1,236 @@
+---
+title: "Platform models"
+description: "Typed trace evidence, evaluation runs, metrics, and scores"
+---
+
+Platform read models preserve the server's snake_case field names in both SDKs. They are separate from trace-export records. Status values and required fields below come from the SDK contracts.
+
+An evaluation result contains a completed run and usable requested scores. It does not by itself demonstrate behavioral improvement. A numeric score is usable only when its status is `SUCCESS`, its data type is `NUMERIC`, and its value parses to a finite number.
+
+These are TypeScript interfaces, not model constructors. Resource methods validate response fields before returning typed objects. Use the exported `numericValue(score)` function for usable numeric score conversion.
+
+## On this page
+
+[ApiModel](#apimodel), [EvaluationRequest](#evaluationrequest), [EvaluationResult](#evaluationresult), [EvaluationRun](#evaluationrun), [Metric](#metric), [Score](#score), [Span](#span), [Trace](#trace), [TracePage](#tracepage), [TraceSummary](#tracesummary), [numericValue](#numericvalue).
+
+## `ApiModel`
+
+```ts
+import type { ApiModel } from "pandaprobe/api";
+```
+
+Wire models preserve additive server fields and the platform's snake_case names.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L4)
+
+Additional indexed fields: `[string]: unknown`.
+
+## `EvaluationRequest`
+
+```ts
+import type { EvaluationRequest } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L67)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `trace_ids` | `string[]` | Required |
+| `metrics` | `string[]` | Required |
+| `name` | `string \| undefined` | Optional |
+| `model` | `string \| undefined` | Optional |
+
+## `EvaluationResult`
+
+```ts
+import type { EvaluationResult } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L73)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `run` | `EvaluationRun` | Required |
+| `scores` | `Score[]` | Required |
+
+## `EvaluationRun`
+
+```ts
+import type { EvaluationRun } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L46)
+
+Additional indexed fields: `[string]: unknown`.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `string` | Required |
+| `status` | `"PENDING" \| "RUNNING" \| "COMPLETED" \| "FAILED" \| "CANCELLED"` | Required |
+| `metric_names` | `string[]` | Required |
+| `total_targets` | `number` | Required |
+| `evaluated_count` | `number` | Required |
+| `failed_count` | `number` | Required |
+| `target_type` | `string` | Required |
+| `error_message` | `string \| null` | Required |
+
+## `Metric`
+
+```ts
+import type { Metric } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L41)
+
+Additional indexed fields: `[string]: unknown`.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `name` | `string` | Required |
+| `description` | `string` | Required |
+| `category` | `string` | Required |
+
+## `Score`
+
+```ts
+import type { Score } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L56)
+
+Additional indexed fields: `[string]: unknown`.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `string` | Required |
+| `trace_id` | `string` | Required |
+| `name` | `string` | Required |
+| `value` | `string \| null` | Required |
+| `status` | `"PENDING" \| "FAILED" \| "SUCCESS"` | Required |
+| `data_type` | `string` | Required |
+| `eval_run_id` | `string \| null` | Required |
+| `reason` | `string \| null` | Required |
+| `metadata` | `Record<string, unknown>` | Required |
+
+## `Span`
+
+```ts
+import type { Span } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L7)
+
+Additional indexed fields: `[string]: unknown`.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `span_id` | `string` | Required |
+| `trace_id` | `string` | Required |
+| `parent_span_id` | `string \| null` | Required |
+| `name` | `string` | Required |
+| `kind` | `string` | Required |
+| `status` | `string` | Required |
+| `input` | `unknown` | Required |
+| `output` | `unknown` | Required |
+| `metadata` | `Record<string, unknown>` | Required |
+| `error` | `string \| null` | Required |
+
+## `Trace`
+
+```ts
+import type { Trace } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L28)
+
+Additional indexed fields: `[string]: unknown`.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `project_id` | `string` | Required |
+| `input` | `unknown` | Required |
+| `output` | `unknown` | Required |
+| `metadata` | `Record<string, unknown>` | Required |
+| `spans` | `Span[]` | Required |
+| `trace_id` | `string` | Required |
+| `name` | `string` | Required |
+| `status` | `"PENDING" \| "RUNNING" \| "COMPLETED" \| "ERROR"` | Required |
+| `session_id` | `string \| null` | Required |
+| `tags` | `string[]` | Required |
+| `started_at` | `string` | Required |
+| `ended_at` | `string \| null` | Required |
+
+## `TracePage`
+
+```ts
+import type { TracePage } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L35)
+
+Additional indexed fields: `[string]: unknown`.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `items` | `TraceSummary[]` | Required |
+| `total` | `number` | Required |
+| `limit` | `number` | Required |
+| `offset` | `number` | Required |
+
+## `TraceSummary`
+
+```ts
+import type { TraceSummary } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L19)
+
+Additional indexed fields: `[string]: unknown`.
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `trace_id` | `string` | Required |
+| `name` | `string` | Required |
+| `status` | `"PENDING" \| "RUNNING" \| "COMPLETED" \| "ERROR"` | Required |
+| `session_id` | `string \| null` | Required |
+| `tags` | `string[]` | Required |
+| `started_at` | `string` | Required |
+| `ended_at` | `string \| null` | Required |
+
+## `numericValue`
+
+```ts
+import { numericValue } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/models.ts#L87)
+
+```text
+numericValue(score: Score): number | null
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `score` | `Score` | Required |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.

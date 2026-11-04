@@ -1,0 +1,95 @@
+---
+title: "Settings"
+description: "Defaults, budgets, and the settings worth changing"
+icon: "settings"
+---
+
+Start with defaults. Configure only the workspace, evaluation policy, or limits your application needs. Reflect reuses the existing PandaProbe client's endpoint, API key, and project; the host owns model/provider settings.
+
+<CodeGroup>
+```python title="Python"
+from pandaprobe.reflect import Reflect, ReflectConfig
+
+reflect = Reflect(client, config=ReflectConfig(
+    workspace="./agent-memory/python",
+    thresholds={"task_completion": 0.8},
+    evaluation_sample_rate=0.25,
+    reflection_timeout=90,
+))
+```
+
+```ts title="TypeScript"
+import { Reflect as ReflectRuntime } from "pandaprobe/reflect";
+
+const reflect = new ReflectRuntime(client, { config: {
+  workspace: "./agent-memory/typescript",
+  thresholds: { task_completion: 0.8 },
+  evaluationSampleRate: 0.25,
+  reflectionTimeout: 90,
+} });
+```
+</CodeGroup>
+
+**All Reflect durations are seconds.** Sizes are UTF-8 bytes; KiB and MiB mean powers of 1024. TypeScript options use camelCase, while persisted records and reports retain snake_case fields such as `execution_id` and `run_ids`.
+
+## Evaluation and reflection
+
+| Python / TypeScript | Default | Meaning |
+| --- | --- | --- |
+| `workspace` | `.pandaprobe/reflect` | Base directory, followed by an identity partition; `PANDAPROBE_REFLECT_WORKSPACE` overrides the default |
+| `thresholds` | `task_completion: 0.5`, `coherence: 0.5` | Primary metrics and strict failure thresholds |
+| `diagnostic_metrics` / `diagnosticMetrics` | `tool_correctness`, `argument_correctness` | Follow-up diagnosis after a notice |
+| `evaluation_sample_rate` / `evaluationSampleRate` | `1.0` | Fraction admitted by deterministic execution-ID sampling |
+| `evaluation_max_runs` / `evaluationMaxRuns` | `None` / `null` | Optional creation-attempt cap per UTC day |
+| `evaluation_max_traces` / `evaluationMaxTraces` | `32` | Maximum trace references for one execution |
+| `max_concurrency` / `maxConcurrency` | `4` | Concurrent evaluation orchestration per runtime |
+| `cooldown_seconds` / `cooldownSeconds` | `60` | Repeated failure-signature cooldown |
+| `trace_visibility_timeout` / `traceVisibilityTimeout` | `30` | Wait for terminal persisted trace evidence |
+| `evaluation_timeout` / `evaluationTimeout` | `120` | Evaluation create/wait budgets |
+| `poll_interval` / `pollInterval` | `1` | Poll interval |
+| `reflection_timeout` / `reflectionTimeout` | `60` | Host reflection continuation deadline |
+| `reflection_max_commands` / `reflectionMaxCommands` | `8` | Tool-call allowance at the reflection checkpoint |
+| `shutdown_timeout` / `shutdownTimeout` | `5` | Bounded cancellation wait |
+
+There is **no default daily evaluation count limit**. An explicit positive integer caps attempts across a reused identity workspace, including diagnostic, failed, and uncertain creations. Polling an existing run does not count. Usage is tracked even when uncapped; zero is invalid.
+
+At the cap, tasks and accepted guidance remain available, new detection is skipped with a reason, and known runs can still be polled. The counter resets at midnight UTC for new requests; previously skipped executions are not automatically retried. This is a local cost control, not a platform quota or a dollar budget.
+
+## Trajectory and validation
+
+| Python / TypeScript | Default | Meaning |
+| --- | --- | --- |
+| `stall_window` / `stallWindow` | `5` | Score-history window |
+| `minimum_progress` / `minimumProgress` | `0.02` | Stall variation cutoff |
+| `regression_drop` / `regressionDrop` | `0.15` | Previous-score drop cutoff |
+| `validation_min_cases` / `validationMinCases` | `3` | Distinct paired cases |
+| `validation_min_improvement` / `validationMinImprovement` | `0.05` | Mean non-protected metric improvement |
+| `validation_regression_tolerance` / `validationRegressionTolerance` | `0.02` | Allowed per-case metric decrease |
+| `validation_timeout` / `validationTimeout` | `120` | Replay collection deadline |
+
+See [Detection semantics](/reflect/concepts#detection-defaults) and [Validation](/reflect/validation) before changing these values. Scores must be finite and normalized to `[0, 1]`.
+
+## Filesystem and output
+
+| Python / TypeScript | Default | Meaning |
+| --- | --- | --- |
+| `shell_timeout` / `shellTimeout` | `5` | Interpreter call deadline |
+| `shell_max_commands` / `shellMaxCommands` | `2,000` | Interpreter command limit |
+| `shell_max_loop_iterations` / `shellMaxLoopIterations` | `5,000` | Interpreter loop limit |
+| `shell_memory_bytes` / `shellMemoryBytes` | `16 MiB` | Interpreter memory |
+| `command_max_bytes` / `commandMaxBytes` | `16 KiB` | Tool command input |
+| `output_max_bytes` / `outputMaxBytes` | `12 KiB` | One tool response |
+| `execution_output_max_bytes` / `executionOutputMaxBytes` | `96 KiB` | Cumulative output, including guard/error replies |
+| `context_max_bytes` / `contextMaxBytes` | `8 KiB` | Active notes |
+| `rule_max_bytes` / `ruleMaxBytes` | `8 KiB` | One rule |
+| `rules_max_bytes` / `rulesMaxBytes` | `512 KiB` | Active rule corpus |
+| `rules_max_count` / `rulesMaxCount` | `256` | Active rule count |
+| `evidence_max_bytes` / `evidenceMaxBytes` | `64 KiB` | Assigned diagnostic presentation |
+
+These limits cover the supplied tool and active files, not the framework's entire context, other host tools, model billing, or historical audit storage. Restoring an execution preserves its consumed output allowance.
+
+## Environment and runtime support
+
+Shared credentials remain `PANDAPROBE_API_KEY`, `PANDAPROBE_PROJECT_NAME`, and `PANDAPROBE_ENDPOINT`. Other Reflect policy settings are constructor options; there is no separate reflection model setting.
+
+Use local filesystem semantics for locks and atomic replacement. Keep Python and TypeScript writable workspaces separate. Native binaries must be available for your platform; browser/edge execution and arbitrary distributed filesystem backends are outside the supported runtime model.

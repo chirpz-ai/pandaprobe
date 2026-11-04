@@ -1,5 +1,5 @@
 ---
-title: "Run Evaluations via UI"
+title: "Evaluation via UI"
 description: "Create and manage evaluation runs through the PandaProbe dashboard."
 icon: "layout-dashboard"
 ---
@@ -15,7 +15,7 @@ Use the dashboard when you want to:
 
 ![PandaProbe dashboard navigation showing Traces, Sessions, and Evaluations](/assets/evals/overview.png)
 
-## Create evals from Traces tab
+## Create evals from Traces
 
 Use the **Traces** tab when you already know which traces you want to evaluate.
 
@@ -46,7 +46,7 @@ The workflow is the same as trace evaluation: select sessions from the table, or
 
 <Steps>
   <Step title="Open the Sessions tab">
-    Open **Sessions** to view grouped agent sessions tab.
+    Open **Sessions** to view grouped agent sessions.
   </Step>
   <Step title="Choose sessions to evaluate">
     Select a batch of sessions from the table, or open one session and click **Evaluate**.
@@ -65,7 +65,6 @@ The workflow is the same as trace evaluation: select sessions from the table, or
 <video controls width="100%">
   <source src="/assets/evals/session-eval.mp4" type="video/mp4" />
 </video>
-
 
 ## Create evals from Evaluations tabs
 
@@ -94,7 +93,7 @@ Open **Trace evaluation runs** when you want to evaluate traces selected by filt
     Add a name, select trace-level metrics, and optionally select the model used for LLM-as-judge evaluation.
   </Step>
   <Step title="Add filters">
-    Use filters such as **Started after**, **Started before**, **Status**, **Trace ID**, **Session ID**, and **Tags** to define the traces you want to evaluate.
+    Use the date range, **Trace status**, **Trace name contains**, **Session ID**, **User ID**, and **Tags** filters to define the traces you want to evaluate.
   </Step>
   <Step title="Set the sampling rate">
     Set **Sampling rate** to choose what portion of matching traces should be evaluated. For example, `0.25` evaluates 25% of traces that match your filters.
@@ -103,7 +102,6 @@ Open **Trace evaluation runs** when you want to evaluate traces selected by filt
     Click **Submit**. The eval run starts in the background.
   </Step>
 </Steps>
-
 
 <video controls width="100%">
   <source src="/assets/evals/trace-eval-tab.mp4" type="video/mp4" />
@@ -124,7 +122,7 @@ Open **Session evaluation runs** when you want to evaluate sessions selected by 
     Add a name, select session-level metrics, and optionally customize signal weights.
   </Step>
   <Step title="Add filters">
-    Use filters such as **Started after**, **Started before**, **Session ID**, **User**, **Tags**, and other session filters to define the sessions you want to evaluate.
+    Use **Started after**, **Started before**, **User ID**, **Has error**, **Tags**, and **Min traces per session** to define the sessions you want to evaluate.
   </Step>
   <Step title="Set the sampling rate">
     Set **Sampling rate** to choose what portion of matching sessions should be evaluated.
@@ -147,15 +145,18 @@ After an eval run starts, PandaProbe processes it in the background. You can rev
 - **Trace scores** lets you inspect scores attached to traces.
 - **Session scores** lets you inspect scores attached to sessions.
 
-Each score includes the metric name, value, status, reason, and metadata. Use these details to understand why a trace or session passed, failed, or needs review.
+Each score includes the metric name, value, computation status, reason, and metadata. `SUCCESS` means the score was computed; use its value, reason, and metadata to assess quality. For session scores, inspect the per-trace signal breakdown to find the steps behind the result.
 
 ## Next steps
 
-<CardGroup cols={2}>
-  <Card title="Scheduling Evaluations" icon="clock" href="/evaluation/setup/scheduling">
+<CardGroup cols={3}>
+  <Card title="Scheduling" icon="clock" href="/evaluation/setup/scheduling">
     Automate recurring evaluations with monitors.
   </Card>
-  <Card title="Run Evaluations via API" icon="terminal" href="/evaluation/setup/run-eval-api">
+  <Card title="Evaluation via API" icon="braces" href="/evaluation/setup/run-eval-api">
     Create eval runs programmatically.
+  </Card>
+  <Card title="Evaluation via CLI" icon="terminal" href="/evaluation/setup/run-eval-cli">
+    Create runs and inspect scores from your terminal.
   </Card>
 </CardGroup>

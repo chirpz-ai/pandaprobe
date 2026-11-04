@@ -1,0 +1,77 @@
+---
+title: "Configuration"
+description: "Tracing credentials, environment settings, and resolved client options"
+---
+
+Explicit constructor options override `PANDAPROBE_*` environment variables. The resolved configuration is immutable. The tracing client requires an API key and project name when enabled; platform API access requires both even if tracing is disabled.
+
+| Environment variable | Default |
+| --- | --- |
+| `PANDAPROBE_API_KEY` | Unset |
+| `PANDAPROBE_PROJECT_NAME` | Unset |
+| `PANDAPROBE_ENDPOINT` | `https://api.pandaprobe.com` |
+| `PANDAPROBE_ENVIRONMENT` | Unset |
+| `PANDAPROBE_RELEASE` | Unset |
+| `PANDAPROBE_ENABLED` | `true` |
+| `PANDAPROBE_BATCH_SIZE` | `10` |
+| `PANDAPROBE_FLUSH_INTERVAL` | `5` seconds |
+| `PANDAPROBE_MAX_QUEUE_SIZE` | `1000` |
+| `PANDAPROBE_DEBUG` | `false` |
+
+Boolean environment settings recognize `true`, `1`, and `yes` as true. Provider credentials belong to the provider SDK. Reflect reuses the same PandaProbe identity; its policy settings are documented separately.
+
+
+
+## On this page
+
+[ConfigOptions](#configoptions), [SdkConfig](#sdkconfig).
+
+## `ConfigOptions`
+
+```ts
+import type { ConfigOptions } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/config.ts#L55)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `apiKey` | `string \| undefined` | Optional |
+| `projectName` | `string \| undefined` | Optional |
+| `endpoint` | `string \| undefined` | Optional |
+| `environment` | `string \| undefined` | Optional |
+| `release` | `string \| undefined` | Optional |
+| `enabled` | `boolean \| undefined` | Optional |
+| `batchSize` | `number \| undefined` | Optional |
+| `flushInterval` | `number \| undefined` | Optional |
+| `maxQueueSize` | `number \| undefined` | Optional |
+| `debug` | `boolean \| undefined` | Optional |
+
+## `SdkConfig`
+
+```ts
+import type { SdkConfig } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/config.ts#L42)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `apiKey` | `string \| undefined` | Required; read-only |
+| `projectName` | `string \| undefined` | Required; read-only |
+| `endpoint` | `string` | Required; read-only |
+| `environment` | `string \| undefined` | Required; read-only |
+| `release` | `string \| undefined` | Required; read-only |
+| `enabled` | `boolean` | Required; read-only |
+| `batchSize` | `number` | Required; read-only |
+| `flushInterval` | `number` | Required; read-only |
+| `maxQueueSize` | `number` | Required; read-only |
+| `debug` | `boolean` | Required; read-only |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.

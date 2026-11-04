@@ -4,7 +4,7 @@ import json
 import textwrap
 from typing import Any
 
-from app.core.evals.metrics.utils import HARNESS_TOOL_GUIDANCE
+from app.core.evals.metrics.utils import REFLECT_TOOL_GUIDANCE
 
 
 class ConfidenceTemplate:
@@ -29,12 +29,7 @@ class ConfidenceTemplate:
             unnecessary retries, vague or incomplete outputs, repeated tool \
             calls with the same parameters, or abandoning a strategy mid-way.
 
-            {HARNESS_TOOL_GUIDANCE}
-            Consulting harness state is not hesitation, indecision, or a \
-            contradictory step: checking learned guidance before acting is a \
-            deliberate choice. Do not read it as hedging or as abandoning a \
-            strategy, and judge decisiveness over the task-directed actions only.
-
+            {REFLECT_TOOL_GUIDANCE}
             Return a JSON object with:
             - `confidence`: a float between 0.0 and 1.0 \
             (1.0 = fully confident and decisive, 0.0 = completely uncertain).

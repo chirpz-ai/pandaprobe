@@ -1,0 +1,140 @@
+---
+title: "DeepAgents"
+description: "Add Reflect to DeepAgents with native tracing, tools, and continuation"
+icon: "/assets/providers/deepagents.svg"
+---
+
+Use the native DeepAgents factory with Reflect. Reflect attaches its filesystem tool and memory context; the existing PandaProbe callback records agent, model, and tool execution.
+
+## Installation
+
+Python 3.11+ or Node.js 22+. Install Reflect together with the framework and model provider used below.
+
+<Tabs>
+<Tab title="pip">
+```bash
+pip install "pandaprobe[reflect,deepagents]" langchain-openai
+```
+</Tab>
+<Tab title="uv">
+```bash
+uv add "pandaprobe[reflect,deepagents]" langchain-openai
+```
+</Tab>
+<Tab title="npm">
+```bash
+npm install pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 deepagents langchain @langchain/core @langchain/langgraph @langchain/openai @langchain/langgraph-checkpoint @langchain/langgraph-sdk "langsmith@>=0.7.1 <0.10.0"
+```
+</Tab>
+<Tab title="yarn">
+```bash
+yarn add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 deepagents langchain @langchain/core @langchain/langgraph @langchain/openai @langchain/langgraph-checkpoint @langchain/langgraph-sdk "langsmith@>=0.7.1 <0.10.0"
+```
+</Tab>
+<Tab title="pnpm">
+```bash
+pnpm add pandaprobe @everruns/bashkit@0.19.0 fs-native-extensions@1.5.1 deepagents langchain @langchain/core @langchain/langgraph @langchain/openai @langchain/langgraph-checkpoint @langchain/langgraph-sdk "langsmith@>=0.7.1 <0.10.0"
+```
+</Tab>
+</Tabs>
+
+## Credentials
+
+```bash
+export PANDAPROBE_API_KEY="your-pandaprobe-api-key"
+export PANDAPROBE_PROJECT_NAME="support-agent"
+export OPENAI_API_KEY="your-provider-api-key"
+```
+
+For a self-hosted platform, also set `PANDAPROBE_ENDPOINT` to your API base URL. Reflect uses the same client configuration as tracing.
+
+## Enable Reflect
+
+This example creates a policy assistant. Add your own domain tools where indicated; Reflect supplies `reflect_bash` automatically.
+
+<CodeGroup>
+```python title="Python"
+import asyncio
+
+from deepagents import create_deep_agent
+from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import InMemorySaver
+from pandaprobe.integrations.deepagents import DeepAgentsCallbackHandler
+from pandaprobe import Client
+from pandaprobe.reflect import Reflect
+
+
+async def main():
+    client = Client()
+    try:
+        async with Reflect(client) as reflect:
+            agent = reflect.agent(
+                create_deep_agent,
+                model=ChatOpenAI(model="gpt-6-luna", reasoning_effort="none"),
+                system_prompt="For standard returns, refund merchandise paid and exclude outbound shipping. Explain the policy clearly.",
+                tools=[],  # Your native business tools go here.
+                checkpointer=InMemorySaver(),
+            )
+            result = await reflect.run(
+                agent, "I paid $65 for an item and $7 for shipping. What is refundable?", session_id="customer-42",
+                config={"callbacks": [DeepAgentsCallbackHandler(client=client)]},
+            )
+            print(result["messages"][-1].content)
+    finally:
+        client.shutdown()
+
+
+asyncio.run(main())
+```
+
+```ts title="TypeScript"
+import { createDeepAgent } from "deepagents";
+import { ChatOpenAI } from "@langchain/openai";
+import { MemorySaver } from "@langchain/langgraph";
+import { DeepAgentsCallbackHandler } from "pandaprobe/integrations/deepagents";
+import { Client } from "pandaprobe";
+import { Reflect as ReflectRuntime } from "pandaprobe/reflect";
+
+async function main() {
+  const client = new Client();
+  const reflect = new ReflectRuntime(client);
+  try {
+    const agent = await reflect.agent(createDeepAgent, {
+      framework: "deepagents",
+      options: {
+        model: new ChatOpenAI({ model: "gpt-6-luna", reasoning: { effort: "none" } }),
+        systemPrompt: "For standard returns, refund merchandise paid and exclude outbound shipping. Explain the policy clearly.",
+        tools: [], // Your native business tools go here.
+        checkpointer: new MemorySaver(),
+      },
+      invokeOptions: { callbacks: [new DeepAgentsCallbackHandler({ client })] },
+    });
+    const result = await reflect.run(agent, "I paid $65 for an item and $7 for shipping. What is refundable?", { sessionId: "customer-42" });
+    console.log(result.messages.at(-1)?.content);
+  } finally {
+    await reflect.close();
+    await client.shutdown();
+  }
+}
+
+main().catch(error => { console.error(error); process.exitCode = 1; });
+```
+</CodeGroup>
+
+## How the integration behaves
+
+DeepAgents keeps its native task capabilities and subagents. Reflect’s `/rules` and `/context.md` belong to **`reflect_bash`**, not the framework’s separate filesystem tools. Use the supplied tool when reading or maintaining Reflect memory.
+
+### Conversations and replay
+
+The checkpointer keeps native conversation history. Use the same `session_id` / `sessionId` for related turns and a new one for a new conversation. Reflect assigns a fresh execution ID per call unless you supply one.
+
+Reflection continues checkpoint-owned history with new feedback; do not append the previous result yourself. Validation uses a fresh thread and local memory, while your replay callback resets business state.
+
+Tracing uses the [DeepAgents callback](/tracing/integrations/deepagents) attached to the same client. Keep that callback on replay invocations as well.
+
+`run()` returns the task's native result after evaluation and any triggered reflection. A healthy answer may produce no proposal. The workspace persists accepted guidance and pending proposals across restarts.
+
+## Validate learned rules
+
+Add [independent replay or controlled trials](/reflect/validation) before proposed changes can become shared accepted guidance. Reset your business environment and conversation for each validation arm. See [Rules and memory](/reflect/rules-and-memory) for the working filesystem and session notes.

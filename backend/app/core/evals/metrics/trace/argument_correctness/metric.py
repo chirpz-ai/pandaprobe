@@ -4,7 +4,7 @@ Evaluates whether tool call arguments/parameters were correctly specified
 for the task. Uses a three-stage LLM judge approach:
 
 1. **Extract** user input and all tool calls (name, parameters, reasoning).
-2. **Verdict** per-call: yes/no + optional reason.
+2. **Verdict** per-call: yes/no for task arguments, neutral for Reflect rule and memory operations.
 3. **Reason** overall explanation from score and incorrect-call reasons.
 """
 
@@ -38,8 +38,8 @@ class ArgumentCorrectnessMetric(BaseMetric):
     threshold = 0.5
     prompt_description = (
         "Three-stage LLM judge: (1) extract user input and tool calls with parameters from "
-        "the trace, (2) generate a per-tool-call yes/no verdict on whether arguments correctly "
-        "address the task, (3) compute score as correct/total and produce an overall explanation."
+        "the trace, (2) judge task arguments as yes/no and Reflect rule and memory operations as neutral, "
+        "(3) compute correct/total excluding neutral verdicts and produce an overall explanation."
     )
 
     @classmethod
@@ -97,28 +97,33 @@ class ArgumentCorrectnessMetric(BaseMetric):
         )
 
         verdicts = verdicts_result.verdicts or []
-        total_verdicts = len(verdicts)
-        correct_count = sum(1 for v in verdicts if v.verdict == "yes")
-        score = min(correct_count / total_verdicts, 1.0) if total_verdicts > 0 else 1.0
+        # Neutral calls must neither improve nor reduce task argument correctness.
+        task_verdicts = [v for v in verdicts if v.verdict != "neutral"]
+        correct_count = sum(1 for v in task_verdicts if v.verdict == "yes")
+        score = correct_count / len(task_verdicts) if task_verdicts else 1.0
 
-        # Stage 3: Generate overall reason
-        incorrect_reasons = [v.reason or "No reason provided" for v in verdicts if v.verdict == "no"]
-        reason_prompt = ArgumentCorrectnessTemplate.generate_reason(
-            incorrect_reasons=incorrect_reasons,
-            user_input=user_input,
-            score=score,
-        )
-        reason_result = await llm.generate_structured(
-            prompt=reason_prompt,
-            response_schema=ArgumentCorrectnessReason,
-            model=model,
-        )
+        # Stage 3: Explain task argument correctness, not Reflect rule and memory operations.
+        if verdicts and not task_verdicts:
+            reason = "Only Reflect rule and memory operations; no task-directed arguments to evaluate."
+        else:
+            incorrect_reasons = [v.reason or "No reason provided" for v in task_verdicts if v.verdict == "no"]
+            reason_prompt = ArgumentCorrectnessTemplate.generate_reason(
+                incorrect_reasons=incorrect_reasons,
+                user_input=user_input,
+                score=score,
+            )
+            reason_result = await llm.generate_structured(
+                prompt=reason_prompt,
+                response_schema=ArgumentCorrectnessReason,
+                model=model,
+            )
+            reason = reason_result.reason
 
         verdicts_metadata = [{"verdict": v.verdict, "reason": v.reason} for v in verdicts]
 
         return MetricResult(
             score=score,
-            reason=reason_result.reason,
+            reason=reason,
             metadata={
                 "user_input": user_input,
                 "verdicts": verdicts_metadata,

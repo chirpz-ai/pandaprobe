@@ -1,0 +1,93 @@
+---
+title: "Rules and memory"
+description: "What the agent can read and edit, and how changes become persistent guidance"
+icon: "folder-open"
+---
+
+Reflect supplies `reflect_bash`, an embedded shell for searching and editing a virtual filesystem. Agents use ordinary commands instead of a collection of specialized rule tools.
+
+## The agent's filesystem
+
+| Path | Contents | Access |
+| --- | --- | --- |
+| `/rules/**/*.md` | Working rule snapshot | Read/write |
+| `/context.md` | Active notes for this session | Read/write |
+| `/inbox/notice.json` | Assigned failure notice | Read-only |
+| `/inbox/evidence.txt` | Diagnostic evidence | Read-only |
+| `/decisions/status.json` | Recent proposal/validation summaries | Read-only |
+
+These paths exist inside the supplied tool, not at the root of your computer. The embedded interpreter supports file utilities, pipes, loops, and heredocs. It has no host mounts, inherited credentials, network access, external programs, or Python execution.
+
+## Retrieve relevant guidance
+
+The native integration tells the agent where memory lives. The agent chooses what to search and read:
+
+```bash
+grep -rl 'standard-return' /rules
+cat /rules/refunds/standard-return.md
+```
+
+Reflect does not automatically insert the whole rule corpus or choose rules with a static retrieval policy. File and output limits bound the supplied tool; they do not bound the agent framework's full conversation history.
+
+## Write a useful rule
+
+A rule needs a title, an `Applies to:` line, and actionable guidance. Directories provide scope; applicability is descriptive text the agent interprets.
+
+```bash
+mkdir -p /rules/refunds
+cat > /rules/refunds/standard-return.md <<'RULE'
+# Refund merchandise only
+Applies to: authorized standard-return refunds
+Read the payment breakdown before submitting a refund. Refund merchandise paid
+and exclude nonrefundable outbound shipping. Check the posted result.
+RULE
+```
+
+At the boundary, Reflect compares all working rules with the pinned accepted revision. The diff becomes one proposal. The Markdown text is normalized and versioned by content hash.
+
+- No change produces `no_proposal`.
+- Exact repeated changes and normalized duplicate guidance are detected.
+- Invalid rules or stale bases produce explicit outcomes.
+- Semantic overlaps and contradictions require reasoning and validation; exact deduplication is not a semantic memory system.
+
+## Keep memory small
+
+The agent can merge overlapping rules, shorten guidance, move files, or remove obsolete rules using ordinary shell commands. These changes still require independent validation before they alter shared accepted guidance.
+
+The default active corpus permits **256 rules**, **8 KiB per rule**, and **512 KiB total**. A smaller corpus can be accepted as maintenance when paired validation meets its non-inferiority checks. That verdict does not claim improved behavior.
+
+## Active notes are different from accepted rules
+
+`/context.md` is a bounded scratchpad, **8 KiB** by default:
+
+```bash
+cat > /context.md <<'MEMORY'
+Current conversation: customer is asking about a standard return.
+Confirm the order identifier before taking an account action.
+MEMORY
+```
+
+Native integrations refresh a replaceable active-memory block at their supported checkpoints. Notes can carry into the same session at the same accepted revision, but are unvalidated working memory. Notes associated with candidate rule edits are not reused in a fresh ordinary view. Validation starts with fresh local memory.
+
+Reflect does not rewrite or compress the rest of the conversation. Keep native framework sessions/checkpoints for conversation history.
+
+## The durable workspace on disk
+
+```text
+.pandaprobe/reflect/<identity>/
+  state.json                         # accepted head, proposals, evaluations, trials, memory
+  revisions/<revision>/manifest.json # paths and rule versions
+  revisions/<revision>/rules/        # immutable accepted Markdown
+  executions/<execution-hash>.json   # working files, usage, phase trace IDs, outcomes
+  evidence/<notice-id>.txt           # assigned diagnostic evidence
+  events/<event-id>.json             # lifecycle events
+  .lock                             # cross-process coordination
+```
+
+To inspect accepted rules, follow `state.json` → `head` → the matching revision's `rules/`. Working proposals and notes are separate from that accepted directory. Do not edit the immutable revisions or lifecycle records to publish a rule.
+
+The identity directory is derived from endpoint, project, and API key; changing credentials changes the partition. Use a persistent local volume and a separate writable workspace for each language/deployment. Python and TypeScript have equivalent behavior, but simultaneous mixed-language writers are not supported.
+
+<Note>
+  The shell cannot reach authoritative storage. Other unrestricted host tools may be able to: keep that storage outside their writable environment. Historical revisions and evidence are not automatically pruned by active-rule limits. See [Operations](/reflect/operations) for retention and access controls.
+</Note>

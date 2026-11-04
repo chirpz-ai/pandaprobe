@@ -1,0 +1,149 @@
+---
+title: "Evaluation via CLI"
+description: "Create trace and session evaluations, inspect progress, and read scores from your terminal."
+icon: "terminal"
+---
+
+Use the PandaProbe CLI for terminal workflows and shell-based automation. It calls the same evaluation API as the dashboard and works with data already captured in your project.
+
+## Prerequisites
+
+[Install the CLI](/reference/tools/cli#install), then authenticate and select your project:
+
+```bash
+pandaprobe auth login
+pandaprobe auth status
+```
+
+Cloud login opens a browser and saves the API key and project name locally. For self-hosted deployments or CI, use an API key with `PANDAPROBE_API_KEY` and `PANDAPROBE_PROJECT_NAME`; set `PANDAPROBE_ENDPOINT` for a custom API endpoint. See [CLI authentication](/reference/tools/cli#authenticate).
+
+<Note>
+  Evaluation commands default to `--target trace`. Use `--target session` when creating, inspecting, or reading scores from a session run. Add `--project your-project-name` to override the configured project for a command.
+</Note>
+
+## Discover metrics and targets
+
+```bash
+# Available metrics for each target
+pandaprobe evals metrics --target trace
+pandaprobe evals metrics --target session
+
+# Find existing trace and session IDs
+pandaprobe traces list --limit 5
+pandaprobe sessions list --limit 5
+```
+
+Choose metrics from the matching list. `loop_detection` is computed during session evaluation and is excluded from the standalone trace metric list.
+
+## Evaluate selected IDs
+
+Replace the example IDs below with IDs from your project.
+
+<Tabs>
+  <Tab title="Traces">
+    ```bash
+    pandaprobe evals runs batch \
+      --target trace \
+      --trace-ids "11111111-1111-1111-1111-111111111111" \
+      --metrics task_completion,tool_correctness \
+      --name "Trace review"
+    ```
+  </Tab>
+  <Tab title="Sessions">
+    ```bash
+    pandaprobe evals runs batch \
+      --target session \
+      --session-ids "conversation-123" \
+      --metrics agent_reliability,agent_consistency \
+      --name "Session review"
+    ```
+  </Tab>
+</Tabs>
+
+Both ID flags accept comma-separated lists. The command returns the created run as JSON, including its `id` and `status`; evaluation continues in the background.
+
+## Evaluate filtered data
+
+Use `runs create` to select targets with filters. For example, evaluate 25% of completed traces tagged `production`:
+
+```bash
+pandaprobe evals runs create \
+  --target trace \
+  --name "Production quality check" \
+  --metrics task_completion,tool_correctness \
+  --status COMPLETED \
+  --tags production \
+  --sampling-rate 0.25
+```
+
+For sessions, select sessions with at least three traces and optionally customize signal weights:
+
+```bash
+pandaprobe evals runs create \
+  --target session \
+  --name "Session reliability check" \
+  --metrics agent_reliability,agent_consistency \
+  --tags production \
+  --min-trace-count 3 \
+  --signal-weights '{"loop_detection":1.5}'
+```
+
+Omitted signal weights retain their defaults. The available filter flags depend on the target:
+
+| Target | Filter flags |
+| --- | --- |
+| Both | `--date-from`, `--date-to`, `--user-id`, `--tags` |
+| Trace | `--status`, `--session-id`, `--filter-name` |
+| Session | `--has-error`, `--min-trace-count` |
+
+Use ISO 8601 timestamps for dates. `--date-to` is exclusive. `--filter-name` matches part of a trace name; `--name` labels the evaluation run itself. With no filters, the run selects all targets in the project; the default sampling rate is `1.0`.
+
+Both `create` and `batch` accept `--model` to override the judge model. `--sampling-rate` applies only to filtered runs. Use `pandaprobe evals runs create --help` for flag details.
+
+## Review progress and scores
+
+Use the run ID returned when you submitted the evaluation:
+
+<Tabs>
+  <Tab title="Traces">
+    ```bash
+    pandaprobe evals runs get "your-run-id" --target trace
+    pandaprobe evals runs scores "your-run-id" --target trace
+    ```
+  </Tab>
+  <Tab title="Sessions">
+    ```bash
+    pandaprobe evals runs get "your-run-id" --target session
+    pandaprobe evals runs scores "your-run-id" --target session
+    ```
+  </Tab>
+</Tabs>
+
+Read `status`, `evaluated_count`, and `failed_count` to track processing. Runs progress from `PENDING` to `RUNNING`, then `COMPLETED` or `FAILED`. `COMPLETED` can include individual computation failures. A score's `SUCCESS` status means it was computed; inspect its value and reason to assess quality.
+
+To find previous runs or scores for one target:
+
+```bash
+pandaprobe evals runs list --target trace --limit 10
+pandaprobe evals runs list --target session --limit 10
+pandaprobe evals scores get "your-trace-id" --target trace
+pandaprobe evals scores get "conversation-123" --target session
+```
+
+## Use results in scripts
+
+JSON goes to stdout and errors go to stderr. With `jq` installed, select the fields your workflow needs:
+
+```bash
+pandaprobe evals runs get "your-run-id" --target trace \
+  | jq '{id, status, evaluated_count, failed_count}'
+
+pandaprobe evals runs scores "your-run-id" --target trace \
+  | jq '.[] | {name, value, status, reason}'
+```
+
+<Note>
+  A zero CLI exit code means the command succeeded, not that evaluation has finished or met your quality bar. A CI check should wait for a terminal run status, check computation failures, and then compare score values with its own criteria.
+</Note>
+
+For readable terminal output, add `--format table`. See the [CLI reference](/reference/tools/cli#output-and-exit-codes) for output formats and exit codes, or [Scheduling](/evaluation/setup/scheduling#cli-setup) to create recurring monitors from the CLI.

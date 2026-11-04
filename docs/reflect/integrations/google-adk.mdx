@@ -1,0 +1,87 @@
+---
+title: "Google ADK"
+description: "Add Reflect to Google ADK with native tracing, tools, and continuation"
+icon: "/assets/providers/adk.svg"
+---
+
+The Python integration configures an ADK LlmAgent and runs it through a native Runner. Reflect composes the agent’s instructions and callbacks, while the existing ADK adapter records execution.
+
+## Installation
+
+Python only; use Python 3.10+ with a compatible Google ADK release. Install Reflect together with the framework and model provider used below.
+
+<Tabs>
+<Tab title="pip">
+```bash
+pip install "pandaprobe[reflect,google-adk]"
+```
+</Tab>
+<Tab title="uv">
+```bash
+uv add "pandaprobe[reflect,google-adk]"
+```
+</Tab>
+</Tabs>
+
+## Credentials
+
+```bash
+export PANDAPROBE_API_KEY="your-pandaprobe-api-key"
+export PANDAPROBE_PROJECT_NAME="support-agent"
+export GOOGLE_API_KEY="your-provider-api-key"
+```
+
+For a self-hosted platform, also set `PANDAPROBE_ENDPOINT` to your API base URL. Reflect uses the same client configuration as tracing.
+
+## Enable Reflect
+
+This example creates a policy assistant. Add your own domain tools where indicated; Reflect supplies `reflect_bash` automatically.
+
+```python title="Python"
+import asyncio
+
+from google.adk.agents import LlmAgent
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from pandaprobe.integrations.google_adk import GoogleADKAdapter
+from pandaprobe import Client
+from pandaprobe.reflect import Reflect
+
+
+async def main():
+    client = Client()
+    try:
+        GoogleADKAdapter(client=client).instrument()
+        async with Reflect(client) as reflect:
+            agent = reflect.agent(
+                LlmAgent, name="support", model="gemini-3.8-flash",
+                instruction="For standard returns, refund merchandise paid and exclude outbound shipping. Explain the policy clearly.",
+                tools=[],  # Your ADK business tools go here.
+            )
+            runner = Runner(agent=agent, app_name="support", session_service=InMemorySessionService())
+            events = await reflect.run(runner, "I paid $65 for an item and $7 for shipping. What is refundable?", session_id="customer-42")
+            for event in events:
+                if event.is_final_response() and event.content:
+                    print("".join(part.text or "" for part in event.content.parts or []))
+    finally:
+        client.shutdown()
+
+
+asyncio.run(main())
+```
+
+## How the integration behaves
+
+Construct the Runner’s agent with `reflect.agent(...)` so its tools, memory, and permission callbacks are configured before execution. An existing Runner must already contain that configured agent.
+
+### Conversations and replay
+
+Reuse the Runner and session service for related turns. Reflect resolves/creates the native session using the task session ID, and uses a fresh execution identity during validation. The example uses an in-memory service; choose your normal ADK persistence for longer-lived conversations.
+
+You can pass `user_id` and `run_config` to `reflect.run(...)`. During reflection, Reflect bounds model calls, advertises only its own tool, and blocks domain tool execution. The returned value is the collected native event list. See the [ADK tracing guide](/tracing/integrations/google-adk) for instrumentation details.
+
+`run()` returns the task's native result after evaluation and any triggered reflection. A healthy answer may produce no proposal. The workspace persists accepted guidance and pending proposals across restarts.
+
+## Validate learned rules
+
+Add [independent replay or controlled trials](/reflect/validation) before proposed changes can become shared accepted guidance. Reset your business environment and conversation for each validation arm. See [Rules and memory](/reflect/rules-and-memory) for the working filesystem and session notes.

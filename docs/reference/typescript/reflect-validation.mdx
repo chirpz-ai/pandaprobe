@@ -1,0 +1,219 @@
+---
+title: "Replay and validation"
+description: "Independent outcomes, paired replay, controlled trials, and acceptance"
+---
+
+Supply reproducible cases, a fresh business environment for every arm, and an independent verifier. The agent's statement that it succeeded is not an outcome measurement.
+
+Each case compares control rules with candidate rules under fresh identities and active memory. Defaults require three distinct pairs including a protected successful control, complete normalized metric evidence, no success regression, no per-case metric decrease beyond `0.02`, and mean non-protected improvement of at least `0.05`. A strict reduction in guidance bytes can qualify as maintenance under the same non-regression checks.
+
+Return scores for every configured threshold metric and an explicit boolean success. Incomplete evidence stays pending. Acceptance publishes a new immutable revision; it is evidence under tested conditions, not a permanent guarantee.
+
+Use `Reflect.validate` for replay. The `validator` property exposes lower-level replay, assessment, and controlled-trial recording for host code. Do not expose acceptance methods to the proposing agent. See [Validate guidance](/reflect/validation) for the integration recipe.
+
+
+
+## On this page
+
+[Outcome](#outcome), [Replay](#replay), [ReplayCase](#replaycase), [ReplayRequest](#replayrequest), [Validator](#validator).
+
+## `Outcome`
+
+```ts
+import { Outcome } from "pandaprobe/reflect";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/validation.ts#L33)
+
+### Constructor
+
+```text
+new Outcome(
+  options?: { scores?: Record<string, number>; success?: boolean | null; evidence?: Record<string, unknown>; },
+): Outcome
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `{ scores?: Record<string, number>; success?: boolean \| null; evidence?: Record<string, unknown> }` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `scores` | `Record<string, number>` | `{}`; read-only |
+| `success` | `boolean \| null` | `null`; read-only |
+| `evidence` | `Record<string, unknown>` | `{}`; read-only |
+
+## `Replay`
+
+```ts
+import type { Replay } from "pandaprobe/reflect";
+```
+
+Type parameters: `I = any`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/validation.ts#L68)
+
+```text
+Replay<I = any> = (request: ReplayRequest<I>) => Promise<Outcome>
+```
+
+## `ReplayCase`
+
+```ts
+import { ReplayCase } from "pandaprobe/reflect";
+```
+
+Type parameters: `I = unknown`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/validation.ts#L18)
+
+### Constructor
+
+```text
+new ReplayCase<I = unknown>(options: { id: string; input: I; protected?: boolean; }): ReplayCase<I>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `{ id: string; input: I; protected?: boolean }` | Required |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `id` | `string` | Instance value; read-only |
+| `input` | `I` | Instance value; read-only |
+| `protected` | `boolean` | `false`; read-only |
+
+## `ReplayRequest`
+
+```ts
+import { ReplayRequest } from "pandaprobe/reflect";
+```
+
+Type parameters: `I = unknown`.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/validation.ts#L50)
+
+### Constructor
+
+```text
+new ReplayRequest<I = unknown>(
+  case_: ReplayCase<I>,
+  execution: Execution,
+  arm: "control" | "candidate",
+  signal?: AbortSignal,
+): ReplayRequest<I>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `case_` | `ReplayCase<I>` | Required |
+| `execution` | `Execution` | Required |
+| `arm` | `"control" \| "candidate"` | Required |
+| `signal` | `AbortSignal` | `execution.signal` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `case` | `ReplayCase<I>` | Instance value; read-only |
+| `execution` | `Execution` | Instance value; read-only |
+| `arm` | `"candidate" \| "control"` | Instance value; read-only |
+| `signal` | `AbortSignal` | `execution.signal`; read-only |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="run">
+
+```text
+run<R>(agent: Agent<I, R>, options?: Record<string, unknown>): Promise<R>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `agent` | `Agent<I, R>` | Required |
+| `options` | `Record<string, unknown>` | `{}` |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `Validator`
+
+Supporting contract used by the API below; it is not a separate package export.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/reflect/validation.ts#L69)
+
+### Constructor
+
+```text
+new Validator(runtime: ReflectRuntime): Validator
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `runtime` | `ReflectRuntime` | Required |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="replay">
+
+```text
+replay(
+  proposalId: string,
+  cases: ReplayCase[],
+  replay: Replay,
+  signal?: AbortSignal,
+): Promise<ValidationVerdict>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `proposalId` | `string` | Required |
+| `cases` | `ReplayCase[]` | Required |
+| `replay` | `Replay` | Required |
+| `signal` | `AbortSignal` | Optional |
+
+</Accordion>
+
+<Accordion title="assess">
+
+Assesses supplied paired rows against acceptance policy. Assessment alone does not publish a revision; use runtime validation or recorded trials.
+
+```text
+assess(proposal: RuleProposal, rows: TrialCase[], mode: "replay" | "trial"): ValidationVerdict
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `proposal` | `RuleProposal` | Required |
+| `rows` | `TrialCase[]` | Required |
+| `mode` | `"replay" \| "trial"` | Required |
+
+</Accordion>
+
+<Accordion title="recordTrial">
+
+Records independently measured paired trial evidence and applies the same acceptance policy used for replay.
+
+```text
+recordTrial(proposalId: string, case_: TrialCase): ValidationVerdict
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `proposalId` | `string` | Required |
+| `case_` | `TrialCase` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.

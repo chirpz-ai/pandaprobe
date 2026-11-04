@@ -1,0 +1,4265 @@
+{
+  "sdk_revision": "92d8c37fba00e87ac6f0104cd293990aa5d5e621",
+  "languages": {
+    "python": {
+      "exports": [
+        {
+          "importPath": "pandaprobe",
+          "name": "__version__",
+          "id": "pandaprobe._version#__version__",
+          "page": "reference/python/client",
+          "anchor": "__version__"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "Client",
+          "id": "pandaprobe.client#Client",
+          "page": "reference/python/client",
+          "anchor": "client"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "init",
+          "id": "pandaprobe.client#init",
+          "page": "reference/python/client",
+          "anchor": "init"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "get_client",
+          "id": "pandaprobe.client#get_client",
+          "page": "reference/python/client",
+          "anchor": "get_client"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "trace",
+          "id": "pandaprobe.decorators#trace",
+          "page": "reference/python/tracing",
+          "anchor": "trace"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "span",
+          "id": "pandaprobe.decorators#span",
+          "page": "reference/python/tracing",
+          "anchor": "span"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "start_trace",
+          "id": "pandaprobe#start_trace",
+          "page": "reference/python/tracing",
+          "anchor": "start_trace"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "SpanKind",
+          "id": "pandaprobe.schemas#SpanKind",
+          "page": "reference/python/data",
+          "anchor": "spankind"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "SpanStatusCode",
+          "id": "pandaprobe.schemas#SpanStatusCode",
+          "page": "reference/python/data",
+          "anchor": "spanstatuscode"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "TraceStatus",
+          "id": "pandaprobe.schemas#TraceStatus",
+          "page": "reference/python/data",
+          "anchor": "tracestatus"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "ScoreDataType",
+          "id": "pandaprobe.schemas#ScoreDataType",
+          "page": "reference/python/data",
+          "anchor": "scoredatatype"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "flush",
+          "id": "pandaprobe#flush",
+          "page": "reference/python/client",
+          "anchor": "flush"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "shutdown",
+          "id": "pandaprobe#shutdown",
+          "page": "reference/python/client",
+          "anchor": "shutdown"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "score",
+          "id": "pandaprobe#score",
+          "page": "reference/python/client",
+          "anchor": "score"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "set_session",
+          "id": "pandaprobe#set_session",
+          "page": "reference/python/tracing",
+          "anchor": "set_session"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "session",
+          "id": "pandaprobe#session",
+          "page": "reference/python/tracing",
+          "anchor": "session"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "set_user",
+          "id": "pandaprobe#set_user",
+          "page": "reference/python/tracing",
+          "anchor": "set_user"
+        },
+        {
+          "importPath": "pandaprobe",
+          "name": "user",
+          "id": "pandaprobe#user",
+          "page": "reference/python/tracing",
+          "anchor": "user"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "ApiDeadlineExceeded",
+          "id": "pandaprobe.api.errors#ApiDeadlineExceeded",
+          "page": "reference/python/platform-errors",
+          "anchor": "apideadlineexceeded"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "ApiError",
+          "id": "pandaprobe.api.errors#ApiError",
+          "page": "reference/python/platform-errors",
+          "anchor": "apierror"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "AuthenticationError",
+          "id": "pandaprobe.api.errors#AuthenticationError",
+          "page": "reference/python/platform-errors",
+          "anchor": "authenticationerror"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "CreationOutcomeUnknown",
+          "id": "pandaprobe.api.errors#CreationOutcomeUnknown",
+          "page": "reference/python/platform-errors",
+          "anchor": "creationoutcomeunknown"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "EvaluationFailed",
+          "id": "pandaprobe.api.errors#EvaluationFailed",
+          "page": "reference/python/platform-errors",
+          "anchor": "evaluationfailed"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "EvaluationResult",
+          "id": "pandaprobe.api.models#EvaluationResult",
+          "page": "reference/python/platform-models",
+          "anchor": "evaluationresult"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "EvaluationRun",
+          "id": "pandaprobe.api.models#EvaluationRun",
+          "page": "reference/python/platform-models",
+          "anchor": "evaluationrun"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "InsufficientEvidence",
+          "id": "pandaprobe.api.errors#InsufficientEvidence",
+          "page": "reference/python/platform-errors",
+          "anchor": "insufficientevidence"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "InvalidResponseError",
+          "id": "pandaprobe.api.errors#InvalidResponseError",
+          "page": "reference/python/platform-errors",
+          "anchor": "invalidresponseerror"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "Metric",
+          "id": "pandaprobe.api.models#Metric",
+          "page": "reference/python/platform-models",
+          "anchor": "metric"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "NotFoundError",
+          "id": "pandaprobe.api.errors#NotFoundError",
+          "page": "reference/python/platform-errors",
+          "anchor": "notfounderror"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "PlatformClient",
+          "id": "pandaprobe.api.client#PlatformClient",
+          "page": "reference/python/platform-client",
+          "anchor": "platformclient"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "PlatformError",
+          "id": "pandaprobe.api.errors#PlatformError",
+          "page": "reference/python/platform-errors",
+          "anchor": "platformerror"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "RateLimitError",
+          "id": "pandaprobe.api.errors#RateLimitError",
+          "page": "reference/python/platform-errors",
+          "anchor": "ratelimiterror"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "Score",
+          "id": "pandaprobe.api.models#Score",
+          "page": "reference/python/platform-models",
+          "anchor": "score"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "Span",
+          "id": "pandaprobe.api.models#Span",
+          "page": "reference/python/platform-models",
+          "anchor": "span"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "Trace",
+          "id": "pandaprobe.api.models#Trace",
+          "page": "reference/python/platform-models",
+          "anchor": "trace"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "TracePage",
+          "id": "pandaprobe.api.models#TracePage",
+          "page": "reference/python/platform-models",
+          "anchor": "tracepage"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "TraceSummary",
+          "id": "pandaprobe.api.models#TraceSummary",
+          "page": "reference/python/platform-models",
+          "anchor": "tracesummary"
+        },
+        {
+          "importPath": "pandaprobe.api",
+          "name": "TransportError",
+          "id": "pandaprobe.api.errors#TransportError",
+          "page": "reference/python/platform-errors",
+          "anchor": "transporterror"
+        },
+        {
+          "importPath": "pandaprobe.integrations.claude_agent_sdk",
+          "name": "ClaudeAgentSDKAdapter",
+          "id": "pandaprobe.integrations.claude_agent_sdk.adapter#ClaudeAgentSDKAdapter",
+          "page": "reference/python/integrations",
+          "anchor": "claudeagentsdkadapter"
+        },
+        {
+          "importPath": "pandaprobe.integrations.crewai",
+          "name": "CrewAIAdapter",
+          "id": "pandaprobe.integrations.crewai.adapter#CrewAIAdapter",
+          "page": "reference/python/integrations",
+          "anchor": "crewaiadapter"
+        },
+        {
+          "importPath": "pandaprobe.integrations.deepagents",
+          "name": "DeepAgentsCallbackHandler",
+          "id": "pandaprobe.integrations.deepagents.callback#DeepAgentsCallbackHandler",
+          "page": "reference/python/integrations",
+          "anchor": "deepagentscallbackhandler"
+        },
+        {
+          "importPath": "pandaprobe.integrations.google_adk",
+          "name": "GoogleADKAdapter",
+          "id": "pandaprobe.integrations.google_adk.adapter#GoogleADKAdapter",
+          "page": "reference/python/integrations",
+          "anchor": "googleadkadapter"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langchain",
+          "name": "LangChainCallbackHandler",
+          "id": "pandaprobe.integrations.langchain.callback#LangChainCallbackHandler",
+          "page": "reference/python/integrations",
+          "anchor": "langchaincallbackhandler"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph",
+          "name": "LangGraphCallbackHandler",
+          "id": "pandaprobe.integrations.langgraph.callback#LangGraphCallbackHandler",
+          "page": "reference/python/integrations",
+          "anchor": "langgraphcallbackhandler"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "_normalize_content_blocks",
+          "id": "pandaprobe.integrations._langchain_core.utils#_normalize_content_blocks",
+          "page": "reference/python/integrations",
+          "anchor": "_normalize_content_blocks"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "_normalize_role",
+          "id": "pandaprobe.integrations._langchain_core.utils#_normalize_role",
+          "page": "reference/python/integrations",
+          "anchor": "_normalize_role"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "_ROLE_MAP",
+          "id": "pandaprobe.integrations._langchain_core.utils#_ROLE_MAP",
+          "page": "reference/python/integrations",
+          "anchor": "_role_map"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "extract_model_parameters",
+          "id": "pandaprobe.integrations._langchain_core.utils#extract_model_parameters",
+          "page": "reference/python/integrations",
+          "anchor": "extract_model_parameters"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "extract_name",
+          "id": "pandaprobe.integrations._langchain_core.utils#extract_name",
+          "page": "reference/python/integrations",
+          "anchor": "extract_name"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "extract_reasoning_from_generation",
+          "id": "pandaprobe.integrations._langchain_core.utils#extract_reasoning_from_generation",
+          "page": "reference/python/integrations",
+          "anchor": "extract_reasoning_from_generation"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "extract_token_usage",
+          "id": "pandaprobe.integrations._langchain_core.utils#extract_token_usage",
+          "page": "reference/python/integrations",
+          "anchor": "extract_token_usage"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "normalize_langchain_input",
+          "id": "pandaprobe.integrations._langchain_core.utils#normalize_langchain_input",
+          "page": "reference/python/integrations",
+          "anchor": "normalize_langchain_input"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "normalize_langchain_output",
+          "id": "pandaprobe.integrations._langchain_core.utils#normalize_langchain_output",
+          "page": "reference/python/integrations",
+          "anchor": "normalize_langchain_output"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "normalize_llm_generation_output",
+          "id": "pandaprobe.integrations._langchain_core.utils#normalize_llm_generation_output",
+          "page": "reference/python/integrations",
+          "anchor": "normalize_llm_generation_output"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "normalize_type_to_role",
+          "id": "pandaprobe.integrations._langchain_core.utils#normalize_type_to_role",
+          "page": "reference/python/integrations",
+          "anchor": "normalize_type_to_role"
+        },
+        {
+          "importPath": "pandaprobe.integrations.langgraph.utils",
+          "name": "safe_output",
+          "id": "pandaprobe.integrations._langchain_core.utils#safe_output",
+          "page": "reference/python/integrations",
+          "anchor": "safe_output"
+        },
+        {
+          "importPath": "pandaprobe.integrations.openai_agents",
+          "name": "OpenAIAgentsAdapter",
+          "id": "pandaprobe.integrations.openai_agents.adapter#OpenAIAgentsAdapter",
+          "page": "reference/python/integrations",
+          "anchor": "openaiagentsadapter"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "EvaluationOutcome",
+          "id": "pandaprobe.reflect.models#EvaluationOutcome",
+          "page": "reference/python/reflect-models",
+          "anchor": "evaluationoutcome"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "Execution",
+          "id": "pandaprobe.reflect.execution#Execution",
+          "page": "reference/python/reflect-execution",
+          "anchor": "execution"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "ExecutionReport",
+          "id": "pandaprobe.reflect.models#ExecutionReport",
+          "page": "reference/python/reflect-models",
+          "anchor": "executionreport"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "Invocation",
+          "id": "pandaprobe.reflect.runtime#Invocation",
+          "page": "reference/python/reflect-execution",
+          "anchor": "invocation"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "Outcome",
+          "id": "pandaprobe.reflect.validation#Outcome",
+          "page": "reference/python/reflect-validation",
+          "anchor": "outcome"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "ProposalOutcome",
+          "id": "pandaprobe.reflect.models#ProposalOutcome",
+          "page": "reference/python/reflect-models",
+          "anchor": "proposaloutcome"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "Reflect",
+          "id": "pandaprobe.reflect.runtime#Reflect",
+          "page": "reference/python/reflect-runtime",
+          "anchor": "reflect"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "ReflectConfig",
+          "id": "pandaprobe.reflect.config#ReflectConfig",
+          "page": "reference/python/reflect-config",
+          "anchor": "reflectconfig"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "ReplayCase",
+          "id": "pandaprobe.reflect.validation#ReplayCase",
+          "page": "reference/python/reflect-validation",
+          "anchor": "replaycase"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "ReplayRequest",
+          "id": "pandaprobe.reflect.validation#ReplayRequest",
+          "page": "reference/python/reflect-validation",
+          "anchor": "replayrequest"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "Rule",
+          "id": "pandaprobe.reflect.models#Rule",
+          "page": "reference/python/reflect-models",
+          "anchor": "rule"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "RuleProposal",
+          "id": "pandaprobe.reflect.models#RuleProposal",
+          "page": "reference/python/reflect-models",
+          "anchor": "ruleproposal"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "TrialArm",
+          "id": "pandaprobe.reflect.models#TrialArm",
+          "page": "reference/python/reflect-models",
+          "anchor": "trialarm"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "TrialCase",
+          "id": "pandaprobe.reflect.models#TrialCase",
+          "page": "reference/python/reflect-models",
+          "anchor": "trialcase"
+        },
+        {
+          "importPath": "pandaprobe.reflect",
+          "name": "ValidationVerdict",
+          "id": "pandaprobe.reflect.models#ValidationVerdict",
+          "page": "reference/python/reflect-models",
+          "anchor": "validationverdict"
+        },
+        {
+          "importPath": "pandaprobe.tracing",
+          "name": "TraceContext",
+          "id": "pandaprobe.tracing.context#TraceContext",
+          "page": "reference/python/tracing",
+          "anchor": "tracecontext"
+        },
+        {
+          "importPath": "pandaprobe.tracing",
+          "name": "SpanContext",
+          "id": "pandaprobe.tracing.span#SpanContext",
+          "page": "reference/python/tracing",
+          "anchor": "spancontext"
+        },
+        {
+          "importPath": "pandaprobe.wrappers",
+          "name": "wrap_anthropic",
+          "id": "pandaprobe.wrappers.anthropic.wrapper#wrap_anthropic",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_anthropic"
+        },
+        {
+          "importPath": "pandaprobe.wrappers",
+          "name": "wrap_bedrock",
+          "id": "pandaprobe.wrappers.bedrock.wrapper#wrap_bedrock",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_bedrock"
+        },
+        {
+          "importPath": "pandaprobe.wrappers",
+          "name": "wrap_gemini",
+          "id": "pandaprobe.wrappers.gemini.wrapper#wrap_gemini",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_gemini"
+        },
+        {
+          "importPath": "pandaprobe.wrappers",
+          "name": "wrap_litellm",
+          "id": "pandaprobe.wrappers.litellm.wrapper#wrap_litellm",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_litellm"
+        },
+        {
+          "importPath": "pandaprobe.wrappers",
+          "name": "wrap_mistral",
+          "id": "pandaprobe.wrappers.mistral.wrapper#wrap_mistral",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_mistral"
+        },
+        {
+          "importPath": "pandaprobe.wrappers",
+          "name": "wrap_openai",
+          "id": "pandaprobe.wrappers.openai.wrapper#wrap_openai",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_openai"
+        },
+        {
+          "importPath": "pandaprobe.wrappers.anthropic",
+          "name": "wrap_anthropic",
+          "id": "pandaprobe.wrappers.anthropic.wrapper#wrap_anthropic",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_anthropic"
+        },
+        {
+          "importPath": "pandaprobe.wrappers.bedrock",
+          "name": "wrap_bedrock",
+          "id": "pandaprobe.wrappers.bedrock.wrapper#wrap_bedrock",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_bedrock"
+        },
+        {
+          "importPath": "pandaprobe.wrappers.gemini",
+          "name": "wrap_gemini",
+          "id": "pandaprobe.wrappers.gemini.wrapper#wrap_gemini",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_gemini"
+        },
+        {
+          "importPath": "pandaprobe.wrappers.litellm",
+          "name": "wrap_litellm",
+          "id": "pandaprobe.wrappers.litellm.wrapper#wrap_litellm",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_litellm"
+        },
+        {
+          "importPath": "pandaprobe.wrappers.mistral",
+          "name": "wrap_mistral",
+          "id": "pandaprobe.wrappers.mistral.wrapper#wrap_mistral",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_mistral"
+        },
+        {
+          "importPath": "pandaprobe.wrappers.openai",
+          "name": "wrap_openai",
+          "id": "pandaprobe.wrappers.openai.wrapper#wrap_openai",
+          "page": "reference/python/wrappers",
+          "anchor": "wrap_openai"
+        },
+        {
+          "importPath": "pandaprobe.config",
+          "name": "SdkConfig",
+          "id": "pandaprobe.config#SdkConfig",
+          "supplemental": true,
+          "page": "reference/python/configuration",
+          "anchor": "sdkconfig"
+        },
+        {
+          "importPath": "pandaprobe.config",
+          "name": "resolve_config",
+          "id": "pandaprobe.config#resolve_config",
+          "supplemental": true,
+          "page": "reference/python/configuration",
+          "anchor": "resolve_config"
+        },
+        {
+          "importPath": "pandaprobe.schemas",
+          "name": "SpanKind",
+          "id": "pandaprobe.schemas#SpanKind",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "spankind"
+        },
+        {
+          "importPath": "pandaprobe.schemas",
+          "name": "SpanStatusCode",
+          "id": "pandaprobe.schemas#SpanStatusCode",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "spanstatuscode"
+        },
+        {
+          "importPath": "pandaprobe.schemas",
+          "name": "TraceStatus",
+          "id": "pandaprobe.schemas#TraceStatus",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "tracestatus"
+        },
+        {
+          "importPath": "pandaprobe.schemas",
+          "name": "ScoreDataType",
+          "id": "pandaprobe.schemas#ScoreDataType",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "scoredatatype"
+        },
+        {
+          "importPath": "pandaprobe.schemas",
+          "name": "SpanData",
+          "id": "pandaprobe.schemas#SpanData",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "spandata"
+        },
+        {
+          "importPath": "pandaprobe.schemas",
+          "name": "TraceData",
+          "id": "pandaprobe.schemas#TraceData",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "tracedata"
+        },
+        {
+          "importPath": "pandaprobe.schemas",
+          "name": "ScoreData",
+          "id": "pandaprobe.schemas#ScoreData",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "scoredata"
+        },
+        {
+          "importPath": "pandaprobe.validation",
+          "name": "validate_messages_format",
+          "id": "pandaprobe.validation#validate_messages_format",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "validate_messages_format"
+        },
+        {
+          "importPath": "pandaprobe.validation",
+          "name": "warn_if_invalid_messages",
+          "id": "pandaprobe.validation#warn_if_invalid_messages",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "warn_if_invalid_messages"
+        },
+        {
+          "importPath": "pandaprobe.validation",
+          "name": "extract_last_user_message",
+          "id": "pandaprobe.validation#extract_last_user_message",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "extract_last_user_message"
+        },
+        {
+          "importPath": "pandaprobe.validation",
+          "name": "extract_last_assistant_message",
+          "id": "pandaprobe.validation#extract_last_assistant_message",
+          "supplemental": true,
+          "page": "reference/python/data",
+          "anchor": "extract_last_assistant_message"
+        },
+        {
+          "importPath": "pandaprobe.tracing.context",
+          "name": "get_current_trace",
+          "id": "pandaprobe.tracing.context#get_current_trace",
+          "supplemental": true,
+          "page": "reference/python/tracing",
+          "anchor": "get_current_trace"
+        },
+        {
+          "importPath": "pandaprobe.tracing.context",
+          "name": "get_span_stack",
+          "id": "pandaprobe.tracing.context#get_span_stack",
+          "supplemental": true,
+          "page": "reference/python/tracing",
+          "anchor": "get_span_stack"
+        },
+        {
+          "importPath": "pandaprobe.tracing.session",
+          "name": "get_current_session_id",
+          "id": "pandaprobe.tracing.session#get_current_session_id",
+          "supplemental": true,
+          "page": "reference/python/tracing",
+          "anchor": "get_current_session_id"
+        },
+        {
+          "importPath": "pandaprobe.tracing.session",
+          "name": "set_current_session_id",
+          "id": "pandaprobe.tracing.session#set_current_session_id",
+          "supplemental": true,
+          "page": "reference/python/tracing",
+          "anchor": "set_current_session_id"
+        },
+        {
+          "importPath": "pandaprobe.tracing.session",
+          "name": "reset_current_session_id",
+          "id": "pandaprobe.tracing.session#reset_current_session_id",
+          "supplemental": true,
+          "page": "reference/python/tracing",
+          "anchor": "reset_current_session_id"
+        },
+        {
+          "importPath": "pandaprobe.tracing.session",
+          "name": "get_current_user_id",
+          "id": "pandaprobe.tracing.session#get_current_user_id",
+          "supplemental": true,
+          "page": "reference/python/tracing",
+          "anchor": "get_current_user_id"
+        },
+        {
+          "importPath": "pandaprobe.tracing.session",
+          "name": "set_current_user_id",
+          "id": "pandaprobe.tracing.session#set_current_user_id",
+          "supplemental": true,
+          "page": "reference/python/tracing",
+          "anchor": "set_current_user_id"
+        },
+        {
+          "importPath": "pandaprobe.tracing.session",
+          "name": "reset_current_user_id",
+          "id": "pandaprobe.tracing.session#reset_current_user_id",
+          "supplemental": true,
+          "page": "reference/python/tracing",
+          "anchor": "reset_current_user_id"
+        },
+        {
+          "importPath": "pandaprobe.tracing.capture",
+          "name": "TraceCapture",
+          "id": "pandaprobe.tracing.capture#TraceCapture",
+          "supplemental": true,
+          "page": "reference/python/tracing",
+          "anchor": "tracecapture"
+        },
+        {
+          "importPath": "pandaprobe.api.models",
+          "name": "ApiModel",
+          "id": "pandaprobe.api.models#ApiModel",
+          "supplemental": true,
+          "page": "reference/python/platform-models",
+          "anchor": "apimodel"
+        },
+        {
+          "importPath": "pandaprobe.api.models",
+          "name": "EvaluationRequest",
+          "id": "pandaprobe.api.models#EvaluationRequest",
+          "supplemental": true,
+          "page": "reference/python/platform-models",
+          "anchor": "evaluationrequest"
+        },
+        {
+          "importPath": "pandaprobe.api.resources",
+          "name": "Traces",
+          "id": "pandaprobe.api.resources#Traces",
+          "supplemental": true,
+          "page": "reference/python/platform-client",
+          "anchor": "traces"
+        },
+        {
+          "importPath": "pandaprobe.api.resources",
+          "name": "Evaluations",
+          "id": "pandaprobe.api.resources#Evaluations",
+          "supplemental": true,
+          "page": "reference/python/platform-client",
+          "anchor": "evaluations"
+        },
+        {
+          "importPath": "pandaprobe.reflect.models",
+          "name": "FailureNotice",
+          "id": "pandaprobe.reflect.models#FailureNotice",
+          "supplemental": true,
+          "page": "reference/python/reflect-models",
+          "anchor": "failurenotice"
+        },
+        {
+          "importPath": "pandaprobe.reflect.validation",
+          "name": "Replay",
+          "id": "pandaprobe.reflect.validation#Replay",
+          "supplemental": true,
+          "page": "reference/python/reflect-validation",
+          "anchor": "replay"
+        },
+        {
+          "importPath": "pandaprobe.reflect.validation",
+          "name": "Validator",
+          "id": "pandaprobe.reflect.validation#Validator",
+          "supplemental": true,
+          "page": "reference/python/reflect-validation",
+          "anchor": "validator"
+        }
+      ],
+      "symbols": [
+        {
+          "id": "pandaprobe#flush",
+          "page": "reference/python/client",
+          "name": "flush",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe#score",
+          "page": "reference/python/client",
+          "name": "score",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe#session",
+          "page": "reference/python/tracing",
+          "name": "session",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe#set_session",
+          "page": "reference/python/tracing",
+          "name": "set_session",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe#set_user",
+          "page": "reference/python/tracing",
+          "name": "set_user",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe#shutdown",
+          "page": "reference/python/client",
+          "name": "shutdown",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe#start_trace",
+          "page": "reference/python/tracing",
+          "name": "start_trace",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe#user",
+          "page": "reference/python/tracing",
+          "name": "user",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe._version#__version__",
+          "page": "reference/python/client",
+          "name": "__version__",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.api.client#PlatformClient",
+          "page": "reference/python/platform-client",
+          "name": "PlatformClient",
+          "methods": [
+            "aclose",
+            "decode",
+            "decode_many",
+            "request"
+          ],
+          "fields": [
+            "config",
+            "timeout",
+            "read_attempts",
+            "traces",
+            "evaluations"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.errors#ApiDeadlineExceeded",
+          "page": "reference/python/platform-errors",
+          "name": "ApiDeadlineExceeded",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.api.errors#ApiError",
+          "page": "reference/python/platform-errors",
+          "name": "ApiError",
+          "methods": [],
+          "fields": [
+            "status_code",
+            "request_id"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.errors#AuthenticationError",
+          "page": "reference/python/platform-errors",
+          "name": "AuthenticationError",
+          "methods": [],
+          "fields": [
+            "status_code",
+            "request_id"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.errors#CreationOutcomeUnknown",
+          "page": "reference/python/platform-errors",
+          "name": "CreationOutcomeUnknown",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.api.errors#EvaluationFailed",
+          "page": "reference/python/platform-errors",
+          "name": "EvaluationFailed",
+          "methods": [],
+          "fields": [
+            "run_id"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.errors#InsufficientEvidence",
+          "page": "reference/python/platform-errors",
+          "name": "InsufficientEvidence",
+          "methods": [],
+          "fields": [
+            "run_id",
+            "missing"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.errors#InvalidResponseError",
+          "page": "reference/python/platform-errors",
+          "name": "InvalidResponseError",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.api.errors#NotFoundError",
+          "page": "reference/python/platform-errors",
+          "name": "NotFoundError",
+          "methods": [],
+          "fields": [
+            "status_code",
+            "request_id"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.errors#PlatformError",
+          "page": "reference/python/platform-errors",
+          "name": "PlatformError",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.api.errors#RateLimitError",
+          "page": "reference/python/platform-errors",
+          "name": "RateLimitError",
+          "methods": [],
+          "fields": [
+            "status_code",
+            "request_id"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.errors#TransportError",
+          "page": "reference/python/platform-errors",
+          "name": "TransportError",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.api.models#ApiModel",
+          "page": "reference/python/platform-models",
+          "name": "ApiModel",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.api.models#EvaluationRequest",
+          "page": "reference/python/platform-models",
+          "name": "EvaluationRequest",
+          "methods": [],
+          "fields": [
+            "trace_ids",
+            "metrics",
+            "name",
+            "model"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.models#EvaluationResult",
+          "page": "reference/python/platform-models",
+          "name": "EvaluationResult",
+          "methods": [],
+          "fields": [
+            "run",
+            "scores"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.models#EvaluationRun",
+          "page": "reference/python/platform-models",
+          "name": "EvaluationRun",
+          "methods": [],
+          "fields": [
+            "id",
+            "status",
+            "metric_names",
+            "total_targets",
+            "evaluated_count",
+            "failed_count",
+            "target_type",
+            "error_message"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.models#Metric",
+          "page": "reference/python/platform-models",
+          "name": "Metric",
+          "methods": [],
+          "fields": [
+            "name",
+            "description",
+            "category"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.models#Score",
+          "page": "reference/python/platform-models",
+          "name": "Score",
+          "methods": [],
+          "fields": [
+            "id",
+            "trace_id",
+            "name",
+            "value",
+            "status",
+            "data_type",
+            "eval_run_id",
+            "reason",
+            "metadata",
+            "numeric_value"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.models#Span",
+          "page": "reference/python/platform-models",
+          "name": "Span",
+          "methods": [],
+          "fields": [
+            "span_id",
+            "trace_id",
+            "parent_span_id",
+            "name",
+            "kind",
+            "status",
+            "input",
+            "output",
+            "metadata",
+            "error"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.models#Trace",
+          "page": "reference/python/platform-models",
+          "name": "Trace",
+          "methods": [],
+          "fields": [
+            "trace_id",
+            "name",
+            "status",
+            "session_id",
+            "tags",
+            "started_at",
+            "ended_at",
+            "project_id",
+            "input",
+            "output",
+            "metadata",
+            "spans"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.models#TracePage",
+          "page": "reference/python/platform-models",
+          "name": "TracePage",
+          "methods": [],
+          "fields": [
+            "items",
+            "total",
+            "limit",
+            "offset"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.models#TraceSummary",
+          "page": "reference/python/platform-models",
+          "name": "TraceSummary",
+          "methods": [],
+          "fields": [
+            "trace_id",
+            "name",
+            "status",
+            "session_id",
+            "tags",
+            "started_at",
+            "ended_at"
+          ]
+        },
+        {
+          "id": "pandaprobe.api.resources#Evaluations",
+          "page": "reference/python/platform-client",
+          "name": "Evaluations",
+          "methods": [
+            "metrics",
+            "create",
+            "get",
+            "scores",
+            "wait"
+          ],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.api.resources#Traces",
+          "page": "reference/python/platform-client",
+          "name": "Traces",
+          "methods": [
+            "get",
+            "list",
+            "iterate",
+            "wait_visible"
+          ],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.client#Client",
+          "page": "reference/python/client",
+          "name": "Client",
+          "methods": [
+            "capture_traces",
+            "trace",
+            "log_trace",
+            "score",
+            "flush",
+            "shutdown",
+            "on_error"
+          ],
+          "fields": [
+            "enabled",
+            "config"
+          ]
+        },
+        {
+          "id": "pandaprobe.client#get_client",
+          "page": "reference/python/client",
+          "name": "get_client",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.client#init",
+          "page": "reference/python/client",
+          "name": "init",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.config#SdkConfig",
+          "page": "reference/python/configuration",
+          "name": "SdkConfig",
+          "methods": [],
+          "fields": [
+            "api_key",
+            "project_name",
+            "endpoint",
+            "environment",
+            "release",
+            "enabled",
+            "batch_size",
+            "flush_interval",
+            "max_queue_size",
+            "debug"
+          ]
+        },
+        {
+          "id": "pandaprobe.config#resolve_config",
+          "page": "reference/python/configuration",
+          "name": "resolve_config",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.decorators#span",
+          "page": "reference/python/tracing",
+          "name": "span",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.decorators#trace",
+          "page": "reference/python/tracing",
+          "name": "trace",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#_ROLE_MAP",
+          "page": "reference/python/integrations",
+          "name": "_ROLE_MAP",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#_normalize_content_blocks",
+          "page": "reference/python/integrations",
+          "name": "_normalize_content_blocks",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#_normalize_role",
+          "page": "reference/python/integrations",
+          "name": "_normalize_role",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#extract_model_parameters",
+          "page": "reference/python/integrations",
+          "name": "extract_model_parameters",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#extract_name",
+          "page": "reference/python/integrations",
+          "name": "extract_name",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#extract_reasoning_from_generation",
+          "page": "reference/python/integrations",
+          "name": "extract_reasoning_from_generation",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#extract_token_usage",
+          "page": "reference/python/integrations",
+          "name": "extract_token_usage",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#normalize_langchain_input",
+          "page": "reference/python/integrations",
+          "name": "normalize_langchain_input",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#normalize_langchain_output",
+          "page": "reference/python/integrations",
+          "name": "normalize_langchain_output",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#normalize_llm_generation_output",
+          "page": "reference/python/integrations",
+          "name": "normalize_llm_generation_output",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#normalize_type_to_role",
+          "page": "reference/python/integrations",
+          "name": "normalize_type_to_role",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations._langchain_core.utils#safe_output",
+          "page": "reference/python/integrations",
+          "name": "safe_output",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations.claude_agent_sdk.adapter#ClaudeAgentSDKAdapter",
+          "page": "reference/python/integrations",
+          "name": "ClaudeAgentSDKAdapter",
+          "methods": [
+            "instrument"
+          ],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations.crewai.adapter#CrewAIAdapter",
+          "page": "reference/python/integrations",
+          "name": "CrewAIAdapter",
+          "methods": [
+            "instrument"
+          ],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations.deepagents.callback#DeepAgentsCallbackHandler",
+          "page": "reference/python/integrations",
+          "name": "DeepAgentsCallbackHandler",
+          "methods": [
+            "on_chain_start",
+            "on_chain_end",
+            "on_chain_error",
+            "on_llm_start",
+            "on_chat_model_start",
+            "on_llm_end",
+            "on_llm_error",
+            "on_tool_start",
+            "on_tool_end",
+            "on_tool_error",
+            "on_retriever_start",
+            "on_retriever_end"
+          ],
+          "fields": [
+            "DEFAULT_TRACE_NAME"
+          ]
+        },
+        {
+          "id": "pandaprobe.integrations.google_adk.adapter#GoogleADKAdapter",
+          "page": "reference/python/integrations",
+          "name": "GoogleADKAdapter",
+          "methods": [
+            "instrument"
+          ],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.integrations.langchain.callback#LangChainCallbackHandler",
+          "page": "reference/python/integrations",
+          "name": "LangChainCallbackHandler",
+          "methods": [
+            "on_chain_start",
+            "on_chain_end",
+            "on_chain_error",
+            "on_llm_start",
+            "on_chat_model_start",
+            "on_llm_end",
+            "on_llm_error",
+            "on_tool_start",
+            "on_tool_end",
+            "on_tool_error",
+            "on_retriever_start",
+            "on_retriever_end"
+          ],
+          "fields": [
+            "DEFAULT_TRACE_NAME"
+          ]
+        },
+        {
+          "id": "pandaprobe.integrations.langgraph.callback#LangGraphCallbackHandler",
+          "page": "reference/python/integrations",
+          "name": "LangGraphCallbackHandler",
+          "methods": [
+            "on_chain_start",
+            "on_chain_end",
+            "on_chain_error",
+            "on_llm_start",
+            "on_chat_model_start",
+            "on_llm_end",
+            "on_llm_error",
+            "on_tool_start",
+            "on_tool_end",
+            "on_tool_error",
+            "on_retriever_start",
+            "on_retriever_end"
+          ],
+          "fields": [
+            "DEFAULT_TRACE_NAME"
+          ]
+        },
+        {
+          "id": "pandaprobe.integrations.openai_agents.adapter#OpenAIAgentsAdapter",
+          "page": "reference/python/integrations",
+          "name": "OpenAIAgentsAdapter",
+          "methods": [
+            "instrument"
+          ],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.reflect.config#ReflectConfig",
+          "page": "reference/python/reflect-config",
+          "name": "ReflectConfig",
+          "methods": [],
+          "fields": [
+            "workspace",
+            "trace_visibility_timeout",
+            "evaluation_timeout",
+            "poll_interval",
+            "evaluation_max_runs",
+            "evaluation_max_traces",
+            "evaluation_sample_rate",
+            "max_concurrency",
+            "cooldown_seconds",
+            "reflection_timeout",
+            "shutdown_timeout",
+            "reflection_max_commands",
+            "shell_timeout",
+            "shell_max_commands",
+            "shell_max_loop_iterations",
+            "shell_memory_bytes",
+            "command_max_bytes",
+            "output_max_bytes",
+            "execution_output_max_bytes",
+            "context_max_bytes",
+            "rule_max_bytes",
+            "rules_max_bytes",
+            "rules_max_count",
+            "evidence_max_bytes",
+            "thresholds",
+            "diagnostic_metrics",
+            "stall_window",
+            "minimum_progress",
+            "regression_drop",
+            "validation_min_cases",
+            "validation_min_improvement",
+            "validation_regression_tolerance",
+            "validation_timeout"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.execution#Execution",
+          "page": "reference/python/reflect-execution",
+          "name": "Execution",
+          "methods": [
+            "instructions",
+            "seal",
+            "activate"
+          ],
+          "fields": [
+            "runtime",
+            "session_id",
+            "id",
+            "role",
+            "completed",
+            "base_revision",
+            "trace_ids",
+            "proposal",
+            "status",
+            "task_status",
+            "phase_traces",
+            "loop",
+            "shell"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.models#EvaluationOutcome",
+          "page": "reference/python/reflect-models",
+          "name": "EvaluationOutcome",
+          "methods": [],
+          "fields": [
+            "execution_id",
+            "status",
+            "run_ids",
+            "scores",
+            "notice",
+            "reason"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.models#ExecutionReport",
+          "page": "reference/python/reflect-models",
+          "name": "ExecutionReport",
+          "methods": [],
+          "fields": [
+            "execution_id",
+            "session_id",
+            "task_status",
+            "trace_ids",
+            "evaluation",
+            "reflection",
+            "proposals"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.models#FailureNotice",
+          "page": "reference/python/reflect-models",
+          "name": "FailureNotice",
+          "methods": [],
+          "fields": [
+            "id",
+            "execution_id",
+            "session_id",
+            "trace_ids",
+            "scores",
+            "reasons",
+            "signatures",
+            "created_at"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.models#ProposalOutcome",
+          "page": "reference/python/reflect-models",
+          "name": "ProposalOutcome",
+          "methods": [],
+          "fields": [
+            "status",
+            "proposal",
+            "reason",
+            "rationale"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.models#Rule",
+          "page": "reference/python/reflect-models",
+          "name": "Rule",
+          "methods": [
+            "safe_path",
+            "applicable_markdown"
+          ],
+          "fields": [
+            "path",
+            "text",
+            "version",
+            "scope",
+            "applicability"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.models#RuleProposal",
+          "page": "reference/python/reflect-models",
+          "name": "RuleProposal",
+          "methods": [],
+          "fields": [
+            "id",
+            "base_revision",
+            "changes",
+            "fingerprint",
+            "session_id",
+            "execution_id",
+            "evidence_ids",
+            "created_at",
+            "status",
+            "rationale",
+            "decision"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.models#TrialArm",
+          "page": "reference/python/reflect-models",
+          "name": "TrialArm",
+          "methods": [
+            "normalized_scores"
+          ],
+          "fields": [
+            "execution_id",
+            "scores",
+            "success",
+            "evidence",
+            "candidate_ids"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.models#TrialCase",
+          "page": "reference/python/reflect-models",
+          "name": "TrialCase",
+          "methods": [],
+          "fields": [
+            "case_id",
+            "base_revision",
+            "input_hash",
+            "protected",
+            "control",
+            "candidate"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.models#ValidationVerdict",
+          "page": "reference/python/reflect-models",
+          "name": "ValidationVerdict",
+          "methods": [],
+          "fields": [
+            "proposal_id",
+            "outcome",
+            "reason",
+            "mode",
+            "cases",
+            "created_at"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.runtime#Invocation",
+          "page": "reference/python/reflect-execution",
+          "name": "Invocation",
+          "methods": [],
+          "fields": [
+            "input",
+            "execution",
+            "phase",
+            "previous_result",
+            "feedback",
+            "instructions"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.runtime#Reflect",
+          "page": "reference/python/reflect-runtime",
+          "name": "Reflect",
+          "methods": [
+            "execution",
+            "bash",
+            "tool",
+            "agent",
+            "submit_traces",
+            "wait_export",
+            "settle_evaluation",
+            "resume_evaluations",
+            "continue_reflection",
+            "report",
+            "proposals",
+            "settle_reflection",
+            "run",
+            "settle_validation",
+            "validate",
+            "trial_execution",
+            "aclose"
+          ],
+          "fields": [
+            "client",
+            "config",
+            "workspace",
+            "api",
+            "validator"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.validation#Outcome",
+          "page": "reference/python/reflect-validation",
+          "name": "Outcome",
+          "methods": [],
+          "fields": [
+            "scores",
+            "success",
+            "evidence"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.validation#Replay",
+          "page": "reference/python/reflect-validation",
+          "name": "Replay",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.reflect.validation#ReplayCase",
+          "page": "reference/python/reflect-validation",
+          "name": "ReplayCase",
+          "methods": [],
+          "fields": [
+            "id",
+            "input",
+            "protected"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.validation#ReplayRequest",
+          "page": "reference/python/reflect-validation",
+          "name": "ReplayRequest",
+          "methods": [
+            "run"
+          ],
+          "fields": [
+            "case",
+            "execution",
+            "arm"
+          ]
+        },
+        {
+          "id": "pandaprobe.reflect.validation#Validator",
+          "page": "reference/python/reflect-validation",
+          "name": "Validator",
+          "methods": [
+            "replay",
+            "assess",
+            "record_trial"
+          ],
+          "fields": [
+            "runtime"
+          ]
+        },
+        {
+          "id": "pandaprobe.schemas#ScoreData",
+          "page": "reference/python/data",
+          "name": "ScoreData",
+          "methods": [
+            "to_api_dict"
+          ],
+          "fields": [
+            "trace_id",
+            "name",
+            "value",
+            "data_type",
+            "source",
+            "reason",
+            "metadata"
+          ]
+        },
+        {
+          "id": "pandaprobe.schemas#ScoreDataType",
+          "page": "reference/python/data",
+          "name": "ScoreDataType",
+          "methods": [],
+          "fields": [
+            "NUMERIC",
+            "BOOLEAN",
+            "CATEGORICAL"
+          ]
+        },
+        {
+          "id": "pandaprobe.schemas#SpanData",
+          "page": "reference/python/data",
+          "name": "SpanData",
+          "methods": [
+            "to_api_dict"
+          ],
+          "fields": [
+            "span_id",
+            "parent_span_id",
+            "name",
+            "kind",
+            "status",
+            "input",
+            "output",
+            "model",
+            "token_usage",
+            "metadata",
+            "started_at",
+            "ended_at",
+            "error",
+            "completion_start_time",
+            "model_parameters",
+            "cost"
+          ]
+        },
+        {
+          "id": "pandaprobe.schemas#SpanKind",
+          "page": "reference/python/data",
+          "name": "SpanKind",
+          "methods": [],
+          "fields": [
+            "AGENT",
+            "TOOL",
+            "LLM",
+            "RETRIEVER",
+            "CHAIN",
+            "EMBEDDING",
+            "OTHER"
+          ]
+        },
+        {
+          "id": "pandaprobe.schemas#SpanStatusCode",
+          "page": "reference/python/data",
+          "name": "SpanStatusCode",
+          "methods": [],
+          "fields": [
+            "UNSET",
+            "OK",
+            "ERROR"
+          ]
+        },
+        {
+          "id": "pandaprobe.schemas#TraceData",
+          "page": "reference/python/data",
+          "name": "TraceData",
+          "methods": [
+            "to_api_dict"
+          ],
+          "fields": [
+            "trace_id",
+            "name",
+            "status",
+            "input",
+            "output",
+            "metadata",
+            "started_at",
+            "ended_at",
+            "session_id",
+            "user_id",
+            "tags",
+            "environment",
+            "release",
+            "spans"
+          ]
+        },
+        {
+          "id": "pandaprobe.schemas#TraceStatus",
+          "page": "reference/python/data",
+          "name": "TraceStatus",
+          "methods": [],
+          "fields": [
+            "PENDING",
+            "RUNNING",
+            "COMPLETED",
+            "ERROR"
+          ]
+        },
+        {
+          "id": "pandaprobe.tracing.capture#TraceCapture",
+          "page": "reference/python/tracing",
+          "name": "TraceCapture",
+          "methods": [],
+          "fields": [
+            "trace_ids",
+            "overflow",
+            "closed"
+          ]
+        },
+        {
+          "id": "pandaprobe.tracing.context#TraceContext",
+          "page": "reference/python/tracing",
+          "name": "TraceContext",
+          "methods": [
+            "span",
+            "set_output",
+            "set_input",
+            "set_metadata",
+            "set_status",
+            "add_span_data"
+          ],
+          "fields": [
+            "trace_id"
+          ]
+        },
+        {
+          "id": "pandaprobe.tracing.context#get_current_trace",
+          "page": "reference/python/tracing",
+          "name": "get_current_trace",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.tracing.context#get_span_stack",
+          "page": "reference/python/tracing",
+          "name": "get_span_stack",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.tracing.session#get_current_session_id",
+          "page": "reference/python/tracing",
+          "name": "get_current_session_id",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.tracing.session#get_current_user_id",
+          "page": "reference/python/tracing",
+          "name": "get_current_user_id",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.tracing.session#reset_current_session_id",
+          "page": "reference/python/tracing",
+          "name": "reset_current_session_id",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.tracing.session#reset_current_user_id",
+          "page": "reference/python/tracing",
+          "name": "reset_current_user_id",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.tracing.session#set_current_session_id",
+          "page": "reference/python/tracing",
+          "name": "set_current_session_id",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.tracing.session#set_current_user_id",
+          "page": "reference/python/tracing",
+          "name": "set_current_user_id",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.tracing.span#SpanContext",
+          "page": "reference/python/tracing",
+          "name": "SpanContext",
+          "methods": [
+            "set_input",
+            "set_output",
+            "set_token_usage",
+            "set_model",
+            "set_model_parameters",
+            "set_cost",
+            "set_completion_start_time",
+            "set_error",
+            "set_metadata"
+          ],
+          "fields": [
+            "span_id"
+          ]
+        },
+        {
+          "id": "pandaprobe.validation#extract_last_assistant_message",
+          "page": "reference/python/data",
+          "name": "extract_last_assistant_message",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.validation#extract_last_user_message",
+          "page": "reference/python/data",
+          "name": "extract_last_user_message",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.validation#validate_messages_format",
+          "page": "reference/python/data",
+          "name": "validate_messages_format",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.validation#warn_if_invalid_messages",
+          "page": "reference/python/data",
+          "name": "warn_if_invalid_messages",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.wrappers.anthropic.wrapper#wrap_anthropic",
+          "page": "reference/python/wrappers",
+          "name": "wrap_anthropic",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.wrappers.bedrock.wrapper#wrap_bedrock",
+          "page": "reference/python/wrappers",
+          "name": "wrap_bedrock",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.wrappers.gemini.wrapper#wrap_gemini",
+          "page": "reference/python/wrappers",
+          "name": "wrap_gemini",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.wrappers.litellm.wrapper#wrap_litellm",
+          "page": "reference/python/wrappers",
+          "name": "wrap_litellm",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.wrappers.mistral.wrapper#wrap_mistral",
+          "page": "reference/python/wrappers",
+          "name": "wrap_mistral",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "pandaprobe.wrappers.openai.wrapper#wrap_openai",
+          "page": "reference/python/wrappers",
+          "name": "wrap_openai",
+          "methods": [],
+          "fields": []
+        }
+      ]
+    },
+    "typescript": {
+      "exports": [
+        {
+          "name": "flush",
+          "importPath": "pandaprobe",
+          "id": "index.ts#flush",
+          "page": "reference/typescript/client",
+          "anchor": "flush"
+        },
+        {
+          "name": "shutdown",
+          "importPath": "pandaprobe",
+          "id": "index.ts#shutdown",
+          "page": "reference/typescript/client",
+          "anchor": "shutdown"
+        },
+        {
+          "name": "score",
+          "importPath": "pandaprobe",
+          "id": "index.ts#score",
+          "page": "reference/typescript/client",
+          "anchor": "score"
+        },
+        {
+          "name": "setSession",
+          "importPath": "pandaprobe",
+          "id": "index.ts#setSession",
+          "page": "reference/typescript/tracing",
+          "anchor": "setsession"
+        },
+        {
+          "name": "session",
+          "importPath": "pandaprobe",
+          "id": "index.ts#session",
+          "page": "reference/typescript/tracing",
+          "anchor": "session"
+        },
+        {
+          "name": "setUser",
+          "importPath": "pandaprobe",
+          "id": "index.ts#setUser",
+          "page": "reference/typescript/tracing",
+          "anchor": "setuser"
+        },
+        {
+          "name": "user",
+          "importPath": "pandaprobe",
+          "id": "index.ts#user",
+          "page": "reference/typescript/tracing",
+          "anchor": "user"
+        },
+        {
+          "name": "VERSION",
+          "importPath": "pandaprobe",
+          "id": "version.ts#VERSION",
+          "page": "reference/typescript/client",
+          "anchor": "version"
+        },
+        {
+          "name": "Client",
+          "importPath": "pandaprobe",
+          "id": "client.ts#Client",
+          "page": "reference/typescript/client",
+          "anchor": "client"
+        },
+        {
+          "name": "init",
+          "importPath": "pandaprobe",
+          "id": "client.ts#init",
+          "page": "reference/typescript/client",
+          "anchor": "init"
+        },
+        {
+          "name": "getClient",
+          "importPath": "pandaprobe",
+          "id": "client.ts#getClient",
+          "page": "reference/typescript/client",
+          "anchor": "getclient"
+        },
+        {
+          "name": "ConfigOptions",
+          "importPath": "pandaprobe",
+          "id": "config.ts#ConfigOptions",
+          "page": "reference/typescript/configuration",
+          "anchor": "configoptions"
+        },
+        {
+          "name": "SdkConfig",
+          "importPath": "pandaprobe",
+          "id": "config.ts#SdkConfig",
+          "page": "reference/typescript/configuration",
+          "anchor": "sdkconfig"
+        },
+        {
+          "name": "SpanKind",
+          "importPath": "pandaprobe",
+          "id": "schemas.ts#SpanKind",
+          "page": "reference/typescript/data",
+          "anchor": "spankind"
+        },
+        {
+          "name": "SpanStatusCode",
+          "importPath": "pandaprobe",
+          "id": "schemas.ts#SpanStatusCode",
+          "page": "reference/typescript/data",
+          "anchor": "spanstatuscode"
+        },
+        {
+          "name": "TraceStatus",
+          "importPath": "pandaprobe",
+          "id": "schemas.ts#TraceStatus",
+          "page": "reference/typescript/data",
+          "anchor": "tracestatus"
+        },
+        {
+          "name": "ScoreDataType",
+          "importPath": "pandaprobe",
+          "id": "schemas.ts#ScoreDataType",
+          "page": "reference/typescript/data",
+          "anchor": "scoredatatype"
+        },
+        {
+          "name": "SpanData",
+          "importPath": "pandaprobe",
+          "id": "schemas.ts#SpanData",
+          "page": "reference/typescript/data",
+          "anchor": "spandata"
+        },
+        {
+          "name": "TraceData",
+          "importPath": "pandaprobe",
+          "id": "schemas.ts#TraceData",
+          "page": "reference/typescript/data",
+          "anchor": "tracedata"
+        },
+        {
+          "name": "ScoreData",
+          "importPath": "pandaprobe",
+          "id": "schemas.ts#ScoreData",
+          "page": "reference/typescript/data",
+          "anchor": "scoredata"
+        },
+        {
+          "name": "trace",
+          "importPath": "pandaprobe",
+          "id": "decorators.ts#trace",
+          "page": "reference/typescript/tracing",
+          "anchor": "trace"
+        },
+        {
+          "name": "span",
+          "importPath": "pandaprobe",
+          "id": "decorators.ts#span",
+          "page": "reference/typescript/tracing",
+          "anchor": "span"
+        },
+        {
+          "name": "withTrace",
+          "importPath": "pandaprobe",
+          "id": "decorators.ts#withTrace",
+          "page": "reference/typescript/tracing",
+          "anchor": "withtrace"
+        },
+        {
+          "name": "withSpan",
+          "importPath": "pandaprobe",
+          "id": "decorators.ts#withSpan",
+          "page": "reference/typescript/tracing",
+          "anchor": "withspan"
+        },
+        {
+          "name": "startTrace",
+          "importPath": "pandaprobe",
+          "id": "decorators.ts#startTrace",
+          "page": "reference/typescript/tracing",
+          "anchor": "starttrace"
+        },
+        {
+          "name": "WithTraceOptions",
+          "importPath": "pandaprobe",
+          "id": "decorators.ts#WithTraceOptions",
+          "page": "reference/typescript/tracing",
+          "anchor": "withtraceoptions"
+        },
+        {
+          "name": "WithSpanOptions",
+          "importPath": "pandaprobe",
+          "id": "decorators.ts#WithSpanOptions",
+          "page": "reference/typescript/tracing",
+          "anchor": "withspanoptions"
+        },
+        {
+          "name": "TraceDecoratorOptions",
+          "importPath": "pandaprobe",
+          "id": "decorators.ts#TraceDecoratorOptions",
+          "page": "reference/typescript/tracing",
+          "anchor": "tracedecoratoroptions"
+        },
+        {
+          "name": "SpanDecoratorOptions",
+          "importPath": "pandaprobe",
+          "id": "decorators.ts#SpanDecoratorOptions",
+          "page": "reference/typescript/tracing",
+          "anchor": "spandecoratoroptions"
+        },
+        {
+          "name": "TraceContext",
+          "importPath": "pandaprobe",
+          "id": "tracing/context.ts#TraceContext",
+          "page": "reference/typescript/tracing",
+          "anchor": "tracecontext"
+        },
+        {
+          "name": "TraceContextOptions",
+          "importPath": "pandaprobe",
+          "id": "tracing/context.ts#TraceContextOptions",
+          "page": "reference/typescript/tracing",
+          "anchor": "tracecontextoptions"
+        },
+        {
+          "name": "getCurrentTrace",
+          "importPath": "pandaprobe",
+          "id": "tracing/context.ts#getCurrentTrace",
+          "page": "reference/typescript/tracing",
+          "anchor": "getcurrenttrace"
+        },
+        {
+          "name": "getSpanStack",
+          "importPath": "pandaprobe",
+          "id": "tracing/context.ts#getSpanStack",
+          "page": "reference/typescript/tracing",
+          "anchor": "getspanstack"
+        },
+        {
+          "name": "SpanContext",
+          "importPath": "pandaprobe",
+          "id": "tracing/span.ts#SpanContext",
+          "page": "reference/typescript/tracing",
+          "anchor": "spancontext"
+        },
+        {
+          "name": "SpanContextOptions",
+          "importPath": "pandaprobe",
+          "id": "tracing/span.ts#SpanContextOptions",
+          "page": "reference/typescript/tracing",
+          "anchor": "spancontextoptions"
+        },
+        {
+          "name": "TraceCapture",
+          "importPath": "pandaprobe",
+          "id": "tracing/capture.ts#TraceCapture",
+          "page": "reference/typescript/tracing",
+          "anchor": "tracecapture"
+        },
+        {
+          "name": "TraceCaptureOptions",
+          "importPath": "pandaprobe",
+          "id": "tracing/capture.ts#TraceCaptureOptions",
+          "page": "reference/typescript/tracing",
+          "anchor": "tracecaptureoptions"
+        },
+        {
+          "name": "wrapOpenAI",
+          "importPath": "pandaprobe/wrappers/openai",
+          "id": "wrappers/openai/wrapper.ts#wrapOpenAI",
+          "page": "reference/typescript/wrappers",
+          "anchor": "wrapopenai"
+        },
+        {
+          "name": "wrapAnthropic",
+          "importPath": "pandaprobe/wrappers/anthropic",
+          "id": "wrappers/anthropic/wrapper.ts#wrapAnthropic",
+          "page": "reference/typescript/wrappers",
+          "anchor": "wrapanthropic"
+        },
+        {
+          "name": "wrapGemini",
+          "importPath": "pandaprobe/wrappers/gemini",
+          "id": "wrappers/gemini/wrapper.ts#wrapGemini",
+          "page": "reference/typescript/wrappers",
+          "anchor": "wrapgemini"
+        },
+        {
+          "name": "wrapBedrock",
+          "importPath": "pandaprobe/wrappers/bedrock",
+          "id": "wrappers/bedrock/wrapper.ts#wrapBedrock",
+          "page": "reference/typescript/wrappers",
+          "anchor": "wrapbedrock"
+        },
+        {
+          "name": "wrapMistral",
+          "importPath": "pandaprobe/wrappers/mistral",
+          "id": "wrappers/mistral/wrapper.ts#wrapMistral",
+          "page": "reference/typescript/wrappers",
+          "anchor": "wrapmistral"
+        },
+        {
+          "name": "LangChainCallbackHandler",
+          "importPath": "pandaprobe/integrations/langchain",
+          "id": "integrations/langchain/callback.ts#LangChainCallbackHandler",
+          "page": "reference/typescript/integrations",
+          "anchor": "langchaincallbackhandler"
+        },
+        {
+          "name": "AdapterOptions",
+          "importPath": "pandaprobe/integrations/langchain",
+          "id": "integrations/base.ts#AdapterOptions",
+          "page": "reference/typescript/integrations",
+          "anchor": "adapteroptions"
+        },
+        {
+          "name": "LangGraphCallbackHandler",
+          "importPath": "pandaprobe/integrations/langgraph",
+          "id": "integrations/langgraph/callback.ts#LangGraphCallbackHandler",
+          "page": "reference/typescript/integrations",
+          "anchor": "langgraphcallbackhandler"
+        },
+        {
+          "name": "AdapterOptions",
+          "importPath": "pandaprobe/integrations/langgraph",
+          "id": "integrations/base.ts#AdapterOptions",
+          "page": "reference/typescript/integrations",
+          "anchor": "adapteroptions"
+        },
+        {
+          "name": "DeepAgentsCallbackHandler",
+          "importPath": "pandaprobe/integrations/deepagents",
+          "id": "integrations/deepagents/callback.ts#DeepAgentsCallbackHandler",
+          "page": "reference/typescript/integrations",
+          "anchor": "deepagentscallbackhandler"
+        },
+        {
+          "name": "AdapterOptions",
+          "importPath": "pandaprobe/integrations/deepagents",
+          "id": "integrations/base.ts#AdapterOptions",
+          "page": "reference/typescript/integrations",
+          "anchor": "adapteroptions"
+        },
+        {
+          "name": "ClaudeAgentSDKAdapter",
+          "importPath": "pandaprobe/integrations/claude-agent-sdk",
+          "id": "integrations/claude-agent-sdk/adapter.ts#ClaudeAgentSDKAdapter",
+          "page": "reference/typescript/integrations",
+          "anchor": "claudeagentsdkadapter"
+        },
+        {
+          "name": "wrapClaudeAgentQuery",
+          "importPath": "pandaprobe/integrations/claude-agent-sdk",
+          "id": "integrations/claude-agent-sdk/adapter.ts#wrapClaudeAgentQuery",
+          "page": "reference/typescript/integrations",
+          "anchor": "wrapclaudeagentquery"
+        },
+        {
+          "name": "AdapterOptions",
+          "importPath": "pandaprobe/integrations/claude-agent-sdk",
+          "id": "integrations/base.ts#AdapterOptions",
+          "page": "reference/typescript/integrations",
+          "anchor": "adapteroptions"
+        },
+        {
+          "name": "OpenAIAgentsAdapter",
+          "importPath": "pandaprobe/integrations/openai-agents",
+          "id": "integrations/openai-agents/adapter.ts#OpenAIAgentsAdapter",
+          "page": "reference/typescript/integrations",
+          "anchor": "openaiagentsadapter"
+        },
+        {
+          "name": "TraceProcessor",
+          "importPath": "pandaprobe/integrations/openai-agents",
+          "id": "integrations/openai-agents/adapter.ts#TraceProcessor",
+          "page": "reference/typescript/integrations",
+          "anchor": "traceprocessor"
+        },
+        {
+          "name": "AdapterOptions",
+          "importPath": "pandaprobe/integrations/openai-agents",
+          "id": "integrations/base.ts#AdapterOptions",
+          "page": "reference/typescript/integrations",
+          "anchor": "adapteroptions"
+        },
+        {
+          "name": "pandaProbeMiddleware",
+          "importPath": "pandaprobe/integrations/vercel-ai",
+          "id": "integrations/vercel-ai/middleware.ts#pandaProbeMiddleware",
+          "page": "reference/typescript/integrations",
+          "anchor": "pandaprobemiddleware"
+        },
+        {
+          "name": "VercelMiddlewareOptions",
+          "importPath": "pandaprobe/integrations/vercel-ai",
+          "id": "integrations/vercel-ai/middleware.ts#VercelMiddlewareOptions",
+          "page": "reference/typescript/integrations",
+          "anchor": "vercelmiddlewareoptions"
+        },
+        {
+          "name": "wrapVercelAgent",
+          "importPath": "pandaprobe/integrations/vercel-ai",
+          "id": "integrations/vercel-ai/adapter.ts#wrapVercelAgent",
+          "page": "reference/typescript/integrations",
+          "anchor": "wrapvercelagent"
+        },
+        {
+          "name": "VercelAgentOptions",
+          "importPath": "pandaprobe/integrations/vercel-ai",
+          "id": "integrations/vercel-ai/adapter.ts#VercelAgentOptions",
+          "page": "reference/typescript/integrations",
+          "anchor": "vercelagentoptions"
+        },
+        {
+          "name": "Reflect",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/runtime.ts#ReflectRuntime",
+          "page": "reference/typescript/reflect-runtime",
+          "anchor": "reflect"
+        },
+        {
+          "name": "Invocation",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/runtime.ts#Invocation",
+          "page": "reference/typescript/reflect-execution",
+          "anchor": "invocation"
+        },
+        {
+          "name": "ReflectInit",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/runtime.ts#ReflectInit",
+          "page": "reference/typescript/reflect-runtime",
+          "anchor": "reflectinit"
+        },
+        {
+          "name": "ReflectConfig",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/config.ts#ReflectConfig",
+          "page": "reference/typescript/reflect-config",
+          "anchor": "reflectconfig"
+        },
+        {
+          "name": "ReflectOptions",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/config.ts#ReflectOptions",
+          "page": "reference/typescript/reflect-config",
+          "anchor": "reflectoptions"
+        },
+        {
+          "name": "ResolvedReflectConfig",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/config.ts#ResolvedReflectConfig",
+          "page": "reference/typescript/reflect-config",
+          "anchor": "resolvedreflectconfig"
+        },
+        {
+          "name": "Execution",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/execution.ts#Execution",
+          "page": "reference/typescript/reflect-execution",
+          "anchor": "execution"
+        },
+        {
+          "name": "ExecutionOptions",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/execution.ts#ExecutionOptions",
+          "page": "reference/typescript/reflect-execution",
+          "anchor": "executionoptions"
+        },
+        {
+          "name": "Phase",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/execution.ts#Phase",
+          "page": "reference/typescript/reflect-execution",
+          "anchor": "phase"
+        },
+        {
+          "name": "Rule",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/models.ts#Rule",
+          "page": "reference/typescript/reflect-models",
+          "anchor": "rule"
+        },
+        {
+          "name": "RuleProposal",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/models.ts#RuleProposal",
+          "page": "reference/typescript/reflect-models",
+          "anchor": "ruleproposal"
+        },
+        {
+          "name": "ProposalOutcome",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/models.ts#ProposalOutcome",
+          "page": "reference/typescript/reflect-models",
+          "anchor": "proposaloutcome"
+        },
+        {
+          "name": "EvaluationOutcome",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/models.ts#EvaluationOutcome",
+          "page": "reference/typescript/reflect-models",
+          "anchor": "evaluationoutcome"
+        },
+        {
+          "name": "ExecutionReport",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/models.ts#ExecutionReport",
+          "page": "reference/typescript/reflect-models",
+          "anchor": "executionreport"
+        },
+        {
+          "name": "ValidationVerdict",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/models.ts#ValidationVerdict",
+          "page": "reference/typescript/reflect-models",
+          "anchor": "validationverdict"
+        },
+        {
+          "name": "TrialCase",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/models.ts#TrialCase",
+          "page": "reference/typescript/reflect-models",
+          "anchor": "trialcase"
+        },
+        {
+          "name": "TrialArm",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/models.ts#TrialArm",
+          "page": "reference/typescript/reflect-models",
+          "anchor": "trialarm"
+        },
+        {
+          "name": "Outcome",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/validation.ts#Outcome",
+          "page": "reference/typescript/reflect-validation",
+          "anchor": "outcome"
+        },
+        {
+          "name": "ReplayCase",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/validation.ts#ReplayCase",
+          "page": "reference/typescript/reflect-validation",
+          "anchor": "replaycase"
+        },
+        {
+          "name": "ReplayRequest",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/validation.ts#ReplayRequest",
+          "page": "reference/typescript/reflect-validation",
+          "anchor": "replayrequest"
+        },
+        {
+          "name": "Replay",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/validation.ts#Replay",
+          "page": "reference/typescript/reflect-validation",
+          "anchor": "replay"
+        },
+        {
+          "name": "Agent",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/integrations.ts#Agent",
+          "page": "reference/typescript/reflect-runtime",
+          "anchor": "agent"
+        },
+        {
+          "name": "AgentOptions",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/integrations.ts#AgentOptions",
+          "page": "reference/typescript/reflect-runtime",
+          "anchor": "agentoptions"
+        },
+        {
+          "name": "Framework",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/integrations.ts#Framework",
+          "page": "reference/typescript/reflect-runtime",
+          "anchor": "framework"
+        },
+        {
+          "name": "NativeAgent",
+          "importPath": "pandaprobe/reflect",
+          "id": "reflect/integrations.ts#NativeAgent",
+          "page": "reference/typescript/reflect-runtime",
+          "anchor": "nativeagent"
+        },
+        {
+          "name": "PlatformClient",
+          "importPath": "pandaprobe/api",
+          "id": "api/client.ts#PlatformClient",
+          "page": "reference/typescript/platform-client",
+          "anchor": "platformclient"
+        },
+        {
+          "name": "PlatformOptions",
+          "importPath": "pandaprobe/api",
+          "id": "api/client.ts#PlatformOptions",
+          "page": "reference/typescript/platform-client",
+          "anchor": "platformoptions"
+        },
+        {
+          "name": "RequestOptions",
+          "importPath": "pandaprobe/api",
+          "id": "api/client.ts#RequestOptions",
+          "page": "reference/typescript/platform-client",
+          "anchor": "requestoptions"
+        },
+        {
+          "name": "ApiModel",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#ApiModel",
+          "page": "reference/typescript/platform-models",
+          "anchor": "apimodel"
+        },
+        {
+          "name": "Span",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#Span",
+          "page": "reference/typescript/platform-models",
+          "anchor": "span"
+        },
+        {
+          "name": "Trace",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#Trace",
+          "page": "reference/typescript/platform-models",
+          "anchor": "trace"
+        },
+        {
+          "name": "TraceSummary",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#TraceSummary",
+          "page": "reference/typescript/platform-models",
+          "anchor": "tracesummary"
+        },
+        {
+          "name": "TracePage",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#TracePage",
+          "page": "reference/typescript/platform-models",
+          "anchor": "tracepage"
+        },
+        {
+          "name": "Metric",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#Metric",
+          "page": "reference/typescript/platform-models",
+          "anchor": "metric"
+        },
+        {
+          "name": "EvaluationRequest",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#EvaluationRequest",
+          "page": "reference/typescript/platform-models",
+          "anchor": "evaluationrequest"
+        },
+        {
+          "name": "EvaluationRun",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#EvaluationRun",
+          "page": "reference/typescript/platform-models",
+          "anchor": "evaluationrun"
+        },
+        {
+          "name": "EvaluationResult",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#EvaluationResult",
+          "page": "reference/typescript/platform-models",
+          "anchor": "evaluationresult"
+        },
+        {
+          "name": "Score",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#Score",
+          "page": "reference/typescript/platform-models",
+          "anchor": "score"
+        },
+        {
+          "name": "numericValue",
+          "importPath": "pandaprobe/api",
+          "id": "api/models.ts#numericValue",
+          "page": "reference/typescript/platform-models",
+          "anchor": "numericvalue"
+        },
+        {
+          "name": "Traces",
+          "importPath": "pandaprobe/api",
+          "id": "api/resources.ts#Traces",
+          "page": "reference/typescript/platform-client",
+          "anchor": "traces"
+        },
+        {
+          "name": "Evaluations",
+          "importPath": "pandaprobe/api",
+          "id": "api/resources.ts#Evaluations",
+          "page": "reference/typescript/platform-client",
+          "anchor": "evaluations"
+        },
+        {
+          "name": "PlatformError",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#PlatformError",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "platformerror"
+        },
+        {
+          "name": "ApiError",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#ApiError",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "apierror"
+        },
+        {
+          "name": "AuthenticationError",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#AuthenticationError",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "authenticationerror"
+        },
+        {
+          "name": "NotFoundError",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#NotFoundError",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "notfounderror"
+        },
+        {
+          "name": "RateLimitError",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#RateLimitError",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "ratelimiterror"
+        },
+        {
+          "name": "TransportError",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#TransportError",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "transporterror"
+        },
+        {
+          "name": "ApiDeadlineExceeded",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#ApiDeadlineExceeded",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "apideadlineexceeded"
+        },
+        {
+          "name": "InvalidResponseError",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#InvalidResponseError",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "invalidresponseerror"
+        },
+        {
+          "name": "CreationOutcomeUnknown",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#CreationOutcomeUnknown",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "creationoutcomeunknown"
+        },
+        {
+          "name": "EvaluationFailed",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#EvaluationFailed",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "evaluationfailed"
+        },
+        {
+          "name": "InsufficientEvidence",
+          "importPath": "pandaprobe/api",
+          "id": "api/errors.ts#InsufficientEvidence",
+          "page": "reference/typescript/platform-errors",
+          "anchor": "insufficientevidence"
+        }
+      ],
+      "symbols": [
+        {
+          "id": "api/client.ts#PlatformClient",
+          "page": "reference/typescript/platform-client",
+          "name": "PlatformClient",
+          "methods": [
+            "close",
+            "request"
+          ],
+          "fields": [
+            "config",
+            "timeout",
+            "readAttempts",
+            "traces",
+            "evaluations"
+          ]
+        },
+        {
+          "id": "api/client.ts#PlatformOptions",
+          "page": "reference/typescript/platform-client",
+          "name": "PlatformOptions",
+          "methods": [],
+          "fields": [
+            "config",
+            "timeout",
+            "readAttempts",
+            "fetch"
+          ]
+        },
+        {
+          "id": "api/client.ts#RequestOptions",
+          "page": "reference/typescript/platform-client",
+          "name": "RequestOptions",
+          "methods": [],
+          "fields": [
+            "timeout",
+            "signal",
+            "query",
+            "body"
+          ]
+        },
+        {
+          "id": "api/errors.ts#ApiDeadlineExceeded",
+          "page": "reference/typescript/platform-errors",
+          "name": "ApiDeadlineExceeded",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "api/errors.ts#ApiError",
+          "page": "reference/typescript/platform-errors",
+          "name": "ApiError",
+          "methods": [],
+          "fields": [
+            "statusCode",
+            "requestId"
+          ]
+        },
+        {
+          "id": "api/errors.ts#AuthenticationError",
+          "page": "reference/typescript/platform-errors",
+          "name": "AuthenticationError",
+          "methods": [],
+          "fields": [
+            "statusCode",
+            "requestId"
+          ]
+        },
+        {
+          "id": "api/errors.ts#CreationOutcomeUnknown",
+          "page": "reference/typescript/platform-errors",
+          "name": "CreationOutcomeUnknown",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "api/errors.ts#EvaluationFailed",
+          "page": "reference/typescript/platform-errors",
+          "name": "EvaluationFailed",
+          "methods": [],
+          "fields": [
+            "runId",
+            "status"
+          ]
+        },
+        {
+          "id": "api/errors.ts#InsufficientEvidence",
+          "page": "reference/typescript/platform-errors",
+          "name": "InsufficientEvidence",
+          "methods": [],
+          "fields": [
+            "runId",
+            "missing"
+          ]
+        },
+        {
+          "id": "api/errors.ts#InvalidResponseError",
+          "page": "reference/typescript/platform-errors",
+          "name": "InvalidResponseError",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "api/errors.ts#NotFoundError",
+          "page": "reference/typescript/platform-errors",
+          "name": "NotFoundError",
+          "methods": [],
+          "fields": [
+            "statusCode",
+            "requestId"
+          ]
+        },
+        {
+          "id": "api/errors.ts#PlatformError",
+          "page": "reference/typescript/platform-errors",
+          "name": "PlatformError",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "api/errors.ts#RateLimitError",
+          "page": "reference/typescript/platform-errors",
+          "name": "RateLimitError",
+          "methods": [],
+          "fields": [
+            "statusCode",
+            "requestId"
+          ]
+        },
+        {
+          "id": "api/errors.ts#TransportError",
+          "page": "reference/typescript/platform-errors",
+          "name": "TransportError",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "api/models.ts#ApiModel",
+          "page": "reference/typescript/platform-models",
+          "name": "ApiModel",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "api/models.ts#EvaluationRequest",
+          "page": "reference/typescript/platform-models",
+          "name": "EvaluationRequest",
+          "methods": [],
+          "fields": [
+            "trace_ids",
+            "metrics",
+            "name",
+            "model"
+          ]
+        },
+        {
+          "id": "api/models.ts#EvaluationResult",
+          "page": "reference/typescript/platform-models",
+          "name": "EvaluationResult",
+          "methods": [],
+          "fields": [
+            "run",
+            "scores"
+          ]
+        },
+        {
+          "id": "api/models.ts#EvaluationRun",
+          "page": "reference/typescript/platform-models",
+          "name": "EvaluationRun",
+          "methods": [],
+          "fields": [
+            "id",
+            "status",
+            "metric_names",
+            "total_targets",
+            "evaluated_count",
+            "failed_count",
+            "target_type",
+            "error_message"
+          ]
+        },
+        {
+          "id": "api/models.ts#Metric",
+          "page": "reference/typescript/platform-models",
+          "name": "Metric",
+          "methods": [],
+          "fields": [
+            "name",
+            "description",
+            "category"
+          ]
+        },
+        {
+          "id": "api/models.ts#Score",
+          "page": "reference/typescript/platform-models",
+          "name": "Score",
+          "methods": [],
+          "fields": [
+            "id",
+            "trace_id",
+            "name",
+            "value",
+            "status",
+            "data_type",
+            "eval_run_id",
+            "reason",
+            "metadata"
+          ]
+        },
+        {
+          "id": "api/models.ts#Span",
+          "page": "reference/typescript/platform-models",
+          "name": "Span",
+          "methods": [],
+          "fields": [
+            "span_id",
+            "trace_id",
+            "parent_span_id",
+            "name",
+            "kind",
+            "status",
+            "input",
+            "output",
+            "metadata",
+            "error"
+          ]
+        },
+        {
+          "id": "api/models.ts#Trace",
+          "page": "reference/typescript/platform-models",
+          "name": "Trace",
+          "methods": [],
+          "fields": [
+            "project_id",
+            "input",
+            "output",
+            "metadata",
+            "spans",
+            "trace_id",
+            "name",
+            "status",
+            "session_id",
+            "tags",
+            "started_at",
+            "ended_at"
+          ]
+        },
+        {
+          "id": "api/models.ts#TracePage",
+          "page": "reference/typescript/platform-models",
+          "name": "TracePage",
+          "methods": [],
+          "fields": [
+            "items",
+            "total",
+            "limit",
+            "offset"
+          ]
+        },
+        {
+          "id": "api/models.ts#TraceSummary",
+          "page": "reference/typescript/platform-models",
+          "name": "TraceSummary",
+          "methods": [],
+          "fields": [
+            "trace_id",
+            "name",
+            "status",
+            "session_id",
+            "tags",
+            "started_at",
+            "ended_at"
+          ]
+        },
+        {
+          "id": "api/models.ts#numericValue",
+          "page": "reference/typescript/platform-models",
+          "name": "numericValue",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "api/resources.ts#Evaluations",
+          "page": "reference/typescript/platform-client",
+          "name": "Evaluations",
+          "methods": [
+            "metrics",
+            "create",
+            "get",
+            "scores",
+            "wait"
+          ],
+          "fields": []
+        },
+        {
+          "id": "api/resources.ts#Traces",
+          "page": "reference/typescript/platform-client",
+          "name": "Traces",
+          "methods": [
+            "get",
+            "list",
+            "iterate",
+            "waitVisible"
+          ],
+          "fields": []
+        },
+        {
+          "id": "client.ts#Client",
+          "page": "reference/typescript/client",
+          "name": "Client",
+          "methods": [
+            "trace",
+            "logTrace",
+            "captureTraces",
+            "score",
+            "flush",
+            "shutdown",
+            "onError"
+          ],
+          "fields": [
+            "enabled",
+            "config"
+          ]
+        },
+        {
+          "id": "client.ts#getClient",
+          "page": "reference/typescript/client",
+          "name": "getClient",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "client.ts#init",
+          "page": "reference/typescript/client",
+          "name": "init",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "config.ts#ConfigOptions",
+          "page": "reference/typescript/configuration",
+          "name": "ConfigOptions",
+          "methods": [],
+          "fields": [
+            "apiKey",
+            "projectName",
+            "endpoint",
+            "environment",
+            "release",
+            "enabled",
+            "batchSize",
+            "flushInterval",
+            "maxQueueSize",
+            "debug"
+          ]
+        },
+        {
+          "id": "config.ts#SdkConfig",
+          "page": "reference/typescript/configuration",
+          "name": "SdkConfig",
+          "methods": [],
+          "fields": [
+            "apiKey",
+            "projectName",
+            "endpoint",
+            "environment",
+            "release",
+            "enabled",
+            "batchSize",
+            "flushInterval",
+            "maxQueueSize",
+            "debug"
+          ]
+        },
+        {
+          "id": "decorators.ts#SpanDecoratorOptions",
+          "page": "reference/typescript/tracing",
+          "name": "SpanDecoratorOptions",
+          "methods": [],
+          "fields": [
+            "name",
+            "kind",
+            "model",
+            "metadata"
+          ]
+        },
+        {
+          "id": "decorators.ts#TraceDecoratorOptions",
+          "page": "reference/typescript/tracing",
+          "name": "TraceDecoratorOptions",
+          "methods": [],
+          "fields": [
+            "name",
+            "sessionId",
+            "userId",
+            "tags",
+            "metadata"
+          ]
+        },
+        {
+          "id": "decorators.ts#WithSpanOptions",
+          "page": "reference/typescript/tracing",
+          "name": "WithSpanOptions",
+          "methods": [],
+          "fields": [
+            "kind",
+            "model",
+            "metadata"
+          ]
+        },
+        {
+          "id": "decorators.ts#WithTraceOptions",
+          "page": "reference/typescript/tracing",
+          "name": "WithTraceOptions",
+          "methods": [],
+          "fields": [
+            "input",
+            "sessionId",
+            "userId",
+            "tags",
+            "metadata"
+          ]
+        },
+        {
+          "id": "decorators.ts#span",
+          "page": "reference/typescript/tracing",
+          "name": "span",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "decorators.ts#startTrace",
+          "page": "reference/typescript/tracing",
+          "name": "startTrace",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "decorators.ts#trace",
+          "page": "reference/typescript/tracing",
+          "name": "trace",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "decorators.ts#withSpan",
+          "page": "reference/typescript/tracing",
+          "name": "withSpan",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "decorators.ts#withTrace",
+          "page": "reference/typescript/tracing",
+          "name": "withTrace",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "index.ts#flush",
+          "page": "reference/typescript/client",
+          "name": "flush",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "index.ts#score",
+          "page": "reference/typescript/client",
+          "name": "score",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "index.ts#session",
+          "page": "reference/typescript/tracing",
+          "name": "session",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "index.ts#setSession",
+          "page": "reference/typescript/tracing",
+          "name": "setSession",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "index.ts#setUser",
+          "page": "reference/typescript/tracing",
+          "name": "setUser",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "index.ts#shutdown",
+          "page": "reference/typescript/client",
+          "name": "shutdown",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "index.ts#user",
+          "page": "reference/typescript/tracing",
+          "name": "user",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "integrations/base.ts#AdapterOptions",
+          "page": "reference/typescript/integrations",
+          "name": "AdapterOptions",
+          "methods": [],
+          "fields": [
+            "client",
+            "sessionId",
+            "userId",
+            "tags",
+            "metadata"
+          ]
+        },
+        {
+          "id": "integrations/claude-agent-sdk/adapter.ts#ClaudeAgentSDKAdapter",
+          "page": "reference/typescript/integrations",
+          "name": "ClaudeAgentSDKAdapter",
+          "methods": [
+            "wrapQuery"
+          ],
+          "fields": []
+        },
+        {
+          "id": "integrations/claude-agent-sdk/adapter.ts#wrapClaudeAgentQuery",
+          "page": "reference/typescript/integrations",
+          "name": "wrapClaudeAgentQuery",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "integrations/deepagents/callback.ts#DeepAgentsCallbackHandler",
+          "page": "reference/typescript/integrations",
+          "name": "DeepAgentsCallbackHandler",
+          "methods": [
+            "handleChainStart",
+            "handleChainEnd",
+            "handleChainError",
+            "handleLLMStart",
+            "handleChatModelStart",
+            "handleLLMEnd",
+            "handleLLMError",
+            "handleToolStart",
+            "handleToolEnd",
+            "handleToolError",
+            "handleRetrieverStart",
+            "handleRetrieverEnd"
+          ],
+          "fields": [
+            "name"
+          ]
+        },
+        {
+          "id": "integrations/langchain/callback.ts#LangChainCallbackHandler",
+          "page": "reference/typescript/integrations",
+          "name": "LangChainCallbackHandler",
+          "methods": [
+            "handleChainStart",
+            "handleChainEnd",
+            "handleChainError",
+            "handleLLMStart",
+            "handleChatModelStart",
+            "handleLLMEnd",
+            "handleLLMError",
+            "handleToolStart",
+            "handleToolEnd",
+            "handleToolError",
+            "handleRetrieverStart",
+            "handleRetrieverEnd"
+          ],
+          "fields": [
+            "name"
+          ]
+        },
+        {
+          "id": "integrations/langgraph/callback.ts#LangGraphCallbackHandler",
+          "page": "reference/typescript/integrations",
+          "name": "LangGraphCallbackHandler",
+          "methods": [
+            "handleChainStart",
+            "handleChainEnd",
+            "handleChainError",
+            "handleLLMStart",
+            "handleChatModelStart",
+            "handleLLMEnd",
+            "handleLLMError",
+            "handleToolStart",
+            "handleToolEnd",
+            "handleToolError",
+            "handleRetrieverStart",
+            "handleRetrieverEnd"
+          ],
+          "fields": [
+            "name"
+          ]
+        },
+        {
+          "id": "integrations/openai-agents/adapter.ts#OpenAIAgentsAdapter",
+          "page": "reference/typescript/integrations",
+          "name": "OpenAIAgentsAdapter",
+          "methods": [
+            "createTraceProcessor",
+            "instrument"
+          ],
+          "fields": []
+        },
+        {
+          "id": "integrations/openai-agents/adapter.ts#TraceProcessor",
+          "page": "reference/typescript/integrations",
+          "name": "TraceProcessor",
+          "methods": [
+            "onTraceStart",
+            "onTraceEnd",
+            "onSpanStart",
+            "onSpanEnd",
+            "forceFlush",
+            "shutdown"
+          ],
+          "fields": []
+        },
+        {
+          "id": "integrations/vercel-ai/adapter.ts#VercelAgentOptions",
+          "page": "reference/typescript/integrations",
+          "name": "VercelAgentOptions",
+          "methods": [],
+          "fields": [
+            "name",
+            "client",
+            "sessionId",
+            "userId",
+            "tags",
+            "metadata"
+          ]
+        },
+        {
+          "id": "integrations/vercel-ai/adapter.ts#wrapVercelAgent",
+          "page": "reference/typescript/integrations",
+          "name": "wrapVercelAgent",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "integrations/vercel-ai/middleware.ts#VercelMiddlewareOptions",
+          "page": "reference/typescript/integrations",
+          "name": "VercelMiddlewareOptions",
+          "methods": [],
+          "fields": [
+            "name"
+          ]
+        },
+        {
+          "id": "integrations/vercel-ai/middleware.ts#pandaProbeMiddleware",
+          "page": "reference/typescript/integrations",
+          "name": "pandaProbeMiddleware",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "reflect/config.ts#ReflectConfig",
+          "page": "reference/typescript/reflect-config",
+          "name": "ReflectConfig",
+          "methods": [],
+          "fields": [
+            "workspace",
+            "traceVisibilityTimeout",
+            "evaluationTimeout",
+            "pollInterval",
+            "evaluationMaxRuns",
+            "evaluationMaxTraces",
+            "evaluationSampleRate",
+            "maxConcurrency",
+            "cooldownSeconds",
+            "reflectionTimeout",
+            "shutdownTimeout",
+            "reflectionMaxCommands",
+            "shellTimeout",
+            "shellMaxCommands",
+            "shellMaxLoopIterations",
+            "shellMemoryBytes",
+            "commandMaxBytes",
+            "outputMaxBytes",
+            "executionOutputMaxBytes",
+            "contextMaxBytes",
+            "ruleMaxBytes",
+            "rulesMaxBytes",
+            "rulesMaxCount",
+            "evidenceMaxBytes",
+            "thresholds",
+            "diagnosticMetrics",
+            "stallWindow",
+            "minimumProgress",
+            "regressionDrop",
+            "validationMinCases",
+            "validationMinImprovement",
+            "validationRegressionTolerance",
+            "validationTimeout"
+          ]
+        },
+        {
+          "id": "reflect/config.ts#ReflectOptions",
+          "page": "reference/typescript/reflect-config",
+          "name": "ReflectOptions",
+          "methods": [],
+          "fields": [
+            "workspace",
+            "traceVisibilityTimeout",
+            "evaluationTimeout",
+            "pollInterval",
+            "evaluationMaxRuns",
+            "evaluationMaxTraces",
+            "evaluationSampleRate",
+            "maxConcurrency",
+            "cooldownSeconds",
+            "reflectionTimeout",
+            "shutdownTimeout",
+            "reflectionMaxCommands",
+            "shellTimeout",
+            "shellMaxCommands",
+            "shellMaxLoopIterations",
+            "shellMemoryBytes",
+            "commandMaxBytes",
+            "outputMaxBytes",
+            "executionOutputMaxBytes",
+            "contextMaxBytes",
+            "ruleMaxBytes",
+            "rulesMaxBytes",
+            "rulesMaxCount",
+            "evidenceMaxBytes",
+            "thresholds",
+            "diagnosticMetrics",
+            "stallWindow",
+            "minimumProgress",
+            "regressionDrop",
+            "validationMinCases",
+            "validationMinImprovement",
+            "validationRegressionTolerance",
+            "validationTimeout"
+          ]
+        },
+        {
+          "id": "reflect/config.ts#ResolvedReflectConfig",
+          "page": "reference/typescript/reflect-config",
+          "name": "ResolvedReflectConfig",
+          "methods": [],
+          "fields": [
+            "workspace",
+            "traceVisibilityTimeout",
+            "evaluationTimeout",
+            "pollInterval",
+            "evaluationMaxRuns",
+            "evaluationMaxTraces",
+            "evaluationSampleRate",
+            "maxConcurrency",
+            "cooldownSeconds",
+            "reflectionTimeout",
+            "shutdownTimeout",
+            "reflectionMaxCommands",
+            "shellTimeout",
+            "shellMaxCommands",
+            "shellMaxLoopIterations",
+            "shellMemoryBytes",
+            "commandMaxBytes",
+            "outputMaxBytes",
+            "executionOutputMaxBytes",
+            "contextMaxBytes",
+            "ruleMaxBytes",
+            "rulesMaxBytes",
+            "rulesMaxCount",
+            "evidenceMaxBytes",
+            "thresholds",
+            "diagnosticMetrics",
+            "stallWindow",
+            "minimumProgress",
+            "regressionDrop",
+            "validationMinCases",
+            "validationMinImprovement",
+            "validationRegressionTolerance",
+            "validationTimeout"
+          ]
+        },
+        {
+          "id": "reflect/evaluation.ts#SubmissionOptions",
+          "page": "reference/typescript/reflect-runtime",
+          "name": "SubmissionOptions",
+          "methods": [],
+          "fields": [
+            "executionId",
+            "sessionId",
+            "completed"
+          ]
+        },
+        {
+          "id": "reflect/execution.ts#Execution",
+          "page": "reference/typescript/reflect-execution",
+          "name": "Execution",
+          "methods": [
+            "checkpoint",
+            "instructions",
+            "seal",
+            "activate",
+            "run",
+            "close",
+            "create"
+          ],
+          "fields": [
+            "id",
+            "sessionId",
+            "completed",
+            "signal",
+            "baseRevision",
+            "role",
+            "traceIds",
+            "proposal",
+            "status",
+            "taskStatus",
+            "phaseTraces",
+            "shell",
+            "runtime"
+          ]
+        },
+        {
+          "id": "reflect/execution.ts#ExecutionOptions",
+          "page": "reference/typescript/reflect-execution",
+          "name": "ExecutionOptions",
+          "methods": [],
+          "fields": [
+            "sessionId",
+            "executionId",
+            "completed",
+            "signal"
+          ]
+        },
+        {
+          "id": "reflect/execution.ts#Phase",
+          "page": "reference/typescript/reflect-execution",
+          "name": "Phase",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "reflect/integrations.ts#Agent",
+          "page": "reference/typescript/reflect-runtime",
+          "name": "Agent",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "reflect/integrations.ts#AgentOptions",
+          "page": "reference/typescript/reflect-runtime",
+          "name": "AgentOptions",
+          "methods": [],
+          "fields": [
+            "framework",
+            "options",
+            "invokeOptions"
+          ]
+        },
+        {
+          "id": "reflect/integrations.ts#Framework",
+          "page": "reference/typescript/reflect-runtime",
+          "name": "Framework",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "reflect/integrations.ts#NativeAgent",
+          "page": "reference/typescript/reflect-runtime",
+          "name": "NativeAgent",
+          "methods": [
+            "invokeReflect"
+          ],
+          "fields": [
+            "native",
+            "framework"
+          ]
+        },
+        {
+          "id": "reflect/models.ts#EvaluationOutcome",
+          "page": "reference/typescript/reflect-models",
+          "name": "EvaluationOutcome",
+          "methods": [],
+          "fields": [
+            "execution_id",
+            "status",
+            "run_ids",
+            "scores",
+            "notice",
+            "reason"
+          ]
+        },
+        {
+          "id": "reflect/models.ts#ExecutionReport",
+          "page": "reference/typescript/reflect-models",
+          "name": "ExecutionReport",
+          "methods": [],
+          "fields": [
+            "execution_id",
+            "session_id",
+            "task_status",
+            "trace_ids",
+            "evaluation",
+            "reflection",
+            "proposals"
+          ]
+        },
+        {
+          "id": "reflect/models.ts#FailureNotice",
+          "page": "reference/typescript/reflect-models",
+          "name": "FailureNotice",
+          "methods": [],
+          "fields": [
+            "id",
+            "execution_id",
+            "session_id",
+            "trace_ids",
+            "scores",
+            "reasons",
+            "signatures",
+            "created_at"
+          ]
+        },
+        {
+          "id": "reflect/models.ts#ProposalOutcome",
+          "page": "reference/typescript/reflect-models",
+          "name": "ProposalOutcome",
+          "methods": [],
+          "fields": [
+            "status",
+            "proposal",
+            "reason",
+            "rationale"
+          ]
+        },
+        {
+          "id": "reflect/models.ts#Rule",
+          "page": "reference/typescript/reflect-models",
+          "name": "Rule",
+          "methods": [
+            "safePath"
+          ],
+          "fields": [
+            "path",
+            "text",
+            "version",
+            "scope",
+            "applicability"
+          ]
+        },
+        {
+          "id": "reflect/models.ts#RuleProposal",
+          "page": "reference/typescript/reflect-models",
+          "name": "RuleProposal",
+          "methods": [],
+          "fields": [
+            "id",
+            "base_revision",
+            "changes",
+            "fingerprint",
+            "session_id",
+            "execution_id",
+            "evidence_ids",
+            "created_at",
+            "status",
+            "rationale",
+            "decision"
+          ]
+        },
+        {
+          "id": "reflect/models.ts#TrialArm",
+          "page": "reference/typescript/reflect-models",
+          "name": "TrialArm",
+          "methods": [],
+          "fields": [
+            "execution_id",
+            "scores",
+            "success",
+            "evidence",
+            "candidate_ids"
+          ]
+        },
+        {
+          "id": "reflect/models.ts#TrialCase",
+          "page": "reference/typescript/reflect-models",
+          "name": "TrialCase",
+          "methods": [],
+          "fields": [
+            "case_id",
+            "base_revision",
+            "input_hash",
+            "protected",
+            "control",
+            "candidate"
+          ]
+        },
+        {
+          "id": "reflect/models.ts#ValidationVerdict",
+          "page": "reference/typescript/reflect-models",
+          "name": "ValidationVerdict",
+          "methods": [],
+          "fields": [
+            "proposal_id",
+            "outcome",
+            "reason",
+            "mode",
+            "cases",
+            "created_at"
+          ]
+        },
+        {
+          "id": "reflect/runtime.ts#Invocation",
+          "page": "reference/typescript/reflect-execution",
+          "name": "Invocation",
+          "methods": [],
+          "fields": [
+            "input",
+            "execution",
+            "phase",
+            "previousResult",
+            "feedback",
+            "signal",
+            "instructions"
+          ]
+        },
+        {
+          "id": "reflect/runtime.ts#ReflectInit",
+          "page": "reference/typescript/reflect-runtime",
+          "name": "ReflectInit",
+          "methods": [],
+          "fields": [
+            "config",
+            "api",
+            "replay",
+            "cases"
+          ]
+        },
+        {
+          "id": "reflect/runtime.ts#ReflectRuntime",
+          "page": "reference/typescript/reflect-runtime",
+          "name": "Reflect",
+          "methods": [
+            "withCurrent",
+            "assertOpen",
+            "trackExecution",
+            "untrackExecution",
+            "execution",
+            "bash",
+            "tool",
+            "agent",
+            "submitTraces",
+            "waitExport",
+            "settleEvaluation",
+            "resumeEvaluations",
+            "continueReflection",
+            "settleReflection",
+            "run",
+            "report",
+            "proposals",
+            "scheduleValidation",
+            "validate",
+            "settleValidation",
+            "trialExecution",
+            "close"
+          ],
+          "fields": [
+            "client",
+            "config",
+            "workspace",
+            "api",
+            "validator",
+            "signal"
+          ]
+        },
+        {
+          "id": "reflect/validation.ts#Outcome",
+          "page": "reference/typescript/reflect-validation",
+          "name": "Outcome",
+          "methods": [],
+          "fields": [
+            "scores",
+            "success",
+            "evidence"
+          ]
+        },
+        {
+          "id": "reflect/validation.ts#Replay",
+          "page": "reference/typescript/reflect-validation",
+          "name": "Replay",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "reflect/validation.ts#ReplayCase",
+          "page": "reference/typescript/reflect-validation",
+          "name": "ReplayCase",
+          "methods": [],
+          "fields": [
+            "id",
+            "input",
+            "protected"
+          ]
+        },
+        {
+          "id": "reflect/validation.ts#ReplayRequest",
+          "page": "reference/typescript/reflect-validation",
+          "name": "ReplayRequest",
+          "methods": [
+            "run"
+          ],
+          "fields": [
+            "case",
+            "execution",
+            "arm",
+            "signal"
+          ]
+        },
+        {
+          "id": "reflect/validation.ts#Validator",
+          "page": "reference/typescript/reflect-validation",
+          "name": "Validator",
+          "methods": [
+            "replay",
+            "assess",
+            "recordTrial"
+          ],
+          "fields": []
+        },
+        {
+          "id": "schemas.ts#ScoreData",
+          "page": "reference/typescript/data",
+          "name": "ScoreData",
+          "methods": [
+            "toApiDict"
+          ],
+          "fields": [
+            "traceId",
+            "name",
+            "value",
+            "dataType",
+            "source",
+            "reason",
+            "metadata"
+          ]
+        },
+        {
+          "id": "schemas.ts#ScoreDataInit",
+          "page": "reference/typescript/data",
+          "name": "ScoreDataInit",
+          "methods": [],
+          "fields": [
+            "traceId",
+            "name",
+            "value",
+            "dataType",
+            "source",
+            "reason",
+            "metadata"
+          ]
+        },
+        {
+          "id": "schemas.ts#ScoreDataType",
+          "page": "reference/typescript/data",
+          "name": "ScoreDataType",
+          "methods": [],
+          "fields": [
+            "NUMERIC",
+            "BOOLEAN",
+            "CATEGORICAL"
+          ]
+        },
+        {
+          "id": "schemas.ts#SpanData",
+          "page": "reference/typescript/data",
+          "name": "SpanData",
+          "methods": [
+            "toApiDict"
+          ],
+          "fields": [
+            "spanId",
+            "parentSpanId",
+            "name",
+            "kind",
+            "status",
+            "input",
+            "output",
+            "model",
+            "tokenUsage",
+            "metadata",
+            "startedAt",
+            "endedAt",
+            "error",
+            "completionStartTime",
+            "modelParameters",
+            "cost"
+          ]
+        },
+        {
+          "id": "schemas.ts#SpanDataInit",
+          "page": "reference/typescript/data",
+          "name": "SpanDataInit",
+          "methods": [],
+          "fields": [
+            "spanId",
+            "parentSpanId",
+            "name",
+            "kind",
+            "status",
+            "input",
+            "output",
+            "model",
+            "tokenUsage",
+            "metadata",
+            "startedAt",
+            "endedAt",
+            "error",
+            "completionStartTime",
+            "modelParameters",
+            "cost"
+          ]
+        },
+        {
+          "id": "schemas.ts#SpanKind",
+          "page": "reference/typescript/data",
+          "name": "SpanKind",
+          "methods": [],
+          "fields": [
+            "AGENT",
+            "TOOL",
+            "LLM",
+            "RETRIEVER",
+            "CHAIN",
+            "EMBEDDING",
+            "OTHER"
+          ]
+        },
+        {
+          "id": "schemas.ts#SpanStatusCode",
+          "page": "reference/typescript/data",
+          "name": "SpanStatusCode",
+          "methods": [],
+          "fields": [
+            "UNSET",
+            "OK",
+            "ERROR"
+          ]
+        },
+        {
+          "id": "schemas.ts#TraceData",
+          "page": "reference/typescript/data",
+          "name": "TraceData",
+          "methods": [
+            "toApiDict"
+          ],
+          "fields": [
+            "traceId",
+            "name",
+            "status",
+            "input",
+            "output",
+            "metadata",
+            "startedAt",
+            "endedAt",
+            "sessionId",
+            "userId",
+            "tags",
+            "environment",
+            "release",
+            "spans"
+          ]
+        },
+        {
+          "id": "schemas.ts#TraceDataInit",
+          "page": "reference/typescript/data",
+          "name": "TraceDataInit",
+          "methods": [],
+          "fields": [
+            "traceId",
+            "name",
+            "status",
+            "input",
+            "output",
+            "metadata",
+            "startedAt",
+            "endedAt",
+            "sessionId",
+            "userId",
+            "tags",
+            "environment",
+            "release",
+            "spans"
+          ]
+        },
+        {
+          "id": "schemas.ts#TraceStatus",
+          "page": "reference/typescript/data",
+          "name": "TraceStatus",
+          "methods": [],
+          "fields": [
+            "PENDING",
+            "RUNNING",
+            "COMPLETED",
+            "ERROR"
+          ]
+        },
+        {
+          "id": "tracing/capture.ts#TraceCapture",
+          "page": "reference/typescript/tracing",
+          "name": "TraceCapture",
+          "methods": [
+            "run"
+          ],
+          "fields": [
+            "traceIds",
+            "overflow",
+            "closed"
+          ]
+        },
+        {
+          "id": "tracing/capture.ts#TraceCaptureOptions",
+          "page": "reference/typescript/tracing",
+          "name": "TraceCaptureOptions",
+          "methods": [],
+          "fields": [
+            "metadata",
+            "sessionId",
+            "maxTraces",
+            "onSubmit"
+          ]
+        },
+        {
+          "id": "tracing/context.ts#TraceContext",
+          "page": "reference/typescript/tracing",
+          "name": "TraceContext",
+          "methods": [
+            "start",
+            "end",
+            "run",
+            "instrument",
+            "span",
+            "setOutput",
+            "setInput",
+            "setMetadata",
+            "setStatus",
+            "addSpanData"
+          ],
+          "fields": [
+            "spanStack",
+            "traceId"
+          ]
+        },
+        {
+          "id": "tracing/context.ts#TraceContextOptions",
+          "page": "reference/typescript/tracing",
+          "name": "TraceContextOptions",
+          "methods": [],
+          "fields": [
+            "input",
+            "sessionId",
+            "userId",
+            "tags",
+            "metadata"
+          ]
+        },
+        {
+          "id": "tracing/context.ts#getCurrentTrace",
+          "page": "reference/typescript/tracing",
+          "name": "getCurrentTrace",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "tracing/context.ts#getSpanStack",
+          "page": "reference/typescript/tracing",
+          "name": "getSpanStack",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "tracing/span.ts#SpanContext",
+          "page": "reference/typescript/tracing",
+          "name": "SpanContext",
+          "methods": [
+            "getOutput",
+            "getTraceContext",
+            "start",
+            "end",
+            "run",
+            "instrument",
+            "setInput",
+            "setOutput",
+            "setTokenUsage",
+            "setModel",
+            "setModelParameters",
+            "setCost",
+            "setCompletionStartTime",
+            "setError",
+            "setMetadata"
+          ],
+          "fields": [
+            "spanId"
+          ]
+        },
+        {
+          "id": "tracing/span.ts#SpanContextOptions",
+          "page": "reference/typescript/tracing",
+          "name": "SpanContextOptions",
+          "methods": [],
+          "fields": [
+            "kind",
+            "model",
+            "metadata"
+          ]
+        },
+        {
+          "id": "version.ts#VERSION",
+          "page": "reference/typescript/client",
+          "name": "VERSION",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "wrappers/anthropic/wrapper.ts#wrapAnthropic",
+          "page": "reference/typescript/wrappers",
+          "name": "wrapAnthropic",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "wrappers/bedrock/wrapper.ts#wrapBedrock",
+          "page": "reference/typescript/wrappers",
+          "name": "wrapBedrock",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "wrappers/gemini/wrapper.ts#wrapGemini",
+          "page": "reference/typescript/wrappers",
+          "name": "wrapGemini",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "wrappers/mistral/wrapper.ts#wrapMistral",
+          "page": "reference/typescript/wrappers",
+          "name": "wrapMistral",
+          "methods": [],
+          "fields": []
+        },
+        {
+          "id": "wrappers/openai/wrapper.ts#wrapOpenAI",
+          "page": "reference/typescript/wrappers",
+          "name": "wrapOpenAI",
+          "methods": [],
+          "fields": []
+        }
+      ]
+    }
+  }
+}

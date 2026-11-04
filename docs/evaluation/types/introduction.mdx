@@ -1,0 +1,75 @@
+---
+title: "Introduction"
+description: "Evaluate individual executions and complete agent sessions with a shared set of metrics and scores."
+icon: "book-open"
+---
+
+PandaProbe evaluates the traces your agent has already recorded. **Trace evaluation** measures one execution; **session evaluation** combines evidence across related executions. Both produce scores you can inspect in the dashboard, API, or CLI.
+
+| Target | Evaluates | Useful for |
+| --- | --- | --- |
+| Trace | One execution, including its spans, inputs, outputs, and tool calls | Task completion, tool use, planning, and input-output alignment |
+| Session | Traces grouped under the same `session_id` | Reliability and consistency across a conversation, workflow, or task |
+
+## Trace evaluation
+
+Trace metrics answer focused questions about an execution: did the agent complete the task, select the right tools, supply correct arguments, and follow its plan?
+
+Seven metrics use **LLM-as-judge** analysis. Most separate extraction from judgment: first identify the task, tool calls, or plan, then evaluate that evidence. For example, `task_completion` extracts the user's objective and the agent's factual outcome before scoring how well they match. `confidence` judges the trace in a single call.
+
+**Coherence** uses input and output embeddings to measure semantic alignment without a judge-generation call.
+
+The ninth trace metric, **loop detection**, compares an output with recent outputs in the same session. It combines semantic and lexical similarity and runs as a session-evaluation signal. It is not available for standalone trace runs.
+
+See [trace metrics](/evaluation/types/metrics#trace-metrics) for the calculations, scoring guides, and metadata for each metric.
+
+## Session evaluation
+
+A session groups traces from one agent lifecycle using a stable `session_id`. Session evaluation helps identify repeated responses, isolated high-risk steps, and accumulated uncertainty across that lifecycle.
+
+<Steps>
+  <Step title="Collect the session's traces">
+    PandaProbe loads traces with the same session ID in execution order.
+  </Step>
+  <Step title="Prepare trace-level signals">
+    The worker reuses available scores or computes `confidence`, `loop_detection`, `tool_correctness`, and `coherence`. Newly computed signals are stored as trace scores, so you can inspect the evidence behind the session result.
+  </Step>
+  <Step title="Aggregate session scores">
+    `agent_reliability` emphasizes the riskiest traces. `agent_consistency` combines confidence risk with penalties from the other signals. Aggregation uses deterministic math with no additional LLM or embedding calls.
+  </Step>
+</Steps>
+
+Both session metrics use the same default signal weights:
+
+| Signal | Default weight | Evidence |
+| --- | --- | --- |
+| `confidence` | 1.0 | Decisiveness and appropriateness of actions |
+| `loop_detection` | 1.0 | Repetition across recent traces |
+| `tool_correctness` | 0.8 | Tool selection quality |
+| `coherence` | 1.0 | Input-output alignment |
+
+You can customize these weights in the dashboard or pass `signal_weights` through the API or CLI. See [session metrics](/evaluation/types/metrics#session-metrics) for the formulas and missing-signal behavior.
+
+## Read the result
+
+Evaluation runs execute asynchronously. Each selected metric produces a score for each target, with a value, reason, and supporting metadata. Built-in scores range from 0 to 1; higher values indicate better results on the measured dimension.
+
+Score `status` describes whether computation succeeded. A `SUCCESS` status can accompany a low value. Read the value and reason together, and use metadata to inspect extracted evidence, individual verdicts, or per-trace signals.
+
+<Note>
+  Some metrics return 1.0 when there is nothing to evaluate, such as a missing plan or no evaluable signals. Check the reason and metadata before treating a high score as evidence of successful behavior.
+</Note>
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Metrics" href="/evaluation/types/metrics">
+    Compare all trace and session metrics and inspect their calculations.
+  </Card>
+  <Card title="Programmatic Scoring" href="/evaluation/types/scoring">
+    Attach your own checks or feedback to a trace.
+  </Card>
+  <Card title="Set Up Evaluation" href="/evaluation/setup/introduction">
+    Run evaluations through the dashboard, API, CLI, or monitors.
+  </Card>
+</CardGroup>

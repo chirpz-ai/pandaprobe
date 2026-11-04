@@ -1,99 +1,35 @@
 ---
 title: "Introduction"
-description: "Set up and run evaluations via the PandaProbe dashboard or API."
-icon: "route"
+description: "Choose how to run evaluations: dashboard, API, CLI, or scheduled monitors."
+icon: "book-open"
 ---
 
-PandaProbe provides three setup paths for evaluation. Choose the one that matches how you want to operate: manually from the dashboard, programmatically through the API, or automatically on a schedule.
-
-<CardGroup cols={3}>
-  <Card title="Dashboard UI" icon="layout-dashboard" href="/evaluation/setup/run-eval-ui">
-    Best for exploring metrics, creating one-off eval runs, and reviewing results visually.
-  </Card>
-  <Card title="API" icon="terminal" href="/evaluation/setup/run-eval-api">
-    Best for CI/CD, internal tools, notebooks, and custom automation.
-  </Card>
-  <Card title="Scheduled Monitors" icon="clock" href="/evaluation/setup/scheduling">
-    Best for recurring production checks that evaluate new traces or sessions over time.
-  </Card>
-</CardGroup>
+Run evaluations against traces or sessions already captured in your project. Use the dashboard for interactive review, the API or CLI for automation, and monitors for recurring checks.
 
 ## Prerequisites
 
-Before running evaluations, make sure you have:
-
-- **Traces in your project**: evaluations run against data already captured by PandaProbe tracing.
-- **Sessions for agent evaluation**: session-level metrics require traces grouped with a `session_id`.
-- **Project access**: dashboard users need access to the project, and API users need valid authentication.
-
-<Info>
-  PandaProbe Cloud manages the evaluation LLM infrastructure for you. You do not need to bring your own LLM API key to run evaluations in PandaProbe Cloud.
-</Info>
+- **Captured traces** in the project you want to evaluate. Start with the [Tracing Quickstart](/tracing/get-started/quickstart) if needed.
+- **A shared `session_id`** for related traces when running session evaluation.
+- **Project access** through the dashboard, or an API key and project name for API and CLI requests.
 
 <Note>
-  Self-hosted deployments must configure their own LLM provider credentials for LLM-powered PandaProbe features, including LLM-as-judge evaluation.
+  PandaProbe Cloud manages the evaluation LLM infrastructure. Self-hosted deployments need provider credentials configured on the server for judge and embedding calls.
 </Note>
 
-## What you can evaluate
+## Configure a run
 
-### Trace-level evaluation
+1. Choose **traces** or **sessions** and select the matching [metrics](/evaluation/types/metrics).
+2. Select specific IDs, or use filters to define the target set. Filtered runs can sample a fraction of matches.
+3. Optionally choose a judge model. Session runs also support custom signal weights.
+4. Submit the run and review its progress and scores when processing finishes.
 
-Run metrics against individual traces to score task completion, tool usage, planning, coherence, and more. You can target traces by:
+Each score includes a value, computation status, reason, and metadata. A completed run can contain failed computations; check `failed_count` and individual score statuses when reviewing results.
 
-- **Filters** — date range, status, session, user, tags, or name substring
-- **Explicit IDs** — provide a list of specific trace UUIDs
-- **Sampling** — evaluate a random fraction of matching traces to control cost
+## Choose a setup method
 
-### Session-level evaluation
-
-Run metrics against entire sessions to assess agent reliability and consistency. You can target sessions by:
-
-- **Filters** — date range, user, error status, tags, minimum trace count
-- **Explicit IDs** — provide a list of specific session ID strings
-- **Sampling** — evaluate a fraction of matching sessions
-
-## Setup methods
-
-### Dashboard UI
-
-Use the dashboard when you want to create evaluations interactively and inspect results without writing code.
-
-<Card title="Run Evaluations via UI" icon="layout-dashboard" href="/evaluation/setup/run-eval-ui">
-  Create eval runs and review scores from the PandaProbe dashboard.
-</Card>
-
-### API
-
-Use the API when evaluations need to be part of an automated workflow, CI job, internal dashboard, or custom tool.
-
-<Card title="Run Evaluations via API" icon="terminal" href="/evaluation/setup/run-eval-api">
-  Create eval runs, poll run status, and query scores programmatically.
-</Card>
-
-### Scheduled monitors
-
-Use monitors when you want PandaProbe to run evaluations repeatedly on a cadence, such as daily production checks or weekly quality reports.
-
-<Card title="Scheduling Evaluations" icon="clock" href="/evaluation/setup/scheduling">
-  Configure recurring evaluation monitors with filters, sampling, and cadence.
-</Card>
-
-## Results
-
-Every eval run produces **scores** attached to traces or sessions. Each score includes a metric name, value, status, reason, and metadata. You can review scores in the dashboard or query them through the API for analytics, reporting, and monitoring.
-
-## Next steps
-
-Start with the setup path that matches your workflow:
-
-<CardGroup cols={3}>
-  <Card title="Run via Dashboard" icon="layout-dashboard" href="/evaluation/setup/run-eval-ui">
-    Visual guide to creating eval runs in the dashboard.
-  </Card>
-  <Card title="Run via API" icon="terminal" href="/evaluation/setup/run-eval-api">
-    Complete API reference for evaluation endpoints.
-  </Card>
-  <Card title="Schedule Monitors" icon="clock" href="/evaluation/setup/scheduling">
-    Automate recurring evaluations for new traces or sessions.
-  </Card>
-</CardGroup>
+| Method | Use when |
+| --- | --- |
+| [Dashboard UI](/evaluation/setup/run-eval-ui) | You want to select data, configure metrics, and inspect results visually. |
+| [API](/evaluation/setup/run-eval-api) | Evaluations belong in an application, notebook, or custom service. |
+| [CLI](/evaluation/setup/run-eval-cli) | You work from a terminal or shell-based CI workflow. |
+| [Scheduled monitors](/evaluation/setup/scheduling) | You want recurring checks with saved metrics, filters, and sampling. |

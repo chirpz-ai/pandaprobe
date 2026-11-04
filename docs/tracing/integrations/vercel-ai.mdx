@@ -1,6 +1,6 @@
 ---
 title: "Vercel AI SDK"
-description: "Trace Vercel AI SDK generation and streaming calls with PandaProbe middleware"
+description: "Trace native Vercel agents, tools, generation, and streaming calls"
 icon: "/assets/providers/vercel.svg"
 ---
 
@@ -78,6 +78,34 @@ for await (const delta of result.textStream) {
 ```
 
 Streaming captures time-to-first-token, combines text deltas into one span output, and records final usage. The span is finalized if the stream completes, fails, or is cancelled before completion.
+
+## Trace an agent
+
+For a native `ToolLoopAgent` in AI SDK 6 or 7, use `wrapVercelAgent` to capture the agent, its model steps, and actual tool executions. Use the wrapped `model` from Setup above:
+
+```ts title="TypeScript"
+import { ToolLoopAgent } from "ai";
+import { Client } from "pandaprobe";
+import { wrapVercelAgent } from "pandaprobe/integrations/vercel-ai";
+
+const client = new Client();
+const TracedAgent = wrapVercelAgent(ToolLoopAgent, { client });
+try {
+  const agent = new TracedAgent({
+    model,
+    instructions: "Help the user using the available evidence.",
+    tools: {}, // Add your native business tools here.
+  });
+  const result = await agent.generate({ prompt: "How can I return an order?" });
+  console.log(result.text);
+} finally {
+  await client.shutdown();
+}
+```
+
+The wrapper also accepts an existing agent instance. It records `CHAIN → AGENT → LLM → TOOL`; model middleware enriches the same LLM spans without duplicating them. Without middleware, model timing comes from native step callbacks. Proposed tool calls without execution do not create tool spans.
+
+For streaming, consume the stream through completion or explicitly cancel it. An abandoned consumer is not a completion signal. See [Reflect's Vercel integration](/reflect/integrations/vercel-ai) to combine the traced constructor with persistent guidance and reflection.
 
 ## What gets traced
 

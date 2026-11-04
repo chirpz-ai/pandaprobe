@@ -10,7 +10,7 @@ import json
 import textwrap
 from typing import Any
 
-from app.core.evals.metrics.utils import HARNESS_TOOL_GUIDANCE
+from app.core.evals.metrics.utils import REFLECT_TOOL_GUIDANCE
 
 
 class ToolCorrectnessTemplate:
@@ -32,9 +32,8 @@ class ToolCorrectnessTemplate:
             available in this context. For each, include "name" and "description" \
             (infer from span metadata, tool definitions, or usage context).
 
-            Preserve tool names verbatim, including any harness prefix such as \
-            `harness_`; the scoring stage relies on the exact name to tell an \
-            harness meta-tool apart from a task tool.
+            Preserve exact tool names, arguments, outputs, and evidenced purpose;
+            do not omit calls based on their names.
 
             Return **only** valid JSON with keys: `user_input`, `tools_called`, \
             and `available_tools`.
@@ -66,7 +65,7 @@ class ToolCorrectnessTemplate:
             better served the task?
             - **Mis-selection**: Did the agent choose wrong or irrelevant tools?
 
-            {HARNESS_TOOL_GUIDANCE}
+            {REFLECT_TOOL_GUIDANCE}
             Return a JSON object with two keys:
             - `score`: a float between 0 and 1 (1 = perfect tool selection).
             - `reason`: a clear explanation of the score.

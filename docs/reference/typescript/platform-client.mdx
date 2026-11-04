@@ -1,0 +1,324 @@
+---
+title: "Platform client"
+description: "Read persisted traces and create or poll evaluation runs"
+---
+
+This asynchronous HTTP client reads persisted evidence and starts or polls trace evaluations independently of trace export. It reuses an existing tracing client's resolved endpoint, API key, and project, with a separate lifecycle. Close it separately when you supply it to Reflect.
+
+The SDK currently exposes trace reads and trace evaluation resources. The [HTTP API](/reference/api/introduction) also documents operations such as sessions and monitors that are not typed SDK resources here.
+
+All timeouts and polling intervals are **seconds**. Safe GETs have bounded retries; evaluation creation is sent once because the server has no idempotency-key contract. Poll the returned run ID. An uncertain create outcome must not be automatically retried.
+
+`wait_visible` / `waitVisible` waits for a terminal persisted trace, including an error trace. Evaluation `wait` requires usable scores for every requested trace/metric pair; terminal status alone is insufficient. Missing, duplicate, nonnumeric, or failed evidence does not become a passing result.
+
+
+
+## On this page
+
+[Evaluations](#evaluations), [PlatformClient](#platformclient), [PlatformOptions](#platformoptions), [RequestOptions](#requestoptions), [Traces](#traces).
+
+## Example
+
+This creates a real evaluation run for an existing trace. `traceId` is a persisted task trace UUID from the same project.
+
+```ts
+import { Client } from "pandaprobe";
+import { PlatformClient } from "pandaprobe/api";
+
+async function evaluate(traceId: string) {
+  const client = new Client();
+  const api = new PlatformClient(client);
+  try {
+    await api.traces.waitVisible(traceId);
+    const run = await api.evaluations.create([traceId], ["task_completion"]);
+    return await api.evaluations.wait(run.id, {
+      traceIds: [traceId], metrics: ["task_completion"],
+    });
+  } finally {
+    await api.close();
+    await client.shutdown();
+  }
+}
+```
+
+## `Evaluations`
+
+```ts
+import { Evaluations } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/resources.ts#L85)
+
+### Constructor
+
+```text
+new Evaluations(client: PlatformClient): Evaluations
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `PlatformClient` | Required |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="metrics">
+
+Returns the supported trace metric metadata from the platform.
+
+```text
+metrics(options?: RequestOptions): Promise<Metric[]>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `RequestOptions` | `{}` |
+
+</Accordion>
+
+<Accordion title="create">
+
+Creates one batch trace-evaluation run. Deduplicates trace IDs and metric names and requires nonempty inputs. Creation is never automatically retried.
+
+```text
+create(
+  traceIds: string[],
+  metrics: string[],
+  options?: RequestOptions & { name?: string; model?: string; },
+): Promise<EvaluationRun>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `traceIds` | `string[]` | Required |
+| `metrics` | `string[]` | Required |
+| `options` | `RequestOptions & { name?: string; model?: string }` | `{}` |
+
+</Accordion>
+
+<Accordion title="get">
+
+Fetches one evaluation run and verifies its identity. A RUNNING or PENDING result is not complete evidence.
+
+```text
+get(runId: string, options?: RequestOptions): Promise<EvaluationRun>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `runId` | `string` | Required |
+| `options` | `RequestOptions` | `{}` |
+
+</Accordion>
+
+<Accordion title="scores">
+
+Fetches the score records for an evaluation run; use wait to require a complete usable set.
+
+```text
+scores(runId: string, options?: RequestOptions): Promise<Score[]>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `runId` | `string` | Required |
+| `options` | `RequestOptions` | `{}` |
+
+</Accordion>
+
+<Accordion title="wait">
+
+```text
+wait(
+  runId: string,
+  options: WaitOptions & { traceIds: string[]; metrics: string[]; },
+): Promise<EvaluationResult>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `runId` | `string` | Required |
+| `options` | `WaitOptions & { traceIds: string[]; metrics: string[] }` | Required |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `PlatformClient`
+
+```ts
+import { PlatformClient } from "pandaprobe/api";
+```
+
+Native, independently owned platform requests. All durations are seconds.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/client.ts#L51)
+
+### Constructor
+
+```text
+new PlatformClient(client?: Client, options?: PlatformOptions): PlatformClient
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `Client` | Optional |
+| `options` | `PlatformOptions` | `{}` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `config` | `SdkConfig` | `resolveConfig()`; read-only |
+| `timeout` | `number` | `30`; read-only |
+| `readAttempts` | `number` | `3`; read-only |
+| `traces` | `Traces` | Instance value; read-only |
+| `evaluations` | `Evaluations` | Instance value; read-only |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="close">
+
+```text
+close(): Promise<void>
+```
+
+</Accordion>
+
+<Accordion title="request">
+
+```text
+request(method: "GET" | "POST", path: string, options?: RequestOptions): Promise<unknown>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `method` | `"GET" \| "POST"` | Required |
+| `path` | `string` | Required |
+| `options` | `RequestOptions` | `{}` |
+
+</Accordion>
+
+</AccordionGroup>
+
+## `PlatformOptions`
+
+```ts
+import type { PlatformOptions } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/client.ts#L21)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `config` | `SdkConfig \| undefined` | Optional |
+| `timeout` | `number \| undefined` | Optional |
+| `readAttempts` | `number \| undefined` | Optional |
+| `fetch` | `((input: RequestInfo \| URL, init?: RequestInit) => Promise<Response>) \| undefined` | Optional |
+
+## `RequestOptions`
+
+```ts
+import type { RequestOptions } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/client.ts#L15)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `timeout` | `number \| undefined` | Optional |
+| `signal` | `AbortSignal \| undefined` | Optional |
+| `query` | `Record<string, string \| number \| undefined> \| undefined` | Optional |
+| `body` | `unknown` | Optional |
+
+## `Traces`
+
+```ts
+import { Traces } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/resources.ts#L39)
+
+### Constructor
+
+```text
+new Traces(client: PlatformClient): Traces
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `client` | `PlatformClient` | Required |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="get">
+
+Fetches one trace with span evidence and verifies that the returned trace ID matches the requested ID.
+
+```text
+get(traceId: string, options?: RequestOptions): Promise<Trace>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `traceId` | `string` | Required |
+| `options` | `RequestOptions` | `{}` |
+
+</Accordion>
+
+<Accordion title="list">
+
+Returns a page of trace summaries. Limit must be 1–200 and offset must be nonnegative.
+
+```text
+list(
+  options?: RequestOptions & { sessionId?: string; status?: string; limit?: number; offset?: number; },
+): Promise<TracePage>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `RequestOptions & { sessionId?: string; status?: string; limit?: number; offset?: number }` | `{}` |
+
+</Accordion>
+
+<Accordion title="iterate">
+
+Iterates trace summaries in pages, stopping at the configured maximum or the end of the server result.
+
+```text
+iterate(
+  options?: { sessionId?: string; maxItems?: number; signal?: AbortSignal; },
+): AsyncGenerator<TraceSummary>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `options` | `{ sessionId?: string; maxItems?: number; signal?: AbortSignal }` | `{}` |
+
+</Accordion>
+
+<Accordion title="waitVisible">
+
+```text
+waitVisible(traceId: string, options?: WaitOptions): Promise<Trace>
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `traceId` | `string` | Required |
+| `options` | `WaitOptions` | `{}` |
+
+</Accordion>
+
+</AccordionGroup>
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.

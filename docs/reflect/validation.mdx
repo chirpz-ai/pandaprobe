@@ -1,0 +1,157 @@
+---
+title: "Validate guidance"
+description: "Use fresh paired executions and an independent verifier before publishing rules"
+icon: "badge-check"
+---
+
+A proposed rule is a hypothesis. Validation compares the same task with and without the change, checks known successes for regressions, and decides whether to publish it.
+
+Without a verifier and suitable cases, proposals remain unaccepted. The model cannot approve its own proposal through `reflect_bash`.
+
+## Supply three things
+
+1. **Reproducible cases:** failures to improve and at least one known successful case to protect.
+2. **Fresh business state:** a sandbox, fixture, or reset environment for every replay arm.
+3. **An independent verifier:** check the actual refund ledger, test result, database state, or other outcome; do not accept the agent's claim as the result.
+
+Reflect supplies fresh execution/session identities, local memory, and assigned rule snapshots. It cannot reset an arbitrary application or undo a real-world action for you.
+
+## Register replay
+
+This recipe validates refund behavior using a single `task_completion` metric. Construct the runtime with matching thresholds:
+
+<CodeGroup>
+```python title="Python"
+from pandaprobe.reflect import Reflect, ReflectConfig
+
+reflect = Reflect(client, config=ReflectConfig(thresholds={"task_completion": 0.8}))
+```
+
+```ts title="TypeScript"
+import { Reflect as ReflectRuntime } from "pandaprobe/reflect";
+
+const reflect = new ReflectRuntime(client, {
+  config: { thresholds: { task_completion: 0.8 } },
+});
+```
+</CodeGroup>
+
+The following is application integration code: `open_refund_sandbox` / `openRefundSandbox` loads your case fixture, and `build_refund_agent` / `buildRefundAgent` connects its tools to a fresh traced agent using this Reflect runtime. Each sandbox exposes its independently defined expected refund and the actual ledger result. Close it after every arm.
+
+<CodeGroup>
+```python title="Python"
+from pandaprobe.reflect import Outcome, ReplayCase
+
+cases = [
+    ReplayCase(id="shipping-a", input="Refund order HOLD-A."),
+    ReplayCase(id="shipping-b", input="Refund order HOLD-B."),
+    ReplayCase(id="free-shipping", input="Refund order HOLD-FREE.", protected=True),
+]
+
+
+async def replay(request):
+    async with open_refund_sandbox(request.case.id) as sandbox:
+        agent = build_refund_agent(reflect, sandbox)
+        await request.run(agent)  # The agent must include your tracing integration.
+        actual = sandbox.posted_refund_cents
+        expected = sandbox.expected_refund_cents
+        passed = actual == expected
+        return Outcome(
+            scores={"task_completion": float(passed)},
+            success=passed,
+            evidence={"actual_cents": actual, "expected_cents": expected},
+        )
+
+
+async def validate_pending():
+    for proposal in reflect.proposals():
+        if proposal.status in ("candidate", "pending"):
+            verdict = await reflect.validate(proposal.id, cases=cases, replay=replay)
+            print(verdict.outcome, verdict.reason)
+```
+
+```ts title="TypeScript"
+import { Outcome, ReplayCase, type ReplayRequest } from "pandaprobe/reflect";
+
+const cases = [
+  new ReplayCase({ id: "shipping-a", input: "Refund order HOLD-A." }),
+  new ReplayCase({ id: "shipping-b", input: "Refund order HOLD-B." }),
+  new ReplayCase({ id: "free-shipping", input: "Refund order HOLD-FREE.", protected: true }),
+];
+
+async function replay(request: ReplayRequest<string>) {
+  const sandbox = await openRefundSandbox(request.case.id);
+  try {
+    const agent = await buildRefundAgent(reflect, sandbox);
+    await request.run(agent); // The agent must include your tracing integration.
+    const actual = sandbox.postedRefundCents;
+    const expected = sandbox.expectedRefundCents;
+    const passed = actual === expected;
+    return new Outcome({
+      scores: { task_completion: Number(passed) },
+      success: passed,
+      evidence: { actual_cents: actual, expected_cents: expected },
+    });
+  } finally {
+    await sandbox.close();
+  }
+}
+
+async function validatePending() {
+  for (const proposal of reflect.proposals()) {
+    if (["candidate", "pending"].includes(proposal.status)) {
+      const verdict = await reflect.validate(proposal.id, { cases, replay });
+      console.log(verdict.outcome, verdict.reason);
+    }
+  }
+}
+```
+</CodeGroup>
+
+Call `validate_pending()` / `validatePending()` after the original task releases its resources and before closing Reflect.
+
+Alternatively, pass `cases` and `replay` together when constructing Reflect. It then schedules validation when a proposal is created. Wait separately with `settle_validation()` / `settleValidation()`; `run()` does not hold up the task boundary waiting for replay resources.
+
+<Note>
+  Return a real `Outcome` with boolean success and independently measured scores for **every configured threshold metric**. With the defaults, that includes both task completion and coherence. Do not fill in an unmeasured metric with a fabricated passing score.
+</Note>
+
+## What the validator checks
+
+Every case runs twice: **control** receives the proposal's baseline rules, and **candidate** receives baseline plus the proposal. Both start with fresh local memory and conversation identity. Arm order varies deterministically by case ID.
+
+Default acceptance requires:
+
+- At least **three distinct paired cases**, including a protected successful control.
+- Complete matching metric sets, finite scores in `[0, 1]`, explicit success, and distinct execution IDs.
+- Unchanged assigned rule snapshots and the expected candidate assignment.
+- No successful control becoming an unsuccessful candidate.
+- No per-case metric decrease greater than **0.02**.
+- Mean metric improvement of at least **0.05** across non-protected comparisons.
+
+A strict reduction in guidance bytes can instead be accepted as maintenance if the preceding outcome and regression checks pass. Its reason records non-inferiority under those tolerances, not improved behavior.
+
+| Verdict | Meaning |
+| --- | --- |
+| `accepted` | Evidence meets the policy; a new immutable rule revision becomes shared guidance |
+| `rejected` | The tested change caused a disallowed regression |
+| `pending` | Evidence is incomplete, improvement is insufficient, replay failed/timed out, or the accepted base changed |
+
+Pending proposals stay outside ordinary fresh rule views. A stale proposal needs rebasing and revalidation; it cannot overwrite a newer accepted revision. File deletions and rule cleanup follow the same path.
+
+## Controlled live trials
+
+When replay is unavailable, explicitly assign matched control/candidate executions with `trial_execution()` / `trialExecution()`. Submit their independently verified outcomes through `reflect.validator.record_trial()` / `recordTrial()`.
+
+Each `TrialCase` records a case ID, reproducible input hash, base revision, protected flag, and both `TrialArm` records. Each arm identifies its execution, assigned candidate IDs, scores, success, and evidence. The same assessment policy applies. A later unrelated success is not automatically a control/candidate pair.
+
+## Interpret acceptance correctly
+
+Acceptance is evidence under the supplied test conditions, not a statistical proof or a permanent repair guarantee. Use representative held-out cases and fresh business state. Do not reuse the proposing conversation as a clean control.
+
+Core acceptance does not require exact rule-text matching or a complete file read. Example-level retrieval audits can help demonstrate the loop; they are not production runtime gates.
+
+
+## More examples
+
+For complete application fixtures and live multi-turn scenarios, see the SDK’s [Python examples](https://github.com/chirpz-ai/pandaprobe-sdk/tree/main/libraries/python/examples) and [TypeScript examples](https://github.com/chirpz-ai/pandaprobe-sdk/tree/main/libraries/typescript/examples). These optional examples include independent refund ledgers and fresh control/candidate runs for the supported frameworks.

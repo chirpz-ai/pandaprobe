@@ -1,0 +1,285 @@
+---
+title: "Platform errors"
+description: "Distinguish failed requests, deadlines, insufficient evidence, and uncertain creation"
+---
+
+Catch errors at the operation boundary. Authentication errors, missing resources, rate limits, read transport failures, deadlines, and incomplete evaluation evidence have separate types.
+
+`CreationOutcomeUnknown` means the server may already have created a billable evaluation. Keep that outcome distinct from a known failed request; do not create another run automatically. Cancellation is separate from these operational errors.
+
+| Error | Meaning |
+| --- | --- |
+| `PlatformError` | Base platform error |
+| `ApiError` | Non-success HTTP response; includes status and request ID when available |
+| `AuthenticationError` | HTTP 401 or 403 |
+| `NotFoundError` | HTTP 404 |
+| `RateLimitError` | HTTP 429 after applicable read retries |
+| `TransportError` | A read could not complete through the transport |
+| `ApiDeadlineExceeded` | Operation or polling deadline exceeded |
+| `InvalidResponseError` | Invalid JSON, response shape, or mismatched response identity |
+| `CreationOutcomeUnknown` | A create may have reached the server; response cannot establish its outcome |
+| `EvaluationFailed` | Evaluation ended `FAILED` or `CANCELLED` |
+| `InsufficientEvidence` | Required trace/metric pairs are missing, duplicated, or unusable |
+
+
+
+
+## On this page
+
+[ApiDeadlineExceeded](#apideadlineexceeded), [ApiError](#apierror), [AuthenticationError](#authenticationerror), [CreationOutcomeUnknown](#creationoutcomeunknown), [EvaluationFailed](#evaluationfailed), [InsufficientEvidence](#insufficientevidence), [InvalidResponseError](#invalidresponseerror), [NotFoundError](#notfounderror), [PlatformError](#platformerror), [RateLimitError](#ratelimiterror), [TransportError](#transporterror).
+
+## `ApiDeadlineExceeded`
+
+```ts
+import { ApiDeadlineExceeded } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L21)
+
+### Constructor
+
+```text
+new ApiDeadlineExceeded(message: string): ApiDeadlineExceeded
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `message` | `string` | Required |
+
+## `ApiError`
+
+```ts
+import { ApiError } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L8)
+
+### Constructor
+
+```text
+new ApiError(message: string, statusCode: number, requestId?: string | null): ApiError
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `message` | `string` | Required |
+| `statusCode` | `number` | Required |
+| `requestId` | `string \| null` | `null` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `statusCode` | `number` | Instance value; read-only |
+| `requestId` | `string \| null` | `null`; read-only |
+
+## `AuthenticationError`
+
+```ts
+import { AuthenticationError } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L17)
+
+### Constructor
+
+```text
+new AuthenticationError(message: string, statusCode: number, requestId?: string | null): AuthenticationError
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `message` | `string` | Required |
+| `statusCode` | `number` | Required |
+| `requestId` | `string \| null` | `null` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `statusCode` | `number` | Instance value; read-only |
+| `requestId` | `string \| null` | `null`; read-only |
+
+## `CreationOutcomeUnknown`
+
+```ts
+import { CreationOutcomeUnknown } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L23)
+
+### Constructor
+
+```text
+new CreationOutcomeUnknown(message: string): CreationOutcomeUnknown
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `message` | `string` | Required |
+
+## `EvaluationFailed`
+
+```ts
+import { EvaluationFailed } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L24)
+
+### Constructor
+
+```text
+new EvaluationFailed(runId: string, status: string): EvaluationFailed
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `runId` | `string` | Required |
+| `status` | `string` | Required |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `runId` | `string` | Instance value; read-only |
+| `status` | `string` | Instance value; read-only |
+
+## `InsufficientEvidence`
+
+```ts
+import { InsufficientEvidence } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L32)
+
+### Constructor
+
+```text
+new InsufficientEvidence(runId: string, missing: [string, string][]): InsufficientEvidence
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `runId` | `string` | Required |
+| `missing` | `[string, string][]` | Required |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `runId` | `string` | Instance value; read-only |
+| `missing` | `[string, string][]` | Instance value; read-only |
+
+## `InvalidResponseError`
+
+```ts
+import { InvalidResponseError } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L22)
+
+### Constructor
+
+```text
+new InvalidResponseError(message: string): InvalidResponseError
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `message` | `string` | Required |
+
+## `NotFoundError`
+
+```ts
+import { NotFoundError } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L18)
+
+### Constructor
+
+```text
+new NotFoundError(message: string, statusCode: number, requestId?: string | null): NotFoundError
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `message` | `string` | Required |
+| `statusCode` | `number` | Required |
+| `requestId` | `string \| null` | `null` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `statusCode` | `number` | Instance value; read-only |
+| `requestId` | `string \| null` | `null`; read-only |
+
+## `PlatformError`
+
+```ts
+import { PlatformError } from "pandaprobe/api";
+```
+
+Platform failures remain distinct from an ambiguous, potentially billable create.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L2)
+
+### Constructor
+
+```text
+new PlatformError(message: string): PlatformError
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `message` | `string` | Required |
+
+## `RateLimitError`
+
+```ts
+import { RateLimitError } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L19)
+
+### Constructor
+
+```text
+new RateLimitError(message: string, statusCode: number, requestId?: string | null): RateLimitError
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `message` | `string` | Required |
+| `statusCode` | `number` | Required |
+| `requestId` | `string \| null` | `null` |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `statusCode` | `number` | Instance value; read-only |
+| `requestId` | `string \| null` | `null`; read-only |
+
+## `TransportError`
+
+```ts
+import { TransportError } from "pandaprobe/api";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/api/errors.ts#L20)
+
+### Constructor
+
+```text
+new TransportError(message: string): TransportError
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `message` | `string` | Required |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.

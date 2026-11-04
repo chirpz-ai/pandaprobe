@@ -1,0 +1,322 @@
+---
+title: "Trace data"
+description: "Trace, span, score, and message contracts"
+---
+
+These are trace-export records, not the platform read models. Construct them for low-level submission through the tracing client, or let contexts and framework integrations construct them.
+
+The wire representation uses snake_case, string enum values, and ISO-8601 timestamps. Serialization omits selected null/empty fields as defined by each record's serializer. Trace and LLM-span input/output use `{"messages": [{"role": "user", "content": "..."}]}`; other span kinds can carry domain-specific values.
+
+Token usage records prompt/completion/total tokens and may include provider-specific numeric usage. Cost is a dictionary of monetary amounts; the SDK does not calculate missing provider prices.
+
+Construct `SpanData`, `TraceData`, and `ScoreData` with their init objects; `toApiDict()` performs wire serialization. The init interfaces shown below describe accepted objects but are not independently exported at the package root.
+
+## On this page
+
+[ScoreData](#scoredata), [ScoreDataInit](#scoredatainit), [ScoreDataType](#scoredatatype), [SpanData](#spandata), [SpanDataInit](#spandatainit), [SpanKind](#spankind), [SpanStatusCode](#spanstatuscode), [TraceData](#tracedata), [TraceDataInit](#tracedatainit), [TraceStatus](#tracestatus).
+
+## Example
+
+```ts
+import { SpanData, SpanKind, TraceData } from "pandaprobe";
+
+const now = new Date();
+const record = new TraceData({
+  name: "lookup", startedAt: now, endedAt: now,
+  spans: [new SpanData({ name: "policy", kind: SpanKind.TOOL, startedAt: now, endedAt: now })],
+});
+const payload = record.toApiDict();
+console.log(payload.trace_id);
+```
+
+## `ScoreData`
+
+```ts
+import { ScoreData } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L304)
+
+### Constructor
+
+```text
+new ScoreData(init: ScoreDataInit): ScoreData
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `init` | `ScoreDataInit` | Required |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `traceId` | `string` | Instance value |
+| `name` | `string` | Instance value |
+| `value` | `string` | Instance value |
+| `dataType` | `ScoreDataType` | `ScoreDataType.NUMERIC` |
+| `source` | `string` | `"PROGRAMMATIC"` |
+| `reason` | `string \| null` | `null` |
+| `metadata` | `Record<string, unknown>` | `{}` |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="toApiDict">
+
+```text
+toApiDict(): Record<string, unknown>
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## `ScoreDataInit`
+
+Supporting contract used by the API below; it is not a separate package export.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L294)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `traceId` | `string` | Required |
+| `name` | `string` | Required |
+| `value` | `string` | Required |
+| `dataType` | `ScoreDataType \| undefined` | `ScoreDataType.NUMERIC` |
+| `source` | `string \| undefined` | `"PROGRAMMATIC"` |
+| `reason` | `string \| null \| undefined` | `null` |
+| `metadata` | `Record<string, unknown> \| undefined` | `{}` |
+
+## `ScoreDataType`
+
+```ts
+import { ScoreDataType } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L41)
+
+### Values
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `NUMERIC` | `string` | `"NUMERIC"` |
+| `BOOLEAN` | `string` | `"BOOLEAN"` |
+| `CATEGORICAL` | `string` | `"CATEGORICAL"` |
+
+## `SpanData`
+
+```ts
+import { SpanData } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L112)
+
+### Constructor
+
+```text
+new SpanData(init: SpanDataInit): SpanData
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `init` | `SpanDataInit` | Required |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `spanId` | `string` | `newUuid()` |
+| `parentSpanId` | `string \| null` | `null` |
+| `name` | `string` | Instance value |
+| `kind` | `SpanKind` | `SpanKind.OTHER` |
+| `status` | `SpanStatusCode` | `SpanStatusCode.UNSET` |
+| `input` | `unknown` | `null` |
+| `output` | `unknown` | `null` |
+| `model` | `string \| null` | `null` |
+| `tokenUsage` | `Record<string, number> \| null` | `null` |
+| `metadata` | `Record<string, unknown>` | `{}` |
+| `startedAt` | `Date` | Instance value |
+| `endedAt` | `Date \| null` | `null` |
+| `error` | `string \| null` | `null` |
+| `completionStartTime` | `Date \| null` | `null` |
+| `modelParameters` | `Record<string, unknown> \| null` | `null` |
+| `cost` | `Record<string, number> \| null` | `null` |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="toApiDict">
+
+Serialize to a dict matching the backend POST /traces span schema.
+
+```text
+toApiDict(): Record<string, unknown>
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## `SpanDataInit`
+
+Supporting contract used by the API below; it is not a separate package export.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L93)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `spanId` | `string \| undefined` | `newUuid()` |
+| `parentSpanId` | `string \| null \| undefined` | `null` |
+| `name` | `string` | Required |
+| `kind` | `SpanKind \| undefined` | `SpanKind.OTHER` |
+| `status` | `SpanStatusCode \| undefined` | `SpanStatusCode.UNSET` |
+| `input` | `unknown` | `null` |
+| `output` | `unknown` | `null` |
+| `model` | `string \| null \| undefined` | `null` |
+| `tokenUsage` | `Record<string, number> \| null \| undefined` | `null` |
+| `metadata` | `Record<string, unknown> \| undefined` | `{}` |
+| `startedAt` | `Date` | Required |
+| `endedAt` | `Date \| null \| undefined` | `null` |
+| `error` | `string \| null \| undefined` | `null` |
+| `completionStartTime` | `Date \| null \| undefined` | `null` |
+| `modelParameters` | `Record<string, unknown> \| null \| undefined` | `null` |
+| `cost` | `Record<string, number> \| null \| undefined` | `null` |
+
+## `SpanKind`
+
+```ts
+import { SpanKind } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L15)
+
+### Values
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `AGENT` | `string` | `"AGENT"` |
+| `TOOL` | `string` | `"TOOL"` |
+| `LLM` | `string` | `"LLM"` |
+| `RETRIEVER` | `string` | `"RETRIEVER"` |
+| `CHAIN` | `string` | `"CHAIN"` |
+| `EMBEDDING` | `string` | `"EMBEDDING"` |
+| `OTHER` | `string` | `"OTHER"` |
+
+## `SpanStatusCode`
+
+```ts
+import { SpanStatusCode } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L26)
+
+### Values
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `UNSET` | `string` | `"UNSET"` |
+| `OK` | `string` | `"OK"` |
+| `ERROR` | `string` | `"ERROR"` |
+
+## `TraceData`
+
+```ts
+import { TraceData } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L215)
+
+### Constructor
+
+```text
+new TraceData(init: TraceDataInit): TraceData
+```
+
+| Parameter | Type | Default / passing |
+| --- | --- | --- |
+| `init` | `TraceDataInit` | Required |
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `traceId` | `string` | `newUuid()` |
+| `name` | `string` | Instance value |
+| `status` | `TraceStatus` | `TraceStatus.COMPLETED` |
+| `input` | `unknown` | `null` |
+| `output` | `unknown` | `null` |
+| `metadata` | `Record<string, unknown>` | `{}` |
+| `startedAt` | `Date` | Instance value |
+| `endedAt` | `Date \| null` | `null` |
+| `sessionId` | `string \| null` | `null` |
+| `userId` | `string \| null` | `null` |
+| `tags` | `string[]` | `[]` |
+| `environment` | `string \| null` | `null` |
+| `release` | `string \| null` | `null` |
+| `spans` | `SpanData[]` | `[]` |
+
+### Methods
+
+<AccordionGroup>
+<Accordion title="toApiDict">
+
+Serialize to a dict matching the backend POST /traces schema.
+
+```text
+toApiDict(): Record<string, unknown>
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## `TraceDataInit`
+
+Supporting contract used by the API below; it is not a separate package export.
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L198)
+
+### Fields and properties
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `traceId` | `string \| undefined` | `newUuid()` |
+| `name` | `string` | Required |
+| `status` | `TraceStatus \| undefined` | `TraceStatus.COMPLETED` |
+| `input` | `unknown` | `null` |
+| `output` | `unknown` | `null` |
+| `metadata` | `Record<string, unknown> \| undefined` | `{}` |
+| `startedAt` | `Date` | Required |
+| `endedAt` | `Date \| null \| undefined` | `null` |
+| `sessionId` | `string \| null \| undefined` | `null` |
+| `userId` | `string \| null \| undefined` | `null` |
+| `tags` | `string[] \| undefined` | `[]` |
+| `environment` | `string \| null \| undefined` | `null` |
+| `release` | `string \| null \| undefined` | `null` |
+| `spans` | `SpanData[] \| undefined` | `[]` |
+
+## `TraceStatus`
+
+```ts
+import { TraceStatus } from "pandaprobe";
+```
+
+[Source declaration](https://github.com/chirpz-ai/pandaprobe-sdk/blob/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript/src/schemas.ts#L33)
+
+### Values
+
+| Name | Type | Default / contract |
+| --- | --- | --- |
+| `PENDING` | `string` | `"PENDING"` |
+| `RUNNING` | `string` | `"RUNNING"` |
+| `COMPLETED` | `string` | `"COMPLETED"` |
+| `ERROR` | `string` | `"ERROR"` |
+
+---
+
+Signatures and fields are generated from the [SDK source](https://github.com/chirpz-ai/pandaprobe-sdk/tree/92d8c37fba00e87ac6f0104cd293990aa5d5e621/libraries/typescript). See the [import index](/reference/typescript/overview#public-import-index) for available entry points.
