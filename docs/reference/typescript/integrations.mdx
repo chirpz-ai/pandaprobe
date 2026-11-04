@@ -7,7 +7,7 @@ These APIs enable tracing. They do not enable reflection by themselves. Use the 
 
 LangChain, LangGraph, and DeepAgents use callback handlers passed to native invocation configuration. Their inherited callback methods are framework hooks; applications normally construct a handler once and let the framework call it. The callback contracts below include those inherited SDK methods.
 
-Other integrations use the framework's adapter, processor, query wrapper, or agent wrapper. Register instrumentation once at application startup. See [Reflect integrations](/reflect/frameworks) for memory tooling and reflection continuation.
+Other integrations use the framework's adapter, processor, query wrapper, or agent wrapper. Register instrumentation once at application startup. See [Reflect integrations](/reflect/integrations/overview) for memory tooling and reflection continuation.
 
 Await OpenAI Agents `instrument()` or use its processor factory with the native SDK. Claude integration wraps the query function because ESM modules cannot be patched like Python modules. Vercel model middleware instruments LLM calls; `wrapVercelAgent` adds the agent/step/tool hierarchy. Google ADK and CrewAI are not TypeScript exports.
 
@@ -28,7 +28,7 @@ const invocationConfig = { callbacks: [handler] };
 // Keep client alive for the agent's lifetime, then await client.shutdown().
 ```
 
-Full native setup examples are in the [tracing integrations](/tracing/integrations/overview) and [Reflect integrations](/reflect/frameworks).
+Full native setup examples are in the [tracing integrations](/tracing/integrations/overview) and [Reflect integrations](/reflect/integrations/overview).
 
 ## `AdapterOptions`
 
