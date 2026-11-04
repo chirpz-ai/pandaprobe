@@ -9,4 +9,4 @@ invocation_config = {"callbacks": [handler]}
 # Keep client alive for the agent's lifetime, then call client.shutdown().
 ```
 
-Full native setup examples are in the [tracing integrations](/tracing/integrations/overview) and [Reflect integrations](/reflect/frameworks).
+Full native setup examples are in the [tracing integrations](/tracing/integrations/overview) and [Reflect integrations](/reflect/integrations/overview).
