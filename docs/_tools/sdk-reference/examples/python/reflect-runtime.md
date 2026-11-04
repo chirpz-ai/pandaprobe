@@ -1,4 +1,4 @@
-This function wraps an already configured native agent or an async `Invocation` callback. The agent must include its tracing integration; use a [framework guide](/reflect/frameworks) to construct one with Reflect tooling.
+This function wraps an already configured native agent or an async `Invocation` callback. The agent must include its tracing integration; use a [framework guide](/reflect/integrations/overview) to construct one with Reflect tooling.
 
 ```python
 from pandaprobe import Client
