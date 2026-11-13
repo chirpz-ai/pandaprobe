@@ -14,7 +14,7 @@
   },
   "background": {
     "color": {
-      "dark": "#0c0c0b"
+      "dark": "#191919"
     }
   },
   "api": {
@@ -515,7 +515,7 @@
       "googlebot": "index, follow",
       "google": "notranslate",
       "generator": "PandaProbe",
-      "theme-color": "#0c0c0b",
+      "theme-color": "#191919",
       "color-scheme": "light dark",
       "format-detection": "telephone=no",
       "referrer": "origin",
@@ -532,7 +532,7 @@
       "apple-mobile-web-app-status-bar-style": "black-translucent",
       "apple-mobile-web-app-title": "PandaProbe Docs",
       "application-name": "PandaProbe",
-      "msapplication-TileColor": "#0c0c0b",
+      "msapplication-TileColor": "#191919",
       "og:type": "website",
       "og:image": "https://docs.pandaprobe.com/assets/og-image-docs.png",
       "og:site_name": "PandaProbe Documentation",
