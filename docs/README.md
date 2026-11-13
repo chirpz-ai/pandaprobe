@@ -80,7 +80,7 @@ All site configuration lives in `docs.json`. Key settings:
 |---|---|
 | `theme` | Mintlify theme (`aspen`) |
 | `colors` | Neutral accents (`#18181B` / `#E4E4E7`); blue (`#2F86FF`) reserved for primary button backgrounds in `style.css` |
-| `background.color.dark` | Dark mode background (`#0c0c0b`) |
+| `background.color.dark` | Dark mode background (`#191919`) |
 | `logo` | Logo images for light/dark mode |
 | `navigation` | Full sidebar and tab structure |
 

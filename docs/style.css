@@ -43,6 +43,7 @@ html button.rounded-xl,
   --overview-border: #e4e4e7;
   --overview-muted: #52525b;
   --overview-surface: #f7f8fa;
+  --overview-hover: #f7f8fa;
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
@@ -52,13 +53,15 @@ html button.rounded-xl,
 }
 
 .dark #overview-content {
-  --overview-background: #0c0c0b;
+  --overview-background: #191919;
   --overview-text: #e4e4e7;
-  --overview-border: #252528;
+  --overview-border: rgb(255 255 255 / 10%);
   --overview-muted: #a1a1aa;
-  --overview-surface: #151517;
+  /* Match Mintlify's dark surfaces and button hover fills. */
+  --overview-surface: rgb(255 255 255 / 5%);
+  --overview-hover: rgb(255 255 255 / 10%);
   color: #fafafa;
-  background: #0c0c0b;
+  background: #191919;
 }
 
 #overview-content .overview-hero {
@@ -117,7 +120,7 @@ html button.rounded-xl,
 }
 
 #overview-content a.overview-button:hover {
-  background-color: var(--overview-surface);
+  background-color: var(--overview-hover);
 }
 
 #overview-content .overview-primary {
@@ -236,7 +239,7 @@ html button.rounded-xl,
 }
 
 #overview-content .overview-path-body a:hover {
-  background: var(--overview-surface);
+  background: var(--overview-hover);
   color: var(--overview-text);
 }
 
@@ -268,7 +271,7 @@ html button.rounded-xl,
 }
 
 .dark body:has(#overview-content) {
-  background: #0c0c0b;
+  background: #191919;
 }
 
 #overview-content .overview-path-body a > span:last-child {
@@ -286,7 +289,7 @@ html button.rounded-xl,
   justify-content: space-between;
   min-height: 40px;
   padding: 4px 16px;
-  background: var(--overview-surface);
+  background: transparent;
   border-radius: calc(var(--docs-radius-large) - 1px) calc(var(--docs-radius-large) - 1px) 0 0;
   color: var(--overview-muted);
   font-size: 0.8125rem;
@@ -330,7 +333,7 @@ html button.rounded-xl,
 }
 
 #overview-content .overview-copy-icon:hover {
-  background: var(--overview-border);
+  background: var(--overview-hover);
   color: var(--overview-text);
 }
 
@@ -339,7 +342,7 @@ html button.rounded-xl,
 }
 
 #overview-content .overview-primary:hover {
-  filter: brightness(0.95);
+  filter: brightness(1.1);
 }
 
 #overview-content button:focus-visible,
