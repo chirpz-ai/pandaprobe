@@ -48,15 +48,16 @@ Use [PandaProbe Cloud](https://app.pandaprobe.com/) for a managed deployment, or
 
 Explore the docs:
 
-- [Tracing quickstart](https://docs.pandaprobe.com/tracing/get-started/quickstart)
-- [Evaluation quickstart](https://docs.pandaprobe.com/evaluation/get-started/quickstart)
-- [Reflect quickstart](https://docs.pandaprobe.com/reflect/quickstart)
-
 <p align="left">
   <a href="https://docs.pandaprobe.com/overview" target="_blank">
     <img alt="Documentation" src="https://img.shields.io/badge/Docs%20Overview-0066FF" />
   </a>
 </p>
+
+- [Tracing quickstart](https://docs.pandaprobe.com/tracing/get-started/quickstart)
+- [Evaluation quickstart](https://docs.pandaprobe.com/evaluation/get-started/quickstart)
+- [Reflect quickstart](https://docs.pandaprobe.com/reflect/quickstart)
+
 
 ## PandaProbe Cloud
 
