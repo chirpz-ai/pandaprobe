@@ -153,7 +153,7 @@ export function TimeInput({ value, onChange, className }: TimeInputProps) {
         type="button"
         tabIndex={-1}
         onClick={togglePeriod}
-        className="ml-0.5 px-1 h-5 text-[10px] font-mono font-medium bg-surface-hi text-text-dim hover:text-text border border-border transition-colors select-none"
+        className="ml-0.5 px-1 h-5 text-caption font-mono font-medium bg-surface-hi text-text-dim hover:text-text border border-border transition-colors select-none"
       >
         {period}
       </button>
