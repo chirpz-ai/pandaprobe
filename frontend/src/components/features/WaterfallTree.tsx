@@ -115,7 +115,7 @@ function WaterfallRow({
   return (
     <div
       className={cn(
-        "relative flex h-9 items-center pr-3 border-l-2 border-transparent hover:bg-surface-hi/60",
+        "relative flex h-9 items-center pr-3 rounded-control border-l-2 border-transparent hover:bg-surface-hi/60",
         selected && "bg-surface-hi",
       )}
       style={{
