@@ -465,7 +465,7 @@ export function Sidebar() {
               className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight hover:text-text transition-colors"
             >
               <Image
-                src="/favicon-32x32.png"
+                src="/favicon-96x96.png"
                 alt=""
                 width={18}
                 height={18}
@@ -479,7 +479,7 @@ export function Sidebar() {
               className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight"
             >
               <Image
-                src="/favicon-32x32.png"
+                src="/favicon-96x96.png"
                 alt=""
                 width={18}
                 height={18}
