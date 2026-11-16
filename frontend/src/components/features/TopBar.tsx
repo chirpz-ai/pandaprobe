@@ -83,7 +83,7 @@ export function TopBar() {
 
       <div className="flex items-center gap-3">
         {!AUTH_ENABLED && (
-          <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-warning border border-warning/30 bg-warning/5">
+          <span className="px-2 py-0.5 text-compact font-mono uppercase tracking-wider text-warning border border-warning/30 bg-warning/5">
             Dev Mode
           </span>
         )}
