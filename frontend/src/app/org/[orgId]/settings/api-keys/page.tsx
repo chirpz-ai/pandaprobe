@@ -187,7 +187,7 @@ export default function APIKeysPage() {
         <div className="border border-border overflow-x-auto">
           <table className="w-full text-xs font-mono">
             <thead>
-              <tr className="border-b border-border bg-surface-hi">
+              <tr className="border-b border-divider bg-surface-hi">
                 <th className="text-left px-3 py-2 text-text-muted font-normal">
                   Name
                 </th>
@@ -212,7 +212,7 @@ export default function APIKeysPage() {
               {keys.map((key) => (
                 <tr
                   key={key.id}
-                  className="border-b border-border hover:bg-surface-hi"
+                  className="border-b border-divider hover:bg-surface-hi"
                 >
                   <td className="px-3 py-2 text-text">{key.name}</td>
                   <td className="ph-no-capture px-3 py-2 text-text-dim font-mono">
