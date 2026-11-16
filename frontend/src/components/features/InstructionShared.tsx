@@ -235,7 +235,7 @@ export function NextSteps() {
               </span>
               <ExternalLink className="h-3 w-3 text-text-muted group-hover:text-text transition-colors" />
             </div>
-            <p className="text-[11px] font-mono text-text-muted mt-1.5 leading-relaxed">
+            <p className="text-caption font-mono text-text-muted mt-1.5 leading-relaxed">
               {link.description}
             </p>
           </a>
