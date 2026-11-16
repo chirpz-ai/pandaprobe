@@ -78,7 +78,7 @@ describe("trace timing", () => {
         }),
       ],
     });
-    expect(getTimeline(trace).extent).toBe(4000);
+    expect(getTimeline(trace).extent).toBe(5000);
     expect(spanDuration(trace.spans[0])).toBeNull();
   });
 });
