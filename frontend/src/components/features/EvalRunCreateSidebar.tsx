@@ -249,7 +249,7 @@ export function EvalRunCreateSidebar({
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between h-12 px-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-between h-12 px-4 border-b border-divider flex-shrink-0">
           <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider">
             Create {mode} evaluation run
           </h2>
@@ -259,7 +259,7 @@ export function EvalRunCreateSidebar({
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
                 Metrics <span className="text-error">*</span>
@@ -281,14 +281,14 @@ export function EvalRunCreateSidebar({
                 No metrics available
               </p>
             ) : (
-              <div className="max-h-64 overflow-y-auto border border-border/40 divide-y divide-border/40">
+              <div className="max-h-64 overflow-y-auto rounded-md bg-bg/30 p-1 space-y-1">
                 {metrics.map((metric) => {
                   const checked = selectedMetrics.has(metric.name);
                   return (
                     <label
                       key={metric.name}
                       className={cn(
-                        "flex items-start gap-2 px-2 py-1.5 cursor-pointer hover:bg-surface-hi transition-colors",
+                        "flex items-start gap-2 rounded-md px-2 py-2 cursor-pointer hover:bg-surface-hi transition-colors",
                         checked && "bg-surface-hi/40",
                       )}
                     >
@@ -316,7 +316,7 @@ export function EvalRunCreateSidebar({
             )}
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
                 Filters
@@ -342,7 +342,7 @@ export function EvalRunCreateSidebar({
             )}
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
                 Sampling rate
@@ -366,7 +366,7 @@ export function EvalRunCreateSidebar({
             </p>
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-4">
             <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
               Model
             </label>
@@ -403,7 +403,7 @@ export function EvalRunCreateSidebar({
             )}
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-4">
             <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
               Name (optional)
             </label>
@@ -417,7 +417,7 @@ export function EvalRunCreateSidebar({
           </div>
 
           {mode === "session" && (
-            <div className="px-4 py-3 border-b border-border">
+            <div className="px-4 py-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -464,7 +464,7 @@ export function EvalRunCreateSidebar({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3 flex-shrink-0">
+        <div className="flex items-center justify-end gap-2 border-t border-divider px-4 py-3 flex-shrink-0">
           <Button
             variant="secondary"
             size="sm"
