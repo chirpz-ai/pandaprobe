@@ -1,4 +1,5 @@
-FROM node:20-alpine AS base
+# Track the same Node major as .nvmrc; package.json enforces the minimum version.
+FROM node:24-alpine AS base
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
