@@ -25,7 +25,7 @@ export function SpanWaterfall({ trace }: { trace: TraceResponse }) {
   return (
     <div className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden border border-border bg-surface">
       <div
-        className="flex border-b border-border lg:hidden"
+        className="flex border-b border-divider lg:hidden"
         aria-label="Trace panels"
       >
         {(["waterfall", "details"] as const).map((pane) => (
