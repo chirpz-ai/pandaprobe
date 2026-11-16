@@ -93,8 +93,8 @@ export default function BillingPage() {
       {/* ── Current Subscription ─────────────────────────────────── */}
       {subscription && (
         <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-            Current Subscription
+          <h2 className="text-xs font-mono text-text-muted mb-3">
+            Current subscription
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs font-mono">
             <div>
@@ -150,8 +150,8 @@ export default function BillingPage() {
       {/* ── Current Period Usage ──────────────────────────────────── */}
       {usage && (
         <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-            Current Period Usage
+          <h2 className="text-xs font-mono text-text-muted mb-3">
+            Current period usage
           </h2>
           <div className="grid grid-cols-3 gap-6 text-xs font-mono">
             <div>
@@ -179,8 +179,8 @@ export default function BillingPage() {
       {/* ── Billing Breakdown ────────────────────────────────────── */}
       {billing && (
         <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-            Billing Breakdown
+          <h2 className="text-xs font-mono text-text-muted mb-3">
+            Billing breakdown
           </h2>
           <div className="grid grid-cols-3 gap-4 text-xs font-mono mb-4">
             {(["traces", "trace_evals", "session_evals"] as const).map(
@@ -244,8 +244,8 @@ function InvoicesTable({
 
   return (
     <div className="border-engraved bg-surface p-4">
-      <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-        Billing History
+      <h2 className="text-xs font-mono text-text-muted mb-3">
+        Billing history
       </h2>
       {loading ? (
         <p className="text-xs text-text-dim font-mono">Loading…</p>
