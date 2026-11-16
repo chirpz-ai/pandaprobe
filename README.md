@@ -36,9 +36,9 @@
 
 PandaProbe is an open source agent engineering platform for tracing, evaluating, and improving AI agents. It helps you understand what happened, check whether the work succeeded, and give your agent feedback it can use to make fewer mistakes.
 
-- **Trace** captures model calls, tool use, inputs, outputs, errors, latency, and usage. Group related executions into sessions to follow a conversation or task.
-- **Evaluate** measures the quality of traces and sessions, records programmatic scores, and identifies failures that need attention.
-- **Reflect** brings failure evidence back to your agent through a persistent rule filesystem. The agent proposes reusable guidance; independent validation tests changes before accepting them as shared rules for future runs.
+- **Trace** captures model calls, tool use, inputs, outputs, errors, latency, and usage. Group related executions into sessions to follow a conversation or task. [Tracing quickstart](https://docs.pandaprobe.com/tracing/get-started/quickstart).
+- **Evaluate** measures the quality of traces and sessions, records programmatic scores, and identifies failures that need attention. [Evaluation quickstart](https://docs.pandaprobe.com/evaluation/get-started/quickstart).
+- **Reflect** brings failure evidence back to your agent through a persistent rule filesystem. The agent proposes reusable guidance; independent validation tests changes before accepting them as shared rules for future runs. [Reflect quickstart](https://docs.pandaprobe.com/reflect/quickstart).
 
 Python and TypeScript SDKs connect to supported agent frameworks and model providers while preserving your existing agent, tools, and application logic. Start with tracing, add evaluations suited to your task, and enable Reflect when you have reproducible cases and outcome checks.
 
@@ -46,18 +46,13 @@ Use [PandaProbe Cloud](https://app.pandaprobe.com/) for a managed deployment, or
 
 ## Documentation
 
-Explore the docs:
+Start with the docs overview:
 
 <p align="left">
   <a href="https://docs.pandaprobe.com/overview" target="_blank">
-    <img alt="Documentation" src="https://img.shields.io/badge/Docs%20Overview-0066FF" />
+    <img alt="Docs overview" src="https://img.shields.io/badge/Docs%20Overview-0066FF" />
   </a>
 </p>
-
-- [Tracing quickstart](https://docs.pandaprobe.com/tracing/get-started/quickstart)
-- [Evaluation quickstart](https://docs.pandaprobe.com/evaluation/get-started/quickstart)
-- [Reflect quickstart](https://docs.pandaprobe.com/reflect/quickstart)
-
 
 ## PandaProbe Cloud
 
