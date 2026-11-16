@@ -269,7 +269,7 @@ export default function SessionDetailPage({
 
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex-shrink-0 pb-2">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider">
+          <h2 className="text-xs font-mono text-text-muted">
             Traces · {session.trace_count}
           </h2>
         </div>
