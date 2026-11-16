@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, memo } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import {
   ChevronRight,
   ChevronDown,
@@ -13,264 +13,283 @@ import {
   Circle,
   Activity,
 } from "lucide-react";
-import type { SpanResponse, TraceResponse } from "@/lib/api/types";
-import type { SpanKind } from "@/lib/api/enums";
-import { SpanStatusCode } from "@/lib/api/enums";
+import type { TraceResponse } from "@/lib/api/types";
 import { formatDuration } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
+import {
+  getTimeline,
+  getBarPosition,
+  spanDuration,
+  timestamp,
+  formatTick,
+  type SpanNode,
+  type Timeline,
+} from "@/lib/utils/trace-timeline";
 
-export interface SpanNode extends SpanResponse {
-  children: SpanNode[];
-}
-
-export function buildTree(spans: SpanResponse[]): SpanNode[] {
-  const map = new Map<string, SpanNode>();
-  const roots: SpanNode[] = [];
-
-  for (const span of spans) {
-    map.set(span.span_id, { ...span, children: [] });
-  }
-
-  for (const node of map.values()) {
-    if (node.parent_span_id && map.has(node.parent_span_id)) {
-      map.get(node.parent_span_id)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-
-  return roots;
-}
-
-const SPAN_KIND_CONFIG: Record<
-  string,
-  { icon: typeof Bot; color: string; label: string }
-> = {
-  AGENT: { icon: Bot, color: "#3b82f6", label: "Agent" },
-  TOOL: { icon: Wrench, color: "#eab308", label: "Tool" },
-  LLM: { icon: Sparkles, color: "#a78bfa", label: "LLM" },
-  RETRIEVER: { icon: Search, color: "#22c55e", label: "Retriever" },
-  CHAIN: { icon: Link, color: "#858d9b", label: "Chain" },
-  EMBEDDING: { icon: Grid3X3, color: "#06b6d4", label: "Embedding" },
-  OTHER: { icon: Circle, color: "#737b89", label: "Other" },
+const KINDS = {
+  AGENT: { icon: Bot, color: "#60a5fa" },
+  TOOL: { icon: Wrench, color: "#fbbf24" },
+  LLM: { icon: Sparkles, color: "#a78bfa" },
+  RETRIEVER: { icon: Search, color: "#4ade80" },
+  CHAIN: { icon: Link, color: "#38bdf8" },
+  EMBEDDING: { icon: Grid3X3, color: "#22d3ee" },
+  OTHER: { icon: Circle, color: "#94a3b8" },
+  TRACE: { icon: Activity, color: "#38bdf8" },
 };
 
-function getKindConfig(kind: SpanKind) {
-  return SPAN_KIND_CONFIG[kind] ?? SPAN_KIND_CONFIG.OTHER;
-}
-
-function statusDotColor(status: string): string {
-  if (status === SpanStatusCode.OK) return "bg-success";
-  if (status === SpanStatusCode.ERROR) return "bg-error";
-  return "bg-text-muted";
-}
-
-interface WaterfallTreeProps {
+interface Props {
   trace: TraceResponse;
   tree: SpanNode[];
   selectedId: string | null;
   onSelect: (id: string) => void;
 }
 
-export function WaterfallTree({
-  trace,
-  tree,
-  selectedId,
-  onSelect,
-}: WaterfallTreeProps) {
-  return (
-    <div className="py-1">
-      <TraceRootNode
-        trace={trace}
-        selected={selectedId === "trace"}
-        onSelect={() => onSelect("trace")}
-      />
-      {tree.map((node, i) => (
-        <SpanWaterfallNode
-          key={node.span_id}
-          node={node}
-          depth={0}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          isLast={i === tree.length - 1}
-        />
-      ))}
-    </div>
-  );
-}
-
-function TraceRootNode({
-  trace,
-  selected,
-  onSelect,
-}: {
-  trace: TraceResponse;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  const latencyMs =
-    trace.started_at && trace.ended_at
-      ? new Date(trace.ended_at).getTime() -
-        new Date(trace.started_at).getTime()
+export function WaterfallTree({ trace, tree, selectedId, onSelect }: Props) {
+  const timeline = useMemo(() => getTimeline(trace), [trace]);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const rows: { node: SpanNode; depth: number }[] = [];
+  const visit = (nodes: SpanNode[], depth: number) => {
+    for (const node of nodes) {
+      rows.push({ node, depth });
+      if (!collapsed.has(node.span_id)) visit(node.children, depth + 1);
+    }
+  };
+  if (!collapsed.has("trace")) visit(tree, 1);
+  const toggle = (id: string) =>
+    setCollapsed((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const traceStart = timestamp(trace.started_at);
+  const traceEnd = timestamp(trace.ended_at);
+  const traceDuration =
+    traceStart != null && traceEnd != null
+      ? Math.max(0, traceEnd - traceStart)
       : null;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "w-full flex items-center gap-2 px-3 py-2 text-left transition-colors duration-100",
-        "hover:bg-surface-hi",
-        selected
-          ? "bg-surface-hi border-l-2 border-l-primary"
-          : "border-l-2 border-l-transparent",
-      )}
-    >
-      <Activity className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-      <span className="text-xs font-mono text-text truncate flex-1">
-        {trace.name}
-      </span>
-      <span className="text-[10px] font-mono text-text-muted uppercase tracking-wide flex-shrink-0">
-        Trace
-      </span>
-      {latencyMs != null && (
-        <span className="text-[10px] font-mono text-text-dim flex-shrink-0">
-          {formatDuration(latencyMs)}
-        </span>
-      )}
-    </button>
+    <div className="min-w-0 min-h-full">
+      <div className="sticky top-0 z-20 bg-surface border-b border-border">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          <span className="hidden lg:inline">
+            Waterfall · {trace.spans.length} spans
+          </span>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setCollapsed(new Set())}
+              className="hover:text-text focus-visible:outline focus-visible:outline-primary"
+            >
+              Expand all
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setCollapsed(
+                  new Set([
+                    "trace",
+                    ...trace.spans.map((span) => span.span_id),
+                  ]),
+                )
+              }
+              className="hover:text-text focus-visible:outline focus-visible:outline-primary"
+            >
+              Collapse all
+            </button>
+          </div>
+        </div>
+        <div
+          className="relative h-7 ml-3 mr-10 text-[10px] font-mono text-text-muted"
+          aria-label="Elapsed time"
+        >
+          {timeline.ticks.map((tick, i) => (
+            <span
+              key={tick}
+              className="absolute bottom-1 tabular-nums"
+              style={{
+                left: `${(tick / timeline.extent) * 100}%`,
+                transform:
+                  i === 0
+                    ? undefined
+                    : i === timeline.ticks.length - 1
+                      ? "translateX(-100%)"
+                      : "translateX(-50%)",
+              }}
+            >
+              {formatTick(tick, timeline.extent)}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="relative py-1">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-3 right-10"
+        >
+          {timeline.ticks.map((tick) => (
+            <div
+              key={tick}
+              className="absolute inset-y-0 border-l border-border/60"
+              style={{ left: `${(tick / timeline.extent) * 100}%` }}
+            />
+          ))}
+        </div>
+        <TimelineRow
+          id="trace"
+          name={trace.name}
+          kind="TRACE"
+          status={trace.status}
+          startedAt={trace.started_at}
+          duration={traceDuration}
+          depth={0}
+          timeline={timeline}
+          selected={selectedId === "trace"}
+          onSelect={onSelect}
+          hasChildren={tree.length > 0}
+          expanded={!collapsed.has("trace")}
+          onToggle={toggle}
+        />
+        {rows.map(({ node, depth }) => (
+          <TimelineRow
+            key={node.span_id}
+            id={node.span_id}
+            name={node.name}
+            kind={node.kind}
+            model={node.model}
+            status={node.status}
+            startedAt={node.started_at}
+            duration={spanDuration(node)}
+            depth={depth}
+            timeline={timeline}
+            selected={selectedId === node.span_id}
+            onSelect={onSelect}
+            hasChildren={node.children.length > 0}
+            expanded={!collapsed.has(node.span_id)}
+            onToggle={toggle}
+          />
+        ))}
+        {trace.spans.length === 0 && (
+          <p className="p-6 text-center text-xs font-mono text-text-muted">
+            No spans recorded
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
-const INDENT_PX = 20;
-
-const SpanWaterfallNode = memo(function SpanWaterfallNode({
-  node,
+function TimelineRow({
+  id,
+  name,
+  kind,
+  model,
+  status,
+  startedAt,
+  duration,
   depth,
-  selectedId,
+  timeline,
+  selected,
   onSelect,
-  isLast,
+  hasChildren,
+  expanded,
+  onToggle,
 }: {
-  node: SpanNode;
+  id: string;
+  name: string;
+  kind: keyof typeof KINDS;
+  model?: string | null;
+  status: string;
+  startedAt: string | null;
+  duration: number | null;
   depth: number;
-  selectedId: string | null;
+  timeline: Timeline;
+  selected: boolean;
   onSelect: (id: string) => void;
-  isLast: boolean;
+  hasChildren: boolean;
+  expanded: boolean;
+  onToggle: (id: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
-  const hasChildren = node.children.length > 0;
-  const kindCfg = getKindConfig(node.kind);
-  const KindIcon = kindCfg.icon;
-  const isSelected = selectedId === node.span_id;
-
+  const config = KINDS[kind] ?? KINDS.OTHER;
+  const Icon = config.icon;
+  const position = getBarPosition(startedAt, duration, timeline);
+  const isError = status === "ERROR" || status === "FAILED";
+  const color = isError ? "var(--color-error)" : config.color;
+  const tooltip = `${name} · ${kind}${model ? ` · ${model}` : ""}\n${formatDuration(duration)} · ${status}${position ? ` · +${formatDuration(timestamp(startedAt)! - timeline.start)}` : " · Start time unavailable"}`;
   return (
-    <div>
+    <div
+      className={cn(
+        "relative flex h-11 items-stretch border-l-2 border-transparent hover:bg-surface-hi/50",
+        selected && "bg-surface-hi/70",
+      )}
+      style={selected ? { borderLeftColor: color } : undefined}
+    >
       <button
         type="button"
-        onClick={() => onSelect(node.span_id)}
-        className={cn(
-          "w-full flex items-center gap-1.5 py-1.5 pr-3 text-left transition-colors duration-100",
-          "hover:bg-surface-hi group",
-          isSelected ? "bg-surface-hi" : "",
-        )}
-        style={{
-          paddingLeft: `${(depth + 1) * INDENT_PX + 12}px`,
-          borderLeft: isSelected
-            ? `2px solid ${kindCfg.color}`
-            : "2px solid transparent",
-        }}
+        onClick={() => onSelect(id)}
+        aria-pressed={selected}
+        aria-label={`${name} ${kind} ${formatDuration(duration)}${isError ? " Error" : ""}`}
+        title={tooltip}
+        className="relative flex-1 min-w-0 ml-2.5 mr-1 text-left focus-visible:outline focus-visible:outline-primary focus-visible:-outline-offset-2"
       >
-        {/* Connector stub */}
-        <div className="relative flex-shrink-0 w-4 h-4 flex items-center justify-center">
-          {depth > 0 && (
-            <div
-              className="absolute border-l border-b border-line"
-              style={{
-                left: -10,
-                top: -6,
-                width: 10,
-                height: isLast ? 14 : 14,
-                borderBottomLeftRadius: 0,
-              }}
-            />
-          )}
-          {hasChildren ? (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded((v) => !v);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setExpanded((v) => !v);
-                }
-              }}
-              className="relative z-10 text-text-muted hover:text-text transition-colors cursor-pointer"
-            >
-              {expanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-            </span>
-          ) : (
-            <div
-              className="h-1 w-1 flex-shrink-0"
-              style={{ backgroundColor: kindCfg.color, opacity: 0.5 }}
-            />
-          )}
-        </div>
-
-        <KindIcon
-          className="h-3.5 w-3.5 flex-shrink-0"
-          style={{ color: kindCfg.color }}
-        />
-
-        <span className="text-xs font-mono text-text truncate flex-1 min-w-0">
-          {node.name}
-        </span>
-
-        <span
-          className="text-[10px] font-mono uppercase tracking-wide flex-shrink-0 opacity-60"
-          style={{ color: kindCfg.color }}
-        >
-          {kindCfg.label}
-        </span>
-
-        {node.model && (
-          <span className="text-[10px] font-mono text-text-muted flex-shrink-0 max-w-[80px] truncate">
-            {node.model}
-          </span>
-        )}
-
-        <span className="text-[10px] font-mono text-text-dim flex-shrink-0">
-          {formatDuration(node.latency_ms)}
-        </span>
-
-        <div
-          className={cn(
-            "h-1.5 w-1.5 flex-shrink-0",
-            statusDotColor(node.status),
-          )}
-        />
-      </button>
-
-      {expanded &&
-        hasChildren &&
-        node.children.map((child, i) => (
-          <SpanWaterfallNode
-            key={child.span_id}
-            node={child}
-            depth={depth + 1}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            isLast={i === node.children.length - 1}
+        {position && (
+          <span
+            aria-hidden="true"
+            data-timeline-bar={id}
+            className={cn(
+              "absolute top-1.5 bottom-1.5 rounded-sm border-l-2",
+              duration == null && "border border-dashed",
+            )}
+            style={
+              {
+                left: `min(${position.left}%, calc(100% - 2px))`,
+                width: `${position.width}%`,
+                minWidth: 2,
+                backgroundColor: `color-mix(in srgb, ${color} ${selected ? 35 : 20}%, transparent)`,
+                borderColor: color,
+              } as CSSProperties
+            }
           />
-        ))}
+        )}
+        <span
+          className="absolute inset-y-0 flex items-center gap-1.5 pr-1 max-w-full"
+          style={{
+            left: `clamp(0px, calc(${position?.left ?? 0}% + ${Math.min(depth, 5) * 8 + 6}px), max(0px, calc(100% - 250px)))`,
+            right: 0,
+          }}
+        >
+          <Icon className="h-3.5 w-3.5 shrink-0" style={{ color }} />
+          <span className="text-xs font-mono text-text truncate">{name}</span>
+          <span
+            className="text-[9px] font-mono shrink-0 uppercase"
+            style={{ color }}
+          >
+            {kind}
+          </span>
+          <span className="text-[10px] font-mono text-text-dim shrink-0 tabular-nums">
+            {formatDuration(duration)}
+          </span>
+          {isError && <span className="text-[9px] text-error">Error</span>}
+        </span>
+      </button>
+      <div className="flex w-9 shrink-0 items-center justify-center">
+        {hasChildren && (
+          <button
+            type="button"
+            onClick={() => onToggle(id)}
+            aria-label={`${expanded ? "Collapse" : "Expand"} ${name}`}
+            aria-expanded={expanded}
+            className="flex h-9 w-8 items-center justify-center text-text-muted hover:text-text focus-visible:outline focus-visible:outline-primary"
+          >
+            {expanded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
-});
+}
