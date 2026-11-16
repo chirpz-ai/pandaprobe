@@ -30,14 +30,14 @@ export function Pagination({
       <div className="flex items-center gap-3">
         {limit != null && onLimitChange && (
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-text-muted font-mono">Rows</span>
+            <span className="text-caption text-text-muted font-mono">Rows</span>
             <div className="flex items-center gap-0.5">
               {LIMIT_OPTIONS.map((opt) => (
                 <button
                   key={opt}
                   type="button"
                   onClick={() => onLimitChange(opt)}
-                  className={`px-1.5 py-0.5 text-[10px] font-mono transition-colors ${
+                  className={`px-1.5 py-0.5 text-caption font-mono transition-colors ${
                     limit === opt
                       ? "text-primary bg-primary/10"
                       : "text-text-muted hover:text-text"
