@@ -20,7 +20,7 @@ describe("FormattedData", () => {
         }}
       />,
     );
-    expect(screen.getByText("assistant")).toBeInTheDocument();
+    expect(screen.getByText("Assistant")).toBeInTheDocument();
     expect(screen.getByText("three").tagName).toBe("STRONG");
     expect(screen.getByText("search")).toBeInTheDocument();
     expect(screen.getByText("order")).toBeInTheDocument();
