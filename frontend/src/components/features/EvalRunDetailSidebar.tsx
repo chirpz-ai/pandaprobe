@@ -220,7 +220,7 @@ export function EvalRunDetailSidebar({
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between h-12 px-4 border-b border-border flex-shrink-0 gap-2">
+        <div className="flex items-center justify-between h-12 px-4 border-b border-divider flex-shrink-0 gap-2">
           <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider truncate">
             {title}
           </h2>
@@ -254,7 +254,7 @@ export function EvalRunDetailSidebar({
             </div>
           ) : !run ? null : (
             <>
-              <div className="px-4 py-3 border-b border-border space-y-2">
+              <div className="px-4 py-4 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <StatusBadge status={run.status} />
                   <Badge variant="default">{run.target_type}</Badge>
@@ -333,7 +333,7 @@ export function EvalRunDetailSidebar({
                 </div>
               </div>
 
-              <div className="px-4 py-3 border-b border-border">
+              <div className="px-4 py-4">
                 <label className="block text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
                   Metrics
                 </label>
@@ -353,23 +353,20 @@ export function EvalRunDetailSidebar({
               </div>
 
               {filtersList.length > 0 && (
-                <div className="px-4 py-3 border-b border-border">
+                <div className="px-4 py-4">
                   <label className="flex items-center gap-1 text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
                     <Filter className="h-2.5 w-2.5" />
                     Filters
                   </label>
-                  <div className="border border-border/40">
+                  <div className="rounded-md bg-bg/30 p-1">
                     <table className="text-[11px] font-mono w-full border-collapse">
                       <tbody>
                         {filtersList.map(([key, val]) => (
-                          <tr
-                            key={key}
-                            className="border-b border-border/40 last:border-0"
-                          >
-                            <td className="text-text-muted px-2 py-0.5 whitespace-nowrap align-top border-r border-border/40">
+                          <tr key={key} className="align-top">
+                            <td className="text-text-muted px-2 py-1.5 whitespace-nowrap align-top">
                               {key}
                             </td>
-                            <td className="text-text px-2 py-0.5 break-all">
+                            <td className="text-text px-2 py-1.5 break-all">
                               {val}
                             </td>
                           </tr>
@@ -381,7 +378,7 @@ export function EvalRunDetailSidebar({
               )}
 
               {run.error_message && (
-                <div className="px-4 py-3 border-b border-border">
+                <div className="px-4 py-4">
                   <label className="block text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
                     Error
                   </label>
@@ -393,7 +390,7 @@ export function EvalRunDetailSidebar({
                 </div>
               )}
 
-              <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+              <div className="px-4 py-4 flex items-center gap-2">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -427,7 +424,7 @@ export function EvalRunDetailSidebar({
                   type="button"
                   onClick={() => setScoresOpen((v) => !v)}
                   aria-expanded={scoresOpen}
-                  className="w-full flex items-center justify-between h-10 px-4 border-b border-border hover:bg-surface-hi transition-colors focus:outline-none focus-visible:bg-surface-hi"
+                  className="w-full flex items-center justify-between h-10 px-4 border-b border-divider hover:bg-surface-hi transition-colors focus:outline-none focus-visible:bg-surface-hi"
                 >
                   <h3 className="text-xs font-mono text-info uppercase tracking-wider flex items-center gap-1.5">
                     {scoresOpen ? (
@@ -463,7 +460,7 @@ export function EvalRunDetailSidebar({
                           : "Scores will appear here as they are produced."}
                       </div>
                     ) : (
-                      <div className="divide-y divide-border">
+                      <div className="divide-y divide-divider">
                         {scores.map((score) => (
                           <ScoreRow
                             key={score.id}
@@ -477,7 +474,7 @@ export function EvalRunDetailSidebar({
                     <Link
                       href={`${basePath}/evaluations/${mode}-scores?eval_run_id=${run.id}`}
                       onClick={onClose}
-                      className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors"
+                      className="flex items-center justify-between gap-2 px-4 py-3 border-t border-divider text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi transition-colors"
                     >
                       <span>View full scores list for this run</span>
                       <ArrowRight className="h-3 w-3 flex-shrink-0" />
