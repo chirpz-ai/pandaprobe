@@ -325,7 +325,7 @@ function ExpandedRowDetails({
         <div className="flex items-start gap-2">
           <MessageSquareText className="h-3 w-3 text-text-muted mt-0.5 flex-shrink-0" />
           <div className="min-w-0">
-            <div className="text-[10px] font-mono text-text-muted uppercase tracking-wider mb-0.5">
+            <div className="text-caption font-mono text-text-muted mb-0.5">
               Reasoning
             </div>
             <p className="text-xs font-mono text-text-dim whitespace-pre-wrap break-words">
@@ -339,9 +339,9 @@ function ExpandedRowDetails({
         <MetadataSection data={score.metadata as Record<string, unknown>} />
       )}
 
-      <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
+      <div className="grid grid-cols-2 gap-3 text-caption font-mono">
         <DetailRow label="Data type">
-          <Badge variant="default" className="text-[10px]">
+          <Badge variant="default" className="text-caption">
             {score.data_type}
           </Badge>
         </DetailRow>
@@ -402,9 +402,7 @@ function DetailRow({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] uppercase tracking-wider text-text-muted">
-        {label}
-      </div>
+      <div className="text-caption text-text-muted">{label}</div>
       <div className="mt-0.5 min-w-0">{children}</div>
     </div>
   );
