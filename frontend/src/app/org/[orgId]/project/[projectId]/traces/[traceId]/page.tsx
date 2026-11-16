@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useRef, useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,6 +11,7 @@ import {
   BarChart3,
   FlaskConical,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { getTrace, deleteTrace } from "@/lib/api/traces";
 import { getTraceScoresByTraceId } from "@/lib/api/evaluations";
@@ -57,8 +58,6 @@ export default function TraceDetailPage({
   const [copiedId, setCopiedId] = useState(false);
   const [scoresOpen, setScoresOpen] = useState(false);
   const [runEvalOpen, setRunEvalOpen] = useState(false);
-  // The span panel below can expand over this card to gain reading room.
-  const metadataRef = useRef<HTMLDivElement>(null);
 
   const hasPendingEval = useHasPendingEvalForTarget("trace", traceId);
 
@@ -107,21 +106,35 @@ export default function TraceDetailPage({
       : null;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+    <div className="flex h-full min-h-[540px] flex-col gap-3 animate-fade-in">
+      <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Go back"
+            onClick={() => router.back()}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-lg font-mono text-primary">{trace.name}</h1>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-text-muted font-mono">
-              {trace.trace_id}
+          <h1
+            className="truncate text-lg font-mono text-primary"
+            title={trace.name}
+          >
+            {trace.name}
+          </h1>
+          <div className="hidden xl:flex items-center gap-1.5">
+            <span
+              className="text-xs text-text-muted font-mono"
+              title={trace.trace_id}
+            >
+              {trace.trace_id.slice(0, 8)}
             </span>
             <Tooltip content={copiedId ? "Copied!" : "Copy trace ID"}>
               <button
                 className="text-text-muted hover:text-text transition-colors"
                 onClick={handleCopyId}
+                aria-label="Copy trace ID"
               >
                 {copiedId ? (
                   <Check className="h-3 w-3 text-success" />
@@ -132,10 +145,11 @@ export default function TraceDetailPage({
             </Tooltip>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
+            className="px-2 sm:px-3"
             onClick={() => setRunEvalOpen(true)}
           >
             <FlaskConical className="h-3 w-3" />
@@ -147,6 +161,7 @@ export default function TraceDetailPage({
             onClick={() => setScoresOpen((v) => !v)}
             disabled={scores.length === 0 && !hasPendingEval}
             className={cn(
+              "px-2 sm:px-3",
               scores.length > 0 || hasPendingEval
                 ? "text-info border-info/30 hover:bg-info/10"
                 : "text-text-muted border-border opacity-50 cursor-not-allowed",
@@ -166,6 +181,7 @@ export default function TraceDetailPage({
           <Button
             variant="destructive"
             size="sm"
+            className="px-2 sm:px-3"
             onClick={() => setConfirmDelete(true)}
           >
             <Trash2 className="h-3 w-3" /> Delete
@@ -173,21 +189,34 @@ export default function TraceDetailPage({
         </div>
       </div>
 
-      <div ref={metadataRef} className="border-engraved bg-surface p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
-          <div>
-            <span className="text-text-muted block">Status</span>
-            <StatusBadge status={trace.status} />
-          </div>
-          <div>
-            <span className="text-text-muted block">Latency</span>
-            <span className="text-text">{formatDuration(latencyMs)}</span>
-          </div>
-          <div>
-            <span className="text-text-muted block">Total Tokens</span>
-            <span className="text-text">
-              {formatTokens(trace.total_tokens)}
-            </span>
+      <details className="group shrink-0 border border-border bg-surface text-xs font-mono">
+        <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 [&::-webkit-details-marker]:hidden focus-visible:outline focus-visible:outline-primary">
+          <StatusBadge status={trace.status} />
+          <span className="text-text">
+            {formatDuration(latencyMs)}{" "}
+            <span className="text-text-muted">duration</span>
+          </span>
+          <span className="text-text">
+            {formatTokens(trace.total_tokens)}{" "}
+            <span className="text-text-muted">tokens</span>
+          </span>
+          <span className="ml-auto flex items-center gap-2 text-text-dim">
+            Trace details{" "}
+            <ChevronDown className="h-3 w-3 group-open:rotate-180" />
+          </span>
+        </summary>
+        <div className="grid max-h-[28vh] grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 overflow-auto border-t border-border p-3 text-xs font-mono [overflow-wrap:anywhere]">
+          <div className="sm:col-span-2">
+            <span className="text-text-muted block">Trace ID</span>
+            <button
+              type="button"
+              onClick={handleCopyId}
+              className="text-left text-text hover:text-primary"
+              title="Copy trace ID"
+            >
+              {trace.trace_id}{" "}
+              {copiedId ? "Copied" : <Copy className="inline h-3 w-3" />}
+            </button>
           </div>
           {/* TODO(cost): Restore Total Cost once trace cost computation is implemented. */}
           {/* <div>
@@ -222,7 +251,7 @@ export default function TraceDetailPage({
             <span className="text-text-muted block">Release</span>
             <span className="text-text">{trace.release ?? "—"}</span>
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <span className="text-text-muted block mb-1">Tags</span>
             {trace.tags.length > 0 ? (
               <div className="flex gap-1 flex-wrap">
@@ -237,9 +266,9 @@ export default function TraceDetailPage({
             )}
           </div>
         </div>
-      </div>
+      </details>
 
-      <SpanWaterfall trace={trace} overlayTargetRef={metadataRef} />
+      <SpanWaterfall key={trace.trace_id} trace={trace} />
 
       <ScoresSidebar
         scores={scores}
