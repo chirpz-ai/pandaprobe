@@ -185,8 +185,8 @@ export default function AnalyticsPage() {
         <div className="space-y-6">
           {metric === "models" ? (
             <div className="border-engraved bg-surface p-4">
-              <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-                Top Models
+              <h2 className="text-xs font-mono text-text-muted mb-3">
+                Top models
               </h2>
               <div className="border border-border overflow-x-auto">
                 <table className="w-full text-xs font-mono">
@@ -227,8 +227,8 @@ export default function AnalyticsPage() {
             </div>
           ) : metric === "tokens" || metric === "cost" ? (
             <div className="border-engraved bg-surface p-4">
-              <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-                {metric === "tokens" ? "Token Usage" : "Cost"} Over Time
+              <h2 className="text-xs font-mono text-text-muted mb-3">
+                {metric === "tokens" ? "Token usage" : "Cost"} over time
               </h2>
               <BarChart
                 data={analyticsData as unknown as Record<string, unknown>[]}
@@ -243,8 +243,8 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <div className="border-engraved bg-surface p-4">
-              <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-                Trace {metric} Over Time
+              <h2 className="text-xs font-mono text-text-muted mb-3">
+                Trace {metric} over time
               </h2>
               <BarChart
                 data={analyticsData as unknown as Record<string, unknown>[]}
@@ -265,8 +265,8 @@ export default function AnalyticsPage() {
 
           {scoreSummary.length > 0 && (
             <div className="border-engraved bg-surface p-4">
-              <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-3">
-                Score Summary
+              <h2 className="text-xs font-mono text-text-muted mb-3">
+                Score summary
               </h2>
               <div className="border border-border overflow-x-auto">
                 <table className="w-full text-xs font-mono">
