@@ -187,8 +187,9 @@ export function EvaluationSidebar({
         )}
       >
         <div className="flex items-center justify-between h-12 px-4 border-b border-divider flex-shrink-0">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider">
-            {mode} evaluation · {targetIds.length}
+          <h2 className="text-xs font-mono text-text-muted">
+            {mode === "trace" ? "Trace" : "Session"} evaluation ·{" "}
+            {targetIds.length}
           </h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-3.5 w-3.5" />
@@ -200,7 +201,7 @@ export function EvaluationSidebar({
             <button
               type="button"
               onClick={() => setIdsExpanded((v) => !v)}
-              className="flex items-center gap-1 text-xs font-mono text-text-primary uppercase tracking-wide hover:text-accent transition-colors"
+              className="flex items-center gap-1 text-xs font-mono text-text-primary hover:text-accent transition-colors"
             >
               {idsExpanded ? (
                 <ChevronDown className="h-2.5 w-2.5" />
@@ -212,7 +213,7 @@ export function EvaluationSidebar({
             {idsExpanded && (
               <div className="mt-2 max-h-32 overflow-y-auto rounded-md bg-bg/30 p-3">
                 {targetIds.length === 0 ? (
-                  <p className="text-[11px] font-mono text-text-muted">
+                  <p className="text-caption font-mono text-text-muted">
                     No targets selected
                   </p>
                 ) : (
@@ -220,7 +221,7 @@ export function EvaluationSidebar({
                     {targetIds.map((id) => (
                       <li
                         key={id}
-                        className="text-[11px] font-mono text-text-dim truncate"
+                        className="text-caption font-mono text-text-dim truncate"
                       >
                         {id}
                       </li>
@@ -233,23 +234,23 @@ export function EvaluationSidebar({
 
           <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
+              <label className="block text-xs font-mono text-text-primary">
                 Metrics <span className="text-error">*</span>
               </label>
-              <span className="text-[10px] font-mono text-text-muted">
+              <span className="text-caption font-mono text-text-muted">
                 {selectedMetrics.size}/{metrics.length}
               </span>
             </div>
             {metricsQuery.isPending ? (
-              <p className="text-[11px] font-mono text-text-muted py-2">
+              <p className="text-caption font-mono text-text-muted py-2">
                 Loading metrics…
               </p>
             ) : metricsQuery.error ? (
-              <p className="text-[11px] font-mono text-error py-2">
+              <p className="text-caption font-mono text-error py-2">
                 {extractErrorMessage(metricsQuery.error)}
               </p>
             ) : metrics.length === 0 ? (
-              <p className="text-[11px] font-mono text-text-muted py-2">
+              <p className="text-caption font-mono text-text-muted py-2">
                 No metrics available
               </p>
             ) : (
@@ -276,7 +277,7 @@ export function EvaluationSidebar({
                           {metric.name}
                         </span>
                         {metric.description && (
-                          <p className="mt-0.5 text-[11px] font-mono text-text-muted line-clamp-2">
+                          <p className="mt-0.5 text-caption font-mono text-text-muted line-clamp-2">
                             {metric.description}
                           </p>
                         )}
@@ -289,7 +290,7 @@ export function EvaluationSidebar({
           </div>
 
           <div className="px-4 py-4">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+            <label className="block text-xs font-mono text-text-primary mb-1.5">
               Model
             </label>
             <Select
@@ -319,14 +320,14 @@ export function EvaluationSidebar({
               </SelectContent>
             </Select>
             {providersQuery.error && (
-              <p className="mt-1 text-[10px] font-mono text-error">
+              <p className="mt-1 text-caption font-mono text-error">
                 {extractErrorMessage(providersQuery.error)}
               </p>
             )}
           </div>
 
           <div className="px-4 py-4">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+            <label className="block text-xs font-mono text-text-primary mb-1.5">
               Name (optional)
             </label>
             <Input
@@ -347,7 +348,7 @@ export function EvaluationSidebar({
                   onChange={(e) => setCustomizeWeights(e.target.checked)}
                   disabled={submitting}
                 />
-                <span className="text-xs font-mono text-text-primary uppercase tracking-wide">
+                <span className="text-xs font-mono text-text-primary">
                   Customize signal weights
                 </span>
               </label>
@@ -356,10 +357,10 @@ export function EvaluationSidebar({
                   {SIGNAL_WEIGHT_KEYS.map((key) => (
                     <div key={key}>
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[11px] font-mono text-text-dim">
+                        <span className="text-caption font-mono text-text-dim">
                           {key}
                         </span>
-                        <span className="text-[11px] font-mono text-text">
+                        <span className="text-caption font-mono text-text">
                           {weights[key].toFixed(2)}
                         </span>
                       </div>
