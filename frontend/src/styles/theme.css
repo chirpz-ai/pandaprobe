@@ -99,12 +99,18 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Navigation links share the control radius. Bordered link cards retain the
+     panel radius below; button-styled links explicitly use rounded-control. */
+  :where(a[href], [role="link"]) {
+    border-radius: var(--radius-control);
+  }
+
   /* Shared defaults cover native controls as well as Radix/custom buttons. */
   :where(.border, .border-engraved, [role="dialog"], [role="menu"], [role="listbox"]) {
     border-radius: var(--radius-panel);
   }
 
-  :where(button, input, select, textarea, summary, [role="button"], [role="tab"], [role="checkbox"], [role="switch"]) {
+  :where(button, input, select, textarea, summary, [role="button"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="combobox"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"]) {
     border-radius: var(--radius-control);
   }
 
