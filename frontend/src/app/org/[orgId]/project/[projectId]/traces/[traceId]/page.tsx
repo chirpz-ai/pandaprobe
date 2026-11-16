@@ -205,7 +205,7 @@ export default function TraceDetailPage({
             <ChevronDown className="h-3 w-3 group-open:rotate-180" />
           </span>
         </summary>
-        <div className="grid max-h-[28vh] grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 overflow-auto border-t border-border p-3 text-xs font-mono [overflow-wrap:anywhere]">
+        <div className="grid max-h-[28vh] grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 overflow-auto border-t border-divider p-3 text-xs font-mono [overflow-wrap:anywhere]">
           <div className="sm:col-span-2">
             <span className="text-text-muted block">Trace ID</span>
             <button
