@@ -211,7 +211,7 @@ export default function BillingPage() {
               ),
             )}
           </div>
-          <div className="flex justify-between border-t border-border pt-3">
+          <div className="flex justify-between border-t border-divider pt-3">
             <span className="text-text-dim">Estimated Total</span>
             <span className="text-primary text-sm">
               ${(billing.estimated_total_cents / 100).toFixed(2)}
@@ -256,7 +256,7 @@ function InvoicesTable({
           <div className="overflow-x-auto">
             <table className="w-full text-xs font-mono">
               <thead>
-                <tr className="border-b border-border text-text-muted text-left">
+                <tr className="border-b border-divider text-text-muted text-left">
                   <th className="px-3 py-2 font-normal">Period</th>
                   <th className="px-3 py-2 font-normal text-right">Traces</th>
                   <th className="px-3 py-2 font-normal text-right">
