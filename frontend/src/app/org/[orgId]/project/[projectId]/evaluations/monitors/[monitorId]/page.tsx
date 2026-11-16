@@ -267,7 +267,7 @@ export default function MonitorDetailPage() {
         </Link>
 
         <div className="border border-border bg-surface">
-          <div className="px-4 py-3 border-b border-border flex items-start justify-between gap-3">
+          <div className="px-4 py-3 border-b border-divider flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Radio className="h-3.5 w-3.5 text-text-muted flex-shrink-0" />
@@ -415,7 +415,7 @@ export default function MonitorDetailPage() {
             />
           </div>
 
-          <div className="px-4 py-3 border-t border-border">
+          <div className="px-4 py-3 border-t border-divider">
             <span className="block text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
               Metrics
             </span>
@@ -435,23 +435,20 @@ export default function MonitorDetailPage() {
           </div>
 
           {filtersList.length > 0 && (
-            <div className="px-4 py-3 border-t border-border">
+            <div className="px-4 py-3 border-t border-divider">
               <span className="flex items-center gap-1 text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
                 <Filter className="h-2.5 w-2.5" />
                 Filters
               </span>
-              <div className="border border-border/40">
+              <div className="rounded-md bg-bg/30 p-1">
                 <table className="text-[11px] font-mono w-full border-collapse">
                   <tbody>
                     {filtersList.map(([key, val]) => (
-                      <tr
-                        key={key}
-                        className="border-b border-border/40 last:border-0"
-                      >
-                        <td className="text-text-muted px-2 py-0.5 whitespace-nowrap align-top border-r border-border/40">
+                      <tr key={key} className="align-top">
+                        <td className="text-text-muted px-2 py-1.5 whitespace-nowrap align-top">
                           {key}
                         </td>
-                        <td className="text-text px-2 py-0.5 break-all">
+                        <td className="text-text px-2 py-1.5 break-all">
                           {val}
                         </td>
                       </tr>
