@@ -37,7 +37,7 @@ export function ScoresSidebar({
         )}
       >
         <div className="flex items-center justify-between h-12 px-4 border-b border-divider flex-shrink-0">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider">
+          <h2 className="text-xs font-mono text-text-muted">
             Scores · {scores.length}
           </h2>
           <div className="flex items-center gap-1">
