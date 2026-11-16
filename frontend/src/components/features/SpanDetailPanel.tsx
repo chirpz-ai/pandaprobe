@@ -45,7 +45,7 @@ export function SpanDetailPanel({ trace, span, mode }: SpanDetailPanelProps) {
 
   return (
     <Tabs.Root value={view} onValueChange={setView} className="min-w-0">
-      <div className="sticky top-0 z-10 border-b border-border bg-surface px-4 py-3">
+      <div className="sticky top-0 z-10 border-b border-divider bg-surface px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
             {selected
@@ -84,7 +84,7 @@ export function SpanDetailPanel({ trace, span, mode }: SpanDetailPanelProps) {
         className="min-w-0 focus-visible:outline-none"
         key={selected?.span_id ?? "trace"}
       >
-        <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 border-b border-border">
+        <div className="mx-4 mt-3 mb-1 rounded-md border border-divider bg-bg/30 p-3 grid grid-cols-2 gap-x-4 gap-y-3">
           {selected ? (
             <>
               <KV
@@ -242,22 +242,22 @@ function DetailSection({
   const [open, setOpen] = useState(defaultOpen);
   const id = useId();
   return (
-    <div className="border-b border-border">
-      <div className="flex items-center pr-3">
+    <div className="py-1">
+      <div className="mx-2 flex items-center justify-between gap-2">
         <button
           type="button"
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen((value) => !value)}
-          className="flex flex-1 items-center gap-2 px-4 py-3 text-left hover:bg-surface-hi focus-visible:outline focus-visible:outline-primary"
+          className="inline-flex max-w-full items-center gap-2 rounded-md px-2 py-2.5 text-left text-text-muted hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary"
         >
           {open ? (
-            <ChevronDown className="h-3 w-3 text-text-muted shrink-0" />
+            <ChevronDown className="h-3 w-3 shrink-0" />
           ) : (
-            <ChevronRight className="h-3 w-3 text-text-muted shrink-0" />
+            <ChevronRight className="h-3 w-3 shrink-0" />
           )}
           {icon}
-          <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          <span className="text-[10px] font-mono uppercase tracking-wider">
             {title}
           </span>
         </button>
@@ -303,7 +303,7 @@ function CopyValue({ value, label }: { value: string; label: string }) {
             : label
       }
       className={cn(
-        "flex h-7 w-7 shrink-0 items-center justify-center text-text-muted hover:text-text focus-visible:outline focus-visible:outline-primary",
+        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface-hi/60 hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary",
         copied && "text-success",
       )}
     >
