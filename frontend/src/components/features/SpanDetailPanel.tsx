@@ -249,7 +249,7 @@ function DetailSection({
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen((value) => !value)}
-          className="inline-flex max-w-full items-center gap-2 rounded-md px-2 py-2.5 text-left text-text-muted hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary"
+          className="inline-flex max-w-full items-center gap-2 rounded-control px-2 py-2.5 text-left text-text-muted hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary"
         >
           {open ? (
             <ChevronDown className="h-3 w-3 shrink-0" />
@@ -301,7 +301,7 @@ function CopyValue({ value, label }: { value: string; label: string }) {
             : label
       }
       className={cn(
-        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-surface-hi/60 hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary",
+        "flex h-7 w-7 shrink-0 items-center justify-center rounded-control text-text-muted hover:bg-surface-hi/60 hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary",
         copied && "text-success",
       )}
     >
