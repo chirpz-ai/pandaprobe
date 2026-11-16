@@ -29,6 +29,85 @@ describe("trace timing", () => {
     ]);
     expect(roots.map((span) => span.span_id)).toEqual(["a", "b", "c"]);
   });
+  it.each([
+    {
+      name: "a two-span cycle",
+      parents: [
+        ["a", "b"],
+        ["b", "a"],
+      ],
+    },
+    {
+      name: "a three-span cycle",
+      parents: [
+        ["a", "b"],
+        ["b", "c"],
+        ["c", "a"],
+      ],
+    },
+    { name: "a self-parent cycle", parents: [["a", "a"]] },
+  ])("preserves children and grandchildren below $name", ({ parents }) => {
+    const roots = buildTree([
+      makeSpan({ span_id: "grandchild", parent_span_id: "child" }),
+      makeSpan({ span_id: "child", parent_span_id: "a" }),
+      makeSpan({ span_id: "sibling", parent_span_id: "a" }),
+      ...parents.map(([span_id, parent_span_id]) =>
+        makeSpan({ span_id, parent_span_id }),
+      ),
+    ]);
+    expect(roots.map((span) => span.span_id)).toEqual(
+      parents.map(([span_id]) => span_id),
+    );
+    expect(roots[0].children.map((span) => span.span_id)).toEqual([
+      "child",
+      "sibling",
+    ]);
+    expect(roots[0].children[0].children.map((span) => span.span_id)).toEqual([
+      "grandchild",
+    ]);
+    expect(roots[0].children[0].children[0].children).toEqual([]);
+    expect(roots[0].children[1].children).toEqual([]);
+    roots.slice(1).forEach((root) => expect(root.children).toEqual([]));
+  });
+  it.each([null, "parent"])(
+    "sorts timed siblings first and preserves ties and untimed order under %s",
+    (parent_span_id) => {
+      const spans = [
+        makeSpan({ span_id: "missing", started_at: null, parent_span_id }),
+        makeSpan({
+          span_id: "late",
+          started_at: "2026-08-01T00:00:03Z",
+          parent_span_id,
+        }),
+        makeSpan({ span_id: "invalid", started_at: "invalid", parent_span_id }),
+        makeSpan({
+          span_id: "early",
+          started_at: "2026-08-01T00:00:01Z",
+          parent_span_id,
+        }),
+        makeSpan({
+          span_id: "same-time",
+          started_at: "2026-08-01T00:00:01Z",
+          parent_span_id,
+        }),
+        makeSpan({ span_id: "empty", started_at: "", parent_span_id }),
+      ];
+      const roots = buildTree(
+        parent_span_id
+          ? [...spans, makeSpan({ span_id: parent_span_id })]
+          : spans,
+      );
+      const siblings = parent_span_id ? roots[0].children : roots;
+      expect(siblings.map((span) => span.span_id)).toEqual([
+        "early",
+        "same-time",
+        "late",
+        "missing",
+        "invalid",
+        "empty",
+      ]);
+    },
+  );
   it("includes spans outside trace boundaries and computes missing duration from timestamps", () => {
     const trace = makeTrace({
       spans: [
