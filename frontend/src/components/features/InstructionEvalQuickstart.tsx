@@ -146,7 +146,7 @@ function Timeline({ steps }: { steps: TimelineStep[] }) {
           {i < steps.length - 1 && (
             <div className="absolute left-[10px] top-[22px] bottom-0 w-px bg-border" />
           )}
-          <span className="relative z-10 flex-shrink-0 flex items-center justify-center h-[22px] w-[22px] border border-border bg-surface-hi text-[10px] font-mono text-text-dim">
+          <span className="relative z-10 flex-shrink-0 flex items-center justify-center h-[22px] w-[22px] border border-border bg-surface-hi text-caption font-mono text-text-dim">
             {i + 1}
           </span>
           <div
@@ -155,7 +155,7 @@ function Timeline({ steps }: { steps: TimelineStep[] }) {
             <p className="text-xs font-mono text-text leading-relaxed">
               {step.title}
             </p>
-            <p className="text-[11px] font-mono text-text-muted mt-0.5 leading-relaxed">
+            <p className="text-caption font-mono text-text-muted mt-0.5 leading-relaxed">
               {step.description}
             </p>
           </div>
@@ -210,7 +210,7 @@ function EvalNextSteps() {
               </span>
               <ExternalLink className="h-3 w-3 text-text-muted group-hover:text-text transition-colors" />
             </div>
-            <p className="text-[11px] font-mono text-text-muted mt-1.5 leading-relaxed">
+            <p className="text-caption font-mono text-text-muted mt-1.5 leading-relaxed">
               {link.description}
             </p>
           </a>
