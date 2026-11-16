@@ -45,7 +45,7 @@ export function CodeBlock({
     >
       {caption && (
         <div className="flex items-center justify-between px-3 pt-3 pb-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          <span className="text-caption font-mono text-text-muted">
             {caption}
           </span>
         </div>
@@ -73,14 +73,14 @@ export function CodeBlock({
           padding: "1rem",
           paddingRight: "3rem",
           background: "transparent",
-          fontSize: "0.75rem",
+          fontSize: "var(--text-xs)",
           lineHeight: "1.5",
         }}
         codeTagProps={{
           style: {
             fontFamily:
               "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-            fontSize: "0.75rem",
+            fontSize: "inherit",
             background: "transparent",
           },
         }}
