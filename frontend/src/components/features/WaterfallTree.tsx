@@ -181,15 +181,15 @@ function WaterfallRow({
         <span className="min-w-0 flex-1 truncate text-xs font-mono text-text">
           {name}
         </span>
-        <span className="shrink-0 text-[9px] font-mono" style={{ color }}>
+        <span className="shrink-0 text-compact font-mono" style={{ color }}>
           {kind}
         </span>
         {model && (
-          <span className="hidden xl:inline max-w-20 truncate text-[10px] font-mono text-text-muted">
+          <span className="hidden xl:inline max-w-20 truncate text-caption font-mono text-text-muted">
             {model}
           </span>
         )}
-        <span className="shrink-0 text-[10px] font-mono text-text-dim tabular-nums">
+        <span className="shrink-0 text-caption font-mono text-text-dim tabular-nums">
           {formatDuration(duration)}
         </span>
         <span
