@@ -77,7 +77,7 @@ export function SessionTable({
     <div className="border border-border">
       <table className="w-full text-xs font-mono">
         <thead className="sticky top-0 z-10 bg-surface-hi">
-          <tr className="border-b border-border">
+          <tr className="border-b border-divider">
             {selectable && (
               <th className="w-8 px-3 py-2">
                 <input
@@ -123,7 +123,7 @@ export function SessionTable({
               key={session.session_id}
               ref={lastVisited === session.session_id ? scrollToRef : undefined}
               className={cn(
-                "border-b border-border border-l-2 hover:bg-surface-hi transition-colors",
+                "border-b border-divider border-l-2 hover:bg-surface-hi transition-colors",
                 lastVisited === session.session_id
                   ? "border-l-primary/40 bg-primary/[0.03]"
                   : "border-l-transparent",
