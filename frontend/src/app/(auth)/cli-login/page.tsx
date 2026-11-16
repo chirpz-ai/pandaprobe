@@ -231,7 +231,7 @@ function CliLoginForm() {
 
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-[11px] font-mono text-text-muted uppercase tracking-wider">
+          <label className="mb-1 block text-caption font-mono text-text-muted">
             Organization
           </label>
           <Select
@@ -257,7 +257,7 @@ function CliLoginForm() {
         </div>
 
         <div>
-          <label className="mb-1 block text-[11px] font-mono text-text-muted uppercase tracking-wider">
+          <label className="mb-1 block text-caption font-mono text-text-muted">
             Project
           </label>
           <Select
@@ -295,7 +295,7 @@ function CliLoginForm() {
         </Button>
       </div>
 
-      <p className="mt-6 text-center text-[11px] text-text-muted">
+      <p className="mt-6 text-center text-caption text-text-muted">
         A 90-day API key named after{" "}
         <span className="text-text-dim">{cli?.label}</span> will be created.
       </p>
