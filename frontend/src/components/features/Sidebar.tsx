@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,6 +48,14 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 const STORAGE_KEY = "pandaprobe_sidebar_collapsed";
+
+function subscribeToMobile(onChange: () => void) {
+  const query = window.matchMedia("(max-width: 639px)");
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+const getIsMobile = () => window.matchMedia("(max-width: 639px)").matches;
+const getServerIsMobile = () => false;
 
 interface NavItem {
   label: string;
@@ -255,7 +263,14 @@ export function Sidebar() {
   const activeOrg =
     currentOrg ?? organizations.find((o) => o.id === orgId) ?? null;
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [desktopCollapsed, setCollapsed] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
+  const isMobile = useSyncExternalStore(
+    subscribeToMobile,
+    getIsMobile,
+    getServerIsMobile,
+  );
+  const collapsed = isMobile ? !mobileExpanded : desktopCollapsed;
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
 
@@ -373,6 +388,10 @@ export function Sidebar() {
   }
 
   function toggleCollapsed() {
+    if (isMobile) {
+      setMobileExpanded((value) => !value);
+      return;
+    }
     const next = !collapsed;
     setCollapsed(next);
     localStorage.setItem(STORAGE_KEY, String(next));
@@ -434,7 +453,7 @@ export function Sidebar() {
     <Tooltip.Provider delayDuration={0}>
       <aside
         className={cn(
-          "flex flex-col h-full bg-surface border-r border-border transition-all duration-200",
+          "flex shrink-0 flex-col h-full bg-surface border-r border-border transition-all duration-200",
           collapsed ? "w-14" : "w-56",
         )}
       >
@@ -471,6 +490,7 @@ export function Sidebar() {
           ) : null}
           <button
             onClick={toggleCollapsed}
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
             className={`${collapsed ? "p-2" : "p-0"} text-text-muted hover:text-text transition-colors`}
           >
             {collapsed ? (
