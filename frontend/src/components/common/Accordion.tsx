@@ -38,7 +38,7 @@ export function Accordion({
           <h2>
             <AccordionPrimitive.Trigger
               className={cn(
-                "group w-full flex items-center gap-3 px-4 py-3 text-left",
+                "group w-full flex items-center gap-3 rounded-md px-4 py-3 text-left",
                 "hover:bg-surface-hi transition-colors",
                 "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent",
               )}
@@ -68,7 +68,7 @@ export function Accordion({
             </AccordionPrimitive.Trigger>
           </h2>
         </AccordionPrimitive.Header>
-        <AccordionPrimitive.Content className="overflow-hidden border-t border-border data-[state=closed]:hidden">
+        <AccordionPrimitive.Content className="overflow-hidden data-[state=closed]:hidden">
           {children}
         </AccordionPrimitive.Content>
       </AccordionPrimitive.Item>
