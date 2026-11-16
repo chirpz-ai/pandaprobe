@@ -55,7 +55,7 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
               <td className="px-3 py-2 max-w-[220px] truncate text-text">
                 {run.name || run.id.slice(0, 8)}
                 {run.monitor_id && (
-                  <span className="ml-2 text-[10px] text-text-muted">
+                  <span className="ml-2 text-caption text-text-muted">
                     · monitor
                   </span>
                 )}
@@ -71,7 +71,7 @@ export function EvalRunTable({ runs, onSelect }: EvalRunTableProps) {
                     </Badge>
                   ))}
                   {run.metric_names.length > 3 && (
-                    <span className="text-[10px] text-text-muted self-center">
+                    <span className="text-caption text-text-muted self-center">
                       +{run.metric_names.length - 3}
                     </span>
                   )}
