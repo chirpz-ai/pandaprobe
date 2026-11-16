@@ -250,7 +250,7 @@ export function EvalRunCreateSidebar({
         )}
       >
         <div className="flex items-center justify-between h-12 px-4 border-b border-divider flex-shrink-0">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider">
+          <h2 className="text-xs font-mono text-text-muted">
             Create {mode} evaluation run
           </h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -261,23 +261,23 @@ export function EvalRunCreateSidebar({
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
+              <label className="block text-xs font-mono text-text-primary">
                 Metrics <span className="text-error">*</span>
               </label>
-              <span className="text-[10px] font-mono text-text-muted">
+              <span className="text-caption font-mono text-text-muted">
                 {selectedMetrics.size}/{metrics.length}
               </span>
             </div>
             {metricsQuery.isPending ? (
-              <p className="text-[11px] font-mono text-text-muted py-2">
+              <p className="text-caption font-mono text-text-muted py-2">
                 Loading metrics…
               </p>
             ) : metricsQuery.error ? (
-              <p className="text-[11px] font-mono text-error py-2">
+              <p className="text-caption font-mono text-error py-2">
                 {extractErrorMessage(metricsQuery.error)}
               </p>
             ) : metrics.length === 0 ? (
-              <p className="text-[11px] font-mono text-text-muted py-2">
+              <p className="text-caption font-mono text-text-muted py-2">
                 No metrics available
               </p>
             ) : (
@@ -304,7 +304,7 @@ export function EvalRunCreateSidebar({
                           {metric.name}
                         </span>
                         {metric.description && (
-                          <p className="mt-0.5 text-[11px] font-mono text-text-muted line-clamp-2">
+                          <p className="mt-0.5 text-caption font-mono text-text-muted line-clamp-2">
                             {metric.description}
                           </p>
                         )}
@@ -318,10 +318,10 @@ export function EvalRunCreateSidebar({
 
           <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
+              <label className="block text-xs font-mono text-text-primary">
                 Filters
               </label>
-              <span className="text-[10px] font-mono text-text-muted">
+              <span className="text-caption font-mono text-text-muted">
                 {activeFilterCount === 0
                   ? "all matching"
                   : `${activeFilterCount} active`}
@@ -344,10 +344,10 @@ export function EvalRunCreateSidebar({
 
           <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
+              <label className="block text-xs font-mono text-text-primary">
                 Sampling rate
               </label>
-              <span className="text-[11px] font-mono text-text">
+              <span className="text-caption font-mono text-text">
                 {formatSamplingRate(samplingRate)}
               </span>
             </div>
@@ -361,13 +361,13 @@ export function EvalRunCreateSidebar({
               disabled={submitting}
               className="w-full accent-primary"
             />
-            <p className="mt-1 text-[10px] font-mono text-text-muted">
+            <p className="mt-1 text-caption font-mono text-text-muted">
               Fraction of matching {mode}s to evaluate.
             </p>
           </div>
 
           <div className="px-4 py-4">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+            <label className="block text-xs font-mono text-text-primary mb-1.5">
               Model
             </label>
             <Select
@@ -397,14 +397,14 @@ export function EvalRunCreateSidebar({
               </SelectContent>
             </Select>
             {providersQuery.error && (
-              <p className="mt-1 text-[10px] font-mono text-error">
+              <p className="mt-1 text-caption font-mono text-error">
                 {extractErrorMessage(providersQuery.error)}
               </p>
             )}
           </div>
 
           <div className="px-4 py-4">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+            <label className="block text-xs font-mono text-text-primary mb-1.5">
               Name (optional)
             </label>
             <Input
@@ -425,7 +425,7 @@ export function EvalRunCreateSidebar({
                   onChange={(e) => setCustomizeWeights(e.target.checked)}
                   disabled={submitting}
                 />
-                <span className="text-xs font-mono text-text-primary uppercase tracking-wide">
+                <span className="text-xs font-mono text-text-primary">
                   Customize signal weights
                 </span>
               </label>
@@ -434,10 +434,10 @@ export function EvalRunCreateSidebar({
                   {SIGNAL_WEIGHT_KEYS.map((key) => (
                     <div key={key}>
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[11px] font-mono text-text-dim">
+                        <span className="text-caption font-mono text-text-dim">
                           {key}
                         </span>
-                        <span className="text-[11px] font-mono text-text">
+                        <span className="text-caption font-mono text-text">
                           {weights[key].toFixed(2)}
                         </span>
                       </div>
@@ -677,7 +677,7 @@ function FieldLabel({
 }) {
   return (
     <div>
-      <label className="block text-[10px] font-mono text-text-muted mb-0.5">
+      <label className="block text-caption font-mono text-text-muted mb-0.5">
         {label}
       </label>
       {children}
