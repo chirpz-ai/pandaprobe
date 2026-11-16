@@ -72,7 +72,9 @@ export function getTimeline(trace: TraceResponse) {
   const magnitude = 10 ** Math.floor(Math.log10(roughStep));
   const step =
     ([1, 2, 5, 10].find((n) => n * magnitude >= roughStep) ?? 10) * magnitude;
-  const extent = Math.ceil(duration / step) * step;
+  // One extra interval makes seconds less spread out and leaves breathing room
+  // after the final span without changing the relative timing of any bar.
+  const extent = (Math.ceil(duration / step) + 1) * step;
   const ticks = Array.from(
     { length: Math.round(extent / step) + 1 },
     (_, i) => i * step,
