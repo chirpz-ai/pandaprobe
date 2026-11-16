@@ -28,7 +28,7 @@ interface TimelineTreeProps {
 export function TimelineRuler({ timeline }: { timeline: TimelineScale }) {
   return (
     <div
-      className="relative h-7 ml-3 mr-10 text-[10px] font-mono text-text-muted"
+      className="relative h-7 ml-3 mr-10 text-compact font-mono text-text-muted"
       aria-label="Elapsed time"
     >
       {timeline.ticks.map((tick, i) => (
@@ -215,15 +215,15 @@ function TimelineRow({
           <Icon className="h-3.5 w-3.5 shrink-0" style={{ color }} />
           <span className="text-xs font-mono text-text truncate">{name}</span>
           <span
-            className="text-[9px] font-mono shrink-0 uppercase"
+            className="text-compact font-mono shrink-0 uppercase"
             style={{ color }}
           >
             {kind}
           </span>
-          <span className="text-[10px] font-mono text-text-dim shrink-0 tabular-nums">
+          <span className="text-caption font-mono text-text-dim shrink-0 tabular-nums">
             {formatDuration(duration)}
           </span>
-          {isError && <span className="text-[9px] text-error">Error</span>}
+          {isError && <span className="text-caption text-error">Error</span>}
         </span>
       </button>
       <div className="flex w-9 shrink-0 items-center justify-center">
