@@ -15,7 +15,7 @@ export const SPAN_KINDS = {
   TOOL: { icon: Wrench, color: "var(--color-brand-yellow)" },
   LLM: { icon: Sparkles, color: "var(--color-span-llm)" },
   RETRIEVER: { icon: Search, color: "var(--color-span-retriever)" },
-  CHAIN: { icon: Link, color: "var(--color-span-chain)" },
+  CHAIN: { icon: Link, color: "var(--color-brand-green)" },
   EMBEDDING: { icon: Grid3X3, color: "var(--color-span-embedding)" },
   OTHER: { icon: Circle, color: "var(--color-text-muted)" },
   TRACE: { icon: Activity, color: "var(--color-span-trace)" },
