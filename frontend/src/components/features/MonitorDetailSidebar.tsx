@@ -246,7 +246,7 @@ export function MonitorDetailSidebar({
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between h-12 px-4 border-b border-border flex-shrink-0 gap-2">
+        <div className="flex items-center justify-between h-12 px-4 border-b border-divider flex-shrink-0 gap-2">
           <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider truncate">
             {title}
           </h2>
@@ -280,7 +280,7 @@ export function MonitorDetailSidebar({
             </div>
           ) : !monitor ? null : (
             <>
-              <div className="px-4 py-3 border-b border-border space-y-2">
+              <div className="px-4 py-4 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <StatusBadge status={monitor.status} />
                   <Badge variant="default">{monitor.target_type}</Badge>
@@ -368,7 +368,7 @@ export function MonitorDetailSidebar({
                 </div>
               </div>
 
-              <div className="px-4 py-3 border-b border-border">
+              <div className="px-4 py-4">
                 <label className="block text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
                   Metrics
                 </label>
@@ -388,23 +388,20 @@ export function MonitorDetailSidebar({
               </div>
 
               {filtersList.length > 0 && (
-                <div className="px-4 py-3 border-b border-border">
+                <div className="px-4 py-4">
                   <label className="flex items-center gap-1 text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
                     <Filter className="h-2.5 w-2.5" />
                     Filters
                   </label>
-                  <div className="border border-border/40">
+                  <div className="rounded-md bg-bg/30 p-1">
                     <table className="text-[11px] font-mono w-full border-collapse">
                       <tbody>
                         {filtersList.map(([key, val]) => (
-                          <tr
-                            key={key}
-                            className="border-b border-border/40 last:border-0"
-                          >
-                            <td className="text-text-muted px-2 py-0.5 whitespace-nowrap align-top border-r border-border/40">
+                          <tr key={key} className="align-top">
+                            <td className="text-text-muted px-2 py-1.5 whitespace-nowrap align-top">
                               {key}
                             </td>
-                            <td className="text-text px-2 py-0.5 break-all">
+                            <td className="text-text px-2 py-1.5 break-all">
                               {val}
                             </td>
                           </tr>
@@ -415,7 +412,7 @@ export function MonitorDetailSidebar({
                 </div>
               )}
 
-              <div className="px-4 py-3 border-b border-border flex flex-wrap items-center gap-2">
+              <div className="px-4 py-4 flex flex-wrap items-center gap-2">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -482,7 +479,7 @@ export function MonitorDetailSidebar({
                 </Button>
               </div>
 
-              <div className="px-4 py-3 border-b border-border space-y-2">
+              <div className="px-4 py-4 space-y-2">
                 <Button
                   variant="primary"
                   size="sm"
