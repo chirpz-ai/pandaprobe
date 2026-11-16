@@ -38,10 +38,13 @@ export function CodeBlock({
 
   return (
     <div
-      className={cn("relative border border-border bg-surface-hi", className)}
+      className={cn(
+        "relative overflow-hidden rounded-md border border-divider bg-surface-hi/60",
+        className,
+      )}
     >
       {caption && (
-        <div className="flex items-center justify-between px-3 h-7 border-b border-border bg-surface">
+        <div className="flex items-center justify-between px-3 pt-3 pb-1">
           <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
             {caption}
           </span>
@@ -52,7 +55,7 @@ export function CodeBlock({
         type="button"
         onClick={handleCopy}
         aria-label="Copy to clipboard"
-        className="absolute top-2 right-2 p-1.5 border border-border bg-surface hover:bg-surface-hi hover:border-primary/40 text-text-muted hover:text-text transition-colors z-10"
+        className="absolute top-2 right-2 p-1.5 rounded-md bg-surface hover:bg-surface-hi text-text-muted hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary z-10"
       >
         {copied ? (
           <Check className="h-3 w-3 text-success" />
