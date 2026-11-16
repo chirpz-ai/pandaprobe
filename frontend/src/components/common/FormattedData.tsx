@@ -111,7 +111,7 @@ function Value({ data, depth }: { data: unknown; depth: number }) {
         </div>
         {Object.keys(extras).length > 0 && (
           <details className="group/message mx-3 mb-3 rounded-md border border-divider bg-surface-hi/40">
-            <summary className="flex items-center gap-1.5 rounded-md px-3 py-2 text-caption text-text-muted list-none hover:bg-surface-hi/60 hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+            <summary className="flex items-center gap-1.5 rounded-control px-3 py-2 text-caption text-text-muted list-none hover:bg-surface-hi/60 hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
               <ChevronRight
                 aria-hidden="true"
                 className="h-3 w-3 shrink-0 transition-transform group-open/message:rotate-90"
