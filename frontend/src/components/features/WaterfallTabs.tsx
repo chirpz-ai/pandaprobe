@@ -49,7 +49,7 @@ export function WaterfallTabs({
     >
       <div className="sticky top-0 z-20 bg-surface border-b border-divider">
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          <span className="text-caption font-mono text-text-muted">
             Spans · {trace.spans.length}
           </span>
           <Tabs.List
@@ -58,14 +58,14 @@ export function WaterfallTabs({
           >
             <Tabs.Trigger
               value="timeline"
-              className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
+              className="flex items-center gap-1.5 px-2 py-1 text-caption font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
             >
               <SquareChartGantt aria-hidden="true" className="h-3.5 w-3.5" />
               Timeline
             </Tabs.Trigger>
             <Tabs.Trigger
               value="waterfall"
-              className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
+              className="flex items-center gap-1.5 px-2 py-1 text-caption font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
             >
               <ListTree aria-hidden="true" className="h-3.5 w-3.5" />
               Waterfall
