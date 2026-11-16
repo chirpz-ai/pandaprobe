@@ -59,7 +59,7 @@ export function TopBar() {
   const crumbs = getBreadcrumbs(pathname);
 
   return (
-    <header className="flex items-center justify-between h-12 px-4 border-b border-border bg-surface">
+    <header className="flex items-center justify-between h-12 px-4 border-b border-divider bg-surface">
       <nav className="flex items-center gap-1 text-xs font-mono">
         {crumbs.map((crumb, i) => {
           const isLast = i === crumbs.length - 1;
