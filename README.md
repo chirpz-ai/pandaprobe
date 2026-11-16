@@ -1,9 +1,9 @@
 <div align="center">
   <a href="https://pandaprobe.com/" target="_blank" rel="noopener noreferrer">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo/light.png">
-      <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo/dark.png">
-      <img alt="PandaProbe Logo" src="docs/assets/logo/dark.png" width="80%">
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo/dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo/light.png">
+      <img alt="PandaProbe Logo" src="docs/assets/logo/light.png" width="80%">
     </picture>
   </a>
 </div>
