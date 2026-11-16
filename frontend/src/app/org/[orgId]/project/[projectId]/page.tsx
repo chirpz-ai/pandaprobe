@@ -102,7 +102,7 @@ export default function ProjectHomePage() {
       <h1 className="text-lg font-mono text-primary">Home</h1>
 
       <div className="border-engraved bg-surface p-5 space-y-4 animate-fade-in">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
             <span className="flex-shrink-0 text-primary">
               <Rocket className="h-4 w-4" />
