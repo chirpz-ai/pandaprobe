@@ -226,7 +226,7 @@ function SwitcherDropdown({
           ))}
           {footerAction && (
             <>
-              <DropdownMenu.Separator className="my-1 mx-1 border-t border-border" />
+              <DropdownMenu.Separator className="my-1 mx-1 border-t border-divider" />
               <DropdownMenu.Item
                 className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-muted hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
                 onSelect={footerAction.onSelect}
@@ -458,7 +458,7 @@ export function Sidebar() {
         )}
       >
         {/* ── Header (h-12 to match TopBar) ──────────────────────── */}
-        <div className="flex items-center justify-between px-3 h-12 border-b border-border">
+        <div className="flex items-center justify-between px-3 h-12 border-b border-divider">
           {!collapsed && (inAccountRoute || settingsView) ? (
             <button
               onClick={exitSettings}
@@ -641,7 +641,7 @@ export function Sidebar() {
         )}
 
         {/* ── Footer ─────────────────────────────────────────────── */}
-        <div className="border-t border-border py-2">
+        <div className="border-t border-divider py-2">
           {/* User menu */}
           {authEnabled && user ? (
             <DropdownMenu.Root>
@@ -661,7 +661,7 @@ export function Sidebar() {
                   sideOffset={8}
                   className="z-50 w-[calc(14rem-16px)] bg-surface border border-border p-1 shadow-lg"
                 >
-                  <div className="px-2 py-2 border-b border-border mb-1 ph-no-capture">
+                  <div className="px-2 py-2 border-b border-divider mb-1 ph-no-capture">
                     <p className="text-xs font-mono text-text truncate">
                       {displayName}
                     </p>
@@ -692,7 +692,7 @@ export function Sidebar() {
                     <Bug className="h-3.5 w-3.5" />
                     Report a bug
                   </DropdownMenu.Item>
-                  <DropdownMenu.Separator className="my-1 mx-1 border-t border-border" />
+                  <DropdownMenu.Separator className="my-1 mx-1 border-t border-divider" />
                   <DropdownMenu.Item
                     className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
                     onSelect={() => signOut()}
