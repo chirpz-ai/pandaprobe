@@ -143,6 +143,7 @@ services:
     build:
       context: ./frontend
       target: dev
+      pull: true
     ports:
       - "3000:3000"
     volumes:
