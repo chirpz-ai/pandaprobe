@@ -22,7 +22,7 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
           "absolute right-1 top-3 h-7 w-7 inline-flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hi transition-colors",
         month_grid: "border-collapse",
         weekdays: "flex",
-        weekday: "w-8 text-[10px] font-mono text-text-muted text-center",
+        weekday: "w-8 text-caption font-mono text-text-muted text-center",
         week: "flex mt-0.5",
         day: "relative p-0 text-center",
         day_button:
