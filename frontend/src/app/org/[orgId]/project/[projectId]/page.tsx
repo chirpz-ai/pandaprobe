@@ -84,7 +84,7 @@ export default function ProjectHomePage() {
       href: `${projectBase}/evaluations/monitors`,
     },
     {
-      label: "Period Usage",
+      label: "Period usage",
       value: usageQuery.data
         ? formatNumber(
             usageQuery.data.traces +
@@ -136,7 +136,7 @@ export default function ProjectHomePage() {
             className="border-engraved bg-surface p-4 hover:bg-surface-hi transition-colors"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-mono text-text-dim uppercase tracking-wider">
+              <span className="text-xs font-mono text-text-dim">
                 {card.label}
               </span>
               <span className="text-text-muted">{card.icon}</span>
@@ -150,8 +150,8 @@ export default function ProjectHomePage() {
 
       {usageQuery.data && (
         <div className="border-engraved bg-surface p-4">
-          <h2 className="text-xs font-mono text-text-dim uppercase tracking-wider mb-4">
-            Current Period Usage
+          <h2 className="text-xs font-mono text-text-dim mb-4">
+            Current period usage
           </h2>
           <div className="grid grid-cols-3 gap-6">
             <div>
