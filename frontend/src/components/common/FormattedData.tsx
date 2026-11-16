@@ -91,8 +91,8 @@ function Value({ data, depth }: { data: unknown; depth: number }) {
     return (
       <article className="rounded-md border border-divider bg-bg/25">
         <div className="flex flex-wrap items-center gap-2 px-3 pt-3">
-          <span className="text-[10px] uppercase tracking-wider text-info">
-            {role}
+          <span className="text-caption text-info">
+            {role.charAt(0).toUpperCase() + role.slice(1)}
           </span>
           {typeof record.name === "string" && (
             <span className="text-xs text-text-dim">{record.name}</span>
@@ -104,16 +104,14 @@ function Value({ data, depth }: { data: unknown; depth: number }) {
           )}
           {"tool_calls" in record && (
             <div>
-              <p className="mb-2 text-[10px] uppercase text-text-muted">
-                Tool calls
-              </p>
+              <p className="mb-2 text-caption text-text-muted">Tool calls</p>
               <Value data={record.tool_calls} depth={depth + 1} />
             </div>
           )}
         </div>
         {Object.keys(extras).length > 0 && (
           <details className="group/message mx-3 mb-3 rounded-md border border-divider bg-surface-hi/40">
-            <summary className="flex items-center gap-1.5 rounded-md px-3 py-2 text-[10px] text-text-muted list-none hover:bg-surface-hi/60 hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+            <summary className="flex items-center gap-1.5 rounded-md px-3 py-2 text-caption text-text-muted list-none hover:bg-surface-hi/60 hover:text-text transition-colors focus-visible:outline focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
               <ChevronRight
                 aria-hidden="true"
                 className="h-3 w-3 shrink-0 transition-transform group-open/message:rotate-90"
@@ -165,7 +163,7 @@ function Fields({
     >
       {entries.map(([key, value]) => (
         <div key={key} className="space-y-1.5 min-w-0">
-          <dt className="text-[10px] text-text-muted">{key}</dt>
+          <dt className="text-caption text-text-muted">{key}</dt>
           <dd className="min-w-0">
             <Value data={value} depth={depth + 1} />
           </dd>
