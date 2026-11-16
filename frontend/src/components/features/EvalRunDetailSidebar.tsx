@@ -221,7 +221,7 @@ export function EvalRunDetailSidebar({
         )}
       >
         <div className="flex items-center justify-between h-12 px-4 border-b border-divider flex-shrink-0 gap-2">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider truncate">
+          <h2 className="text-xs font-mono text-text-muted truncate">
             {title}
           </h2>
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -334,12 +334,12 @@ export function EvalRunDetailSidebar({
               </div>
 
               <div className="px-4 py-4">
-                <label className="block text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
+                <label className="block text-caption font-mono text-text-muted mb-1.5">
                   Metrics
                 </label>
                 <div className="flex gap-1 flex-wrap">
                   {run.metric_names.length === 0 ? (
-                    <span className="text-[11px] font-mono text-text-muted">
+                    <span className="text-caption font-mono text-text-muted">
                       None
                     </span>
                   ) : (
@@ -354,12 +354,12 @@ export function EvalRunDetailSidebar({
 
               {filtersList.length > 0 && (
                 <div className="px-4 py-4">
-                  <label className="flex items-center gap-1 text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
+                  <label className="flex items-center gap-1 text-caption font-mono text-text-muted mb-1.5">
                     <Filter className="h-2.5 w-2.5" />
                     Filters
                   </label>
                   <div className="rounded-md bg-bg/30 p-1">
-                    <table className="text-[11px] font-mono w-full border-collapse">
+                    <table className="text-caption font-mono w-full border-collapse">
                       <tbody>
                         {filtersList.map(([key, val]) => (
                           <tr key={key} className="align-top">
@@ -379,11 +379,11 @@ export function EvalRunDetailSidebar({
 
               {run.error_message && (
                 <div className="px-4 py-4">
-                  <label className="block text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
+                  <label className="block text-caption font-mono text-text-muted mb-1.5">
                     Error
                   </label>
                   <div className="bg-error/5 border border-error/20 p-2">
-                    <span className="text-[11px] font-mono text-error whitespace-pre-wrap">
+                    <span className="text-caption font-mono text-error whitespace-pre-wrap">
                       {run.error_message}
                     </span>
                   </div>
@@ -426,7 +426,7 @@ export function EvalRunDetailSidebar({
                   aria-expanded={scoresOpen}
                   className="w-full flex items-center justify-between h-10 px-4 border-b border-divider hover:bg-surface-hi transition-colors focus:outline-none focus-visible:bg-surface-hi"
                 >
-                  <h3 className="text-xs font-mono text-info uppercase tracking-wider flex items-center gap-1.5">
+                  <h3 className="text-xs font-mono text-info flex items-center gap-1.5">
                     {scoresOpen ? (
                       <ChevronDown className="h-3 w-3" />
                     ) : (
@@ -544,9 +544,7 @@ function KVRow({
 }) {
   return (
     <div className="min-w-0">
-      <span className="text-[10px] text-text-muted uppercase tracking-wider block">
-        {label}
-      </span>
+      <span className="text-caption text-text-muted block">{label}</span>
       <div className={truncate ? "truncate" : "min-w-0"}>{children}</div>
     </div>
   );
