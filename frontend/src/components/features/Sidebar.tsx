@@ -665,7 +665,7 @@ export function Sidebar() {
                     <p className="text-xs font-mono text-text truncate">
                       {displayName}
                     </p>
-                    <p className="text-[10px] font-mono text-text-muted truncate">
+                    <p className="text-caption font-mono text-text-muted truncate">
                       {displayEmail}
                     </p>
                   </div>
