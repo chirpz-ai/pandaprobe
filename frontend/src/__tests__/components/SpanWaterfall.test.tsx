@@ -1,208 +1,108 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createRef, useRef } from "react";
-
 import { SpanWaterfall } from "@/components/features/SpanWaterfall";
-import type { TraceResponse } from "@/lib/api/types";
+import { makeTrace, makeSpan } from "../fixtures/trace";
 
-// The panel expands upward over the metadata card to gain reading room.
-
-const OVERLAY_HEIGHT = 180;
-const STACK_GAP = 24;
-
-function makeTrace(): TraceResponse {
-  const started = "2026-08-01T00:00:00Z";
-  return {
-    trace_id: "t1",
-    name: "trace",
-    status: "COMPLETED",
-    input: null,
-    output: null,
-    metadata: {},
-    started_at: started,
-    ended_at: started,
-    session_id: null,
-    user_id: null,
-    tags: [],
-    environment: null,
-    release: null,
-    total_tokens: 0,
-    total_cost: 0,
-    spans: [
-      {
-        span_id: "s1",
-        trace_id: "t1",
-        parent_span_id: null,
-        name: "root span",
-        kind: "LLM",
-        status: "OK",
-        input: null,
-        output: null,
-        model: null,
-        token_usage: null,
-        metadata: {},
-        started_at: started,
-        ended_at: started,
-        error: null,
-        completion_start_time: null,
-        model_parameters: null,
-        cost: null,
-      },
-    ],
-  } as unknown as TraceResponse;
-}
-
-/** Mirrors the trace page's layout. */
-function Harness({ withTarget = true }: { withTarget?: boolean }) {
-  const targetRef = useRef<HTMLDivElement>(null);
-  return (
-    <div>
-      <div ref={targetRef} data-testid="metadata" />
-      <SpanWaterfall
-        trace={makeTrace()}
-        overlayTargetRef={withTarget ? targetRef : undefined}
-      />
-    </div>
-  );
-}
-
-function panelOf(container: HTMLElement): HTMLElement {
-  const panel = container.querySelector<HTMLElement>(
-    "div.border.border-border",
-  );
-  if (!panel) throw new Error("panel not found");
-  return panel;
-}
-
-beforeAll(() => {
-  // jsdom reports every element as 0x0.
-  Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
-    configurable: true,
-    get(this: HTMLElement) {
-      return this.dataset.testid === "metadata" ? OVERLAY_HEIGHT : 0;
-    },
+describe("Trace waterfall", () => {
+  it("positions bars by elapsed start and duration, keeping zero-duration markers", () => {
+    const { container } = render(<SpanWaterfall trace={makeTrace()} />);
+    const bar = container.querySelector<HTMLElement>(
+      '[data-timeline-bar="llm"]',
+    )!;
+    expect(bar.style.left).toContain("25%");
+    expect(bar.style.width).toBe("25%");
+    const marker = container.querySelector<HTMLElement>(
+      '[data-timeline-bar="tool"]',
+    )!;
+    expect(marker.style.width).toBe("0%");
+    expect(marker.style.minWidth).toBe("2px");
+    expect(screen.getByLabelText("Elapsed time")).toHaveTextContent(
+      "0s2s4s6s8s",
+    );
   });
-});
 
-describe("SpanWaterfall expand control", () => {
-  it("is collapsed initially, with no upward offset", () => {
-    const { container } = render(<Harness />);
-
+  it("collapses descendants independently from selection and preserves nested collapse state", async () => {
+    const user = userEvent.setup();
+    render(<SpanWaterfall trace={makeTrace()} />);
+    await user.click(screen.getByRole("button", { name: "Collapse Agent" }));
     expect(
-      screen.getByRole("button", { name: /expand span panel/i }),
+      screen.queryByRole("button", { name: /ChatOpenAI LLM/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Support workflow" }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Collapse Support workflow" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Expand Support workflow" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Expand Agent" }),
     ).toHaveAttribute("aria-expanded", "false");
-    expect(panelOf(container).style.marginTop).toBe("");
+    await user.click(screen.getByRole("button", { name: "Expand all" }));
+    expect(
+      screen.getByRole("button", { name: /ChatOpenAI LLM/ }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Collapse all" }));
+    expect(
+      screen.queryByRole("button", { name: /Agent AGENT/ }),
+    ).not.toBeInTheDocument();
   });
 
-  it("grows upward by the covered height when expanded", async () => {
+  it("defaults to readable cards, selects spans and keeps the raw preference across selections", async () => {
     const user = userEvent.setup();
-    const { container } = render(<Harness />);
-
-    await user.click(
-      screen.getByRole("button", { name: /expand span panel/i }),
+    render(<SpanWaterfall trace={makeTrace()} />);
+    expect(screen.getByRole("tab", { name: "Formatted" })).toHaveAttribute(
+      "aria-selected",
+      "true",
     );
-
-    const panel = panelOf(container);
-    expect(panel.style.marginTop).toBe(`-${OVERLAY_HEIGHT + STACK_GAP}px`);
-    // Same amount added back, so the bottom edge does not move.
-    expect(panel.style.maxHeight).toContain(
-      `+ ${OVERLAY_HEIGHT + STACK_GAP}px`,
-    );
-  });
-
-  it("becomes opaque and raised so it covers the card beneath", async () => {
-    const user = userEvent.setup();
-    const { container } = render(<Harness />);
-
-    await user.click(
-      screen.getByRole("button", { name: /expand span panel/i }),
-    );
-
-    const panel = panelOf(container);
-    expect(panel.className).toContain("bg-surface");
-    // Below the scores drawer (z-40/z-50).
-    expect(panel.className).toContain("z-30");
-  });
-
-  it("collapses again on a second click", async () => {
-    const user = userEvent.setup();
-    const { container } = render(<Harness />);
-
-    await user.click(
-      screen.getByRole("button", { name: /expand span panel/i }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: /collapse span panel/i }),
-    );
-
-    expect(panelOf(container).style.marginTop).toBe("");
-  });
-
-  it("collapses on Escape", async () => {
-    const user = userEvent.setup();
-    const { container } = render(<Harness />);
-
-    await user.click(
-      screen.getByRole("button", { name: /expand span panel/i }),
-    );
-    await user.keyboard("{Escape}");
-
-    expect(panelOf(container).style.marginTop).toBe("");
-  });
-
-  it("swaps the icon to match the action available", async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-
-    // Scoped to the button; the tree renders its own icons.
-    const collapsed = screen.getByRole("button", {
-      name: /expand span panel/i,
+    await user.click(screen.getByRole("button", { name: /ChatOpenAI LLM/ }));
+    const details = screen.getByRole("region", {
+      name: "Selected span details",
     });
-    expect(collapsed.querySelector(".lucide-maximize-2")).toBeTruthy();
-    expect(collapsed.querySelector(".lucide-minimize-2")).toBeNull();
-
-    await user.click(collapsed);
-
-    const expandedBtn = screen.getByRole("button", {
-      name: /collapse span panel/i,
-    });
-    expect(expandedBtn.querySelector(".lucide-minimize-2")).toBeTruthy();
-    expect(expandedBtn.querySelector(".lucide-maximize-2")).toBeNull();
+    expect(
+      within(details).getByRole("heading", { name: "ChatOpenAI" }),
+    ).toBeInTheDocument();
+    expect(within(details).getByText("+2.0s")).toBeInTheDocument();
+    expect(within(details).getByText("test-model")).toBeInTheDocument();
+    expect(within(details).getByText("Find my order")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Raw" }));
+    expect(within(details).getByText('"Find my order"')).toBeInTheDocument();
+    details.scrollTop = 500;
+    await user.click(screen.getByRole("button", { name: /Lookup order TOOL/ }));
+    expect(details.scrollTop).toBe(0);
+    expect(screen.getByRole("tab", { name: "Raw" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(within(details).getByText('"shipped"')).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Span details" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Waterfall · 3" }));
+    expect(
+      screen.getByRole("button", { name: "Waterfall · 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("gives both panes the surface background, collapsed as well as expanded", () => {
-    const { container } = render(<Harness />);
-
-    // The tree pane had no background and fell through to the page colour, so
-    // it only matched the detail pane once expanding painted the whole panel.
-    const panes = panelOf(container).children;
-    expect(panes[0].className).toContain("bg-surface");
-    expect(panes[1].className).toContain("bg-surface");
-  });
-
-  it("pins the control to the detail panel's top-right corner", () => {
-    render(<Harness />);
-
-    // On the panel, not the detail header — that header scrolls away.
-    const button = screen.getByRole("button", { name: /expand span panel/i });
-    expect(button.className).toMatch(/\babsolute\b/);
-    expect(button.className).toMatch(/\btop-\d/);
-    expect(button.className).toMatch(/\bright-\d/);
-  });
-
-  it("hides the control when there is nothing to overlay", () => {
-    render(<Harness withTarget={false} />);
-
-    expect(screen.queryByRole("button", { name: /span panel/i })).toBeNull();
-  });
-
-  it("renders nothing to expand for a trace with no spans", () => {
-    const trace = { ...makeTrace(), spans: [] } as unknown as TraceResponse;
-    const ref = createRef<HTMLDivElement>();
-
-    render(<SpanWaterfall trace={trace} overlayTargetRef={ref} />);
-
-    expect(screen.getByText(/no spans recorded/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /span panel/i })).toBeNull();
+  it("keeps trace content accessible with no spans and exposes errors without relying on color", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <SpanWaterfall trace={makeTrace({ spans: [] })} />,
+    );
+    expect(screen.getByText("No spans recorded")).toBeInTheDocument();
+    expect(screen.getByText("Find my order")).toBeInTheDocument();
+    rerender(
+      <SpanWaterfall
+        trace={makeTrace({
+          spans: [makeSpan({ status: "ERROR", error: "Model unavailable" })],
+        })}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Agent AGENT 8.0s Error" }),
+    );
+    expect(screen.getByText("Model unavailable")).toBeInTheDocument();
   });
 });
