@@ -60,6 +60,7 @@ jobs:
           context: ${{ matrix.component.context }}
           file: ${{ matrix.component.file }}
           target: ${{ matrix.component.target || '' }}
+          pull: ${{ matrix.component.name == 'frontend' }}
           push: true
           platforms: ${{ matrix.platform.arch }}
           tags: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.component.name }}:${{ steps.meta.outputs.version }}-${{ matrix.platform.suffix }}
