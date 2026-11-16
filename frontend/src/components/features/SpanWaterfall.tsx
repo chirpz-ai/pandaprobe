@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils/cn";
 import type { TraceResponse } from "@/lib/api/types";
 import { buildTree } from "@/lib/utils/trace-timeline";
-import { WaterfallTree } from "./WaterfallTree";
+import { WaterfallTabs } from "./WaterfallTabs";
 import { SpanDetailPanel } from "./SpanDetailPanel";
 
 export function SpanWaterfall({ trace }: { trace: TraceResponse }) {
@@ -23,7 +23,7 @@ export function SpanWaterfall({ trace }: { trace: TraceResponse }) {
   }, []);
 
   return (
-    <div className="flex flex-1 min-h-0 min-w-0 flex-col border border-border bg-surface">
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden border border-border bg-surface">
       <div
         className="flex border-b border-border lg:hidden"
         aria-label="Trace panels"
@@ -55,7 +55,7 @@ export function SpanWaterfall({ trace }: { trace: TraceResponse }) {
             mobilePane !== "waterfall" && "hidden lg:block",
           )}
         >
-          <WaterfallTree
+          <WaterfallTabs
             trace={trace}
             tree={tree}
             selectedId={selectedId}
