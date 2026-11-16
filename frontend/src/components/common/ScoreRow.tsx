@@ -183,7 +183,7 @@ export function ScoreRow({
         <MetadataSection data={score.metadata} />
       )}
 
-      <div className="space-y-0.5 text-[10px] font-mono text-text-muted mt-2">
+      <div className="space-y-0.5 text-caption font-mono text-text-muted mt-2">
         {traceScore?.environment && (
           <div className="flex items-center gap-1.5">
             <Globe className="h-2.5 w-2.5" />
@@ -347,7 +347,7 @@ function EditableTraceScoreRow({
       </div>
 
       <div className="mb-2">
-        <label className="block text-[10px] font-mono text-text-muted uppercase tracking-wide mb-1">
+        <label className="block text-caption font-mono text-text-muted mb-1">
           Reason
         </label>
         <Textarea
@@ -360,7 +360,7 @@ function EditableTraceScoreRow({
       </div>
 
       <div className="mb-2">
-        <label className="block text-[10px] font-mono text-text-muted uppercase tracking-wide mb-1">
+        <label className="block text-caption font-mono text-text-muted mb-1">
           Metadata (JSON)
         </label>
         <Textarea
@@ -369,20 +369,20 @@ function EditableTraceScoreRow({
           placeholder="{}"
           spellCheck={false}
           className={cn(
-            "min-h-[140px] text-[11px] leading-relaxed",
+            "min-h-[140px] text-caption leading-relaxed",
             metadataError &&
               "border-error focus-visible:border-error focus-visible:ring-error",
           )}
           disabled={saving}
         />
         {metadataError && (
-          <p className="mt-1 text-[10px] font-mono text-error">
+          <p className="mt-1 text-caption font-mono text-error">
             {metadataError}
           </p>
         )}
       </div>
 
-      <div className="space-y-0.5 text-[10px] font-mono text-text-muted mt-2">
+      <div className="space-y-0.5 text-caption font-mono text-text-muted mt-2">
         {score.environment && (
           <div className="flex items-center gap-1.5">
             <Globe className="h-2.5 w-2.5" />
@@ -429,7 +429,7 @@ export function MetadataSection({ data }: { data: Record<string, unknown> }) {
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1 text-[10px] font-mono text-text-muted uppercase tracking-wide mb-1 hover:text-text transition-colors"
+        className="flex items-center gap-1 text-caption font-mono text-text-muted mb-1 hover:text-text transition-colors"
       >
         {expanded ? (
           <ChevronDown className="h-2.5 w-2.5" />
@@ -449,7 +449,7 @@ export function MetadataSection({ data }: { data: Record<string, unknown> }) {
 
 function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
   if (data === null || data === undefined) {
-    return <span className="text-text-muted text-[11px] font-mono">null</span>;
+    return <span className="text-text-muted text-caption font-mono">null</span>;
   }
 
   if (
@@ -462,7 +462,7 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
 
   if (Array.isArray(data)) {
     if (data.length === 0)
-      return <span className="text-text-muted text-[11px] font-mono">[]</span>;
+      return <span className="text-text-muted text-caption font-mono">[]</span>;
 
     const allPrimitive = data.every(
       (v) =>
@@ -475,7 +475,7 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
       return (
         <div className="flex flex-wrap gap-1">
           {data.map((item, i) => (
-            <Badge key={i} variant="default" className="text-[10px]">
+            <Badge key={i} variant="default" className="text-caption">
               {String(item)}
             </Badge>
           ))}
@@ -507,7 +507,7 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
     const entries = Object.entries(data as Record<string, unknown>);
     if (entries.length === 0) {
       return (
-        <span className="text-text-muted text-[11px] font-mono">{"{}"}</span>
+        <span className="text-text-muted text-caption font-mono">{"{}"}</span>
       );
     }
 
@@ -533,19 +533,19 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
   }
 
   return (
-    <span className="text-text-dim text-[11px] font-mono">{String(data)}</span>
+    <span className="text-text-dim text-caption font-mono">{String(data)}</span>
   );
 }
 
 function PrimitiveValue({ value }: { value: unknown }) {
   if (value === null || value === undefined) {
-    return <span className="text-text-muted text-[11px] font-mono">null</span>;
+    return <span className="text-text-muted text-caption font-mono">null</span>;
   }
   if (typeof value === "boolean") {
     return (
       <span
         className={cn(
-          "text-[11px] font-mono",
+          "text-caption font-mono",
           value ? "text-success" : "text-error",
         )}
       >
@@ -557,10 +557,14 @@ function PrimitiveValue({ value }: { value: unknown }) {
     const formatted = Number.isInteger(value)
       ? String(value)
       : value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
-    return <span className="text-info text-[11px] font-mono">{formatted}</span>;
+    return (
+      <span className="text-info text-caption font-mono">{formatted}</span>
+    );
   }
   return (
-    <span className="text-text-dim text-[11px] font-mono">{String(value)}</span>
+    <span className="text-text-dim text-caption font-mono">
+      {String(value)}
+    </span>
   );
 }
 
@@ -578,7 +582,7 @@ function FlatKVTable({
         nested && "rounded-md border border-divider bg-surface-hi/30 p-1",
       )}
     >
-      <table className="text-[11px] font-mono w-full border-collapse">
+      <table className="text-caption font-mono w-full border-collapse">
         <tbody>
           {entries.map(([key, val]) => (
             <tr key={key} className="align-top">
@@ -623,7 +627,7 @@ function ObjectArrayTable({
 
   return (
     <div className="overflow-x-auto rounded-md border border-divider bg-surface-hi/30 p-1">
-      <table className="text-[11px] font-mono w-full border-collapse">
+      <table className="text-caption font-mono w-full border-collapse">
         <thead>
           <tr className="border-b border-divider bg-surface-hi/30">
             {allKeys.map((k) => (
@@ -669,7 +673,7 @@ function NestedSection({
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-text transition-colors py-1"
+        className="flex items-center gap-1 text-caption font-mono text-text-muted hover:text-text transition-colors py-1"
       >
         {open ? (
           <ChevronDown className="h-2.5 w-2.5" />
