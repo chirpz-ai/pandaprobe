@@ -5,33 +5,47 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  --color-bg:         #0c0c0b;
-  --color-surface:    #111110;
-  --color-surface-hi: #171717;
+  --color-bg:         #191919;
+  --color-surface:    #1f2022;
+  --color-surface-hi: #252628;
 
-  --color-border:     #202020;
-  --color-border-hi:  #2c2c2c;
+  --color-border:     #343537;
+  --color-border-hi:  #484b50;
 
-  --color-line:       #363636;
+  --color-line:       #484b50;
 
   --color-text:       #d1d5db;
-  --color-text-dim:   #858d9b;
-  --color-text-muted: #737b89;
+  --color-text-dim:   #a3a7af;
+  --color-text-muted: #949aa3;
 
   --color-accent:     #e5e7eb;
-  --color-primary:    #ffffff;
+  --color-primary:    #fafafa;
 
-  --color-success:    #22c55e;
-  --color-warning:    #eab308;
-  --color-error:      #ef4444;
-  --color-info:       #3b82f6;
+  --color-brand-blue:   #4288c6;
+  --color-brand-green:  #419777;
+  --color-brand-yellow: #efb426;
+  --color-brand-red:    #e13841;
+  --color-accent-light-blue: #89ddff;
 
-  --radius:           0px;
-  --radius-sm:        0px;
-  --radius-md:        0px;
-  --radius-lg:        0px;
-  --radius-xl:        0px;
-  --radius-full:      0px;
+  /* Dashboard-only span accents extend the brand palette at similar brightness. */
+  --color-span-chain:     #4f9faa;
+  --color-span-llm:       #9b87c9;
+  --color-span-retriever: #ce9165;
+  --color-span-embedding: #bc819d;
+
+  --color-success:    var(--color-brand-green);
+  --color-warning:    var(--color-brand-yellow);
+  --color-error:      var(--color-brand-red);
+  --color-info:       var(--color-brand-blue);
+
+  --radius-control:   1px;
+  --radius-panel:     3px;
+  --radius:           var(--radius-panel);
+  --radius-sm:        var(--radius-control);
+  --radius-md:        var(--radius-panel);
+  --radius-lg:        var(--radius-panel);
+  --radius-xl:        var(--radius-panel);
+  --radius-full:      3px;
 
   --animate-fade-in:    fadeIn 0.4s ease-out forwards;
   --animate-slide-up:   slideUp 0.4s ease-out forwards;
@@ -61,13 +75,34 @@
   *::before,
   *::after {
     box-sizing: border-box;
-    border-radius: 0 !important;
   }
 
   html {
+    color-scheme: dark;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Shared defaults cover native controls as well as Radix/custom buttons. */
+  :where(.border, .border-engraved, [role="dialog"], [role="menu"], [role="listbox"]) {
+    border-radius: var(--radius-panel);
+  }
+
+  :where(button, input, select, textarea, summary, [role="button"], [role="tab"], [role="checkbox"], [role="switch"]) {
+    border-radius: var(--radius-control);
+  }
+
+  :where(button, summary, select, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="checkbox"], [role="switch"], input[type="button"], input[type="submit"], input[type="reset"], input[type="radio"]) {
+    cursor: pointer;
+  }
+
+  :where(button, input, select, textarea, [role]):is(:disabled, [aria-disabled="true"], [data-disabled]) {
+    cursor: not-allowed;
+  }
+
+  :where(button, summary, a) {
+    touch-action: manipulation;
   }
 
   body {
@@ -78,7 +113,7 @@
   }
 
   ::selection {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: #334b5b;
     color: var(--color-primary);
   }
 
