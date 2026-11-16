@@ -1,0 +1,41 @@
+/*
+ * Dashboard typography. Edit sizes here rather than in component classes.
+ * Rem values preserve browser font preferences; pixel equivalents assume 16px.
+ *
+ * text-caption (11px) is the minimum for headings, labels, controls and metadata.
+ * text-compact (10px) is reserved for timeline ticks, span-kind tags and the
+ * development-mode badge. Never use it for headings, body copy or form feedback.
+ * text-xs (12px): dense UI and code. text-sm (14px): body copy and controls.
+ * text-base through text-2xl: larger text, titles and statistics.
+ * text-6xl: the standalone 404 display.
+ */
+@theme {
+  --text-*: initial;
+
+  --text-compact: 0.625rem;
+  --text-compact--line-height: 1.4;
+
+  --text-caption: 0.6875rem;
+  --text-caption--line-height: calc(1 / 0.6875);
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: calc(1 / 0.75);
+
+  --text-sm: 0.875rem;
+  --text-sm--line-height: calc(1.25 / 0.875);
+
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+
+  --text-lg: 1.125rem;
+  --text-lg--line-height: calc(1.75 / 1.125);
+
+  --text-xl: 1.25rem;
+  --text-xl--line-height: calc(1.75 / 1.25);
+
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: calc(2 / 1.5);
+
+  --text-6xl: 3.75rem;
+  --text-6xl--line-height: 1;
+}
