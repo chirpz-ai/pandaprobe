@@ -62,7 +62,7 @@ export function ScoreListTable({
     <div className="border border-border">
       <table className="w-full text-xs font-mono">
         <thead className="sticky top-0 z-10 bg-surface-hi">
-          <tr className="border-b border-border">
+          <tr className="border-b border-divider">
             <th className="w-8" aria-label="Expand" />
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Metric
@@ -177,7 +177,7 @@ function ScoreListRow({
   return (
     <>
       <tr
-        className="border-b border-border hover:bg-surface-hi transition-colors cursor-pointer"
+        className="border-b border-divider hover:bg-surface-hi transition-colors cursor-pointer"
         onClick={toggle}
       >
         <td className="px-2 py-2 w-8 align-middle">
@@ -293,7 +293,7 @@ function ScoreListRow({
         </td>
       </tr>
       {expanded && (
-        <tr className="border-b border-border bg-surface-hi/30">
+        <tr className="border-b border-divider bg-surface-hi/30">
           <td colSpan={colCount} className="px-4 py-3">
             <ExpandedRowDetails
               score={score}
