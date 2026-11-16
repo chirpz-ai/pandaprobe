@@ -1,17 +1,26 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { ChevronRight, ChevronDown, AlertTriangle } from "lucide-react";
+import { useId, useState, type ReactNode } from "react";
+import * as Tabs from "@radix-ui/react-tabs";
+import {
+  ChevronRight,
+  ChevronDown,
+  AlertTriangle,
+  Copy,
+  Check,
+} from "lucide-react";
 import type { SpanResponse, TraceResponse } from "@/lib/api/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
 import { JsonViewer } from "@/components/common/JsonViewer";
+import { FormattedData } from "@/components/common/FormattedData";
 import {
   formatDateTime,
   formatDuration,
   formatCost,
   formatTokens,
 } from "@/lib/utils/format";
+import { spanDuration, timestamp } from "@/lib/utils/trace-timeline";
 import { cn } from "@/lib/utils/cn";
 
 interface SpanDetailPanelProps {
@@ -21,185 +30,199 @@ interface SpanDetailPanelProps {
 }
 
 export function SpanDetailPanel({ trace, span, mode }: SpanDetailPanelProps) {
-  if (mode === "trace") {
-    return <TraceDetail trace={trace} />;
-  }
+  const [view, setView] = useState("formatted");
+  const selected = mode === "span" ? span : null;
+  const record = selected ?? trace;
+  const parent = trace.spans.find(
+    (item) => item.span_id === selected?.parent_span_id,
+  );
+  const start = timestamp(selected?.started_at ?? null);
+  const traceStart = timestamp(trace.started_at);
+  const offset =
+    start != null && traceStart != null ? start - traceStart : null;
+  const renderData = (data: unknown) =>
+    view === "raw" ? <JsonViewer data={data} /> : <FormattedData data={data} />;
 
-  if (!span) {
-    return (
-      <div className="flex items-center justify-center h-full text-xs text-text-muted font-mono">
-        Select a span to view details
-      </div>
-    );
-  }
-
-  return <SpanDetail span={span} />;
-}
-
-function TraceDetail({ trace }: { trace: TraceResponse }) {
   return (
-    <div className="space-y-0">
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="text-xs font-mono text-primary truncate">
-          {trace.name}
-        </h3>
-        <span className="text-[10px] font-mono text-text-muted">
-          Trace overview
-        </span>
-      </div>
-
-      <DetailSection title="Summary">
-        <div className="grid grid-cols-3 gap-x-6 gap-y-2">
-          <KV label="Total tokens" value={formatTokens(trace.total_tokens)} />
-          {/* TODO(cost): Restore Total cost once trace cost computation is implemented. */}
-          {/* <KV label="Total cost" value={formatCost(trace.total_cost)} /> */}
-          <KV label="Spans" value={String(trace.spans.length)} />
+    <Tabs.Root value={view} onValueChange={setView} className="min-w-0">
+      <div className="sticky top-0 z-10 border-b border-border bg-surface px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+            {selected
+              ? `Span detail · ${trace.spans.indexOf(selected) + 1} / ${trace.spans.length}`
+              : "Trace overview"}
+          </span>
+          <Tabs.List
+            aria-label="Content format"
+            className="flex border border-border p-0.5"
+          >
+            <Tabs.Trigger
+              value="formatted"
+              className="px-2.5 py-1 text-[10px] font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
+            >
+              Formatted
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="raw"
+              className="px-2.5 py-1 text-[10px] font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
+            >
+              Raw
+            </Tabs.Trigger>
+          </Tabs.List>
         </div>
-      </DetailSection>
-
-      {trace.input != null && (
-        <DetailSection title="Input">
-          <div className="pl-1">
-            <JsonViewer data={trace.input} />
-          </div>
-        </DetailSection>
-      )}
-
-      {trace.output != null && (
-        <DetailSection title="Output">
-          <div className="pl-1">
-            <JsonViewer data={trace.output} />
-          </div>
-        </DetailSection>
-      )}
-
-      {Object.keys(trace.metadata).length > 0 && (
-        <DetailSection title="Metadata">
-          <div className="pl-1">
-            <JsonViewer data={trace.metadata} />
-          </div>
-        </DetailSection>
-      )}
-    </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2 min-w-0">
+          <h2 className="text-sm font-mono text-primary [overflow-wrap:anywhere]">
+            {record.name}
+          </h2>
+          {selected && <Badge variant="default">{selected.kind}</Badge>}
+          <StatusBadge status={record.status} />
+        </div>
+      </div>
+      {/* Keep the selected format when navigating between spans. */}
+      <Tabs.Content
+        value={view}
+        className="min-w-0 focus-visible:outline-none"
+        key={selected?.span_id ?? "trace"}
+      >
+        <div className="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-2 border-b border-border">
+          {selected ? (
+            <>
+              <KV
+                label="Start"
+                value={
+                  offset != null
+                    ? `${offset >= 0 ? "+" : "−"}${formatDuration(Math.abs(offset))}`
+                    : "—"
+                }
+              />
+              <KV
+                label="Duration"
+                value={formatDuration(spanDuration(selected))}
+              />
+              {selected.model && <KV label="Model" value={selected.model} />}
+              {selected.parent_span_id && (
+                <KV
+                  label="Parent"
+                  value={parent?.name ?? selected.parent_span_id}
+                />
+              )}
+              {selected.time_to_first_token_ms != null && (
+                <KV
+                  label="First token"
+                  value={formatDuration(selected.time_to_first_token_ms)}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <KV
+                label="Total tokens"
+                value={formatTokens(trace.total_tokens)}
+              />
+              <KV label="Spans" value={String(trace.spans.length)} />
+            </>
+          )}
+        </div>
+        {selected?.error && (
+          <DetailSection
+            title="Error"
+            icon={<AlertTriangle className="h-3 w-3 text-error" />}
+          >
+            <pre className="ph-no-capture whitespace-pre-wrap [overflow-wrap:anywhere] border border-error/20 bg-error/5 p-3 text-xs text-error">
+              {selected.error}
+            </pre>
+          </DetailSection>
+        )}
+        <DataSection title="Input" data={record.input}>
+          {renderData(record.input)}
+        </DataSection>
+        <DataSection title="Output" data={record.output}>
+          {renderData(record.output)}
+        </DataSection>
+        {selected?.token_usage &&
+          Object.keys(selected.token_usage).length > 0 && (
+            <DataSection title="Token usage" data={selected.token_usage}>
+              {renderData(selected.token_usage)}
+            </DataSection>
+          )}
+        {selected?.cost && Object.keys(selected.cost).length > 0 && (
+          <DetailSection title="Cost">
+            <div className="grid grid-cols-2 gap-3">
+              {Object.entries(selected.cost).map(([key, value]) => (
+                <KV key={key} label={key} value={formatCost(value)} />
+              ))}
+            </div>
+          </DetailSection>
+        )}
+        {selected?.model_parameters &&
+          Object.keys(selected.model_parameters).length > 0 && (
+            <DataSection
+              title="Model parameters"
+              data={selected.model_parameters}
+            >
+              {renderData(selected.model_parameters)}
+            </DataSection>
+          )}
+        {Object.keys(record.metadata).length > 0 && (
+          <DataSection title="Metadata" data={record.metadata}>
+            {renderData(record.metadata)}
+          </DataSection>
+        )}
+        {selected && (
+          <DetailSection
+            title="Span identifiers & timestamps"
+            defaultOpen={false}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <KV label="Span ID" value={selected.span_id} copyable />
+              {selected.parent_span_id && (
+                <KV
+                  label="Parent span ID"
+                  value={selected.parent_span_id}
+                  copyable
+                />
+              )}
+              <KV label="Started" value={formatDateTime(selected.started_at)} />
+              <KV label="Ended" value={formatDateTime(selected.ended_at)} />
+              {selected.completion_start_time && (
+                <KV
+                  label="Completion start"
+                  value={formatDateTime(selected.completion_start_time)}
+                />
+              )}
+            </div>
+          </DetailSection>
+        )}
+      </Tabs.Content>
+    </Tabs.Root>
   );
 }
 
-function SpanDetail({ span }: { span: SpanResponse }) {
-  const hasTokens =
-    span.token_usage && Object.keys(span.token_usage).length > 0;
-  const hasCost = span.cost && Object.keys(span.cost).length > 0;
-  const hasModelParams =
-    span.model_parameters && Object.keys(span.model_parameters).length > 0;
-  const hasMetadata = Object.keys(span.metadata).length > 0;
-
+function DataSection({
+  title,
+  data,
+  children,
+}: {
+  title: string;
+  data: unknown;
+  children: ReactNode;
+}) {
   return (
-    <div className="space-y-0">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="text-xs font-mono text-primary truncate max-w-[200px]">
-            {span.name}
-          </h3>
-          <Badge variant="default">{span.kind}</Badge>
-          <StatusBadge status={span.status} />
-          {span.model && <Badge variant="info">{span.model}</Badge>}
-        </div>
-      </div>
-
-      {/* Info grid */}
-      <DetailSection title="Info">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-          <KV label="Span ID" value={span.span_id} copyable />
-          {span.parent_span_id && (
-            <KV label="Parent span" value={span.parent_span_id} copyable />
-          )}
-          <KV label="Latency" value={formatDuration(span.latency_ms)} />
-          <KV
-            label="Time to first token"
-            value={formatDuration(span.time_to_first_token_ms)}
-          />
-          <KV label="Started" value={formatDateTime(span.started_at)} />
-          <KV label="Ended" value={formatDateTime(span.ended_at)} />
-          {span.completion_start_time && (
-            <KV
-              label="Completion start"
-              value={formatDateTime(span.completion_start_time)}
-            />
-          )}
-        </div>
-      </DetailSection>
-
-      {/* Error */}
-      {span.error && (
-        <DetailSection
-          title="Error"
-          titleClassName="text-error"
-          icon={<AlertTriangle className="h-3 w-3 text-error" />}
-        >
-          <pre className="text-xs font-mono text-error/80 whitespace-pre-wrap break-words bg-error/5 p-2.5 border border-error/20">
-            {span.error}
-          </pre>
-        </DetailSection>
-      )}
-
-      {/* Input */}
-      {span.input != null && (
-        <DetailSection title="Input">
-          <div className="pl-1">
-            <JsonViewer data={span.input} />
-          </div>
-        </DetailSection>
-      )}
-
-      {/* Output */}
-      {span.output != null && (
-        <DetailSection title="Output">
-          <div className="pl-1">
-            <JsonViewer data={span.output} />
-          </div>
-        </DetailSection>
-      )}
-
-      {/* Token Usage */}
-      {hasTokens && (
-        <DetailSection title="Token Usage">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-            {Object.entries(span.token_usage!).map(([k, v]) => (
-              <KV key={k} label={k} value={String(v ?? "—")} />
-            ))}
-          </div>
-        </DetailSection>
-      )}
-
-      {/* Cost */}
-      {hasCost && (
-        <DetailSection title="Cost">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-            {Object.entries(span.cost!).map(([k, v]) => (
-              <KV key={k} label={k} value={formatCost(v)} />
-            ))}
-          </div>
-        </DetailSection>
-      )}
-
-      {/* Model Parameters */}
-      {hasModelParams && (
-        <DetailSection title="Model Parameters">
-          <div className="pl-1">
-            <JsonViewer data={span.model_parameters} />
-          </div>
-        </DetailSection>
-      )}
-
-      {/* Metadata */}
-      {hasMetadata && (
-        <DetailSection title="Metadata">
-          <div className="pl-1">
-            <JsonViewer data={span.metadata} />
-          </div>
-        </DetailSection>
-      )}
-    </div>
+    <DetailSection
+      title={title}
+      action={
+        <CopyValue
+          value={
+            typeof data === "string"
+              ? data
+              : (JSON.stringify(data, null, 2) ?? "null")
+          }
+          label={`Copy ${title.toLowerCase()}`}
+        />
+      }
+    >
+      {children}
+    </DetailSection>
   );
 }
 
@@ -207,41 +230,85 @@ function DetailSection({
   title,
   children,
   defaultOpen = true,
-  titleClassName,
   icon,
+  action,
 }: {
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
-  titleClassName?: string;
   icon?: ReactNode;
+  action?: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-
+  const id = useId();
   return (
     <div className="border-b border-border">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-4 py-2 hover:bg-surface-hi transition-colors"
-      >
-        {open ? (
-          <ChevronDown className="h-3 w-3 text-text-muted flex-shrink-0" />
-        ) : (
-          <ChevronRight className="h-3 w-3 text-text-muted flex-shrink-0" />
-        )}
-        {icon}
-        <span
-          className={cn(
-            "text-[10px] font-mono uppercase tracking-wider text-text-muted",
-            titleClassName,
-          )}
+      <div className="flex items-center pr-3">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={id}
+          onClick={() => setOpen((value) => !value)}
+          className="flex flex-1 items-center gap-2 px-4 py-3 text-left hover:bg-surface-hi focus-visible:outline focus-visible:outline-primary"
         >
-          {title}
-        </span>
-      </button>
-      {open && <div className="px-4 pb-3">{children}</div>}
+          {open ? (
+            <ChevronDown className="h-3 w-3 text-text-muted shrink-0" />
+          ) : (
+            <ChevronRight className="h-3 w-3 text-text-muted shrink-0" />
+          )}
+          {icon}
+          <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+            {title}
+          </span>
+        </button>
+        {action}
+      </div>
+      <div
+        id={id}
+        hidden={!open}
+        className="px-4 pb-4 min-w-0 [overflow-wrap:anywhere]"
+      >
+        {open && children}
+      </div>
     </div>
+  );
+}
+
+function CopyValue({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const [failed, setFailed] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setFailed(false);
+    } catch {
+      setFailed(true);
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      onBlur={() => {
+        setCopied(false);
+        setFailed(false);
+      }}
+      aria-label={copied ? `${label}: copied` : label}
+      title={
+        failed
+          ? "Copy failed. Select the text to copy it."
+          : copied
+            ? "Copied"
+            : label
+      }
+      className={cn(
+        "flex h-7 w-7 shrink-0 items-center justify-center text-text-muted hover:text-text focus-visible:outline focus-visible:outline-primary",
+        copied && "text-success",
+      )}
+    >
+      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+    </button>
   );
 }
 
@@ -256,21 +323,17 @@ function KV({
 }) {
   return (
     <div className="min-w-0">
-      <span className="text-[10px] font-mono text-text-muted block">
+      <span className="block text-[10px] font-mono text-text-muted">
         {label}
       </span>
-      {copyable ? (
-        <button
-          type="button"
-          onClick={() => navigator.clipboard.writeText(value)}
-          className="text-xs font-mono text-text truncate block max-w-full hover:text-primary transition-colors text-left"
-          title={value}
-        >
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-mono text-text [overflow-wrap:anywhere]">
           {value}
-        </button>
-      ) : (
-        <span className="text-xs font-mono text-text">{value}</span>
-      )}
+        </span>
+        {copyable && (
+          <CopyValue value={value} label={`Copy ${label.toLowerCase()}`} />
+        )}
+      </div>
     </div>
   );
 }
