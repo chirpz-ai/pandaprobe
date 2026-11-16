@@ -6,12 +6,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Trash2,
-  Copy,
+  Link,
   Check,
   BarChart3,
   FlaskConical,
   Loader2,
-  ChevronDown,
 } from "lucide-react";
 import { getTrace, deleteTrace } from "@/lib/api/traces";
 import { getTraceScoresByTraceId } from "@/lib/api/evaluations";
@@ -19,6 +18,7 @@ import { queryKeys } from "@/lib/query/keys";
 import { SpanWaterfall } from "@/components/features/SpanWaterfall";
 import { ScoresSidebar } from "@/components/features/ScoresSidebar";
 import { EvaluationSidebar } from "@/components/features/EvaluationSidebar";
+import { TraceMetadataSidebar } from "@/components/features/TraceMetadataSidebar";
 import { useHasPendingEvalForTarget } from "@/components/providers/EvalRunTrackerProvider";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
@@ -28,13 +28,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/providers/ToastProvider";
-import {
-  formatDateTime,
-  formatDuration,
-  // TODO(cost): re-enable when trace cost computation is implemented.
-  // formatCost,
-  formatTokens,
-} from "@/lib/utils/format";
+import { formatDuration, formatTokens } from "@/lib/utils/format";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useProjectPath, useProjectId } from "@/hooks/useNavigation";
 import { extractErrorMessage } from "@/lib/api/client";
@@ -84,10 +78,14 @@ export default function TraceDetailPage({
     }
   }
 
-  function handleCopyId() {
-    navigator.clipboard.writeText(traceId);
-    setCopiedId(true);
-    setTimeout(() => setCopiedId(false), 2000);
+  async function handleCopyId() {
+    try {
+      await navigator.clipboard.writeText(traceId);
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    } catch {
+      toast({ title: "Could not copy trace ID", variant: "error" });
+    }
   }
 
   if (traceQuery.isPending) return <LoadingState />;
@@ -107,11 +105,12 @@ export default function TraceDetailPage({
 
   return (
     <div className="flex h-full min-h-[540px] flex-col gap-3 animate-fade-in">
-      <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="grid shrink-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center min-[1360px]:flex min-[1360px]:gap-4">
+        <div className="flex min-w-0 items-center gap-2 min-[1360px]:max-w-[28%]">
           <Button
             variant="ghost"
             size="icon"
+            className="shrink-0"
             aria-label="Go back"
             onClick={() => router.back()}
           >
@@ -123,29 +122,40 @@ export default function TraceDetailPage({
           >
             {trace.name}
           </h1>
-          <div className="hidden xl:flex items-center gap-1.5">
-            <span
-              className="text-xs text-text-muted font-mono"
-              title={trace.trace_id}
+          <Tooltip content={copiedId ? "Copied!" : "Copy trace ID"}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0 gap-1.5 px-1.5 text-text-muted"
+              onClick={handleCopyId}
+              aria-label="Copy trace ID"
             >
-              {trace.trace_id.slice(0, 8)}
-            </span>
-            <Tooltip content={copiedId ? "Copied!" : "Copy trace ID"}>
-              <button
-                className="text-text-muted hover:text-text transition-colors"
-                onClick={handleCopyId}
-                aria-label="Copy trace ID"
-              >
-                {copiedId ? (
-                  <Check className="h-3 w-3 text-success" />
-                ) : (
-                  <Copy className="h-3 w-3" />
-                )}
-              </button>
-            </Tooltip>
-          </div>
+              ID
+              {copiedId ? (
+                <Check className="h-3 w-3 text-success" />
+              ) : (
+                <Link className="h-3 w-3" />
+              )}
+            </Button>
+          </Tooltip>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-mono lg:col-span-2 lg:row-start-2 min-[1360px]:shrink-0">
+          <StatusBadge status={trace.status} />
+          <span className="whitespace-nowrap text-text">
+            {formatDuration(latencyMs)}{" "}
+            <span className="text-text-muted">duration</span>
+          </span>
+          <span className="whitespace-nowrap text-text">
+            {formatTokens(trace.total_tokens)}{" "}
+            <span className="text-text-muted">tokens</span>
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 lg:col-start-2 lg:row-start-1 lg:flex-nowrap min-[1360px]:ml-auto min-[1360px]:shrink-0">
+          <TraceMetadataSidebar
+            trace={trace}
+            copiedId={copiedId}
+            onCopyId={handleCopyId}
+          />
           <Button
             variant="secondary"
             size="sm"
@@ -188,85 +198,6 @@ export default function TraceDetailPage({
           </Button>
         </div>
       </div>
-
-      <details className="group shrink-0 border border-border bg-surface text-xs font-mono">
-        <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 [&::-webkit-details-marker]:hidden focus-visible:outline focus-visible:outline-primary">
-          <StatusBadge status={trace.status} />
-          <span className="text-text">
-            {formatDuration(latencyMs)}{" "}
-            <span className="text-text-muted">duration</span>
-          </span>
-          <span className="text-text">
-            {formatTokens(trace.total_tokens)}{" "}
-            <span className="text-text-muted">tokens</span>
-          </span>
-          <span className="ml-auto flex items-center gap-2 text-text-dim">
-            Trace details{" "}
-            <ChevronDown className="h-3 w-3 group-open:rotate-180" />
-          </span>
-        </summary>
-        <div className="grid max-h-[28vh] grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 overflow-auto border-t border-divider p-3 text-xs font-mono [overflow-wrap:anywhere]">
-          <div className="sm:col-span-2">
-            <span className="text-text-muted block">Trace ID</span>
-            <button
-              type="button"
-              onClick={handleCopyId}
-              className="text-left text-text hover:text-primary"
-              title="Copy trace ID"
-            >
-              {trace.trace_id}{" "}
-              {copiedId ? "Copied" : <Copy className="inline h-3 w-3" />}
-            </button>
-          </div>
-          {/* TODO(cost): Restore Total Cost once trace cost computation is implemented. */}
-          {/* <div>
-            <span className="text-text-muted block">Total Cost</span>
-            <span className="text-text">{formatCost(trace.total_cost)}</span>
-          </div> */}
-          <div>
-            <span className="text-text-muted block">Started</span>
-            <span className="text-text">
-              {formatDateTime(trace.started_at)}
-            </span>
-          </div>
-          <div>
-            <span className="text-text-muted block">Ended</span>
-            <span className="text-text">{formatDateTime(trace.ended_at)}</span>
-          </div>
-          <div>
-            <span className="text-text-muted block">Session</span>
-            <span className="text-text">{trace.session_id ?? "—"}</span>
-          </div>
-          <div>
-            <span className="text-text-muted block">User</span>
-            <span className="ph-no-capture text-text">
-              {trace.user_id ?? "—"}
-            </span>
-          </div>
-          <div>
-            <span className="text-text-muted block">Environment</span>
-            <span className="text-text">{trace.environment ?? "—"}</span>
-          </div>
-          <div>
-            <span className="text-text-muted block">Release</span>
-            <span className="text-text">{trace.release ?? "—"}</span>
-          </div>
-          <div className="sm:col-span-2">
-            <span className="text-text-muted block mb-1">Tags</span>
-            {trace.tags.length > 0 ? (
-              <div className="flex gap-1 flex-wrap">
-                {trace.tags.map((tag) => (
-                  <Badge key={tag} variant="default">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <span className="text-text">—</span>
-            )}
-          </div>
-        </div>
-      </details>
 
       <SpanWaterfall key={trace.trace_id} trace={trace} />
 
