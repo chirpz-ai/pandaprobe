@@ -9,15 +9,17 @@ describe("Trace waterfall", () => {
     const bar = container.querySelector<HTMLElement>(
       '[data-timeline-bar="llm"]',
     )!;
-    expect(bar.style.left).toContain("25%");
-    expect(bar.style.width).toBe("25%");
+    expect(bar.style.left).toContain("20%");
+    expect(bar.style.width).toBe("20%");
+    expect(bar).not.toHaveAttribute("data-timeline-marker");
     const marker = container.querySelector<HTMLElement>(
       '[data-timeline-bar="tool"]',
     )!;
-    expect(marker.style.width).toBe("0%");
+    expect(marker.style.width).toBe("2px");
     expect(marker.style.minWidth).toBe("2px");
+    expect(marker).toHaveAttribute("data-timeline-marker", "true");
     expect(screen.getByLabelText("Elapsed time")).toHaveTextContent(
-      "0s2s4s6s8s",
+      "0s2s4s6s8s10s",
     );
   });
 
@@ -40,14 +42,77 @@ describe("Trace waterfall", () => {
     expect(
       screen.getByRole("button", { name: "Expand Agent" }),
     ).toHaveAttribute("aria-expanded", "false");
-    await user.click(screen.getByRole("button", { name: "Expand all" }));
+    await user.click(screen.getByRole("button", { name: "Expand Agent" }));
     expect(
       screen.getByRole("button", { name: /ChatOpenAI LLM/ }),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Collapse all" }));
     expect(
-      screen.queryByRole("button", { name: /Agent AGENT/ }),
+      screen.queryByRole("button", { name: "Expand all" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Collapse all" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps short spans visible as markers and longer spans as unoutlined bars", () => {
+    const { container } = render(
+      <SpanWaterfall
+        trace={makeTrace({
+          spans: [
+            makeSpan({ span_id: "short", latency_ms: 16 }),
+            makeSpan({ span_id: "long", latency_ms: 2000 }),
+          ],
+        })}
+      />,
+    );
+    const short = container.querySelector<HTMLElement>(
+      '[data-timeline-bar="short"]',
+    )!;
+    const long = container.querySelector<HTMLElement>(
+      '[data-timeline-bar="long"]',
+    )!;
+    expect(short).toHaveAttribute("data-timeline-marker", "true");
+    expect(short.style.width).toBe("2px");
+    expect(long).not.toHaveAttribute("data-timeline-marker");
+    expect(long.className).not.toContain("border-l");
+  });
+
+  it("switches between Waterfall and Timeline with shared selection and collapsed branches", async () => {
+    const user = userEvent.setup();
+    render(<SpanWaterfall trace={makeTrace()} />);
+    expect(screen.getByRole("tab", { name: "Timeline" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: /ChatOpenAI LLM/ }));
+    await user.click(screen.getByRole("tab", { name: "Waterfall" }));
+    expect(screen.queryByLabelText("Elapsed time")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /ChatOpenAI LLM/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Collapse Agent" }));
+    expect(
+      screen.queryByRole("button", { name: /ChatOpenAI LLM/ }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Timeline" }));
+    expect(screen.getByLabelText("Elapsed time")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /ChatOpenAI LLM/ }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Expand Agent" }));
+    expect(
+      screen.getByRole("button", { name: /ChatOpenAI LLM/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    // Radix tabs also support keyboard switching.
+    screen.getByRole("tab", { name: "Timeline" }).focus();
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("tab", { name: "Waterfall" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("heading", { name: "ChatOpenAI" }),
+    ).toBeInTheDocument();
   });
 
   it("defaults to readable cards, selects spans and keeps the raw preference across selections", async () => {
