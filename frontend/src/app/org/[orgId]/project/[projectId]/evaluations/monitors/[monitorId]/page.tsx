@@ -260,7 +260,7 @@ export default function MonitorDetailPage() {
       <div className="flex-shrink-0 pb-3">
         <Link
           href={monitorsListHref}
-          className="inline-flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-text transition-colors mb-2"
+          className="inline-flex items-center gap-1 text-caption font-mono text-text-muted hover:text-text transition-colors mb-2"
         >
           <ArrowLeft className="h-3 w-3" />
           Back to monitors
@@ -279,7 +279,7 @@ export default function MonitorDetailPage() {
               </div>
               <div className="flex items-center gap-1.5 min-w-0">
                 <span
-                  className="text-[11px] font-mono text-text-dim truncate min-w-0"
+                  className="text-caption font-mono text-text-dim truncate min-w-0"
                   title={monitor.id}
                 >
                   {monitor.id}
@@ -416,12 +416,12 @@ export default function MonitorDetailPage() {
           </div>
 
           <div className="px-4 py-3 border-t border-divider">
-            <span className="block text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
+            <span className="block text-caption font-mono text-text-muted mb-1.5">
               Metrics
             </span>
             <div className="flex gap-1 flex-wrap">
               {monitor.metric_names.length === 0 ? (
-                <span className="text-[11px] font-mono text-text-muted">
+                <span className="text-caption font-mono text-text-muted">
                   None
                 </span>
               ) : (
@@ -436,12 +436,12 @@ export default function MonitorDetailPage() {
 
           {filtersList.length > 0 && (
             <div className="px-4 py-3 border-t border-divider">
-              <span className="flex items-center gap-1 text-[10px] font-mono text-text-muted uppercase tracking-wider mb-1.5">
+              <span className="flex items-center gap-1 text-caption font-mono text-text-muted mb-1.5">
                 <Filter className="h-2.5 w-2.5" />
                 Filters
               </span>
               <div className="rounded-md bg-bg/30 p-1">
-                <table className="text-[11px] font-mono w-full border-collapse">
+                <table className="text-caption font-mono w-full border-collapse">
                   <tbody>
                     {filtersList.map(([key, val]) => (
                       <tr key={key} className="align-top">
@@ -460,7 +460,7 @@ export default function MonitorDetailPage() {
           )}
         </div>
 
-        <h2 className="text-sm font-mono text-text-muted uppercase tracking-wider mt-4 mb-2">
+        <h2 className="text-sm font-mono text-text-muted mt-4 mb-2">
           Runs
           {runsQuery.data && (
             <span className="ml-2 text-text-dim normal-case tracking-normal">
@@ -557,9 +557,7 @@ function SummaryCell({
 }) {
   return (
     <div className="min-w-0">
-      <span className="block text-[10px] text-text-muted uppercase tracking-wider">
-        {label}
-      </span>
+      <span className="block text-caption text-text-muted">{label}</span>
       <span
         className={cn(
           "flex items-center gap-1 truncate",
