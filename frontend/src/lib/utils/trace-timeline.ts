@@ -31,7 +31,8 @@ export function buildTree(spans: SpanResponse[]): SpanNode[] {
       ancestors.add(parent);
       parent = nodes.get(parent)!.parent_span_id;
     }
-    if (parent && ancestors.has(parent)) {
+    // Only cycle members become roots; descendants keep their valid parent links.
+    if (parent === node.span_id) {
       roots.push(node);
     } else if (node.parent_span_id && nodes.has(node.parent_span_id)) {
       nodes.get(node.parent_span_id)!.children.push(node);
@@ -40,11 +41,14 @@ export function buildTree(spans: SpanResponse[]): SpanNode[] {
     }
   }
   const sort = (siblings: SpanNode[]) => {
-    siblings.sort(
-      (a, b) =>
-        (timestamp(a.started_at) ?? Infinity) -
-        (timestamp(b.started_at) ?? Infinity),
-    );
+    siblings.sort((a, b) => {
+      const aStart = timestamp(a.started_at);
+      const bStart = timestamp(b.started_at);
+      // Untimed spans follow timed spans and retain their input order.
+      if (aStart == null) return bStart == null ? 0 : 1;
+      if (bStart == null) return -1;
+      return aStart - bStart;
+    });
     siblings.forEach((node) => sort(node.children));
   };
   sort(roots);
