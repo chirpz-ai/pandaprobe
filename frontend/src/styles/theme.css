@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./typography.css";
 
 /* ─── Design Tokens ────────────────────────────────────────────────────────── */
 @theme inline {
@@ -31,7 +32,6 @@
 
   /* Dashboard-only span accents extend the brand palette. */
   --color-span-trace:     #6bb8ed;
-  --color-span-chain:     #4f9faa;
   --color-span-llm:       #9b87c9;
   --color-span-retriever: #ce9165;
   --color-span-embedding: #bc819d;
@@ -52,6 +52,8 @@
 
   --animate-fade-in:    fadeIn 0.4s ease-out forwards;
   --animate-slide-up:   slideUp 0.4s ease-out forwards;
+  --animate-slide-in-right: slideInRight 0.2s ease-out;
+  --animate-slide-out-right: slideOutRight 0.2s ease-in;
   --animate-pulse-glow: pulseGlow 1.8s ease-out infinite;
 }
 
@@ -64,6 +66,16 @@
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
 }
 
 @keyframes pulseGlow {
@@ -112,6 +124,7 @@
     background-color: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-mono), "JetBrains Mono", "Fira Code", monospace;
+    font-size: var(--text-base);
     line-height: 1.6;
   }
 
