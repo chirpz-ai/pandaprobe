@@ -190,7 +190,7 @@ function EvalNextSteps() {
   ];
 
   return (
-    <section className="space-y-3 pt-4 border-t border-border">
+    <section className="space-y-3 pt-4 border-t border-divider">
       <div className="flex items-center gap-2">
         <BookOpen className="h-4 w-4 text-text-muted" />
         <h2 className="text-sm font-mono text-text">Explore the docs</h2>
