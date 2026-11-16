@@ -47,7 +47,7 @@ export function SpanDetailPanel({ trace, span, mode }: SpanDetailPanelProps) {
     <Tabs.Root value={view} onValueChange={setView} className="min-w-0">
       <div className="sticky top-0 z-10 border-b border-divider bg-surface px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+          <span className="text-caption font-mono text-text-muted">
             {selected
               ? `Span detail · ${trace.spans.indexOf(selected) + 1} / ${trace.spans.length}`
               : "Trace overview"}
@@ -58,13 +58,13 @@ export function SpanDetailPanel({ trace, span, mode }: SpanDetailPanelProps) {
           >
             <Tabs.Trigger
               value="formatted"
-              className="px-2.5 py-1 text-[10px] font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
+              className="px-2.5 py-1 text-caption font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
             >
               Formatted
             </Tabs.Trigger>
             <Tabs.Trigger
               value="raw"
-              className="px-2.5 py-1 text-[10px] font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
+              className="px-2.5 py-1 text-caption font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
             >
               Raw
             </Tabs.Trigger>
@@ -257,9 +257,7 @@ function DetailSection({
             <ChevronRight className="h-3 w-3 shrink-0" />
           )}
           {icon}
-          <span className="text-[10px] font-mono uppercase tracking-wider">
-            {title}
-          </span>
+          <span className="text-caption font-mono">{title}</span>
         </button>
         {action}
       </div>
@@ -323,7 +321,7 @@ function KV({
 }) {
   return (
     <div className="min-w-0">
-      <span className="block text-[10px] font-mono text-text-muted">
+      <span className="block text-caption font-mono text-text-muted">
         {label}
       </span>
       <div className="flex items-center gap-1">
