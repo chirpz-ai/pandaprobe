@@ -20,6 +20,17 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Dashboard typography
+
+Font sizes and their default line heights live in [`src/styles/typography.css`](src/styles/typography.css). Use its Tailwind classes instead of arbitrary sizes or inline numeric font sizes:
+
+- `text-caption` — 11px, the minimum for regular UI text, including card headings, labels, tabs and metadata.
+- `text-xs` — 12px for dense content and code; `text-sm` — 14px for body copy and controls.
+- `text-base`, `text-lg`, `text-xl`, `text-2xl` — 16px, 18px, 20px and 24px. `text-6xl` is reserved for the 404 display.
+- `text-compact` — 10px, used only for timeline ticks, span-kind tags and the development-mode badge.
+
+Sizes use rem units so they respect browser font preferences. Components requiring inline styles can reference the same variables, e.g. `fontSize: "var(--text-xs)"`. If adding a custom size name, also register it in `src/lib/utils/cn.ts` so class overrides merge as font sizes rather than colors.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

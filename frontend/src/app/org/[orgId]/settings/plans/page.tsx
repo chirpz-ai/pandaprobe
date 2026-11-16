@@ -198,7 +198,7 @@ function PlanCard({
           href={CONTACT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-1.5 w-full text-xs font-mono px-3 py-1.5 border border-border bg-surface hover:bg-surface-hi text-text transition-colors mt-2"
+          className="inline-flex items-center justify-center gap-1.5 rounded-control w-full text-xs font-mono px-3 py-1.5 border border-border bg-surface hover:bg-surface-hi text-text transition-colors mt-2"
         >
           Contact <ExternalLink className="h-3 w-3" />
         </a>

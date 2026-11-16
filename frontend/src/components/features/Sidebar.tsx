@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,6 +48,14 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 const STORAGE_KEY = "pandaprobe_sidebar_collapsed";
+
+function subscribeToMobile(onChange: () => void) {
+  const query = window.matchMedia("(max-width: 639px)");
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+const getIsMobile = () => window.matchMedia("(max-width: 639px)").matches;
+const getServerIsMobile = () => false;
 
 interface NavItem {
   label: string;
@@ -218,7 +226,7 @@ function SwitcherDropdown({
           ))}
           {footerAction && (
             <>
-              <DropdownMenu.Separator className="my-1 mx-1 border-t border-border" />
+              <DropdownMenu.Separator className="my-1 mx-1 border-t border-divider" />
               <DropdownMenu.Item
                 className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-muted hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
                 onSelect={footerAction.onSelect}
@@ -255,7 +263,14 @@ export function Sidebar() {
   const activeOrg =
     currentOrg ?? organizations.find((o) => o.id === orgId) ?? null;
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [desktopCollapsed, setCollapsed] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
+  const isMobile = useSyncExternalStore(
+    subscribeToMobile,
+    getIsMobile,
+    getServerIsMobile,
+  );
+  const collapsed = isMobile ? !mobileExpanded : desktopCollapsed;
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
 
@@ -373,6 +388,10 @@ export function Sidebar() {
   }
 
   function toggleCollapsed() {
+    if (isMobile) {
+      setMobileExpanded((value) => !value);
+      return;
+    }
     const next = !collapsed;
     setCollapsed(next);
     localStorage.setItem(STORAGE_KEY, String(next));
@@ -434,19 +453,19 @@ export function Sidebar() {
     <Tooltip.Provider delayDuration={0}>
       <aside
         className={cn(
-          "flex flex-col h-full bg-surface border-r border-border transition-all duration-200",
+          "flex shrink-0 flex-col h-full bg-surface border-r border-border transition-all duration-200",
           collapsed ? "w-14" : "w-56",
         )}
       >
         {/* ── Header (h-12 to match TopBar) ──────────────────────── */}
-        <div className="flex items-center justify-between px-3 h-12 border-b border-border">
+        <div className="flex items-center justify-between px-3 h-12 border-b border-divider">
           {!collapsed && (inAccountRoute || settingsView) ? (
             <button
               onClick={exitSettings}
               className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight hover:text-text transition-colors"
             >
               <Image
-                src="/favicon-32x32.png"
+                src="/favicon-96x96.png"
                 alt=""
                 width={18}
                 height={18}
@@ -460,7 +479,7 @@ export function Sidebar() {
               className="flex items-center gap-2 text-sm font-mono text-primary tracking-tight"
             >
               <Image
-                src="/favicon-32x32.png"
+                src="/favicon-96x96.png"
                 alt=""
                 width={18}
                 height={18}
@@ -471,6 +490,7 @@ export function Sidebar() {
           ) : null}
           <button
             onClick={toggleCollapsed}
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
             className={`${collapsed ? "p-2" : "p-0"} text-text-muted hover:text-text transition-colors`}
           >
             {collapsed ? (
@@ -621,7 +641,7 @@ export function Sidebar() {
         )}
 
         {/* ── Footer ─────────────────────────────────────────────── */}
-        <div className="border-t border-border py-2">
+        <div className="border-t border-divider py-2">
           {/* User menu */}
           {authEnabled && user ? (
             <DropdownMenu.Root>
@@ -641,11 +661,11 @@ export function Sidebar() {
                   sideOffset={8}
                   className="z-50 w-[calc(14rem-16px)] bg-surface border border-border p-1 shadow-lg"
                 >
-                  <div className="px-2 py-2 border-b border-border mb-1 ph-no-capture">
+                  <div className="px-2 py-2 border-b border-divider mb-1 ph-no-capture">
                     <p className="text-xs font-mono text-text truncate">
                       {displayName}
                     </p>
-                    <p className="text-[10px] font-mono text-text-muted truncate">
+                    <p className="text-caption font-mono text-text-muted truncate">
                       {displayEmail}
                     </p>
                   </div>
@@ -672,7 +692,7 @@ export function Sidebar() {
                     <Bug className="h-3.5 w-3.5" />
                     Report a bug
                   </DropdownMenu.Item>
-                  <DropdownMenu.Separator className="my-1 mx-1 border-t border-border" />
+                  <DropdownMenu.Separator className="my-1 mx-1 border-t border-divider" />
                   <DropdownMenu.Item
                     className="flex items-center gap-2 px-2 py-1.5 text-xs font-mono text-text-dim hover:text-text hover:bg-surface-hi cursor-pointer outline-none"
                     onSelect={() => signOut()}

@@ -103,7 +103,7 @@ export function ScoreRow({
   }
 
   return (
-    <div className="px-4 py-3 hover:bg-surface-hi transition-colors">
+    <div className="min-w-0 px-4 py-4 hover:bg-surface-hi/30 transition-colors">
       <div className="flex items-center justify-between mb-2 gap-2">
         <span className="text-xs font-mono text-text min-w-0 truncate">
           <span className="text-warning font-medium">{score.name}</span>
@@ -138,7 +138,7 @@ export function ScoreRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 mb-2">
+      <div className="flex flex-wrap items-center gap-1.5 mb-2">
         <Badge variant="default">{score.data_type}</Badge>
         <Badge variant="info">{score.source}</Badge>
         <StatusBadge status={score.status} />
@@ -147,7 +147,7 @@ export function ScoreRow({
       {score.reason && (
         <div className="flex items-start gap-1 mb-2">
           <MessageSquareText className="h-3 w-3 text-text-muted mt-0.5 flex-shrink-0" />
-          <p className="text-xs font-mono text-text-dim whitespace-pre-wrap">
+          <p className="min-w-0 flex-1 text-xs font-mono text-text-dim whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">
             <span className="text-text-muted">Reasoning:</span> {score.reason}
           </p>
         </div>
@@ -183,7 +183,7 @@ export function ScoreRow({
         <MetadataSection data={score.metadata} />
       )}
 
-      <div className="space-y-0.5 text-[10px] font-mono text-text-muted mt-2">
+      <div className="space-y-0.5 text-caption font-mono text-text-muted mt-2">
         {traceScore?.environment && (
           <div className="flex items-center gap-1.5">
             <Globe className="h-2.5 w-2.5" />
@@ -347,7 +347,7 @@ function EditableTraceScoreRow({
       </div>
 
       <div className="mb-2">
-        <label className="block text-[10px] font-mono text-text-muted uppercase tracking-wide mb-1">
+        <label className="block text-caption font-mono text-text-muted mb-1">
           Reason
         </label>
         <Textarea
@@ -360,7 +360,7 @@ function EditableTraceScoreRow({
       </div>
 
       <div className="mb-2">
-        <label className="block text-[10px] font-mono text-text-muted uppercase tracking-wide mb-1">
+        <label className="block text-caption font-mono text-text-muted mb-1">
           Metadata (JSON)
         </label>
         <Textarea
@@ -369,20 +369,20 @@ function EditableTraceScoreRow({
           placeholder="{}"
           spellCheck={false}
           className={cn(
-            "min-h-[140px] text-[11px] leading-relaxed",
+            "min-h-[140px] text-caption leading-relaxed",
             metadataError &&
               "border-error focus-visible:border-error focus-visible:ring-error",
           )}
           disabled={saving}
         />
         {metadataError && (
-          <p className="mt-1 text-[10px] font-mono text-error">
+          <p className="mt-1 text-caption font-mono text-error">
             {metadataError}
           </p>
         )}
       </div>
 
-      <div className="space-y-0.5 text-[10px] font-mono text-text-muted mt-2">
+      <div className="space-y-0.5 text-caption font-mono text-text-muted mt-2">
         {score.environment && (
           <div className="flex items-center gap-1.5">
             <Globe className="h-2.5 w-2.5" />
@@ -429,7 +429,7 @@ export function MetadataSection({ data }: { data: Record<string, unknown> }) {
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1 text-[10px] font-mono text-text-muted uppercase tracking-wide mb-1 hover:text-text transition-colors"
+        className="flex items-center gap-1 text-caption font-mono text-text-muted mb-1 hover:text-text transition-colors"
       >
         {expanded ? (
           <ChevronDown className="h-2.5 w-2.5" />
@@ -439,7 +439,7 @@ export function MetadataSection({ data }: { data: Record<string, unknown> }) {
         Metadata
       </button>
       {expanded && (
-        <div className="border border-border bg-bg p-2 overflow-x-auto">
+        <div className="rounded-md border border-divider bg-bg/30 p-3 overflow-x-auto">
           <MetadataValue data={data} depth={0} />
         </div>
       )}
@@ -449,7 +449,7 @@ export function MetadataSection({ data }: { data: Record<string, unknown> }) {
 
 function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
   if (data === null || data === undefined) {
-    return <span className="text-text-muted text-[11px] font-mono">null</span>;
+    return <span className="text-text-muted text-caption font-mono">null</span>;
   }
 
   if (
@@ -462,7 +462,7 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
 
   if (Array.isArray(data)) {
     if (data.length === 0)
-      return <span className="text-text-muted text-[11px] font-mono">[]</span>;
+      return <span className="text-text-muted text-caption font-mono">[]</span>;
 
     const allPrimitive = data.every(
       (v) =>
@@ -475,7 +475,7 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
       return (
         <div className="flex flex-wrap gap-1">
           {data.map((item, i) => (
-            <Badge key={i} variant="default" className="text-[10px]">
+            <Badge key={i} variant="default" className="text-caption">
               {String(item)}
             </Badge>
           ))}
@@ -493,7 +493,7 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
     }
 
     return (
-      <div className="space-y-0.5 pl-2 border-l border-border/50">
+      <div className="space-y-2 pl-3 border-l border-divider">
         {data.map((item, i) => (
           <div key={i}>
             <MetadataValue data={item} depth={depth + 1} />
@@ -507,7 +507,7 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
     const entries = Object.entries(data as Record<string, unknown>);
     if (entries.length === 0) {
       return (
-        <span className="text-text-muted text-[11px] font-mono">{"{}"}</span>
+        <span className="text-text-muted text-caption font-mono">{"{}"}</span>
       );
     }
 
@@ -520,12 +520,11 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
 
     return (
       <div
-        className={cn(
-          "space-y-1.5",
-          depth > 0 && "pl-2 border-l border-border/50",
-        )}
+        className={cn("space-y-3", depth > 0 && "pl-3 border-l border-divider")}
       >
-        {leafEntries.length > 0 && <FlatKVTable entries={leafEntries} />}
+        {leafEntries.length > 0 && (
+          <FlatKVTable entries={leafEntries} nested={depth > 0} />
+        )}
         {nestedEntries.map(([key, val]) => (
           <NestedSection key={key} label={key} value={val} depth={depth} />
         ))}
@@ -534,19 +533,19 @@ function MetadataValue({ data, depth }: { data: unknown; depth: number }) {
   }
 
   return (
-    <span className="text-text-dim text-[11px] font-mono">{String(data)}</span>
+    <span className="text-text-dim text-caption font-mono">{String(data)}</span>
   );
 }
 
 function PrimitiveValue({ value }: { value: unknown }) {
   if (value === null || value === undefined) {
-    return <span className="text-text-muted text-[11px] font-mono">null</span>;
+    return <span className="text-text-muted text-caption font-mono">null</span>;
   }
   if (typeof value === "boolean") {
     return (
       <span
         className={cn(
-          "text-[11px] font-mono",
+          "text-caption font-mono",
           value ? "text-success" : "text-error",
         )}
       >
@@ -558,24 +557,39 @@ function PrimitiveValue({ value }: { value: unknown }) {
     const formatted = Number.isInteger(value)
       ? String(value)
       : value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
-    return <span className="text-info text-[11px] font-mono">{formatted}</span>;
+    return (
+      <span className="text-info text-caption font-mono">{formatted}</span>
+    );
   }
   return (
-    <span className="text-text-dim text-[11px] font-mono">{String(value)}</span>
+    <span className="text-text-dim text-caption font-mono">
+      {String(value)}
+    </span>
   );
 }
 
-function FlatKVTable({ entries }: { entries: [string, unknown][] }) {
+function FlatKVTable({
+  entries,
+  nested,
+}: {
+  entries: [string, unknown][];
+  nested: boolean;
+}) {
   return (
-    <div className="overflow-x-auto border border-border/40">
-      <table className="text-[11px] font-mono w-full border-collapse">
+    <div
+      className={cn(
+        "overflow-x-auto",
+        nested && "rounded-md border border-divider bg-surface-hi/30 p-1",
+      )}
+    >
+      <table className="text-caption font-mono w-full border-collapse">
         <tbody>
           {entries.map(([key, val]) => (
-            <tr key={key} className="border-b border-border/40 last:border-0">
-              <td className="text-text-muted px-2 py-0.5 whitespace-nowrap align-top border-r border-border/40">
+            <tr key={key} className="align-top">
+              <td className="text-text-muted px-2 py-1.5 whitespace-nowrap align-top">
                 {key}
               </td>
-              <td className="text-text px-2 py-0.5">
+              <td className="text-text px-2 py-1.5">
                 <PrimitiveValue value={val} />
               </td>
             </tr>
@@ -603,7 +617,7 @@ function ObjectArrayTable({
 
   if (!allLeaf) {
     return (
-      <div className="space-y-1 pl-2 border-l border-border/50">
+      <div className="space-y-2 pl-3 border-l border-divider">
         {items.map((item, i) => (
           <MetadataValue key={i} data={item} depth={depth + 1} />
         ))}
@@ -612,14 +626,14 @@ function ObjectArrayTable({
   }
 
   return (
-    <div className="overflow-x-auto border border-border/40">
-      <table className="text-[11px] font-mono w-full border-collapse">
+    <div className="overflow-x-auto rounded-md border border-divider bg-surface-hi/30 p-1">
+      <table className="text-caption font-mono w-full border-collapse">
         <thead>
-          <tr className="border-b border-border/40 bg-surface-hi/30">
+          <tr className="border-b border-divider bg-surface-hi/30">
             {allKeys.map((k) => (
               <th
                 key={k}
-                className="text-text-muted text-left px-2 py-0.5 font-normal whitespace-nowrap"
+                className="text-text-muted text-left px-2 py-1.5 font-normal whitespace-nowrap"
               >
                 {k}
               </th>
@@ -628,9 +642,9 @@ function ObjectArrayTable({
         </thead>
         <tbody>
           {items.map((item, i) => (
-            <tr key={i} className="border-b border-border/20 last:border-0">
+            <tr key={i} className="border-b border-divider last:border-0">
               {allKeys.map((k) => (
-                <td key={k} className="px-2 py-0.5 whitespace-nowrap">
+                <td key={k} className="px-2 py-1.5 whitespace-nowrap">
                   <PrimitiveValue value={item[k]} />
                 </td>
               ))}
@@ -659,7 +673,7 @@ function NestedSection({
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1 text-[11px] font-mono text-text-muted hover:text-text transition-colors py-0.5"
+        className="flex items-center gap-1 text-caption font-mono text-text-muted hover:text-text transition-colors py-1"
       >
         {open ? (
           <ChevronDown className="h-2.5 w-2.5" />
@@ -669,7 +683,7 @@ function NestedSection({
         <span className="font-medium">{label}</span>
       </button>
       {open && (
-        <div className="mt-0.5 ml-1">
+        <div className="mt-1.5 ml-1">
           <MetadataValue data={value} depth={depth + 1} />
         </div>
       )}

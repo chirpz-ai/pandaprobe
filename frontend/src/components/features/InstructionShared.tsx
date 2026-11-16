@@ -215,7 +215,7 @@ export function NextSteps() {
   ];
 
   return (
-    <section className="space-y-3 pt-4 border-t border-border">
+    <section className="space-y-3 pt-4 border-t border-divider">
       <div className="flex items-center gap-2">
         <BookOpen className="h-4 w-4 text-text-muted" />
         <h2 className="text-sm font-mono text-text">Explore the docs</h2>
@@ -235,7 +235,7 @@ export function NextSteps() {
               </span>
               <ExternalLink className="h-3 w-3 text-text-muted group-hover:text-text transition-colors" />
             </div>
-            <p className="text-[11px] font-mono text-text-muted mt-1.5 leading-relaxed">
+            <p className="text-caption font-mono text-text-muted mt-1.5 leading-relaxed">
               {link.description}
             </p>
           </a>

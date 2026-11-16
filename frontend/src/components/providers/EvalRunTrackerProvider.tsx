@@ -316,7 +316,7 @@ function PendingTooltipContent({
         const progress = formatProgress(item.data);
         const status = item.data?.status ?? "Queued";
         return (
-          <div key={item.pending.runId} className="text-[11px] font-mono">
+          <div key={item.pending.runId} className="text-caption font-mono">
             <div className="text-text truncate">
               {name ?? `${item.pending.mode} evaluation`}
             </div>

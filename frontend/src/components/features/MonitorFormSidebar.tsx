@@ -338,8 +338,8 @@ export function MonitorFormSidebar({
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between h-12 px-4 border-b border-border flex-shrink-0">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider truncate">
+        <div className="flex items-center justify-between h-12 px-4 border-b border-divider flex-shrink-0">
+          <h2 className="text-xs font-mono text-text-muted truncate">
             {isEdit ? `Edit monitor` : "Create monitor"}
           </h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
@@ -348,8 +348,8 @@ export function MonitorFormSidebar({
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="px-4 py-3 border-b border-border">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+          <div className="px-4 py-4">
+            <label className="block text-xs font-mono text-text-primary mb-1.5">
               Name <RequiredDot />
             </label>
             <Input
@@ -361,8 +361,8 @@ export function MonitorFormSidebar({
             />
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+          <div className="px-4 py-4">
+            <label className="block text-xs font-mono text-text-primary mb-1.5">
               Target type <RequiredDot />
             </label>
             {isEdit ? (
@@ -398,36 +398,36 @@ export function MonitorFormSidebar({
             )}
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
+              <label className="block text-xs font-mono text-text-primary">
                 Metrics <RequiredDot />
               </label>
-              <span className="text-[10px] font-mono text-text-muted">
+              <span className="text-caption font-mono text-text-muted">
                 {selectedMetrics.size}/{metrics.length}
               </span>
             </div>
             {metricsQuery.isPending ? (
-              <p className="text-[11px] font-mono text-text-muted py-2">
+              <p className="text-caption font-mono text-text-muted py-2">
                 Loading metrics…
               </p>
             ) : metricsQuery.error ? (
-              <p className="text-[11px] font-mono text-error py-2">
+              <p className="text-caption font-mono text-error py-2">
                 {extractErrorMessage(metricsQuery.error)}
               </p>
             ) : metrics.length === 0 ? (
-              <p className="text-[11px] font-mono text-text-muted py-2">
+              <p className="text-caption font-mono text-text-muted py-2">
                 No metrics available
               </p>
             ) : (
-              <div className="max-h-64 overflow-y-auto border border-border/40 divide-y divide-border/40">
+              <div className="max-h-64 overflow-y-auto rounded-md bg-bg/30 p-1 space-y-1">
                 {metrics.map((metric) => {
                   const checked = selectedMetrics.has(metric.name);
                   return (
                     <label
                       key={metric.name}
                       className={cn(
-                        "flex items-start gap-2 px-2 py-1.5 cursor-pointer hover:bg-surface-hi transition-colors",
+                        "flex items-start gap-2 rounded-md px-2 py-2 cursor-pointer hover:bg-surface-hi transition-colors",
                         checked && "bg-surface-hi/40",
                       )}
                     >
@@ -443,7 +443,7 @@ export function MonitorFormSidebar({
                           {metric.name}
                         </span>
                         {metric.description && (
-                          <p className="mt-0.5 text-[11px] font-mono text-text-muted line-clamp-2">
+                          <p className="mt-0.5 text-caption font-mono text-text-muted line-clamp-2">
                             {metric.description}
                           </p>
                         )}
@@ -455,12 +455,12 @@ export function MonitorFormSidebar({
             )}
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
+              <label className="block text-xs font-mono text-text-primary">
                 Filters
               </label>
-              <span className="text-[10px] font-mono text-text-muted">
+              <span className="text-caption font-mono text-text-muted">
                 {activeFilterCount === 0
                   ? "all matching"
                   : `${activeFilterCount} active`}
@@ -481,8 +481,8 @@ export function MonitorFormSidebar({
             )}
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+          <div className="px-4 py-4">
+            <label className="block text-xs font-mono text-text-primary mb-1.5">
               Cadence <RequiredDot />
             </label>
             <Select
@@ -515,7 +515,7 @@ export function MonitorFormSidebar({
                 />
                 <p
                   className={cn(
-                    "text-[10px] font-mono",
+                    "text-caption font-mono",
                     cronValid ? "text-text-muted" : "text-error",
                   )}
                 >
@@ -527,12 +527,12 @@ export function MonitorFormSidebar({
             )}
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-4">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-mono text-text-primary uppercase tracking-wide">
+              <label className="block text-xs font-mono text-text-primary">
                 Sampling rate
               </label>
-              <span className="text-[11px] font-mono text-text">
+              <span className="text-caption font-mono text-text">
                 {formatSamplingRate(samplingRate)}
               </span>
             </div>
@@ -546,15 +546,15 @@ export function MonitorFormSidebar({
               disabled={submitting}
               className="w-full accent-primary"
             />
-            <p className="mt-1 text-[10px] font-mono text-text-muted">
+            <p className="mt-1 text-caption font-mono text-text-muted">
               Fraction of matching{" "}
               {targetType === "TRACE" ? "traces" : "sessions"} to evaluate on
               each run.
             </p>
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
-            <label className="block text-xs font-mono text-text-primary uppercase tracking-wide mb-1.5">
+          <div className="px-4 py-4">
+            <label className="block text-xs font-mono text-text-primary mb-1.5">
               Model
             </label>
             <Select
@@ -585,7 +585,7 @@ export function MonitorFormSidebar({
             </Select>
           </div>
 
-          <div className="px-4 py-3 border-b border-border">
+          <div className="px-4 py-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -597,7 +597,7 @@ export function MonitorFormSidebar({
                 Skip run if no new data since last run
               </span>
             </label>
-            <p className="mt-1 text-[10px] font-mono text-text-muted pl-6">
+            <p className="mt-1 text-caption font-mono text-text-muted pl-6">
               When enabled, the scheduled run is skipped if no new{" "}
               {targetType === "TRACE" ? "traces" : "sessions"} matching the
               filters have appeared since the previous run.
@@ -605,7 +605,7 @@ export function MonitorFormSidebar({
           </div>
 
           {targetType === "SESSION" && (
-            <div className="px-4 py-3 border-b border-border">
+            <div className="px-4 py-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -613,7 +613,7 @@ export function MonitorFormSidebar({
                   onChange={(e) => setCustomizeWeights(e.target.checked)}
                   disabled={submitting}
                 />
-                <span className="text-xs font-mono text-text-primary uppercase tracking-wide">
+                <span className="text-xs font-mono text-text-primary">
                   Customize signal weights
                 </span>
               </label>
@@ -622,10 +622,10 @@ export function MonitorFormSidebar({
                   {SIGNAL_WEIGHT_KEYS.map((key) => (
                     <div key={key}>
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[11px] font-mono text-text-dim">
+                        <span className="text-caption font-mono text-text-dim">
                           {key}
                         </span>
-                        <span className="text-[11px] font-mono text-text">
+                        <span className="text-caption font-mono text-text">
                           {weights[key].toFixed(2)}
                         </span>
                       </div>
@@ -652,7 +652,7 @@ export function MonitorFormSidebar({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3 flex-shrink-0">
+        <div className="flex items-center justify-end gap-2 border-t border-divider px-4 py-3 flex-shrink-0">
           <Button
             variant="secondary"
             size="sm"
@@ -875,7 +875,7 @@ function FieldLabel({
 }) {
   return (
     <div>
-      <label className="block text-[10px] font-mono text-text-muted mb-0.5">
+      <label className="block text-caption font-mono text-text-muted mb-0.5">
         {label}
       </label>
       {children}

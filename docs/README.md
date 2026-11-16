@@ -4,7 +4,7 @@ The `docs/` directory contains the PandaProbe documentation site, built with [Mi
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) v20.17.0 or higher (LTS recommended)
+- The latest [Node.js](https://nodejs.org/) 24.x release (selected by the repository's `.nvmrc`)
 
 ## Local Development
 

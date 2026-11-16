@@ -142,7 +142,7 @@ export default function ProjectsPage() {
         <div className="border border-border overflow-x-auto">
           <table className="w-full text-xs font-mono">
             <thead>
-              <tr className="border-b border-border bg-surface-hi">
+              <tr className="border-b border-divider bg-surface-hi">
                 <th className="text-left px-3 py-2 text-text-muted font-normal">
                   Name
                 </th>
@@ -161,7 +161,7 @@ export default function ProjectsPage() {
               {projects.map((p) => (
                 <tr
                   key={p.id}
-                  className="border-b border-border hover:bg-surface-hi"
+                  className="border-b border-divider hover:bg-surface-hi"
                 >
                   <td className="px-3 py-2 text-text">
                     <div className="flex items-center gap-2">

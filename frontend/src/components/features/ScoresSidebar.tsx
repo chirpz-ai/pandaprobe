@@ -36,8 +36,8 @@ export function ScoresSidebar({
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex items-center justify-between h-12 px-4 border-b border-border flex-shrink-0">
-          <h2 className="text-xs font-mono text-text-muted uppercase tracking-wider">
+        <div className="flex items-center justify-between h-12 px-4 border-b border-divider flex-shrink-0">
+          <h2 className="text-xs font-mono text-text-muted">
             Scores · {scores.length}
           </h2>
           <div className="flex items-center gap-1">
@@ -67,7 +67,7 @@ export function ScoresSidebar({
               No scores available
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-divider">
               {scores.map((score) => (
                 <ScoreRow
                   key={score.id}

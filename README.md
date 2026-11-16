@@ -1,9 +1,9 @@
 <div align="center">
   <a href="https://pandaprobe.com/" target="_blank" rel="noopener noreferrer">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-light.png">
-      <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo-dark.png">
-      <img alt="PandaProbe Logo" src="docs/assets/logo-dark.png" width="80%">
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo/dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo/light.png">
+      <img alt="PandaProbe Logo" src="docs/assets/logo/light.png" width="80%">
     </picture>
   </a>
 </div>
@@ -14,8 +14,8 @@
 
 
 <p align="center">
-  <a href="https://pandaprobe.com/" target="_blank"><img src="https://img.shields.io/badge/PandaProbe_Cloud-0066FF" alt="PandaProbe Cloud"></a>
-  <a href="https://pandaprobe.com/" target="_blank"><img src="https://img.shields.io/badge/Docs-0066FF" alt="Docs"></a>
+  <a href="https://app.pandaprobe.com/" target="_blank"><img src="https://img.shields.io/badge/PandaProbe_Cloud-0066FF" alt="PandaProbe Cloud"></a>
+  <a href="https://docs.pandaprobe.com/" target="_blank"><img src="https://img.shields.io/badge/Docs-0066FF" alt="Docs"></a>
   <a href="https://x.com/PandaProbe" target="_blank"><img src="https://img.shields.io/twitter/follow/PandaProbe?style=social" alt="Follow on X"></a>
 </p>
 
@@ -32,21 +32,25 @@
   <a href="https://github.com/chirpz-ai/pandaprobe/actions/workflows/codeql.yml"><img src="https://github.com/chirpz-ai/pandaprobe/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
 </p>
 
-
-<p align="center">
-  <video width="100%" src="https://github.com/user-attachments/assets/074456d9-0af4-4757-8cf7-870746fa2eb6" controls></video>
-</p>
-
 ## What is PandaProbe?
-PandaProbe is an open source agent engineering platform. It helps teams collaboratively trace, evaluate, monitor, and debug AI agents. You can use PandaProbe cloud or self host the service.
+
+PandaProbe is an open source agent engineering platform for tracing, evaluating, and improving AI agents. It helps you understand what happened, check whether the work succeeded, and give your agent feedback it can use to make fewer mistakes.
+
+- **Trace** captures model calls, tool use, inputs, outputs, errors, latency, and usage. Group related executions into sessions to follow a conversation or task. [Tracing quickstart](https://docs.pandaprobe.com/tracing/get-started/quickstart).
+- **Evaluate** measures the quality of traces and sessions, records programmatic scores, and identifies failures that need attention. [Evaluation quickstart](https://docs.pandaprobe.com/evaluation/get-started/quickstart).
+- **Reflect** brings failure evidence back to your agent through a persistent rule filesystem. The agent proposes reusable guidance; independent validation tests changes before accepting them as shared rules for future runs. [Reflect quickstart](https://docs.pandaprobe.com/reflect/quickstart).
+
+Python and TypeScript SDKs connect to supported agent frameworks and model providers while preserving your existing agent, tools, and application logic. Start with tracing, add evaluations suited to your task, and enable Reflect when you have reproducible cases and outcome checks.
+
+Use [PandaProbe Cloud](https://app.pandaprobe.com/) for a managed deployment, or self-host the community project using the instructions below.
 
 ## Documentation
 
-Visit our client library documentation for quickstart and explore advance <a href="https://docs.pandaprobe.com/tracing/integrations/overview" target="_blank">integrations</a>.
+Start with the docs overview:
 
 <p align="left">
-  <a href="https://docs.pandaprobe.com/get-started/quickstart" target="_blank">
-    <img alt="Documentation" src="https://img.shields.io/badge/Docs%20Quickstart-0066FF" />
+  <a href="https://docs.pandaprobe.com/overview" target="_blank">
+    <img alt="Docs overview" src="https://img.shields.io/badge/Docs%20Overview-0066FF" />
   </a>
 </p>
 

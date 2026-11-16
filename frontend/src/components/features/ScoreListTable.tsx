@@ -62,7 +62,7 @@ export function ScoreListTable({
     <div className="border border-border">
       <table className="w-full text-xs font-mono">
         <thead className="sticky top-0 z-10 bg-surface-hi">
-          <tr className="border-b border-border">
+          <tr className="border-b border-divider">
             <th className="w-8" aria-label="Expand" />
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Metric
@@ -177,7 +177,7 @@ function ScoreListRow({
   return (
     <>
       <tr
-        className="border-b border-border hover:bg-surface-hi transition-colors cursor-pointer"
+        className="border-b border-divider hover:bg-surface-hi transition-colors cursor-pointer"
         onClick={toggle}
       >
         <td className="px-2 py-2 w-8 align-middle">
@@ -293,7 +293,7 @@ function ScoreListRow({
         </td>
       </tr>
       {expanded && (
-        <tr className="border-b border-border bg-surface-hi/30">
+        <tr className="border-b border-divider bg-surface-hi/30">
           <td colSpan={colCount} className="px-4 py-3">
             <ExpandedRowDetails
               score={score}
@@ -325,7 +325,7 @@ function ExpandedRowDetails({
         <div className="flex items-start gap-2">
           <MessageSquareText className="h-3 w-3 text-text-muted mt-0.5 flex-shrink-0" />
           <div className="min-w-0">
-            <div className="text-[10px] font-mono text-text-muted uppercase tracking-wider mb-0.5">
+            <div className="text-caption font-mono text-text-muted mb-0.5">
               Reasoning
             </div>
             <p className="text-xs font-mono text-text-dim whitespace-pre-wrap break-words">
@@ -339,9 +339,9 @@ function ExpandedRowDetails({
         <MetadataSection data={score.metadata as Record<string, unknown>} />
       )}
 
-      <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
+      <div className="grid grid-cols-2 gap-3 text-caption font-mono">
         <DetailRow label="Data type">
-          <Badge variant="default" className="text-[10px]">
+          <Badge variant="default" className="text-caption">
             {score.data_type}
           </Badge>
         </DetailRow>
@@ -402,9 +402,7 @@ function DetailRow({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] uppercase tracking-wider text-text-muted">
-        {label}
-      </div>
+      <div className="text-caption text-text-muted">{label}</div>
       <div className="mt-0.5 min-w-0">{children}</div>
     </div>
   );

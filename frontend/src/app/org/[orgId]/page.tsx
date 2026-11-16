@@ -65,7 +65,7 @@ export default function OrgPage() {
           </div>
           <Link
             href={projectsHref}
-            className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 border border-info/40 bg-info/10 text-xs font-mono text-info hover:bg-info/20 transition-colors"
+            className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-control px-3 py-1.5 border border-info/40 bg-info/10 text-xs font-mono text-info hover:bg-info/20 transition-colors"
           >
             Create project
             <ArrowRight className="h-3 w-3" />

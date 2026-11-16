@@ -4,18 +4,13 @@ import { useState } from "react";
 import { Bot, Check, ChevronRight, Copy, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers/ToastProvider";
+import { CODING_AGENT_PROMPT } from "@/lib/constants/onboardingPrompt";
 import { cn } from "@/lib/utils/cn";
 
 type Mode = "terminal" | "agent";
 
 const SKILL_INSTALL_COMMAND =
   "npx skills add chirpz-ai/pandaprobe-skills --skill '*' --yes";
-
-const CODING_AGENT_PROMPT = `Help me set up and get started with PandaProbe by Chirpz AI.
-
-First install the SKILL via \`npx skills add chirpz-ai/pandaprobe-skills --skill '*' --yes\`, and load the skill.
-
-Then walk me through what I can do with PandaProbe and use the \`setup\` path to onboard me following the interactive mode.`;
 
 interface ModeConfig {
   label: string;
@@ -61,7 +56,7 @@ export function SkillOnboarding() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {MODE_ORDER.map((id) => {
             const { label, icon: Icon } = MODES[id];
             const isActive = id === mode;

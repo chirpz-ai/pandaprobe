@@ -50,7 +50,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version-file: ".nvmrc"
+          check-latest: true
           cache: "yarn"
           cache-dependency-path: frontend/yarn.lock
 
@@ -69,4 +70,4 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Build Docker image
-        run: docker build -t pandaprobe-frontend:ci-${{ github.sha }} ./frontend
+        run: docker build --pull -t pandaprobe-frontend:ci-${{ github.sha }} ./frontend

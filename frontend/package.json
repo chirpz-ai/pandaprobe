@@ -2,6 +2,9 @@
   "name": "frontend",
   "version": "0.7.0",
   "private": true,
+  "engines": {
+    "node": ">=24.22.3 <25"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -38,7 +41,7 @@
     "geist": "^1.7.0",
     "lucide-react": "^1.8.0",
     "next": "16.2.3",
-    "posthog-js": "^1.371.2",
+    "posthog-js": "^1.450.0",
     "react": "19.2.4",
     "react-day-picker": "^9.14.0",
     "react-dom": "19.2.4",
@@ -54,7 +57,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^30.0.0",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-syntax-highlighter": "^15.5.13",

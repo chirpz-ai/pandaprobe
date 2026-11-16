@@ -70,7 +70,7 @@ const SelectLabel = forwardRef<
   <SelectPrimitive.Label
     ref={ref}
     className={cn(
-      "px-2 pt-2 pb-1 text-[11px] font-mono text-text-muted uppercase tracking-wider",
+      "px-2 pt-2 pb-1 text-caption font-mono text-text-muted",
       className,
     )}
     {...props}
@@ -87,7 +87,7 @@ const SelectItem = forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-pointer select-none items-center py-1.5 pl-8 pr-2 text-[11px] font-mono text-text",
+      "relative flex w-full cursor-pointer select-none items-center py-1.5 pl-8 pr-2 text-caption font-mono text-text",
       "outline-none focus:bg-surface-hi",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,

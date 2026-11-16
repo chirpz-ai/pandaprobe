@@ -1,276 +1,210 @@
 "use client";
 
-import { useState, memo } from "react";
-import {
-  ChevronRight,
-  ChevronDown,
-  Bot,
-  Wrench,
-  Sparkles,
-  Search,
-  Link,
-  Grid3X3,
-  Circle,
-  Activity,
-} from "lucide-react";
-import type { SpanResponse, TraceResponse } from "@/lib/api/types";
-import type { SpanKind } from "@/lib/api/enums";
-import { SpanStatusCode } from "@/lib/api/enums";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import type { TraceResponse } from "@/lib/api/types";
 import { formatDuration } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-
-export interface SpanNode extends SpanResponse {
-  children: SpanNode[];
-}
-
-export function buildTree(spans: SpanResponse[]): SpanNode[] {
-  const map = new Map<string, SpanNode>();
-  const roots: SpanNode[] = [];
-
-  for (const span of spans) {
-    map.set(span.span_id, { ...span, children: [] });
-  }
-
-  for (const node of map.values()) {
-    if (node.parent_span_id && map.has(node.parent_span_id)) {
-      map.get(node.parent_span_id)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-
-  return roots;
-}
-
-const SPAN_KIND_CONFIG: Record<
-  string,
-  { icon: typeof Bot; color: string; label: string }
-> = {
-  AGENT: { icon: Bot, color: "#3b82f6", label: "Agent" },
-  TOOL: { icon: Wrench, color: "#eab308", label: "Tool" },
-  LLM: { icon: Sparkles, color: "#a78bfa", label: "LLM" },
-  RETRIEVER: { icon: Search, color: "#22c55e", label: "Retriever" },
-  CHAIN: { icon: Link, color: "#858d9b", label: "Chain" },
-  EMBEDDING: { icon: Grid3X3, color: "#06b6d4", label: "Embedding" },
-  OTHER: { icon: Circle, color: "#737b89", label: "Other" },
-};
-
-function getKindConfig(kind: SpanKind) {
-  return SPAN_KIND_CONFIG[kind] ?? SPAN_KIND_CONFIG.OTHER;
-}
-
-function statusDotColor(status: string): string {
-  if (status === SpanStatusCode.OK) return "bg-success";
-  if (status === SpanStatusCode.ERROR) return "bg-error";
-  return "bg-text-muted";
-}
+import {
+  spanDuration,
+  timestamp,
+  type SpanNode,
+} from "@/lib/utils/trace-timeline";
+import { SPAN_KINDS } from "./span-kind";
 
 interface WaterfallTreeProps {
   trace: TraceResponse;
   tree: SpanNode[];
+  collapsed: Set<string>;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onToggle: (id: string) => void;
 }
 
 export function WaterfallTree({
   trace,
   tree,
+  collapsed,
   selectedId,
   onSelect,
+  onToggle,
 }: WaterfallTreeProps) {
+  const rows: { node: SpanNode; branches: boolean[] }[] = [];
+  const visit = (nodes: SpanNode[], ancestors: boolean[]) => {
+    nodes.forEach((node, index) => {
+      const branches = [...ancestors, index < nodes.length - 1];
+      rows.push({ node, branches });
+      if (!collapsed.has(node.span_id)) visit(node.children, branches);
+    });
+  };
+  if (!collapsed.has("trace")) visit(tree, []);
+  const start = timestamp(trace.started_at);
+  const end = timestamp(trace.ended_at);
+
   return (
-    <div className="py-1">
-      <TraceRootNode
-        trace={trace}
+    <div className="py-1" aria-label="Span hierarchy">
+      <WaterfallRow
+        id="trace"
+        name={trace.name}
+        kind="TRACE"
+        status={trace.status}
+        duration={
+          start != null && end != null ? Math.max(0, end - start) : null
+        }
+        branches={[]}
+        hasChildren={tree.length > 0}
+        expanded={!collapsed.has("trace")}
         selected={selectedId === "trace"}
-        onSelect={() => onSelect("trace")}
+        onSelect={onSelect}
+        onToggle={onToggle}
       />
-      {tree.map((node, i) => (
-        <SpanWaterfallNode
+      {rows.map(({ node, branches }) => (
+        <WaterfallRow
           key={node.span_id}
-          node={node}
-          depth={0}
-          selectedId={selectedId}
+          id={node.span_id}
+          name={node.name}
+          kind={node.kind}
+          model={node.model}
+          status={node.status}
+          duration={spanDuration(node)}
+          branches={branches}
+          hasChildren={node.children.length > 0}
+          expanded={!collapsed.has(node.span_id)}
+          selected={selectedId === node.span_id}
           onSelect={onSelect}
-          isLast={i === tree.length - 1}
+          onToggle={onToggle}
         />
       ))}
     </div>
   );
 }
 
-function TraceRootNode({
-  trace,
+const INDENT = 18;
+const ROW_HEIGHT = 36;
+
+function WaterfallRow({
+  id,
+  name,
+  kind,
+  model,
+  status,
+  duration,
+  branches,
+  hasChildren,
+  expanded,
   selected,
   onSelect,
+  onToggle,
 }: {
-  trace: TraceResponse;
+  id: string;
+  name: string;
+  kind: keyof typeof SPAN_KINDS;
+  model?: string | null;
+  status: string;
+  duration: number | null;
+  branches: boolean[];
+  hasChildren: boolean;
+  expanded: boolean;
   selected: boolean;
-  onSelect: () => void;
-}) {
-  const latencyMs =
-    trace.started_at && trace.ended_at
-      ? new Date(trace.ended_at).getTime() -
-        new Date(trace.started_at).getTime()
-      : null;
-
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "w-full flex items-center gap-2 px-3 py-2 text-left transition-colors duration-100",
-        "hover:bg-surface-hi",
-        selected
-          ? "bg-surface-hi border-l-2 border-l-primary"
-          : "border-l-2 border-l-transparent",
-      )}
-    >
-      <Activity className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-      <span className="text-xs font-mono text-text truncate flex-1">
-        {trace.name}
-      </span>
-      <span className="text-[10px] font-mono text-text-muted uppercase tracking-wide flex-shrink-0">
-        Trace
-      </span>
-      {latencyMs != null && (
-        <span className="text-[10px] font-mono text-text-dim flex-shrink-0">
-          {formatDuration(latencyMs)}
-        </span>
-      )}
-    </button>
-  );
-}
-
-const INDENT_PX = 20;
-
-const SpanWaterfallNode = memo(function SpanWaterfallNode({
-  node,
-  depth,
-  selectedId,
-  onSelect,
-  isLast,
-}: {
-  node: SpanNode;
-  depth: number;
-  selectedId: string | null;
   onSelect: (id: string) => void;
-  isLast: boolean;
+  onToggle: (id: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
-  const hasChildren = node.children.length > 0;
-  const kindCfg = getKindConfig(node.kind);
-  const KindIcon = kindCfg.icon;
-  const isSelected = selectedId === node.span_id;
-
+  const config = SPAN_KINDS[kind] ?? SPAN_KINDS.OTHER;
+  const Icon = config.icon;
+  const isError = status === "ERROR" || status === "FAILED";
+  const color = config.color;
   return (
-    <div>
+    <div
+      className={cn(
+        "relative flex h-9 items-center pr-3 rounded-control border-l-2 border-transparent hover:bg-surface-hi/60",
+        selected && "bg-surface-hi",
+      )}
+      style={{
+        paddingLeft: 12 + branches.length * INDENT,
+        minWidth: 240 + branches.length * INDENT,
+        borderLeftColor: selected ? color : undefined,
+      }}
+    >
+      {branches.length > 0 && (
+        <svg
+          aria-hidden="true"
+          className="absolute left-3 top-0 pointer-events-none text-line"
+          width={branches.length * INDENT}
+          height={ROW_HEIGHT}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+        >
+          {branches.map((continues, level) => {
+            const x = level * INDENT + 1;
+            const isBranch = level === branches.length - 1;
+            return (
+              <path
+                key={level}
+                d={
+                  isBranch
+                    ? `M ${x} 0 V 12 Q ${x} 18 ${x + 6} 18 H ${x + 15}${continues ? ` M ${x} 12 V ${ROW_HEIGHT}` : ""}`
+                    : continues
+                      ? `M ${x} 0 V ${ROW_HEIGHT}`
+                      : ""
+                }
+              />
+            );
+          })}
+        </svg>
+      )}
+      <div className="w-5 shrink-0">
+        {hasChildren && (
+          <button
+            type="button"
+            aria-label={`${expanded ? "Collapse" : "Expand"} ${name}`}
+            aria-expanded={expanded}
+            onClick={() => onToggle(id)}
+            className="flex h-8 w-5 items-center justify-center text-text-muted hover:text-text focus-visible:outline focus-visible:outline-primary"
+          >
+            {expanded ? (
+              <ChevronDown className="h-3 w-3" />
+            ) : (
+              <ChevronRight className="h-3 w-3" />
+            )}
+          </button>
+        )}
+      </div>
       <button
         type="button"
-        onClick={() => onSelect(node.span_id)}
-        className={cn(
-          "w-full flex items-center gap-1.5 py-1.5 pr-3 text-left transition-colors duration-100",
-          "hover:bg-surface-hi group",
-          isSelected ? "bg-surface-hi" : "",
-        )}
-        style={{
-          paddingLeft: `${(depth + 1) * INDENT_PX + 12}px`,
-          borderLeft: isSelected
-            ? `2px solid ${kindCfg.color}`
-            : "2px solid transparent",
-        }}
+        aria-pressed={selected}
+        aria-label={`${name} ${kind} ${formatDuration(duration)}${isError ? " Error" : ""}`}
+        title={`${name} · ${kind}${model ? ` · ${model}` : ""} · ${status}`}
+        onClick={() => onSelect(id)}
+        className="flex h-full flex-1 min-w-0 items-center gap-2 text-left focus-visible:outline focus-visible:outline-primary focus-visible:-outline-offset-2"
       >
-        {/* Connector stub */}
-        <div className="relative flex-shrink-0 w-4 h-4 flex items-center justify-center">
-          {depth > 0 && (
-            <div
-              className="absolute border-l border-b border-line"
-              style={{
-                left: -10,
-                top: -6,
-                width: 10,
-                height: isLast ? 14 : 14,
-                borderBottomLeftRadius: 0,
-              }}
-            />
-          )}
-          {hasChildren ? (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded((v) => !v);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setExpanded((v) => !v);
-                }
-              }}
-              className="relative z-10 text-text-muted hover:text-text transition-colors cursor-pointer"
-            >
-              {expanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-            </span>
-          ) : (
-            <div
-              className="h-1 w-1 flex-shrink-0"
-              style={{ backgroundColor: kindCfg.color, opacity: 0.5 }}
-            />
-          )}
-        </div>
-
-        <KindIcon
-          className="h-3.5 w-3.5 flex-shrink-0"
-          style={{ color: kindCfg.color }}
-        />
-
-        <span className="text-xs font-mono text-text truncate flex-1 min-w-0">
-          {node.name}
+        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color }} />
+        <span className="min-w-0 flex-1 truncate text-xs font-mono text-text">
+          {name}
         </span>
-
-        <span
-          className="text-[10px] font-mono uppercase tracking-wide flex-shrink-0 opacity-60"
-          style={{ color: kindCfg.color }}
-        >
-          {kindCfg.label}
+        <span className="shrink-0 text-compact font-mono" style={{ color }}>
+          {kind}
         </span>
-
-        {node.model && (
-          <span className="text-[10px] font-mono text-text-muted flex-shrink-0 max-w-[80px] truncate">
-            {node.model}
+        {model && (
+          <span className="hidden xl:inline max-w-20 truncate text-caption font-mono text-text-muted">
+            {model}
           </span>
         )}
-
-        <span className="text-[10px] font-mono text-text-dim flex-shrink-0">
-          {formatDuration(node.latency_ms)}
+        <span className="shrink-0 text-caption font-mono text-text-dim tabular-nums">
+          {formatDuration(duration)}
         </span>
-
-        <div
+        <span
           className={cn(
-            "h-1.5 w-1.5 flex-shrink-0",
-            statusDotColor(node.status),
+            "h-1.5 w-1.5 shrink-0 rounded-sm",
+            isError
+              ? "bg-error"
+              : status === "OK" || status === "COMPLETED"
+                ? "bg-success"
+                : "bg-text-muted",
           )}
+          aria-label={status}
+          title={status}
         />
       </button>
-
-      {expanded &&
-        hasChildren &&
-        node.children.map((child, i) => (
-          <SpanWaterfallNode
-            key={child.span_id}
-            node={child}
-            depth={depth + 1}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            isLast={i === node.children.length - 1}
-          />
-        ))}
     </div>
   );
-});
+}

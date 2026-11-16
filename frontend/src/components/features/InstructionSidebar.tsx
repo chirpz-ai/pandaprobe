@@ -38,7 +38,7 @@ export function InstructionSidebar({
         )}
         aria-hidden={!open}
       >
-        <div className="flex items-center gap-2 h-12 px-3 border-b border-border flex-shrink-0">
+        <div className="flex items-center gap-2 h-12 px-3 border-b border-divider flex-shrink-0">
           <div className="flex items-center gap-1 min-w-0 overflow-x-auto scrollbar-hide">
             {TABS.map(({ id, title, icon: Icon }) => {
               const isActive = id === active;

@@ -7,7 +7,7 @@ PandaProbe is licensed under [Apache 2.0](LICENSE). By contributing, you agree t
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) (for containerized development and integration tests)
-- [Node.js](https://nodejs.org/) and [Yarn](https://yarnpkg.com/) (for the frontend)
+- The latest [Node.js](https://nodejs.org/) 24.x release (selected by `.nvmrc`) and [Yarn Classic](https://classic.yarnpkg.com/) 1.22.x (for the frontend)
 - [Python 3.12+](https://www.python.org/) and [uv](https://docs.astral.sh/uv/) (for the backend)
 
 ## Getting Started
@@ -22,6 +22,8 @@ cd pandaprobe
 ### 2. Install Dependencies
 
 All project commands are managed through the root **Makefile**. Run `make help` at any time to see every available target.
+
+Use the Node major in `.nvmrc` before installing frontend dependencies. With nvm, run `nvm install` and `nvm use` from the repository root to install and select the latest Node 24 release. CI checks for the latest release in the same major, and `frontend/package.json` enforces the minimum supported version.
 
 ```bash
 make install    # Install all dependencies (backend + frontend)
@@ -45,6 +47,8 @@ make up         # Build & start all services (API, worker, frontend, PostgreSQL,
 make down       # Stop all services
 make restart    # Restart all services
 ```
+
+`make up` refreshes the frontend's `node:24-alpine` base image before building, so rebuilds pick up newly published Node 24 updates. `make restart` only restarts the existing containers.
 
 Once running, open:
 
