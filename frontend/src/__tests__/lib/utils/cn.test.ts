@@ -15,6 +15,16 @@ describe("cn", () => {
     expect(result).not.toContain("px-2");
   });
 
+  it.each(["text-caption", "text-compact"])(
+    "merges %s as a font size without dropping text colors",
+    (size) => {
+      expect(cn("text-xs text-text-muted", size)).toBe(
+        `text-text-muted ${size}`,
+      );
+      expect(cn(size, "text-info", "text-sm")).toBe("text-info text-sm");
+    },
+  );
+
   it("handles undefined and null", () => {
     expect(cn("foo", undefined, null, "bar")).toBe("foo bar");
   });
