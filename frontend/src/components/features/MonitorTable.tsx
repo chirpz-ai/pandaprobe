@@ -15,7 +15,7 @@ export function MonitorTable({ monitors, onSelect }: MonitorTableProps) {
     <div className="border border-border">
       <table className="w-full text-xs font-mono">
         <thead className="sticky top-0 z-10 bg-surface-hi">
-          <tr className="border-b border-border">
+          <tr className="border-b border-divider">
             <th className="text-left px-3 py-2 text-text-muted font-normal">
               Name / ID
             </th>
@@ -46,7 +46,7 @@ export function MonitorTable({ monitors, onSelect }: MonitorTableProps) {
           {monitors.map((m) => (
             <tr
               key={m.id}
-              className="border-b border-border hover:bg-surface-hi transition-colors cursor-pointer"
+              className="border-b border-divider hover:bg-surface-hi transition-colors cursor-pointer"
               onClick={() => onSelect?.(m)}
             >
               <td className="px-3 py-2 max-w-[220px] truncate text-text">
