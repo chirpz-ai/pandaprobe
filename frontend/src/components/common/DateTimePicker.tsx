@@ -89,9 +89,7 @@ export function DateTimePicker({
             defaultMonth={selected}
           />
           <div className="border-t border-divider px-3 py-2 flex items-center gap-2">
-            <span className="text-[10px] text-text-muted font-mono uppercase tracking-wide">
-              Time
-            </span>
+            <span className="text-caption text-text-muted font-mono">Time</span>
             <TimeInput
               value={timeValue || "00:00"}
               onChange={handleTimeChange}
