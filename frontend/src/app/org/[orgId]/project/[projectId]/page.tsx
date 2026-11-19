@@ -110,7 +110,7 @@ export default function ProjectHomePage() {
             <div className="min-w-0">
               <h2 className="text-base font-mono text-text">Get started</h2>
               <p className="text-sm font-mono text-text-muted mt-0.5 leading-relaxed">
-                Paste the prompt into your coding agent and it handles setup. Or
+                Paste the prompt into your coding agent and it handles the setup. Or
                 install the skill yourself.
               </p>
             </div>
