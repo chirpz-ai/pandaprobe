@@ -5,9 +5,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
-  BookOpen,
   CheckCircle2,
-  ExternalLink,
   KeyRound,
   Package,
   Settings2,
@@ -21,7 +19,7 @@ import { extractErrorMessage } from "@/lib/api/client";
 import { KeyExpiration } from "@/lib/api/enums";
 import { listTraces } from "@/lib/api/traces";
 import { queryKeys } from "@/lib/query/keys";
-import { API_URL, DOCS_TRACING_URL } from "@/lib/utils/constants";
+import { API_URL } from "@/lib/utils/constants";
 import { CodeBlock } from "@/components/common/CodeBlock";
 import { useToast } from "@/components/providers/ToastProvider";
 import { cn } from "@/lib/utils/cn";
@@ -31,15 +29,18 @@ import {
   CreateApiKeyButton,
   IssuedKeyPanel,
   NextSteps,
+  SdkLanguageTabs,
+  QuickstartRunHint,
+  QuickstartDocsLink,
 } from "./InstructionShared";
+import {
+  TRACE_EXAMPLES,
+  getQuickstartExample,
+  type SdkLanguage,
+  type TraceProvider as Provider,
+} from "@/components/config/quickstart-examples";
 
 /* ── SDK snippets ─────────────────────────────────────────────────────── */
-
-const INSTALL_SNIPPETS = {
-  openai: 'pip install "pandaprobe[openai]"',
-  anthropic: 'pip install "pandaprobe[anthropic]"',
-  gemini: 'pip install "pandaprobe[google-genai]"',
-};
 
 const PROVIDER_KEY_EXPORTS: Record<Provider, string> = {
   openai: 'export OPENAI_API_KEY="your-openai-key"',
@@ -55,50 +56,10 @@ export PANDAPROBE_ENDPOINT="${endpoint}"
 ${PROVIDER_KEY_EXPORTS[provider]}`;
 }
 
-const WRAP_SNIPPETS = {
-  openai: `from pandaprobe.wrappers import wrap_openai
-from openai import OpenAI
-
-client = wrap_openai(OpenAI())
-
-response = client.chat.completions.create(
-    model="gpt-5.4",
-    messages=[{"role": "user", "content": "What is agent engineering?"}],
-)
-
-print(response.choices[0].message.content)`,
-  anthropic: `from pandaprobe.wrappers import wrap_anthropic
-from anthropic import Anthropic
-
-client = wrap_anthropic(Anthropic())
-
-response = client.messages.create(
-    model="claude-sonnet-4-6",
-    max_tokens=1024,
-    messages=[{"role": "user", "content": "What is agent engineering?"}],
-)
-
-print(response.content[0].text)`,
-  gemini: `from pandaprobe.wrappers import wrap_gemini
-from google import genai
-
-client = wrap_gemini(genai.Client())
-
-response = client.models.generate_content(
-    model="gemini-3.1-flash-preview",
-    contents="What is agent engineering?",
-)
-
-print(response.text)`,
-};
-
-type Provider = keyof typeof INSTALL_SNIPPETS;
-
-const PROVIDERS: { id: Provider; label: string }[] = [
-  { id: "openai", label: "OpenAI" },
-  { id: "anthropic", label: "Anthropic" },
-  { id: "gemini", label: "Google Gemini" },
-];
+const PROVIDERS = (Object.keys(TRACE_EXAMPLES) as Provider[]).map((id) => ({
+  id,
+  label: TRACE_EXAMPLES[id].label,
+}));
 
 /* ── Body ─────────────────────────────────────────────────────────────── */
 
@@ -110,10 +71,13 @@ export function InstructionTraceQuickstart() {
   const { toast } = useToast();
 
   const [provider, setProvider] = useState<Provider>("openai");
+  const [language, setLanguage] = useState<SdkLanguage>("python");
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
   const [creatingKey, setCreatingKey] = useState(false);
 
   const projectName = currentProject?.name ?? "my-first-project";
+  const guide = TRACE_EXAMPLES[provider];
+  const example = getQuickstartExample(guide, language);
 
   async function handleCreateKey() {
     if (creatingKey) return;
@@ -168,14 +132,15 @@ export function InstructionTraceQuickstart() {
           value={provider}
           onChange={setProvider}
         />
-        <CodeBlock code={INSTALL_SNIPPETS[provider]} language="bash" />
+        <SdkLanguageTabs value={example.language} onChange={setLanguage} />
+        <CodeBlock code={example.install} language="bash" />
       </StepSection>
 
       <StepSection
         number={3}
         icon={<Settings2 className="h-4 w-4" />}
         title="Set environment variables"
-        description="Point the SDK at your project and paste the API key you just created."
+        description="Set these in your server-side environment. Use a PandaProbe API key and your provider key."
       >
         <CodeBlock
           code={envSnippet(provider, projectName, API_URL)}
@@ -194,8 +159,16 @@ export function InstructionTraceQuickstart() {
           value={provider}
           onChange={setProvider}
         />
-        <CodeBlock code={WRAP_SNIPPETS[provider]} language="python" />
-        <DocsHint />
+        <SdkLanguageTabs value={example.language} onChange={setLanguage} />
+        <CodeBlock
+          code={example.code}
+          language={example.language}
+          caption={
+            example.language === "python" ? "quickstart.py" : "quickstart.mts"
+          }
+        />
+        <QuickstartRunHint language={example.language} />
+        <QuickstartDocsLink href={guide.docsUrl} />
       </StepSection>
 
       <StepSection
@@ -209,26 +182,6 @@ export function InstructionTraceQuickstart() {
 
       <NextSteps />
     </>
-  );
-}
-
-/* ── Docs hint (step 4) ───────────────────────────────────────────────── */
-
-function DocsHint() {
-  return (
-    <div className="flex items-center gap-2 px-3 py-2 border border-border bg-surface text-xs font-mono text-text-dim">
-      <BookOpen className="h-3.5 w-3.5 text-text-muted" />
-      <span>Need the full walkthrough or advanced integrations?</span>
-      <a
-        href={DOCS_TRACING_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-1 text-primary hover:text-text transition-colors"
-      >
-        Open documentation
-        <ExternalLink className="h-3 w-3" />
-      </a>
-    </div>
   );
 }
 

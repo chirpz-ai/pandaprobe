@@ -20,6 +20,7 @@ import {
   DOCS_INTEGRATIONS_URL,
   DOCS_MANUAL_URL,
 } from "@/lib/utils/constants";
+import type { SdkLanguage } from "@/components/config/quickstart-examples";
 
 /* ── Step section wrapper ─────────────────────────────────────────────── */
 
@@ -54,7 +55,7 @@ export function StepSection({
           </p>
         </div>
       </div>
-      <div className="pl-10 space-y-2">{children}</div>
+      <div className="min-w-0 space-y-2 sm:pl-10">{children}</div>
     </section>
   );
 }
@@ -71,14 +72,15 @@ export function ProviderTabs<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex items-center gap-0 border border-border bg-surface-hi w-fit">
+    <div className="flex max-w-full items-center overflow-x-auto border border-border bg-surface-hi w-fit">
       {options.map((p) => (
         <button
           key={p.id}
           type="button"
           onClick={() => onChange(p.id)}
+          aria-pressed={value === p.id}
           className={cn(
-            "px-3 py-1.5 text-xs font-mono transition-colors border-r border-border last:border-r-0",
+            "shrink-0 whitespace-nowrap px-3 py-1.5 text-xs font-mono transition-colors border-r border-border last:border-r-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary",
             value === p.id
               ? "bg-surface text-primary"
               : "text-text-dim hover:text-text",
@@ -88,6 +90,54 @@ export function ProviderTabs<T extends string>({
         </button>
       ))}
     </div>
+  );
+}
+
+export function SdkLanguageTabs({
+  value,
+  onChange,
+  typescriptOnly = false,
+}: {
+  value: SdkLanguage;
+  onChange: (language: SdkLanguage) => void;
+  typescriptOnly?: boolean;
+}) {
+  if (typescriptOnly) {
+    return <p className="text-xs text-text-dim">TypeScript only</p>;
+  }
+  return (
+    <ProviderTabs
+      options={[
+        { id: "python", label: "Python" },
+        { id: "typescript", label: "TypeScript" },
+      ]}
+      value={value}
+      onChange={onChange}
+    />
+  );
+}
+
+export function QuickstartRunHint({ language }: { language: SdkLanguage }) {
+  return (
+    <p className="text-xs text-text-muted leading-relaxed">
+      {language === "python"
+        ? "Save as quickstart.py and run python quickstart.py in the terminal where you set the environment variables."
+        : "Save as quickstart.mts and run npx tsx quickstart.mts in the terminal where you set the environment variables. Use Node.js with the versions required by your framework and provider packages."}
+    </p>
+  );
+}
+
+export function QuickstartDocsLink({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 text-xs text-text-dim hover:text-primary"
+    >
+      Open full guide
+      <ExternalLink aria-hidden="true" className="h-3 w-3" />
+    </a>
   );
 }
 
@@ -203,13 +253,13 @@ export function NextSteps() {
     {
       title: "Integrations",
       description:
-        "Advance integrations for frameworks like LangGraph, CrewAI, Google ADK, Claude Agent SDK, and OpenAI Agents.",
+        "Framework guides for LangGraph, DeepAgents, Vercel AI, and more.",
       href: DOCS_INTEGRATIONS_URL,
     },
     {
       title: "Manual Instrumentation",
       description:
-        "Full control with @trace and @span decorators for custom span names, kinds, and metadata.",
+        "Add custom tracing in Python or TypeScript with explicit trace and span boundaries.",
       href: DOCS_MANUAL_URL,
     },
   ];

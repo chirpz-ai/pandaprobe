@@ -9,7 +9,7 @@ import {
   timestamp,
   type SpanNode,
 } from "@/lib/utils/trace-timeline";
-import { SPAN_KINDS } from "./span-kind";
+import { SPAN_KINDS } from "@/components/config/span-kind";
 
 interface WaterfallTreeProps {
   trace: TraceResponse;

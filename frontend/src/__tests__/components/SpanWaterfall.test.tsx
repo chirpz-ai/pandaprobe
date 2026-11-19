@@ -4,8 +4,10 @@ import { SpanWaterfall } from "@/components/features/SpanWaterfall";
 import { makeTrace, makeSpan } from "../fixtures/trace";
 
 describe("Trace waterfall", () => {
-  it("positions bars by elapsed start and duration, keeping zero-duration markers", () => {
+  it("positions bars by elapsed start and duration, keeping zero-duration markers", async () => {
+    const user = userEvent.setup();
     const { container } = render(<SpanWaterfall trace={makeTrace()} />);
+    await user.click(screen.getByRole("tab", { name: "Timeline" }));
     const bar = container.querySelector<HTMLElement>(
       '[data-timeline-bar="llm"]',
     )!;
@@ -54,7 +56,8 @@ describe("Trace waterfall", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps short spans visible as markers and longer spans as unoutlined bars", () => {
+  it("keeps short spans visible as markers and longer spans as unoutlined bars", async () => {
+    const user = userEvent.setup();
     const { container } = render(
       <SpanWaterfall
         trace={makeTrace({
@@ -65,6 +68,7 @@ describe("Trace waterfall", () => {
         })}
       />,
     );
+    await user.click(screen.getByRole("tab", { name: "Timeline" }));
     const short = container.querySelector<HTMLElement>(
       '[data-timeline-bar="short"]',
     )!;
@@ -80,10 +84,12 @@ describe("Trace waterfall", () => {
   it("switches between Waterfall and Timeline with shared selection and collapsed branches", async () => {
     const user = userEvent.setup();
     render(<SpanWaterfall trace={makeTrace()} />);
-    expect(screen.getByRole("tab", { name: "Timeline" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Waterfall" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
+    expect(screen.queryByLabelText("Elapsed time")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Timeline" }));
     await user.click(screen.getByRole("button", { name: /ChatOpenAI LLM/ }));
     await user.click(screen.getByRole("tab", { name: "Waterfall" }));
     expect(screen.queryByLabelText("Elapsed time")).not.toBeInTheDocument();

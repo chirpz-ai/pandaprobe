@@ -6,16 +6,16 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  --color-bg:         #191919;
-  --color-surface:    #1f2022;
-  --color-surface-hi: #252628;
+  --color-bg:         #141414;
+  --color-surface:    #191919;
+  --color-surface-hi: #222222;
 
-  --color-border:     #343537;
-  --color-border-hi:  #484b50;
+  --color-border:     #353535;
+  --color-border-hi:  #4b4b4b;
   /* Internal separators are quieter than panel edges and input boundaries. */
-  --color-divider:    #2c2d2f;
+  --color-divider:    #2d2d2d;
 
-  --color-line:       #484b50;
+  --color-line:       #4b4b4b;
 
   --color-text:       #d1d5db;
   --color-text-dim:   #a3a7af;

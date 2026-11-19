@@ -23,7 +23,7 @@ export function WaterfallTabs({
   onSelect,
 }: WaterfallTabsProps) {
   const timeline = useMemo(() => getTimeline(trace), [trace]);
-  const [view, setView] = useState("timeline");
+  const [view, setView] = useState("waterfall");
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const toggle = (id: string) =>
     setCollapsed((previous) => {
@@ -57,28 +57,28 @@ export function WaterfallTabs({
             className="flex border border-border p-0.5"
           >
             <Tabs.Trigger
-              value="timeline"
-              className="flex items-center gap-1.5 px-2 py-1 text-caption font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
-            >
-              <SquareChartGantt aria-hidden="true" className="h-3.5 w-3.5" />
-              Timeline
-            </Tabs.Trigger>
-            <Tabs.Trigger
               value="waterfall"
               className="flex items-center gap-1.5 px-2 py-1 text-caption font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
             >
               <ListTree aria-hidden="true" className="h-3.5 w-3.5" />
               Waterfall
             </Tabs.Trigger>
+            <Tabs.Trigger
+              value="timeline"
+              className="flex items-center gap-1.5 px-2 py-1 text-caption font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
+            >
+              <SquareChartGantt aria-hidden="true" className="h-3.5 w-3.5" />
+              Timeline
+            </Tabs.Trigger>
           </Tabs.List>
         </div>
         {view === "timeline" && <TimelineRuler timeline={timeline} />}
       </div>
-      <Tabs.Content value="timeline" className="focus-visible:outline-none">
-        <TimelineTree {...sharedProps} timeline={timeline} />
-      </Tabs.Content>
       <Tabs.Content value="waterfall" className="focus-visible:outline-none">
         <WaterfallTree {...sharedProps} />
+      </Tabs.Content>
+      <Tabs.Content value="timeline" className="focus-visible:outline-none">
+        <TimelineTree {...sharedProps} timeline={timeline} />
       </Tabs.Content>
       {trace.spans.length === 0 && (
         <p className="p-6 text-center text-xs font-mono text-text-muted">
