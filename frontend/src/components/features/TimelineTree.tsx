@@ -173,6 +173,7 @@ function TimelineRow({
         "relative flex h-11 items-stretch rounded-control border-l-2 border-transparent hover:bg-surface-hi/50",
         selected && "bg-surface-hi/70",
       )}
+      style={{ borderLeftColor: selected ? color : undefined }}
     >
       <button
         type="button"
