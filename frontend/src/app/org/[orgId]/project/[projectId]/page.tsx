@@ -183,9 +183,7 @@ export default function ProjectHomePage() {
 
         {usageQuery.data && (
           <div className="flex flex-col gap-4 border-t border-divider px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <h2 className="font-sans text-xs text-text-dim">
-              Current period usage
-            </h2>
+            <h2 className="font-sans text-xs text-text-dim">Usage breakdown</h2>
             <dl className="grid grid-cols-3 gap-4 sm:gap-8">
               {[
                 { label: "Traces", value: usageQuery.data.traces },
