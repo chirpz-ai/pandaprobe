@@ -13,7 +13,7 @@ import {
   type SpanNode,
   type Timeline as TimelineScale,
 } from "@/lib/utils/trace-timeline";
-import { SPAN_KINDS } from "./span-kind";
+import { SPAN_KINDS } from "@/components/config/span-kind";
 
 interface TimelineTreeProps {
   trace: TraceResponse;
