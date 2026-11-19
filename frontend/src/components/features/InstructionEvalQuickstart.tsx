@@ -35,7 +35,12 @@ const TRACE_EVAL_STEPS = [
   {
     title: "Submit the run",
     description:
-      "Click Submit. PandaProbe starts the eval run in the background and reports the scores.",
+      "Click Submit. The run starts in the background with status PENDING.",
+  },
+  {
+    title: "Review completed scores",
+    description:
+      "Once the run completes, open the trace's Scores panel to inspect each value, reason, and metadata. SUCCESS means the score was computed; it does not mean the agent passed.",
   },
 ];
 
@@ -43,7 +48,7 @@ const SESSION_EVAL_STEPS = [
   {
     title: "Open the Sessions tab",
     description:
-      "Open Sessions to view grouped agent traces representing a single agent lifecycle.",
+      "Open Sessions to view related traces grouped by session ID, such as a conversation or multi-step task.",
   },
   {
     title: "Choose sessions to evaluate",
@@ -62,7 +67,12 @@ const SESSION_EVAL_STEPS = [
   {
     title: "Submit the run",
     description:
-      "Click Submit. PandaProbe starts the session eval run in the background and reports the scores.",
+      "Click Submit. The session eval runs in the background. Wait for completion before reviewing its results.",
+  },
+  {
+    title: "Review completed scores",
+    description:
+      "Open the session's Scores panel to inspect the result and its per-trace signal breakdown.",
   },
 ];
 
@@ -94,7 +104,7 @@ export function InstructionEvalQuickstart() {
         number={2}
         icon={<Users className="h-4 w-4" />}
         title="Evaluate sessions"
-        description="Evaluate complete agent lifecycles by selecting sessions."
+        description="Evaluate behavior across related traces by selecting sessions."
       >
         <div className="border border-border bg-surface p-3">
           <Timeline steps={SESSION_EVAL_STEPS} />
