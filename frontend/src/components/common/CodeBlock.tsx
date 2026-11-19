@@ -7,13 +7,15 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import python from "react-syntax-highlighter/dist/esm/languages/prism/python";
 import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash";
 import json from "react-syntax-highlighter/dist/esm/languages/prism/json";
+import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript";
 import { cn } from "@/lib/utils/cn";
 
 SyntaxHighlighter.registerLanguage("python", python);
 SyntaxHighlighter.registerLanguage("bash", bash);
 SyntaxHighlighter.registerLanguage("json", json);
+SyntaxHighlighter.registerLanguage("typescript", typescript);
 
-type SupportedLanguage = "python" | "bash" | "json" | "text";
+type SupportedLanguage = "python" | "typescript" | "bash" | "json" | "text";
 
 interface CodeBlockProps {
   code: string;
