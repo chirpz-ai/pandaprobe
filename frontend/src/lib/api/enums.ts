@@ -132,7 +132,6 @@ export type MonitorCadence =
 
 export const SubscriptionPlan = {
   HOBBY: "HOBBY",
-  PRO: "PRO",
   STARTUP: "STARTUP",
   ENTERPRISE: "ENTERPRISE",
   DEVELOPMENT: "DEVELOPMENT",

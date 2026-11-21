@@ -31,9 +31,6 @@ const PLAN_META: Record<string, PlanMeta> = {
   HOBBY: {
     features: ["Human annotation", "Community support via GitHub"],
   },
-  PRO: {
-    features: ["Email support"],
-  },
   STARTUP: {
     features: ["High rate limits", "Private Slack channel"],
   },
@@ -113,7 +110,7 @@ export default function PlansPage() {
           description="Contact support if you expected plan options here."
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {plans.map((plan) => (
             <PlanCard
               key={plan.name}
