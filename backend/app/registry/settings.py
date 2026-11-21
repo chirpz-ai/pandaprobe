@@ -130,7 +130,6 @@ class Settings(BaseSettings):
     # -- Stripe / Billing -----------------------------------------------------
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
-    STRIPE_PRO_PRICE_ID: str = ""
     STRIPE_STARTUP_PRICE_ID: str = ""
 
     # -- Email / Resend -------------------------------------------------------

@@ -99,7 +99,7 @@ class BillingRepository:
         return [self._to_subscription(r) for r in rows]
 
     async def list_paid_subscriptions_active(self) -> list[Subscription]:
-        """Return all active paid subscriptions (PRO, STARTUP, ENTERPRISE)."""
+        """Return all active paid subscriptions (STARTUP, ENTERPRISE)."""
         stmt = select(SubscriptionModel).where(
             SubscriptionModel.plan != SubscriptionPlan.HOBBY.value,
             SubscriptionModel.status == SubscriptionStatus.ACTIVE.value,

@@ -158,7 +158,6 @@ class SubscriptionPlan(StrEnum):
     """Tier of an organization's subscription."""
 
     HOBBY = "HOBBY"
-    PRO = "PRO"
     STARTUP = "STARTUP"
     ENTERPRISE = "ENTERPRISE"
     DEVELOPMENT = "DEVELOPMENT"

@@ -18,15 +18,6 @@ PLAN_LIMITS: dict[SubscriptionPlan, PlanConfig] = {
         pay_as_you_go=False,
         monthly_price_cents=0,
     ),
-    SubscriptionPlan.PRO: PlanConfig(
-        base_traces=5_000,
-        base_trace_evals=5_000,
-        base_session_evals=100,
-        monitoring_allowed=True,
-        max_members=2,
-        pay_as_you_go=True,
-        monthly_price_cents=2_900,
-    ),
     SubscriptionPlan.STARTUP: PlanConfig(
         base_traces=50_000,
         base_trace_evals=50_000,
