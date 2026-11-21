@@ -146,7 +146,7 @@ def deliver(client: AsyncClient, db_session: AsyncSession):
 
 @pytest.fixture
 async def paid_subscription(db_session: AsyncSession) -> tuple[datetime, datetime]:
-    """A PRO subscription with an unbilled usage record for the current period.
+    """A STARTUP subscription with an unbilled usage record for the current period.
 
     Counters stay at zero so overage reporting short-circuits before reaching
     Stripe — these tests must not need network access.
@@ -161,7 +161,7 @@ async def paid_subscription(db_session: AsyncSession) -> tuple[datetime, datetim
     repo = BillingRepository(db_session)
     await repo.create_subscription(
         TEST_ORG_ID,
-        plan=SubscriptionPlan.PRO,
+        plan=SubscriptionPlan.STARTUP,
         stripe_customer_id="cus_webhook_verify",
         stripe_subscription_id=_STRIPE_SUB_ID,
         period_start=period_start,
@@ -371,8 +371,8 @@ async def test_renewal_reports_old_redis_counters_to_exact_draft_once(
     assert (
         await deliver(_event("customer.subscription.updated", _subscription_updated(new_start, new_end)))
     ).status_code == 200
-    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, old_start), mapping={"traces": 6000})
-    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, new_start), mapping={"traces": 9000})
+    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, old_start), mapping={"traces": 51000})
+    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, new_start), mapping={"traces": 54000})
     create_item = MagicMock(return_value=MagicMock(id="ii_draft"))
     monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
     monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="draft"))
@@ -386,7 +386,7 @@ async def test_renewal_reports_old_redis_counters_to_exact_draft_once(
     assert (await deliver(_event("invoice.paid", {**invoice, "status": "paid"}))).status_code == 200
     repo = BillingRepository(db_session)
     old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
-    assert old.trace_count == old.reported_trace_count == 6000
+    assert old.trace_count == old.reported_trace_count == 51000
     assert old.billed and old.stripe_invoice_id == invoice["id"]
     # New-period reporting must remain enabled after closing the previous month.
     await UsageService(redis_client, db_session).sync_to_database(TEST_ORG_ID)
@@ -400,7 +400,7 @@ async def test_late_invoice_saves_carryover_instead_of_failing(
 ):
     old_start, old_end = paid_subscription
     repo = BillingRepository(db_session)
-    await repo.upsert_usage_counters(TEST_ORG_ID, old_start, old_end, trace_count=6000)
+    await repo.upsert_usage_counters(TEST_ORG_ID, old_start, old_end, trace_count=51000)
     await db_session.commit()
     create_item = MagicMock(return_value=MagicMock(id="ii_carryover"))
     monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
@@ -416,7 +416,7 @@ async def test_late_invoice_saves_carryover_instead_of_failing(
     assert "invoice" not in create_item.call_args.kwargs
     assert create_item.call_args.kwargs["subscription"] == _STRIPE_SUB_ID
     old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
-    assert old.reported_trace_count == 6000
+    assert old.reported_trace_count == 51000
 
 
 @pytest.mark.parametrize("event_type", ["invoice.created", "invoice.paid"])
@@ -455,7 +455,7 @@ async def test_partial_stripe_failure_retries_same_invoice_and_idempotency_keys(
 
     start, end = paid_subscription
     repo = BillingRepository(db_session)
-    await repo.upsert_usage_counters(TEST_ORG_ID, start, end, trace_count=6000, trace_eval_count=6000)
+    await repo.upsert_usage_counters(TEST_ORG_ID, start, end, trace_count=51000, trace_eval_count=51000)
     await db_session.commit()
     create_item = MagicMock(
         side_effect=[MagicMock(id="ii_first"), PandaProbeError("simulated Stripe failure"), MagicMock(id="ii_second")]
@@ -475,4 +475,4 @@ async def test_partial_stripe_failure_retries_same_invoice_and_idempotency_keys(
     assert len(calls) == 3 and calls[1] == calls[2]
     assert all(call.kwargs["invoice"] == invoice["id"] for call in calls)
     old = await repo.get_current_usage_record(TEST_ORG_ID, start)
-    assert old.reported_trace_count == old.reported_trace_eval_count == 6000
+    assert old.reported_trace_count == old.reported_trace_eval_count == 51000

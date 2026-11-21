@@ -94,7 +94,6 @@ def _ensure_stripe_configured() -> None:
 def _resolve_plan_from_price_id(price_id: str) -> SubscriptionPlan | None:
     """Map a Stripe price ID to a local plan. Returns None if unrecognised."""
     mapping = {
-        settings.STRIPE_PRO_PRICE_ID: SubscriptionPlan.PRO,
         settings.STRIPE_STARTUP_PRICE_ID: SubscriptionPlan.STARTUP,
     }
     return mapping.get(price_id)
@@ -221,10 +220,10 @@ class BillingService:
         If the org already has a Stripe customer, reuse it.
         Otherwise Stripe auto-creates one from the checkout.
         """
-        if plan not in (SubscriptionPlan.PRO, SubscriptionPlan.STARTUP):
-            raise ValueError("Checkout is only available for PRO and STARTUP plans.")
+        if plan != SubscriptionPlan.STARTUP:
+            raise ValueError("Checkout is only available for STARTUP plans.")
 
-        price_id = settings.STRIPE_PRO_PRICE_ID if plan == SubscriptionPlan.PRO else settings.STRIPE_STARTUP_PRICE_ID
+        price_id = settings.STRIPE_STARTUP_PRICE_ID
 
         sub = await self._repo.get_subscription_by_org(org_id)
 

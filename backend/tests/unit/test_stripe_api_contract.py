@@ -203,7 +203,7 @@ def svc() -> BillingService:
     return service
 
 
-def _subscription(plan: SubscriptionPlan = SubscriptionPlan.PRO) -> Subscription:
+def _subscription(plan: SubscriptionPlan = SubscriptionPlan.STARTUP) -> Subscription:
     now = datetime(2026, 7, 28, tzinfo=timezone.utc)
     return Subscription(
         id=uuid4(),

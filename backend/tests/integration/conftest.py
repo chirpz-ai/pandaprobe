@@ -98,7 +98,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     billing_repo = BillingRepository(session)
     await billing_repo.create_subscription(
         TEST_ORG_ID,
-        plan=SubscriptionPlan.PRO,
+        plan=SubscriptionPlan.STARTUP,
         stripe_subscription_id="sub_integration_seed",
     )
     sub = await billing_repo.get_subscription_by_org(TEST_ORG_ID)

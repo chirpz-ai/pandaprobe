@@ -339,8 +339,8 @@ async def create_checkout(
     """
     _require_user(ctx)
     await IdentityService(session).require_admin(ctx.user.id, org_id)
-    if body.plan not in (SubscriptionPlan.PRO, SubscriptionPlan.STARTUP):
-        raise ValidationError("Checkout is only available for PRO and STARTUP plans.")
+    if body.plan != SubscriptionPlan.STARTUP:
+        raise ValidationError("Checkout is only available for STARTUP plans.")
 
     billing_svc = BillingService(session)
     url = await billing_svc.create_checkout_session(

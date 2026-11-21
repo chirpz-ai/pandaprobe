@@ -215,9 +215,9 @@ async def test_create_invitation_quota_exceeded() -> None:
     svc._invitation_repo.get_pending_invitation = AsyncMock(return_value=None)
 
     sub_mock = AsyncMock()
-    sub_mock.plan = "PRO"
+    sub_mock.plan = "STARTUP"
     svc._billing_repo.get_subscription_by_org = AsyncMock(return_value=sub_mock)
-    svc._billing_repo.count_org_members = AsyncMock(return_value=1)
+    svc._billing_repo.count_org_members = AsyncMock(return_value=9)
     svc._invitation_repo.count_pending_for_org = AsyncMock(return_value=1)
 
     with pytest.raises(QuotaExceededError):

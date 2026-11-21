@@ -29,17 +29,6 @@ def test_get_plan_config_returns_hobby_config() -> None:
     assert cfg.monthly_price_cents == 0
 
 
-def test_get_plan_config_returns_pro_config() -> None:
-    cfg = get_plan_config(SubscriptionPlan.PRO)
-    assert cfg.base_traces == 5_000
-    assert cfg.base_trace_evals == 5_000
-    assert cfg.base_session_evals == 100
-    assert cfg.monitoring_allowed is True
-    assert cfg.max_members == 2
-    assert cfg.pay_as_you_go is True
-    assert cfg.monthly_price_cents == 2_900
-
-
 def test_get_plan_config_returns_startup_config() -> None:
     cfg = get_plan_config(SubscriptionPlan.STARTUP)
     assert cfg.base_traces == 50_000
@@ -69,13 +58,6 @@ def test_get_limit_for_category_hobby() -> None:
     assert get_limit_for_category(plan, UsageCategory.SESSION_EVALS) == 10
 
 
-def test_get_limit_for_category_pro() -> None:
-    plan = SubscriptionPlan.PRO
-    assert get_limit_for_category(plan, UsageCategory.TRACES) == 5_000
-    assert get_limit_for_category(plan, UsageCategory.TRACE_EVALS) == 5_000
-    assert get_limit_for_category(plan, UsageCategory.SESSION_EVALS) == 100
-
-
 def test_get_limit_for_category_startup() -> None:
     plan = SubscriptionPlan.STARTUP
     assert get_limit_for_category(plan, UsageCategory.TRACES) == 50_000
@@ -91,10 +73,9 @@ def test_get_limit_for_category_enterprise() -> None:
 
 
 def test_plan_limits_has_four_entries() -> None:
-    assert len(PLAN_LIMITS) == 5
+    assert len(PLAN_LIMITS) == 4
     assert set(PLAN_LIMITS.keys()) == {
         SubscriptionPlan.HOBBY,
-        SubscriptionPlan.PRO,
         SubscriptionPlan.STARTUP,
         SubscriptionPlan.ENTERPRISE,
         SubscriptionPlan.DEVELOPMENT,
@@ -144,7 +125,7 @@ def test_subscription_model_all_fields() -> None:
     sub = Subscription(
         id=sid,
         org_id=oid,
-        plan=SubscriptionPlan.PRO,
+        plan=SubscriptionPlan.STARTUP,
         status=SubscriptionStatus.ACTIVE,
         stripe_customer_id="cus_123",
         stripe_subscription_id="sub_456",
@@ -156,7 +137,7 @@ def test_subscription_model_all_fields() -> None:
     )
     assert sub.id == sid
     assert sub.org_id == oid
-    assert sub.plan == SubscriptionPlan.PRO
+    assert sub.plan == SubscriptionPlan.STARTUP
     assert sub.status == SubscriptionStatus.ACTIVE
     assert sub.stripe_customer_id == "cus_123"
     assert sub.stripe_subscription_id == "sub_456"
@@ -225,7 +206,6 @@ def test_overage_detail_total_cost_matches_sum_of_line_costs() -> None:
 def test_subscription_plan_enum_members() -> None:
     assert list(SubscriptionPlan) == [
         SubscriptionPlan.HOBBY,
-        SubscriptionPlan.PRO,
         SubscriptionPlan.STARTUP,
         SubscriptionPlan.ENTERPRISE,
         SubscriptionPlan.DEVELOPMENT,

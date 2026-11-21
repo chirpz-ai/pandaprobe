@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
 
@@ -21,13 +22,13 @@ from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.main import app
 from app.registry.constants import MembershipRole, SubscriptionPlan, SubscriptionStatus
 from app.registry.exceptions import QuotaExceededError
+from app.registry.settings import settings
 from app.services.identity_service import IdentityService
 
 from .conftest import TEST_ORG_ID
 
 TEST_USER_ID = UUID("00000000-0000-4000-a000-000000000010")
 TEST_USER_B_ID = UUID("00000000-0000-4000-a000-000000000011")
-TEST_USER_C_ID = UUID("00000000-0000-4000-a000-000000000012")
 TEST_ORG_B_ID = UUID("00000000-0000-4000-a000-000000000020")
 
 
@@ -202,14 +203,14 @@ async def test_billing_repository_list_paid_subscriptions_active_excludes_hobby(
     await repo.create_subscription(billing_isolated_org, plan=SubscriptionPlan.HOBBY)
     await repo.create_subscription(
         TEST_ORG_B_ID,
-        plan=SubscriptionPlan.PRO,
+        plan=SubscriptionPlan.STARTUP,
         stripe_customer_id="cus_b",
         stripe_subscription_id="sub_b",
     )
     await db_session.commit()
     paid = await repo.list_paid_subscriptions_active()
     assert len(paid) == 1
-    assert paid[0].plan == SubscriptionPlan.PRO
+    assert paid[0].plan == SubscriptionPlan.STARTUP
 
 
 async def test_billing_repository_count_org_members(db_session):
@@ -242,16 +243,86 @@ async def test_get_subscription_returns_subscription_when_present(client: AsyncC
     assert resp.status_code == 200
     data = resp.json()
     assert data["org_id"] == str(TEST_ORG_ID)
-    assert data["plan"] == "PRO"
+    assert data["plan"] == "STARTUP"
 
 
 async def test_get_subscription_usage_returns_usage_snapshot(client: AsyncClient, seed_api_user):
     resp = await client.get(f"/organizations/{TEST_ORG_ID}/subscriptions/usage")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["plan"] == "PRO"
+    assert data["plan"] == "STARTUP"
     assert "limits" in data
-    assert data["limits"]["max_members"] == 2
+    assert data["limits"]["max_members"] == 10
+
+
+async def test_available_plans_exclude_retired_pro(client: AsyncClient):
+    resp = await client.get("/subscriptions/plans")
+    assert resp.status_code == 200
+    assert [plan["name"] for plan in resp.json()] == ["HOBBY", "STARTUP", "ENTERPRISE"]
+
+
+async def test_checkout_rejects_retired_pro_before_calling_stripe(client: AsyncClient, seed_api_user):
+    with patch("app.api.v1.routes.subscriptions.BillingService") as service:
+        resp = await client.post(
+            f"/organizations/{TEST_ORG_ID}/subscriptions/checkout",
+            json={
+                "plan": "PRO",
+                "success_url": "https://example.com/success",
+                "cancel_url": "https://example.com/cancel",
+            },
+        )
+    assert resp.status_code == 422
+    service.assert_not_called()
+
+
+async def test_startup_checkout_uses_its_existing_price(client: AsyncClient, seed_api_user, monkeypatch):
+    monkeypatch.setattr(settings, "STRIPE_STARTUP_PRICE_ID", "price_startup")
+    with patch(
+        "stripe.checkout.Session.create", return_value=SimpleNamespace(url="https://checkout.stripe.test")
+    ) as create:
+        resp = await client.post(
+            f"/organizations/{TEST_ORG_ID}/subscriptions/checkout",
+            json={
+                "plan": "STARTUP",
+                "success_url": "https://example.com/success",
+                "cancel_url": "https://example.com/cancel",
+            },
+        )
+    assert resp.status_code == 200
+    assert resp.json()["checkout_url"] == "https://checkout.stripe.test"
+    assert create.call_args.kwargs["line_items"] == [{"price": "price_startup", "quantity": 1}]
+    assert create.call_args.kwargs["metadata"] == {"org_id": str(TEST_ORG_ID), "plan": "STARTUP"}
+
+
+@pytest.mark.parametrize("current_plan", [SubscriptionPlan.HOBBY, SubscriptionPlan.STARTUP])
+async def test_current_subscription_and_past_invoices_remain_accessible(
+    client: AsyncClient, db_session, seed_api_user, current_plan
+):
+    repo = BillingRepository(db_session)
+    sub = await repo.update_subscription(TEST_ORG_ID, plan=current_plan.value)
+    await repo.create_usage_record(
+        TEST_ORG_ID, sub.current_period_start - timedelta(days=30), sub.current_period_start
+    )
+    await repo.mark_billed(TEST_ORG_ID, sub.current_period_start - timedelta(days=30), "in_former_pro")
+    await db_session.commit()
+    history = await repo.list_usage_history(TEST_ORG_ID)
+
+    resp = await client.get(f"/organizations/{TEST_ORG_ID}/subscriptions")
+    assert resp.status_code == 200
+    assert resp.json()["plan"] == current_plan.value
+    assert resp.json()["status"] == "ACTIVE"
+
+    resp = await client.get(f"/organizations/{TEST_ORG_ID}/subscriptions/billing")
+    assert resp.status_code == 200
+    assert resp.json()["plan"] == current_plan.value
+    assert resp.json()["base_price_cents"] == (0 if current_plan == SubscriptionPlan.HOBBY else 29900)
+
+    resp = await client.get(f"/organizations/{TEST_ORG_ID}/subscriptions/invoices")
+    assert resp.status_code == 200
+    past_invoice = next(row for row in resp.json() if row["stripe_invoice_id"] == "in_former_pro")
+    assert past_invoice["billed"] is True
+    assert await repo.get_subscription_by_org(TEST_ORG_ID) == sub
+    assert await repo.list_usage_history(TEST_ORG_ID) == history
 
 
 async def test_get_subscription_returns_404_without_subscription(client: AsyncClient, db_session, seed_api_user):
@@ -284,19 +355,18 @@ async def test_identity_hobby_blocks_adding_second_member(_mock_resend, db_sessi
 
 
 @patch("resend.Emails.send", return_value={"id": "mock_email_id"})
-async def test_identity_pro_allows_two_members_blocks_third(_mock_resend, db_session):
+async def test_identity_startup_allows_ten_seats_including_pending_invites(_mock_resend, db_session):
     repo = BillingRepository(db_session)
-    await repo.update_subscription(TEST_ORG_ID, plan=SubscriptionPlan.PRO.value, stripe_subscription_id="sub_x")
+    await repo.update_subscription(TEST_ORG_ID, plan=SubscriptionPlan.STARTUP.value, stripe_subscription_id="sub_x")
     now = datetime.now(timezone.utc)
     _seed_user(db_session, TEST_USER_ID, "owner@x.com")
-    _seed_user(db_session, TEST_USER_B_ID, "m1@x.com")
-    _seed_user(db_session, TEST_USER_C_ID, "m2@x.com")
     db_session.add(
         MembershipModel(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, role=MembershipRole.OWNER, created_at=now)
     )
     await db_session.commit()
     svc = IdentityService(db_session)
-    await svc.create_invitation(TEST_USER_ID, TEST_ORG_ID, "m1@x.com", MembershipRole.MEMBER)
+    for index in range(9):
+        await svc.create_invitation(TEST_USER_ID, TEST_ORG_ID, f"member{index}@x.com", MembershipRole.MEMBER)
     await db_session.commit()
     with pytest.raises(QuotaExceededError):
-        await svc.create_invitation(TEST_USER_ID, TEST_ORG_ID, "m2@x.com", MembershipRole.MEMBER)
+        await svc.create_invitation(TEST_USER_ID, TEST_ORG_ID, "overflow@x.com", MembershipRole.MEMBER)
