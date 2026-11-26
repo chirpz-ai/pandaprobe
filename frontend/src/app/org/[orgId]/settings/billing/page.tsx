@@ -183,12 +183,22 @@ export default function BillingPage() {
             <span>${(billing.base_price_cents / 100).toFixed(2)}</span>
           </div>
           {billing.pay_as_you_go && (
-            <div className="flex justify-between mb-3 text-xs font-mono">
-              <span className="text-text-dim">
-                {formatNumber(billing.overage_events)} overage events at $
-                {billing.overage_unit_price} each
-              </span>
-              <span>${Number(billing.total_overage_cost).toFixed(2)}</span>
+            <div className="mb-3 space-y-1 text-xs font-mono">
+              <div className="flex justify-between">
+                <span className="text-text-dim">Estimated overage</span>
+                <span>${Number(billing.total_overage_cost).toFixed(2)}</span>
+              </div>
+              <p className="text-text-muted">
+                {formatNumber(billing.overage_events)} current overage events at
+                ${billing.overage_unit_price} each
+              </p>
+              {Number(billing.total_overage_cost) > 0 && (
+                <p className="text-text-muted">
+                  ${Number(billing.reported_overage_cost).toFixed(2)} reported
+                  to Stripe · ${Number(billing.pending_overage_cost).toFixed(2)}{" "}
+                  pending
+                </p>
+              )}
             </div>
           )}
           <div className="flex justify-between border-t border-divider pt-3">
