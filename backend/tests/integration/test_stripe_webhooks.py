@@ -371,8 +371,8 @@ async def test_renewal_reports_old_redis_counters_to_exact_draft_once(
     assert (
         await deliver(_event("customer.subscription.updated", _subscription_updated(new_start, new_end)))
     ).status_code == 200
-    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, old_start), mapping={"traces": 51000})
-    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, new_start), mapping={"traces": 54000})
+    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, old_start), mapping={"traces": 101_000})
+    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, new_start), mapping={"traces": 104_000})
     create_item = MagicMock(return_value=MagicMock(id="ii_draft"))
     monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
     monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="draft"))
@@ -386,12 +386,12 @@ async def test_renewal_reports_old_redis_counters_to_exact_draft_once(
     assert (await deliver(_event("invoice.paid", {**invoice, "status": "paid"}))).status_code == 200
     repo = BillingRepository(db_session)
     old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
-    assert old.trace_count == old.reported_trace_count == 51000
+    assert old.trace_count == old.reported_trace_count == 101_000
     assert old.billed and old.stripe_invoice_id == invoice["id"]
     # New-period reporting must remain enabled after closing the previous month.
     await UsageService(redis_client, db_session).sync_to_database(TEST_ORG_ID)
     remaining = await BillingService(db_session).calculate_unreported_overages(TEST_ORG_ID)
-    assert remaining.trace_overage == 4000
+    assert remaining.overage_events == 4000
 
 
 @pytest.mark.parametrize("event_type", ["invoice.created", "invoice.paid"])
@@ -400,7 +400,7 @@ async def test_late_invoice_saves_carryover_instead_of_failing(
 ):
     old_start, old_end = paid_subscription
     repo = BillingRepository(db_session)
-    await repo.upsert_usage_counters(TEST_ORG_ID, old_start, old_end, trace_count=51000)
+    await repo.upsert_usage_counters(TEST_ORG_ID, old_start, old_end, trace_count=101_000)
     await db_session.commit()
     create_item = MagicMock(return_value=MagicMock(id="ii_carryover"))
     monkeypatch.setattr(stripe.InvoiceItem, "create", create_item)
@@ -416,7 +416,7 @@ async def test_late_invoice_saves_carryover_instead_of_failing(
     assert "invoice" not in create_item.call_args.kwargs
     assert create_item.call_args.kwargs["subscription"] == _STRIPE_SUB_ID
     old = await repo.get_current_usage_record(TEST_ORG_ID, old_start)
-    assert old.reported_trace_count == 51000
+    assert old.reported_trace_count == 101_000
 
 
 @pytest.mark.parametrize("event_type", ["invoice.created", "invoice.paid"])
@@ -464,7 +464,13 @@ async def test_partial_stripe_failure_retries_same_invoice_and_idempotency_keys(
     monkeypatch.setattr(stripe.Invoice, "retrieve", lambda *a, **k: MagicMock(status="draft"))
     invoice = _dahlia_invoice(status="draft")
     body = _event("invoice.created", invoice)
-    assert (await deliver(body)).status_code == 200
+    # The original deployment staged two category items. Retry the persisted report on the new deployment.
+    with monkeypatch.context() as legacy:
+        legacy.setattr(
+            "app.services.billing_reporting_service.plan_pricing",
+            lambda plan: {"unit_price": "0.004", "traces": 50_000, "trace_evals": 50_000, "session_evals": 1_000},
+        )
+        assert (await deliver(body)).status_code == 200
     old = await repo.get_current_usage_record(TEST_ORG_ID, start)
     assert old.reported_trace_count == old.reported_trace_eval_count == 0
     assert not old.billed
