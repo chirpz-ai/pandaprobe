@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { version } from "../../package.json";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -6,7 +7,7 @@ export const handlers = [
   http.get(`${API}/health`, () =>
     HttpResponse.json({
       status: "healthy",
-      version: "1.0.0",
+      version,
       environment: "development",
     }),
   ),
