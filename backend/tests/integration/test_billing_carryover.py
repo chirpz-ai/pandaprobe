@@ -59,9 +59,11 @@ def fake_stripe(monkeypatch):
     return SimpleNamespace(create=create, accepted=accepted, calls=calls)
 
 
-async def _stage(session, bounds, *, count=51000, invoice=None):
+async def _stage(session, bounds, *, count=101_000, trace_evals=0, session_evals=0, invoice=None):
     repo = BillingRepository(session)
-    await repo.upsert_usage_counters(TEST_ORG_ID, *bounds, trace_count=count)
+    await repo.upsert_usage_counters(
+        TEST_ORG_ID, *bounds, trace_count=count, trace_eval_count=trace_evals, session_eval_count=session_evals
+    )
     sub = await repo.get_subscription_by_org(TEST_ORG_ID)
     report = await BillingReportingService(session).stage(sub, bounds[0], invoice_id=invoice)
     await session.commit()
@@ -78,12 +80,12 @@ async def test_paid_renewal_closes_with_trailing_usage_even_when_stripe_delivery
 ):
     start, end = paid_subscription
     key = UsageService._usage_key(TEST_ORG_ID, start)
-    await redis_client.hset(key, mapping={"traces": 51000})
+    await redis_client.hset(key, mapping={"traces": 101_000})
     invoice = _dahlia_invoice()
     assert (await deliver(_event("invoice.created", invoice))).status_code == 200
     assert len(fake_stripe.accepted) == 1
     # 6,250 more units arrive after the draft capture: exactly $25 to carry over.
-    await redis_client.hset(key, mapping={"traces": 57250})
+    await redis_client.hset(key, mapping={"traces": 107_250})
     monkeypatch.setattr(stripe.InvoiceItem, "create", MagicMock(side_effect=stripe.APIConnectionError("offline")))
     for _ in range(2):  # distinct event IDs cannot reserve the same remainder twice
         assert (await deliver(_event("invoice.paid", invoice))).status_code == 200
@@ -91,7 +93,7 @@ async def test_paid_renewal_closes_with_trailing_usage_even_when_stripe_delivery
     old = await repo.get_current_usage_record(TEST_ORG_ID, start)
     new = await repo.get_current_usage_record(TEST_ORG_ID, stub_stripe_subscription[0])
     sub = await repo.get_subscription_by_org(TEST_ORG_ID)
-    assert old.billed and old.reported_trace_count == 51000
+    assert old.billed and old.reported_trace_count == 101_000
     assert not new.billed and new.trace_count == 0
     assert sub.current_period_start == stub_stripe_subscription[0]
     pending = await BillingReportRepository(db_session).pending_ids()
@@ -99,13 +101,13 @@ async def test_paid_renewal_closes_with_trailing_usage_even_when_stripe_delivery
     assert not await BillingReportingService(db_session).deliver_safely(pending[0])
     reports = await _reports(db_session)
     carryover = next(r for r in reports if r.status == "pending")
-    assert carryover.requests["traces"]["amount"] == 2500
-    assert "invoice" not in carryover.requests["traces"]
-    assert carryover.requests["traces"]["period"] == {"start": int(start.timestamp()), "end": int(end.timestamp())}
+    assert carryover.requests["events"]["amount"] == 2500
+    assert "invoice" not in carryover.requests["events"]
+    assert carryover.requests["events"]["period"] == {"start": int(start.timestamp()), "end": int(end.timestamp())}
     monkeypatch.setattr(stripe.InvoiceItem, "create", fake_stripe.create)
     assert await BillingReportingService(db_session).deliver(pending[0])
     old = await repo.get_current_usage_record(TEST_ORG_ID, start)
-    assert old.billed and old.reported_trace_count == 57250
+    assert old.billed and old.reported_trace_count == 107_250
     assert len(fake_stripe.accepted) == 2
 
 
@@ -134,7 +136,7 @@ async def test_crash_after_stripe_acceptance_reuses_frozen_request(
 async def test_expired_idempotency_recovers_known_item_or_requires_review(db_session, paid_subscription, fake_stripe):
     report = await _stage(db_session, paid_subscription)
     attempted = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
-    await BillingReportRepository(db_session).update(report.id, attempted_at={"traces": attempted})
+    await BillingReportRepository(db_session).update(report.id, attempted_at={"events": attempted})
     await db_session.commit()
     # The request may have reached Stripe; no match is not permission to charge again.
     service = BillingReportingService(db_session)
@@ -142,7 +144,7 @@ async def test_expired_idempotency_recovers_known_item_or_requires_review(db_ses
     assert (await _reports(db_session))[0].status == "needs_review"
     assert not fake_stripe.calls
     # Once matching evidence exists, a reviewed retry can recover it without creation.
-    fake_stripe.create(**report.requests["traces"])
+    fake_stripe.create(**report.requests["events"])
     await BillingReportRepository(db_session).update(report.id, status="pending")
     await db_session.commit()
     assert await service.deliver(report.id)
@@ -152,19 +154,42 @@ async def test_expired_idempotency_recovers_known_item_or_requires_review(db_ses
 async def test_usage_growth_during_failure_reserves_only_the_additional_delta(
     db_session, paid_subscription, fake_stripe
 ):
-    first = await _stage(db_session, paid_subscription, count=51000)
-    second = await _stage(db_session, paid_subscription, count=51500)
-    assert first.requests["traces"]["amount"] == 400
-    assert second.requests["traces"]["amount"] == 200
-    assert await _stage(db_session, paid_subscription, count=51500) is None
+    first = await _stage(db_session, paid_subscription, count=101_000)
+    # A rollback in one category and new usage in another still total 101,000.
+    assert await _stage(db_session, paid_subscription, count=100_000, trace_evals=1_000) is None
+    mix = {"count": 100_000, "trace_evals": 2_000, "session_evals": 1_000}
+    second = await _stage(db_session, paid_subscription, **mix)
+    assert first.requests["events"]["amount"] == 400
+    assert second.requests["events"]["amount"] == 800
+    assert await _stage(db_session, paid_subscription, **mix) is None
+    # Confirmation order must come from the stored usage, even without a Stripe metadata count.
+    requests = deepcopy(second.requests)
+    del requests["events"]["metadata"]["to_count"]
+    await BillingReportRepository(db_session).update(second.id, requests=requests)
+    await db_session.commit()
     # Deliver out of order: the older unresolved obligation must not be hidden.
     service = BillingReportingService(db_session)
     assert await service.deliver(second.id)
     repo = BillingRepository(db_session)
     assert (await repo.get_current_usage_record(TEST_ORG_ID, paid_subscription[0])).reported_trace_count == 0
     assert await service.deliver(first.id)
-    assert (await repo.get_current_usage_record(TEST_ORG_ID, paid_subscription[0])).reported_trace_count == 51500
-    assert sum(v[1].amount for v in fake_stripe.accepted.values()) == 600
+    usage = await repo.get_current_usage_record(TEST_ORG_ID, paid_subscription[0])
+    assert (
+        usage.reported_counts
+        == second.snapshot_counts
+        == {"traces": 100_000, "trace_evals": 2_000, "session_evals": 1_000}
+    )
+    assert sum(item.amount for _, item in fake_stripe.accepted.values()) == 1_200
+
+
+async def test_five_single_event_increments_cost_two_cents(db_session, paid_subscription, fake_stripe):
+    service = BillingReportingService(db_session)
+    for extra in range(1, 6):
+        report = await _stage(db_session, paid_subscription, count=100_000, session_evals=extra)
+        if report:
+            assert set(report.requests) == {"events"}
+            assert await service.deliver(report.id)
+    assert [call["amount"] for call in fake_stripe.calls] == [1, 1]
 
 
 async def test_draft_attempt_then_paid_webhook_does_not_duplicate_reserved_charge(
@@ -218,14 +243,14 @@ async def test_late_counters_after_closure_are_captured_without_reopening_or_reb
     assert marker.requests == {} and marker.status == "reported"
     marker_id = str(marker.id)
     await db_session.commit()
-    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, start), mapping={"traces": 52000})
+    await redis_client.hset(UsageService._usage_key(TEST_ORG_ID, start), mapping={"traces": 102_000})
     for _ in range(2):
         await _check_closed_billing_period(str(TEST_ORG_ID), start.isoformat(), end.isoformat(), marker_id)
     reports = await _reports(db_session)
     assert len(reports) == 2
-    assert next(r for r in reports if r.requests).requests["traces"]["amount"] == 800
+    assert next(r for r in reports if r.requests).requests["events"]["amount"] == 800
     old = await BillingRepository(db_session).get_current_usage_record(TEST_ORG_ID, start)
-    assert old.billed and old.trace_count == 52000
+    assert old.billed and old.trace_count == 102_000
     assert not fake_stripe.calls
 
 
@@ -242,7 +267,7 @@ async def test_canceled_subscription_holds_carryover_for_review_not_another_subs
 
 async def test_reservation_and_period_close_roll_back_together(db_session, paid_subscription):
     repo = BillingRepository(db_session)
-    await repo.upsert_usage_counters(TEST_ORG_ID, *paid_subscription, trace_count=51000)
+    await repo.upsert_usage_counters(TEST_ORG_ID, *paid_subscription, trace_count=101_000)
     await db_session.commit()
     sub = await repo.get_subscription_by_org(TEST_ORG_ID)
     await BillingReportingService(db_session).stage(sub, paid_subscription[0], closing_invoice_id="in_atomic")
@@ -254,7 +279,7 @@ async def test_reservation_and_period_close_roll_back_together(db_session, paid_
 
 async def test_concurrent_reservations_do_not_overlap(db_session, paid_subscription):
     repo = BillingRepository(db_session)
-    await repo.upsert_usage_counters(TEST_ORG_ID, *paid_subscription, trace_count=51000)
+    await repo.upsert_usage_counters(TEST_ORG_ID, *paid_subscription, trace_count=101_000)
     await db_session.commit()
 
     async def stage():
@@ -279,12 +304,12 @@ async def test_locked_delivery_is_skipped_by_other_workers(db_session, paid_subs
 
 
 async def test_reserved_period_keeps_original_pricing_after_plan_change(db_session, paid_subscription):
-    first = await _stage(db_session, paid_subscription, count=51000)
+    first = await _stage(db_session, paid_subscription, count=101_000)
     await BillingRepository(db_session).update_subscription(TEST_ORG_ID, plan="ENTERPRISE")
     await db_session.commit()
-    second = await _stage(db_session, paid_subscription, count=52000)
+    second = await _stage(db_session, paid_subscription, count=102_000)
     assert second.pricing == first.pricing
-    assert second.requests["traces"]["amount"] == 400
+    assert second.requests["events"]["amount"] == 400
 
 
 async def test_dispatcher_recovers_intents_without_requiring_active_subscription(
@@ -315,7 +340,7 @@ async def test_legacy_history_is_not_automatically_enrolled(db_session, paid_sub
 
 async def test_late_usage_checks_are_bounded_but_delivery_obligations_do_not_expire(db_session, paid_subscription):
     repo = BillingRepository(db_session)
-    await repo.upsert_usage_counters(TEST_ORG_ID, *paid_subscription, trace_count=51000)
+    await repo.upsert_usage_counters(TEST_ORG_ID, *paid_subscription, trace_count=101_000)
     sub = await repo.get_subscription_by_org(TEST_ORG_ID)
     report = await BillingReportingService(db_session).stage(sub, paid_subscription[0], closing_invoice_id="in_old")
     await BillingReportRepository(db_session).update(
@@ -330,7 +355,7 @@ async def test_late_usage_checks_are_bounded_but_delivery_obligations_do_not_exp
 async def test_expired_recovery_scan_is_bounded(db_session, paid_subscription, fake_stripe, monkeypatch):
     report = await _stage(db_session, paid_subscription)
     await BillingReportRepository(db_session).update(
-        report.id, attempted_at={"traces": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()}
+        report.id, attempted_at={"events": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()}
     )
     await db_session.commit()
     scanned = 0
@@ -353,7 +378,7 @@ async def test_reserved_request_uses_supported_stripe_create_parameters(db_sessi
     from stripe.params import InvoiceItemCreateParams
 
     report = await _stage(db_session, paid_subscription, invoice=invoice)
-    params = report.requests["traces"]
+    params = report.requests["events"]
     # idempotency_key is an SDK request option, not a form-body parameter.
     assert set(params) - {"idempotency_key"} <= InvoiceItemCreateParams.__annotations__.keys()
     assert params["subscription"] == report.stripe_subscription_id
