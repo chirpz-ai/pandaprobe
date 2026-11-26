@@ -3,20 +3,21 @@
 import asyncio
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 import stripe
-from sqlalchemy import select, update
+from sqlalchemy import delete, func, select, update
 
 from app.infrastructure.db.engine import async_session_factory
-from app.infrastructure.db.models import BillingReportModel
+from app.infrastructure.db.models import BillingReportModel, UsageRecordModel
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.billing_report_repo import BillingReportRepository
 from app.infrastructure.queue.tasks import _check_closed_billing_period, _dispatch_billing_reports
 from app.services.billing_reporting_service import BillingReportingService
-from app.services.billing_service import BillingService
+from app.services.billing_service import BillingService, get_billing_overview
 from app.services.usage_service import UsageService
 
 from .conftest import TEST_ORG_ID
@@ -190,6 +191,70 @@ async def test_five_single_event_increments_cost_two_cents(db_session, paid_subs
             assert set(report.requests) == {"events"}
             assert await service.deliver(report.id)
     assert [call["amount"] for call in fake_stripe.calls] == [1, 1]
+
+
+@pytest.mark.parametrize("first_sync", [False, True])
+async def test_overlapping_syncs_bill_one_complete_redis_snapshot(
+    db_session, redis_client, paid_subscription, first_sync
+):
+    start, end = paid_subscription
+    repo = BillingRepository(db_session)
+    sub = await repo.get_subscription_by_org(TEST_ORG_ID)
+    if first_sync:
+        await db_session.execute(delete(UsageRecordModel).where(UsageRecordModel.org_id == TEST_ORG_ID))
+    else:
+        await repo.upsert_usage_counters(TEST_ORG_ID, start, end, trace_count=100_000)
+    await db_session.commit()
+
+    key = UsageService._usage_key(TEST_ORG_ID, start)
+    await redis_client.hset(key, "traces", 101_000)
+    await UsageService(redis_client, db_session).sync_to_database(TEST_ORG_ID)
+    # The first writer has saved its snapshot but still holds the transaction open.
+    await redis_client.hset(key, mapping={"traces": 100_000, "trace_evals": 1_000})
+    async with async_session_factory() as second_session:
+        second_pid = await second_session.scalar(select(func.pg_backend_pid()))
+        async with asyncio.TaskGroup() as workers:
+            workers.create_task(UsageService(redis_client, second_session).sync_to_database(TEST_ORG_ID))
+            async with asyncio.timeout(10):
+                while not await db_session.scalar(select(func.pg_blocking_pids(second_pid))):
+                    await asyncio.sleep(0.01)
+            # A waiting writer must sample Redis after its turn starts.
+            await redis_client.hset(key, mapping={"trace_evals": 900, "session_evals": 100})
+            await db_session.commit()
+        await second_session.commit()
+
+    expected = {"traces": 100_000, "trace_evals": 900, "session_evals": 100}
+    usage = await repo.get_current_usage_record(TEST_ORG_ID, start)
+    assert usage.counts == expected
+    report = await BillingReportingService(db_session).stage(sub, start)
+    assert report.snapshot_counts == expected
+    assert report.requests["events"]["amount"] == 400
+
+
+async def test_pooled_estimate_keeps_reserved_charges_after_rollback(
+    db_session, redis_client, paid_subscription, fake_stripe
+):
+    start, _ = paid_subscription
+    key = UsageService._usage_key(TEST_ORG_ID, start)
+    reporting = BillingReportingService(db_session)
+
+    async def check_overview(traces, *, reported, pending):
+        await redis_client.hset(key, "traces", traces)
+        overview = await get_billing_overview(TEST_ORG_ID, db_session, redis_client)
+        assert overview.overage_events == max(0, traces - 100_000)
+        assert Decimal(overview.reported_overage_cost) == reported
+        assert Decimal(overview.pending_overage_cost) == pending
+        assert Decimal(overview.total_overage_cost) == reported + pending
+        assert overview.estimated_total_cents == 29_900 + 100 * (reported + pending)
+
+    first = await _stage(db_session, paid_subscription, count=101_000)
+    await check_overview(100_000, reported=0, pending=4)
+    await check_overview(103_000, reported=0, pending=12)
+    second = await _stage(db_session, paid_subscription, count=103_000)
+    assert await reporting.deliver(second.id)
+    await check_overview(100_000, reported=8, pending=4)
+    assert await reporting.deliver(first.id)
+    await check_overview(100_000, reported=12, pending=0)
 
 
 async def test_draft_attempt_then_paid_webhook_does_not_duplicate_reserved_charge(
