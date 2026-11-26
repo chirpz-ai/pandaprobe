@@ -5,24 +5,23 @@ and require explicit membership verification.  The static ``GET /plans``
 endpoint remains at ``/subscriptions/plans`` (no org context needed).
 """
 
-from decimal import ROUND_HALF_UP, Decimal
-from typing import Any
 from uuid import UUID
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.context import ApiContext
 from app.api.dependencies import get_api_context
-from app.core.billing.plans import OVERAGE_UNIT_PRICE, PLAN_LIMITS, get_plan_config
+from app.core.billing.entities import BillingResponse, UsageSummary
+from app.core.billing.plans import OVERAGE_UNIT_PRICE, PLAN_LIMITS
 from app.infrastructure.db.engine import get_db_session
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.redis.client import get_redis
 from app.registry.constants import SubscriptionPlan, SubscriptionStatus
 from app.registry.exceptions import AuthenticationError, NotFoundError, ValidationError
-from app.services.billing_service import BillingService
+from app.services.billing_service import BillingService, get_billing_overview
 from app.services.identity_service import IdentityService
 from app.services.usage_service import UsageService
 
@@ -53,50 +52,12 @@ class SubscriptionResponse(BaseModel):
     created_at: str
 
 
-class UsageResponse(BaseModel):
-    """Current-period usage snapshot."""
-
-    plan: SubscriptionPlan
-    status: SubscriptionStatus
-    period_start: str
-    period_end: str
-    traces: int = 0
-    trace_evals: int = 0
-    session_evals: int = 0
-    limits: dict[str, Any] = Field(default_factory=dict)
-
-
-class CategoryBreakdown(BaseModel):
-    """Overage cost breakdown for a single usage category."""
-
-    used: int
-    included: int | None
-    overage_units: int
-    overage_cost: str
-
-
-class BillingResponse(BaseModel):
-    """Current-period billing overview with cost projections."""
-
-    plan: SubscriptionPlan
-    period_start: str
-    period_end: str
-    base_price_cents: int
-    overage_unit_price: str
-    traces: CategoryBreakdown
-    trace_evals: CategoryBreakdown
-    session_evals: CategoryBreakdown
-    total_overage_cost: str
-    reported_overage_cost: str
-    pending_overage_cost: str
-    estimated_total_cents: int
-
-
 class UsageHistoryItem(BaseModel):
     """One billing period's usage summary."""
 
     period_start: str
     period_end: str
+    total_events: int
     trace_count: int
     trace_eval_count: int
     session_eval_count: int
@@ -108,9 +69,7 @@ class PlanInfo(BaseModel):
     """Public representation of a plan tier."""
 
     name: str
-    base_traces: int | None
-    base_trace_evals: int | None
-    base_session_evals: int | None
+    included_events: int | None
     monitoring_allowed: bool
     max_members: int | None
     pay_as_you_go: bool
@@ -180,13 +139,13 @@ async def get_subscription(
     )
 
 
-@router.get("/usage", response_model=UsageResponse)
+@router.get("/usage", response_model=UsageSummary)
 async def get_usage(
     org_id: UUID,
     ctx: ApiContext = Depends(get_api_context),
     redis_client: aioredis.Redis = Depends(get_redis),
     session: AsyncSession = Depends(get_db_session),
-) -> UsageResponse:
+) -> UsageSummary:
     """Get the current period's usage breakdown.
 
     Auth: `Bearer` · role: any member
@@ -196,17 +155,7 @@ async def get_usage(
     await svc.require_membership(ctx.user.id, org_id)
 
     usage_svc = UsageService(redis_client, session)
-    summary = await usage_svc.get_current_usage(org_id)
-    return UsageResponse(
-        plan=summary.plan,
-        status=summary.status,
-        period_start=summary.period_start.isoformat(),
-        period_end=summary.period_end.isoformat(),
-        traces=summary.traces,
-        trace_evals=summary.trace_evals,
-        session_evals=summary.session_evals,
-        limits=summary.limits,
-    )
+    return await usage_svc.get_current_usage(org_id)
 
 
 @router.get("/billing", response_model=BillingResponse)
@@ -218,7 +167,7 @@ async def get_billing(
 ) -> BillingResponse:
     """Get the current billing period's cost breakdown including overages.
 
-    Returns the base plan price, per-category overage breakdown, and
+    Returns the base plan price, event overage, and
     the estimated total for the current period.
 
     Auth: `Bearer` · role: any member
@@ -227,69 +176,7 @@ async def get_billing(
     svc = IdentityService(session)
     await svc.require_membership(ctx.user.id, org_id)
 
-    repo = BillingRepository(session)
-    sub = await repo.get_subscription_by_org(org_id)
-    if sub is None:
-        raise NotFoundError("No subscription found for this organization.")
-
-    plan = SubscriptionPlan(sub.plan)
-    plan_cfg = get_plan_config(plan)
-
-    usage_svc = UsageService(redis_client, session)
-    summary = await usage_svc.get_current_usage(org_id)
-
-    base_t = plan_cfg.base_traces or 0
-    base_e = plan_cfg.base_trace_evals or 0
-    base_s = plan_cfg.base_session_evals or 0
-
-    total_t_over = max(0, summary.traces - base_t)
-    total_e_over = max(0, summary.trace_evals - base_e)
-    total_s_over = max(0, summary.session_evals - base_s)
-    total_overage = OVERAGE_UNIT_PRICE * (total_t_over + total_e_over + total_s_over)
-
-    reported_overage = Decimal("0")
-    usage_record = await repo.get_current_usage_record(org_id, sub.current_period_start)
-    if usage_record:
-        reported_overage = OVERAGE_UNIT_PRICE * (
-            max(0, usage_record.reported_trace_count - base_t)
-            + max(0, usage_record.reported_trace_eval_count - base_e)
-            + max(0, usage_record.reported_session_eval_count - base_s)
-        )
-    pending_overage = total_overage - reported_overage
-
-    estimated_total_cents = plan_cfg.monthly_price_cents + int(
-        (total_overage * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-    )
-
-    return BillingResponse(
-        plan=plan,
-        period_start=sub.current_period_start.isoformat(),
-        period_end=sub.current_period_end.isoformat(),
-        base_price_cents=plan_cfg.monthly_price_cents,
-        overage_unit_price=str(OVERAGE_UNIT_PRICE),
-        traces=CategoryBreakdown(
-            used=summary.traces,
-            included=plan_cfg.base_traces,
-            overage_units=total_t_over,
-            overage_cost=str(OVERAGE_UNIT_PRICE * total_t_over),
-        ),
-        trace_evals=CategoryBreakdown(
-            used=summary.trace_evals,
-            included=plan_cfg.base_trace_evals,
-            overage_units=total_e_over,
-            overage_cost=str(OVERAGE_UNIT_PRICE * total_e_over),
-        ),
-        session_evals=CategoryBreakdown(
-            used=summary.session_evals,
-            included=plan_cfg.base_session_evals,
-            overage_units=total_s_over,
-            overage_cost=str(OVERAGE_UNIT_PRICE * total_s_over),
-        ),
-        total_overage_cost=str(total_overage),
-        reported_overage_cost=str(reported_overage),
-        pending_overage_cost=str(pending_overage),
-        estimated_total_cents=estimated_total_cents,
-    )
+    return await get_billing_overview(org_id, session, redis_client)
 
 
 @router.get("/invoices", response_model=list[UsageHistoryItem])
@@ -316,6 +203,7 @@ async def get_invoices(
         UsageHistoryItem(
             period_start=r.period_start.isoformat(),
             period_end=r.period_end.isoformat(),
+            total_events=sum(r.counts.values()),
             trace_count=r.trace_count,
             trace_eval_count=r.trace_eval_count,
             session_eval_count=r.session_eval_count,
@@ -390,9 +278,7 @@ async def get_plans(
     return [
         PlanInfo(
             name=plan.value,
-            base_traces=cfg.base_traces,
-            base_trace_evals=cfg.base_trace_evals,
-            base_session_evals=cfg.base_session_evals,
+            included_events=cfg.included_events,
             monitoring_allowed=cfg.monitoring_allowed,
             max_members=cfg.max_members,
             pay_as_you_go=cfg.pay_as_you_go,
