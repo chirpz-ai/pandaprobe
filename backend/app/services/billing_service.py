@@ -8,15 +8,17 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import redis.asyncio as aioredis
 import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.billing.entities import OverageDetail, Subscription, UsageRecord
-from app.core.billing.plans import OVERAGE_UNIT_PRICE, get_plan_config
+from app.core.billing.entities import BillingResponse, CategoryUsage, OverageDetail, Subscription, UsageRecord
+from app.core.billing.plans import get_plan_config, overage_by_item, plan_pricing, usd_cents
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
+from app.infrastructure.db.repositories.billing_report_repo import BillingReportRepository
 from app.infrastructure.redis.locks import acquire_owned_lock, release_owned_lock
 from app.logging import logger
 from app.registry.constants import (
@@ -27,8 +29,9 @@ from app.registry.constants import (
     SubscriptionPlan,
     SubscriptionStatus,
 )
-from app.registry.exceptions import PandaProbeError
+from app.registry.exceptions import NotFoundError, PandaProbeError
 from app.registry.settings import settings
+from app.services.usage_service import UsageService
 
 _stripe_configured = False
 
@@ -146,6 +149,57 @@ def _invoice_period(invoice: object) -> tuple[datetime, datetime]:
     if type(start) is not int or type(end) is not int or not 0 < start < end:
         raise PandaProbeError("Renewal invoice has no valid billing period; reconciliation required.")
     return datetime.fromtimestamp(start, timezone.utc), datetime.fromtimestamp(end, timezone.utc)
+
+
+async def get_billing_overview(org_id: UUID, session: AsyncSession, redis_client: aioredis.Redis) -> BillingResponse:
+    """Read usage and pricing for one period, including on deployments without Stripe credentials."""
+    repo = BillingRepository(session)
+    sub = await repo.get_subscription_by_org(org_id)
+    if sub is None:
+        raise NotFoundError("No subscription found for this organization.")
+
+    counts = await UsageService(redis_client, session).get_period_counts(org_id, sub.current_period_start)
+    total_events = sum(counts.values())
+    usage = await repo.get_current_usage_record(org_id, sub.current_period_start)
+    reports = await BillingReportRepository(session).list_for_usage(usage.id) if usage else []
+    pricing = reports[0].pricing if reports else plan_pricing(sub.plan)
+    plan = get_plan_config(sub.plan)
+    pay_as_you_go = bool(reports) or plan.pay_as_you_go
+    if "included_events" in pricing:
+        included = pricing["included_events"]
+        remaining = None if included is None else max(0, included - total_events)
+    else:
+        # Category-priced periods can exhaust one allowance while another still has room.
+        included = sum(pricing[category] for category in counts)
+        remaining = sum(max(0, pricing[category] - count) for category, count in counts.items())
+
+    overage_events = sum(overage_by_item(counts, pricing).values()) if pay_as_you_go else 0
+    rate = Decimal(pricing["unit_price"])
+    # Stripe can confirm a later report before the earlier one advances the reported counters.
+    reported_cents = sum(r.requests[item]["amount"] for r in reports for item in r.stripe_item_ids)
+    if usage and not reports and pay_as_you_go:
+        reported_cents = usd_cents(rate * sum(overage_by_item(usage.reported_counts, pricing).values()))
+    estimated_cents = max(usd_cents(rate * overage_events), reported_cents)
+
+    return BillingResponse(
+        plan=sub.plan,
+        period_start=sub.current_period_start.isoformat(),
+        period_end=sub.current_period_end.isoformat(),
+        base_price_cents=plan.monthly_price_cents,
+        pay_as_you_go=pay_as_you_go,
+        overage_unit_price=str(rate),
+        traces=CategoryUsage(used=counts["traces"]),
+        trace_evals=CategoryUsage(used=counts["trace_evals"]),
+        session_evals=CategoryUsage(used=counts["session_evals"]),
+        total_events=total_events,
+        included_events=included,
+        remaining_events=remaining,
+        overage_events=overage_events,
+        total_overage_cost=str(Decimal(estimated_cents) / 100),
+        reported_overage_cost=str(Decimal(reported_cents) / 100),
+        pending_overage_cost=str(Decimal(estimated_cents - reported_cents) / 100),
+        estimated_total_cents=plan.monthly_price_cents + estimated_cents,
+    )
 
 
 class BillingService:
@@ -280,30 +334,14 @@ class BillingService:
         if usage is None or usage.billed:
             return OverageDetail()
 
-        base_t = plan_cfg.base_traces or 0
-        base_e = plan_cfg.base_trace_evals or 0
-        base_s = plan_cfg.base_session_evals or 0
-
-        total_t_over = max(0, usage.trace_count - base_t)
-        total_e_over = max(0, usage.trace_eval_count - base_e)
-        total_s_over = max(0, usage.session_eval_count - base_s)
-
-        prev_t_over = max(0, usage.reported_trace_count - base_t)
-        prev_e_over = max(0, usage.reported_trace_eval_count - base_e)
-        prev_s_over = max(0, usage.reported_session_eval_count - base_s)
-
-        dt = max(0, total_t_over - prev_t_over)
-        de = max(0, total_e_over - prev_e_over)
-        ds = max(0, total_s_over - prev_s_over)
-
+        reports = await BillingReportRepository(self._session).list_for_usage(usage.id)
+        pricing = reports[0].pricing if reports else plan_pricing(sub.plan)
+        current = overage_by_item(usage.counts, pricing)
+        reported = overage_by_item(usage.reported_counts, pricing)
+        events = sum(max(0, units - reported[item]) for item, units in current.items())
         return OverageDetail(
-            trace_overage=dt,
-            trace_eval_overage=de,
-            session_eval_overage=ds,
-            trace_overage_cost=OVERAGE_UNIT_PRICE * dt,
-            trace_eval_overage_cost=OVERAGE_UNIT_PRICE * de,
-            session_eval_overage_cost=OVERAGE_UNIT_PRICE * ds,
-            total_cost=OVERAGE_UNIT_PRICE * (dt + de + ds),
+            overage_events=events,
+            total_cost=Decimal(pricing["unit_price"]) * events,
             snapshot_trace_count=usage.trace_count,
             snapshot_trace_eval_count=usage.trace_eval_count,
             snapshot_session_eval_count=usage.session_eval_count,
@@ -376,8 +414,6 @@ class BillingService:
         if usage is not None and usage.billed:
             return usage
         if self._redis is not None:
-            from app.services.usage_service import UsageService
-
             await UsageService(self._redis, self._session).sync_to_database(
                 sub.org_id, period_start=period_start, period_end=period_end
             )
@@ -561,8 +597,6 @@ class BillingService:
         plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
         if plan_cfg.pay_as_you_go and sub.stripe_customer_id:
             if self._redis is not None:
-                from app.services.usage_service import UsageService
-
                 usage_svc = UsageService(self._redis, self._session)
                 await usage_svc.sync_to_database(sub.org_id)
                 await self._session.flush()
