@@ -179,7 +179,11 @@ async def get_billing_overview(org_id: UUID, session: AsyncSession, redis_client
     reported_cents = sum(r.requests[item]["amount"] for r in reports for item in r.stripe_item_ids)
     if usage and not reports and pay_as_you_go:
         reported_cents = usd_cents(rate * sum(overage_by_item(usage.reported_counts, pricing).values()))
-    estimated_cents = max(usd_cents(rate * overage_events), reported_cents)
+    # A rollback can lower live usage after a pooled charge has already been reserved.
+    pending_reserved_cents = sum(
+        r.requests["events"]["amount"] for r in reports if "events" in r.requests and "events" not in r.stripe_item_ids
+    )
+    estimated_cents = max(usd_cents(rate * overage_events), reported_cents + pending_reserved_cents)
 
     return BillingResponse(
         plan=sub.plan,
