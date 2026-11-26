@@ -93,14 +93,8 @@ export default function ProjectHomePage() {
     },
     {
       label: "Period usage",
-      description: "Traces and evaluations",
-      value: usageQuery.data
-        ? formatNumber(
-            usageQuery.data.traces +
-              usageQuery.data.trace_evals +
-              usageQuery.data.session_evals,
-          )
-        : "—",
+      description: "Organization events this period",
+      value: formatNumber(usageQuery.data?.total_events),
       icon: BarChart3,
       color: "text-text-dim",
       href: `${projectBase}/analytics`,
