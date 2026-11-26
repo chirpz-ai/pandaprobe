@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.billing.entities import BillingReport, UsageRecord
+from app.core.billing.entities import USAGE_COUNTERS, BillingReport, UsageRecord
 from app.infrastructure.db.models import BillingReportModel, UsageRecordModel
 
 
@@ -78,27 +78,39 @@ class BillingReportRepository:
             )
         ).scalar_one()
         reports = await self.list_for_usage(report.usage_record_id)
-        watermarks = {}
-        for category, counter in (
-            ("traces", "trace_count"),
-            ("trace_evals", "trace_eval_count"),
-            ("session_evals", "session_eval_count"),
-        ):
-            confirmed = max(
-                [getattr(usage, f"reported_{counter}")]
-                + [getattr(r, f"snapshot_{counter}") for r in reports if r.status == "reported" or r.id == report.id]
+        if "events" in report.requests:
+            # Advance all three counters to the same confirmed snapshot. The cumulative
+            # event count orders reservations even if workers deliver them out of order.
+            charged = (r for r in reports if "events" in r.requests)
+            confirmed_counts = {}
+            for staged in sorted(charged, key=lambda r: sum(r.snapshot_counts.values())):
+                if staged.id != report.id and staged.status != "reported":
+                    break
+                confirmed_counts = staged.snapshot_counts
+            watermarks = {f"reported_{USAGE_COUNTERS[key]}": count for key, count in confirmed_counts.items()}
+        else:
+            watermarks = {}
+            for category, counter in USAGE_COUNTERS.items():
+                confirmed = max(
+                    [getattr(usage, f"reported_{counter}")]
+                    + [
+                        getattr(r, f"snapshot_{counter}")
+                        for r in reports
+                        if r.status == "reported" or r.id == report.id
+                    ]
+                )
+                unresolved = [
+                    int(r.requests[category]["metadata"]["from_count"])
+                    for r in reports
+                    if category in r.requests and category not in r.stripe_item_ids
+                ]
+                watermarks[f"reported_{counter}"] = max(
+                    getattr(usage, f"reported_{counter}"), min([confirmed] + unresolved)
+                )
+        if watermarks:
+            await self._session.execute(
+                update(UsageRecordModel).where(UsageRecordModel.id == report.usage_record_id).values(**watermarks)
             )
-            unresolved = [
-                int(r.requests[category]["metadata"]["from_count"])
-                for r in reports
-                if category in r.requests and category not in r.stripe_item_ids
-            ]
-            watermarks[f"reported_{counter}"] = max(
-                getattr(usage, f"reported_{counter}"), min([confirmed] + unresolved)
-            )
-        await self._session.execute(
-            update(UsageRecordModel).where(UsageRecordModel.id == report.usage_record_id).values(**watermarks)
-        )
         await self.update(report.id, status="reported", last_error=None)
 
     async def pending_ids(self, *, limit: int = 200) -> list[UUID]:
