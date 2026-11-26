@@ -208,6 +208,7 @@ class UsageService:
             period_start, period_end = sub.current_period_start, sub.current_period_end
 
         usage_key = self._usage_key(org_id, period_start)
+        await billing_repo.lock_usage_sync(usage_key)
         raw = await self._redis.hgetall(usage_key)  # type: ignore[union-attr]
         if not raw:
             return
