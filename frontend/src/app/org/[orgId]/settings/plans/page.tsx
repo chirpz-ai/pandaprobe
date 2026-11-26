@@ -138,20 +138,14 @@ function PlanCard({
 
   const details: string[] = [];
 
-  function usageLine(label: string, base: number | null): string {
-    if (meta.isEnterprise) return `${label}: pay-as-you-go`;
-    if (base != null || plan.pay_as_you_go) {
-      const fmt = formatLimit(base);
-      return plan.pay_as_you_go
-        ? `${label}: ${fmt} / mo, then pay-as-you-go`
-        : `${label}: ${fmt} / mo`;
-    }
-    return `${label}: Unlimited`;
+  if (meta.isEnterprise) {
+    details.push("Pay-as-you-go events");
+  } else {
+    details.push(`${formatLimit(plan.included_events)} events per month`);
+    if (plan.pay_as_you_go)
+      details.push(`$${plan.overage_unit_price} per additional event`);
   }
-
-  details.push(usageLine("Traces", plan.base_traces));
-  details.push(usageLine("Trace Evals", plan.base_trace_evals));
-  details.push(usageLine("Session Evals", plan.base_session_evals));
+  details.push("Shared across traces, trace evals, and session evals");
 
   const seatLabel =
     plan.max_members == null
