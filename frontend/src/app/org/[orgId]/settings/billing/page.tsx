@@ -6,7 +6,6 @@ import { useOrganization } from "@/components/providers/OrganizationProvider";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import {
   getSubscription,
-  getUsage,
   getBilling,
   getInvoices,
   createPortalSession,
@@ -38,11 +37,6 @@ export default function BillingPage() {
     queryFn: () => getSubscription(orgId),
     enabled: !!currentOrg,
   });
-  const usageQuery = useQuery({
-    queryKey: queryKeys.subscriptions.usage(orgId),
-    queryFn: () => getUsage(orgId),
-    enabled: !!currentOrg,
-  });
   const billingQuery = useQuery({
     queryKey: queryKeys.subscriptions.billing(orgId),
     queryFn: () => getBilling(orgId),
@@ -57,15 +51,8 @@ export default function BillingPage() {
   if (!currentOrg) return <EmptyState title="No organization selected" />;
 
   const loading =
-    subQuery.isPending ||
-    usageQuery.isPending ||
-    billingQuery.isPending ||
-    invoicesQuery.isPending;
-  const error =
-    subQuery.error ||
-    usageQuery.error ||
-    billingQuery.error ||
-    invoicesQuery.error;
+    subQuery.isPending || billingQuery.isPending || invoicesQuery.isPending;
+  const error = subQuery.error || billingQuery.error || invoicesQuery.error;
 
   async function handlePortal() {
     try {
@@ -82,7 +69,6 @@ export default function BillingPage() {
   if (error) return <ErrorState message={extractErrorMessage(error)} />;
 
   const subscription = subQuery.data;
-  const usage = usageQuery.data;
   const billing = billingQuery.data;
   const invoices = invoicesQuery.data ?? [];
 
@@ -148,28 +134,38 @@ export default function BillingPage() {
       )}
 
       {/* ── Current Period Usage ──────────────────────────────────── */}
-      {usage && (
+      {billing && (
         <div className="border-engraved bg-surface p-4">
           <h2 className="text-xs font-mono text-text-muted mb-3">
-            Current period usage
+            Organization usage this period
           </h2>
+          <p className="mb-3 text-sm font-mono text-text">
+            {formatNumber(billing.total_events)} events used
+            <span className="block text-xs text-text-muted">
+              {billing.remaining_events === null
+                ? "Unlimited events"
+                : billing.included_events === 0 && billing.pay_as_you_go
+                  ? "Pay-as-you-go events"
+                  : `${formatNumber(billing.remaining_events)} of ${formatNumber(billing.included_events)} included events remaining`}
+            </span>
+          </p>
           <div className="grid grid-cols-3 gap-6 text-xs font-mono">
             <div>
               <span className="text-text-muted block">Traces</span>
               <span className="text-text text-lg">
-                {formatNumber(usage.traces)}
+                {formatNumber(billing.traces.used)}
               </span>
             </div>
             <div>
               <span className="text-text-muted block">Trace Evals</span>
               <span className="text-text text-lg">
-                {formatNumber(usage.trace_evals)}
+                {formatNumber(billing.trace_evals.used)}
               </span>
             </div>
             <div>
               <span className="text-text-muted block">Session Evals</span>
               <span className="text-text text-lg">
-                {formatNumber(usage.session_evals)}
+                {formatNumber(billing.session_evals.used)}
               </span>
             </div>
           </div>
@@ -182,35 +178,19 @@ export default function BillingPage() {
           <h2 className="text-xs font-mono text-text-muted mb-3">
             Billing breakdown
           </h2>
-          <div className="grid grid-cols-3 gap-4 text-xs font-mono mb-4">
-            {(["traces", "trace_evals", "session_evals"] as const).map(
-              (cat) => (
-                <div key={cat} className="border border-border p-3">
-                  <span className="text-text-muted block mb-1">
-                    {cat.replace("_", " ")}
-                  </span>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-text-dim">Used</span>
-                      <span className="text-text">{billing[cat].used}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-text-dim">Included</span>
-                      <span className="text-text">
-                        {billing[cat].included ?? "Unlimited"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-text-dim">Overage</span>
-                      <span className="text-warning">
-                        {billing[cat].overage_cost}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ),
-            )}
+          <div className="flex justify-between mb-2 text-xs font-mono">
+            <span className="text-text-dim">Base subscription</span>
+            <span>${(billing.base_price_cents / 100).toFixed(2)}</span>
           </div>
+          {billing.pay_as_you_go && (
+            <div className="flex justify-between mb-3 text-xs font-mono">
+              <span className="text-text-dim">
+                {formatNumber(billing.overage_events)} overage events at $
+                {billing.overage_unit_price} each
+              </span>
+              <span>${Number(billing.total_overage_cost).toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-divider pt-3">
             <span className="text-text-dim">Estimated Total</span>
             <span className="text-primary text-sm">
@@ -258,6 +238,9 @@ function InvoicesTable({
               <thead>
                 <tr className="border-b border-divider text-text-muted text-left">
                   <th className="px-3 py-2 font-normal">Period</th>
+                  <th className="px-3 py-2 font-normal text-right">
+                    Total events
+                  </th>
                   <th className="px-3 py-2 font-normal text-right">Traces</th>
                   <th className="px-3 py-2 font-normal text-right">
                     Trace Evals
@@ -278,6 +261,9 @@ function InvoicesTable({
                     <td className="px-3 py-2 text-text-dim whitespace-nowrap">
                       {formatDate(inv.period_start)} –{" "}
                       {formatDate(inv.period_end)}
+                    </td>
+                    <td className="px-3 py-2 text-text text-right">
+                      {formatNumber(inv.total_events)}
                     </td>
                     <td className="px-3 py-2 text-text text-right">
                       {formatNumber(inv.trace_count)}
