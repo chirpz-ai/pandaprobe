@@ -92,8 +92,8 @@ export default function ProjectHomePage() {
       href: `${projectBase}/evaluations/monitors`,
     },
     {
-      label: "Period usage",
-      description: "Organization events this period",
+      label: "Usage",
+      description: "Org events this period",
       value: formatNumber(usageQuery.data?.total_events),
       icon: BarChart3,
       color: "text-text-dim",
