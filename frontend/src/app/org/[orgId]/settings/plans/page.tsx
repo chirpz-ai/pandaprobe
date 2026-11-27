@@ -136,15 +136,9 @@ function PlanCard({
 }) {
   const meta = PLAN_META[plan.name] ?? PLAN_META.HOBBY;
 
-  const details: string[] = [];
-
-  if (meta.isEnterprise) {
-    details.push("Pay-as-you-go events");
-  } else {
-    details.push(`${formatLimit(plan.included_events)} events per month`);
-    if (plan.pay_as_you_go)
-      details.push(`$${plan.overage_unit_price} per additional event`);
-  }
+  const details = [`${formatLimit(plan.included_events)} events per month`];
+  if (plan.pay_as_you_go)
+    details.push(`$${plan.overage_unit_price} per additional event`);
   details.push("Shared across traces, trace evals, and session evals");
 
   const seatLabel =
