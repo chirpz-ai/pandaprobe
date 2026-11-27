@@ -115,10 +115,11 @@ class BillingRepository:
         return list(rows)
 
     async def list_paid_active_org_ids(self) -> list[UUID]:
-        """Return org IDs for active paid subscriptions only."""
+        """Return active paid orgs with a Stripe customer for the overage worker."""
         stmt = select(SubscriptionModel.org_id).where(
             SubscriptionModel.plan != SubscriptionPlan.HOBBY.value,
             SubscriptionModel.status == SubscriptionStatus.ACTIVE.value,
+            SubscriptionModel.stripe_customer_id.is_not(None),
         )
         rows = (await self._session.execute(stmt)).scalars().all()
         return list(rows)
