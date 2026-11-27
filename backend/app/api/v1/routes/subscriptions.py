@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.context import ApiContext
 from app.api.dependencies import get_api_context
 from app.core.billing.entities import BillingResponse, UsageSummary
-from app.core.billing.plans import OVERAGE_UNIT_PRICE, PLAN_LIMITS
+from app.core.billing.plans import PLAN_LIMITS, plan_pricing
 from app.infrastructure.db.engine import get_db_session
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.redis.client import get_redis
@@ -283,7 +283,7 @@ async def get_plans(
             max_members=cfg.max_members,
             pay_as_you_go=cfg.pay_as_you_go,
             monthly_price_cents=cfg.monthly_price_cents,
-            overage_unit_price=str(OVERAGE_UNIT_PRICE),
+            overage_unit_price=plan_pricing(plan)["unit_price"],
         )
         for plan, cfg in PLAN_LIMITS.items()
         if plan != SubscriptionPlan.DEVELOPMENT
