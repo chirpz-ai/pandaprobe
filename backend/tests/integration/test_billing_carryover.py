@@ -377,6 +377,31 @@ async def test_reserved_period_keeps_original_pricing_after_plan_change(db_sessi
     assert second.requests["events"]["amount"] == 400
 
 
+async def test_enterprise_renewal_honors_saved_category_pricing(
+    db_session, paid_subscription, redis_client, deliver, fake_stripe, monkeypatch
+):
+    start, _ = paid_subscription
+    with monkeypatch.context() as legacy:
+        legacy.setattr(
+            "app.services.billing_reporting_service.plan_pricing",
+            lambda plan: {"unit_price": "0.004", "traces": 0, "trace_evals": 0, "session_evals": 0},
+        )
+        first = await _stage(db_session, paid_subscription, count=1_000)
+    await BillingRepository(db_session).update_subscription(TEST_ORG_ID, plan="ENTERPRISE")
+    await db_session.commit()
+    assert (await BillingService(db_session).calculate_unreported_overages(TEST_ORG_ID)).total_cost == 4
+
+    await redis_client.hset(
+        UsageService._usage_key(TEST_ORG_ID, start), mapping={"traces": 1_000, "session_evals": 500}
+    )
+    response = await deliver(_event("invoice.created", _dahlia_invoice()))
+    assert response.status_code == 200
+    assert [(p["metadata"]["category"], p["amount"]) for p in fake_stripe.calls] == [("session_evals", 200)]
+    assert await BillingReportingService(db_session).deliver(first.id)
+    assert fake_stripe.calls[-1] == first.requests["traces"]
+    assert fake_stripe.calls[-1]["amount"] == 400
+
+
 async def test_dispatcher_recovers_intents_without_requiring_active_subscription(
     db_session, paid_subscription, monkeypatch
 ):
