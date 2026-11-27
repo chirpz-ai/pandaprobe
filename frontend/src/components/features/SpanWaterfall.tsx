@@ -42,14 +42,14 @@ export function SpanWaterfall({ trace }: { trace: TraceResponse }) {
             )}
           >
             {pane === "waterfall"
-              ? `Waterfall · ${trace.spans.length}`
+              ? `Trace · ${trace.spans.length}`
               : "Span details"}
           </button>
         ))}
       </div>
       <div className="flex flex-1 min-h-0 min-w-0">
         <section
-          aria-label="Trace waterfall"
+          aria-label="Trace spans"
           className={cn(
             "min-w-0 w-full lg:w-[48%] lg:shrink-0 lg:border-r border-border overflow-auto bg-surface",
             mobilePane !== "waterfall" && "hidden lg:block",
