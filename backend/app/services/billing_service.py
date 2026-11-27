@@ -330,15 +330,13 @@ class BillingService:
         if sub is None:
             return OverageDetail()
 
-        plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
-        if not plan_cfg.pay_as_you_go:
-            return OverageDetail()
-
         usage = await self._repo.get_current_usage_record(org_id, period_start or sub.current_period_start)
         if usage is None or usage.billed:
             return OverageDetail()
 
         reports = await BillingReportRepository(self._session).list_for_usage(usage.id)
+        if not reports and not get_plan_config(sub.plan).pay_as_you_go:
+            return OverageDetail()
         pricing = reports[0].pricing if reports else plan_pricing(sub.plan)
         current = overage_by_item(usage.counts, pricing)
         reported = overage_by_item(usage.reported_counts, pricing)
@@ -443,10 +441,6 @@ class BillingService:
 
         sub = await self._repo.get_subscription_by_stripe_subscription(subscription_id)
         if sub is None:
-            return
-
-        plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
-        if not plan_cfg.pay_as_you_go:
             return
 
         if not await self.acquire_overage_lock(sub.org_id):
@@ -598,8 +592,7 @@ class BillingService:
         if sub is None:
             return
 
-        plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
-        if plan_cfg.pay_as_you_go and sub.stripe_customer_id:
+        if sub.stripe_customer_id:
             if self._redis is not None:
                 usage_svc = UsageService(self._redis, self._session)
                 await usage_svc.sync_to_database(sub.org_id)
