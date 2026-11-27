@@ -15,7 +15,7 @@ interface WaterfallTabsProps {
   onSelect: (id: string) => void;
 }
 
-/** Owns the shared navigation state for the Waterfall and Timeline views. */
+/** Shares selection and collapse state between the Trace and Timeline views. */
 export function WaterfallTabs({
   trace,
   tree,
@@ -53,7 +53,7 @@ export function WaterfallTabs({
             Spans · {trace.spans.length}
           </span>
           <Tabs.List
-            aria-label="Waterfall view"
+            aria-label="Trace view"
             className="flex border border-border p-0.5"
           >
             <Tabs.Trigger
@@ -61,7 +61,7 @@ export function WaterfallTabs({
               className="flex items-center gap-1.5 px-2 py-1 text-caption font-mono text-text-muted data-[state=active]:bg-surface-hi data-[state=active]:text-primary focus-visible:outline focus-visible:outline-primary"
             >
               <ListTree aria-hidden="true" className="h-3.5 w-3.5" />
-              Waterfall
+              Trace
             </Tabs.Trigger>
             <Tabs.Trigger
               value="timeline"

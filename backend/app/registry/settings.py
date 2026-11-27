@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     # -- Application ----------------------------------------------------------
     APP_ENV: Environment = Environment.DEVELOPMENT
     PROJECT_NAME: str = "PandaProbe"
-    VERSION: str = "0.7.0"
+    VERSION: str = "0.9.0"
     DESCRIPTION: str = "Open-source agent engineering service"
     DEBUG: bool = False
     ALLOWED_ORIGINS: list[str] = [

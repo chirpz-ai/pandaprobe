@@ -48,6 +48,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 const STORAGE_KEY = "pandaprobe_sidebar_collapsed";
+const ORG_SETTINGS_LABEL = "Settings";
 
 function subscribeToMobile(onChange: () => void) {
   const query = window.matchMedia("(max-width: 639px)");
@@ -108,16 +109,19 @@ function NavLink({
   return link;
 }
 
-function BackToHomeButton({
+function SettingsBackButton({
+  label,
   collapsed,
   onClick,
 }: {
+  label: string;
   collapsed: boolean;
   onClick: () => void;
 }) {
   const btn = (
     <Button
       variant="ghost"
+      aria-label={label}
       onClick={onClick}
       className={cn(
         "w-full justify-start gap-3 px-3 py-2 text-primary",
@@ -125,7 +129,7 @@ function BackToHomeButton({
       )}
     >
       <ArrowLeft className="h-4 w-4" />
-      {!collapsed && <span>Back to Home</span>}
+      {!collapsed && <span>{label}</span>}
     </Button>
   );
 
@@ -139,7 +143,7 @@ function BackToHomeButton({
             sideOffset={8}
             className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
           >
-            Back to Home
+            {label}
           </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>
@@ -326,38 +330,44 @@ export function Sidebar() {
     [orgBase, projectBase, projectHome],
   );
 
-  const orgSettingsNav = useMemo<NavItem[]>(
+  const orgSettingsGroups = useMemo<NavItem[][]>(
     () => [
-      {
-        label: "Organization",
-        href: `${orgBase}/settings/organization`,
-        icon: <SlidersHorizontal className="h-4 w-4" />,
-      },
-      {
-        label: "Members",
-        href: `${orgBase}/settings/members`,
-        icon: <Users className="h-4 w-4" />,
-      },
-      {
-        label: "Projects",
-        href: `${orgBase}/settings/projects`,
-        icon: <FolderKanban className="h-4 w-4" />,
-      },
-      {
-        label: "API Keys",
-        href: `${orgBase}/settings/api-keys`,
-        icon: <KeyRound className="h-4 w-4" />,
-      },
-      {
-        label: "Plans",
-        href: `${orgBase}/settings/plans`,
-        icon: <Sparkles className="h-4 w-4" />,
-      },
-      {
-        label: "Billing",
-        href: `${orgBase}/settings/billing`,
-        icon: <CreditCard className="h-4 w-4" />,
-      },
+      [
+        {
+          label: "API Keys",
+          href: `${orgBase}/settings/api-keys`,
+          icon: <KeyRound className="h-4 w-4" />,
+        },
+        {
+          label: "Projects",
+          href: `${orgBase}/settings/projects`,
+          icon: <FolderKanban className="h-4 w-4" />,
+        },
+      ],
+      [
+        {
+          label: "Plans",
+          href: `${orgBase}/settings/plans`,
+          icon: <Sparkles className="h-4 w-4" />,
+        },
+        {
+          label: "Billing",
+          href: `${orgBase}/settings/billing`,
+          icon: <CreditCard className="h-4 w-4" />,
+        },
+      ],
+      [
+        {
+          label: "Members",
+          href: `${orgBase}/settings/members`,
+          icon: <Users className="h-4 w-4" />,
+        },
+        {
+          label: "Organization",
+          href: `${orgBase}/settings/organization`,
+          icon: <SlidersHorizontal className="h-4 w-4" />,
+        },
+      ],
     ],
     [orgBase],
   );
@@ -399,7 +409,7 @@ export function Sidebar() {
 
   function openSettings() {
     setSettingsView(true);
-    router.push(`${orgBase}/settings/organization`);
+    router.push(`${orgBase}/settings`);
   }
 
   function exitSettings() {
@@ -408,7 +418,10 @@ export function Sidebar() {
   }
 
   function switchOrg(newOrgId: string) {
-    router.push(`/org/${newOrgId}/settings/organization`);
+    if (newOrgId === orgId) return;
+    const activeTab = orgSettingsGroups.flat().find(isActive);
+    const settingsPath = activeTab?.href.slice(orgBase.length) ?? "/settings";
+    router.push(`/org/${newOrgId}${settingsPath}`);
   }
 
   function switchProject(newProjectId: string) {
@@ -503,26 +516,26 @@ export function Sidebar() {
 
         {/* ── Navigation ─────────────────────────────────────────── */}
         <nav className="flex-1 py-2 overflow-y-auto">
+          {(inAccountRoute || settingsView) && (
+            <SettingsBackButton
+              label={projectBase ? "Back to project" : "Back to home"}
+              collapsed={collapsed}
+              onClick={exitSettings}
+            />
+          )}
           {inAccountRoute ? (
-            <>
-              {/* Back to Home */}
-              <BackToHomeButton collapsed={collapsed} onClick={exitSettings} />
-              {/* Account view */}
-              <div className="space-y-0.5 mt-1">
-                {accountNav.map((item) => (
-                  <NavLink
-                    key={item.label}
-                    item={item}
-                    collapsed={collapsed}
-                    active={isActive(item)}
-                  />
-                ))}
-              </div>
-            </>
+            <div className="space-y-0.5 mt-1">
+              {accountNav.map((item) => (
+                <NavLink
+                  key={item.label}
+                  item={item}
+                  collapsed={collapsed}
+                  active={isActive(item)}
+                />
+              ))}
+            </div>
           ) : settingsView ? (
             <>
-              {/* Back to Home */}
-              <BackToHomeButton collapsed={collapsed} onClick={exitSettings} />
               {/* Org switcher at top of settings view */}
               <SwitcherDropdown
                 label={activeOrg?.name ?? "Select org"}
@@ -538,14 +551,18 @@ export function Sidebar() {
                 }}
               />
 
-              <div className="space-y-0.5 mt-1">
-                {orgSettingsNav.map((item) => (
-                  <NavLink
-                    key={item.label}
-                    item={item}
-                    collapsed={collapsed}
-                    active={isActive(item)}
-                  />
+              <div className="mt-1 space-y-2">
+                {orgSettingsGroups.map((group) => (
+                  <div key={group[0].href} className="space-y-0.5">
+                    {group.map((item) => (
+                      <NavLink
+                        key={item.href}
+                        item={item}
+                        collapsed={collapsed}
+                        active={isActive(item)}
+                      />
+                    ))}
+                  </div>
                 ))}
               </div>
             </>
@@ -616,13 +633,14 @@ export function Sidebar() {
                 <Button
                   variant="ghost"
                   onClick={openSettings}
+                  aria-label={ORG_SETTINGS_LABEL}
                   className={cn(
                     "w-full justify-start gap-3 px-3 py-2",
                     collapsed && "justify-center px-2",
                   )}
                 >
                   <Settings className="h-4 w-4" />
-                  {!collapsed && <span>Settings</span>}
+                  {!collapsed && <span>{ORG_SETTINGS_LABEL}</span>}
                 </Button>
               </Tooltip.Trigger>
               {collapsed && (
@@ -632,7 +650,7 @@ export function Sidebar() {
                     sideOffset={8}
                     className="z-50 bg-surface border border-border px-2 py-1 text-xs font-mono text-text"
                   >
-                    Settings
+                    {ORG_SETTINGS_LABEL}
                   </Tooltip.Content>
                 </Tooltip.Portal>
               )}

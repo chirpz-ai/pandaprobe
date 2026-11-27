@@ -6,5 +6,5 @@ export default async function SettingsPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  redirect(`/org/${orgId}/settings/organization`);
+  redirect(`/org/${orgId}/settings/api-keys`);
 }

@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { version } from "../../package.json";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -6,7 +7,7 @@ export const handlers = [
   http.get(`${API}/health`, () =>
     HttpResponse.json({
       status: "healthy",
-      version: "1.0.0",
+      version,
       environment: "development",
     }),
   ),
@@ -79,7 +80,7 @@ export const handlers = [
     }),
   ),
 
-  http.get(`${API}/subscriptions`, () =>
+  http.get(`${API}/organizations/:orgId/subscriptions`, () =>
     HttpResponse.json({
       id: "sub-001",
       org_id: "org-001",
@@ -92,7 +93,7 @@ export const handlers = [
     }),
   ),
 
-  http.get(`${API}/subscriptions/usage`, () =>
+  http.get(`${API}/organizations/:orgId/subscriptions/usage`, () =>
     HttpResponse.json({
       plan: "DEVELOPMENT",
       status: "ACTIVE",
@@ -101,7 +102,15 @@ export const handlers = [
       traces: 42,
       trace_evals: 10,
       session_evals: 5,
-      limits: {},
+      total_events: 57,
+      remaining_events: null,
+      limits: {
+        included_events: null,
+        monitoring_allowed: true,
+        max_members: 1,
+        pay_as_you_go: false,
+        monthly_price_cents: 0,
+      },
     }),
   ),
 

@@ -6,7 +6,16 @@ rss: true
 
 Release history for the **PandaProbe Core Platform**.
 
-Current version: `v0.7.0`
+Current version: `v0.9.0`
+
+<Update label="v0.9.0" description="2026-11-26" tags={["Billing", "Dashboard"]}>
+  ### Shared event allowance
+
+  - Traces, trace evaluations, and session evaluations now count toward one event total across all projects in an organization. Each evaluation counts once per target and metric.
+  - Hobby includes 1,000 events per billing period and rejects a whole submission if it would exceed the limit. Startup includes 100,000 events for \$299 per month and charges \$0.004 per additional event.
+  - Enterprise includes unlimited pooled events with no automatic per-event overage. Billing follows the organization's Enterprise agreement.
+  - The billing dashboard shows total events, usage by category, and how much overage is pending or already reported.
+</Update>
 
 <Update label="v0.7.0" description="2026-10-04" tags={["Billing", "Evaluation", "Dashboard"]}>
   ### Durable billing and evaluation improvements

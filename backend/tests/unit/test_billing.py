@@ -7,12 +7,13 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.core.billing.entities import OverageDetail, PlanConfig, Subscription, UsageRecord, UsageSummary
+from app.core.billing.entities import PlanConfig, Subscription, UsageRecord, UsageSummary
 from app.core.billing.plans import (
     OVERAGE_UNIT_PRICE,
     PLAN_LIMITS,
-    get_limit_for_category,
     get_plan_config,
+    overage_by_item,
+    plan_pricing,
 )
 from app.registry.constants import SubscriptionPlan, SubscriptionStatus, UsageCategory
 from app.registry.exceptions import QuotaExceededError
@@ -20,9 +21,7 @@ from app.registry.exceptions import QuotaExceededError
 
 def test_get_plan_config_returns_hobby_config() -> None:
     cfg = get_plan_config(SubscriptionPlan.HOBBY)
-    assert cfg.base_traces == 100
-    assert cfg.base_trace_evals == 100
-    assert cfg.base_session_evals == 10
+    assert cfg.included_events == 1_000
     assert cfg.monitoring_allowed is False
     assert cfg.max_members == 1
     assert cfg.pay_as_you_go is False
@@ -31,9 +30,7 @@ def test_get_plan_config_returns_hobby_config() -> None:
 
 def test_get_plan_config_returns_startup_config() -> None:
     cfg = get_plan_config(SubscriptionPlan.STARTUP)
-    assert cfg.base_traces == 50_000
-    assert cfg.base_trace_evals == 50_000
-    assert cfg.base_session_evals == 1_000
+    assert cfg.included_events == 100_000
     assert cfg.monitoring_allowed is True
     assert cfg.max_members == 10
     assert cfg.pay_as_you_go is True
@@ -42,34 +39,17 @@ def test_get_plan_config_returns_startup_config() -> None:
 
 def test_get_plan_config_returns_enterprise_config() -> None:
     cfg = get_plan_config(SubscriptionPlan.ENTERPRISE)
-    assert cfg.base_traces == 0
-    assert cfg.base_trace_evals == 0
-    assert cfg.base_session_evals == 0
+    assert cfg.included_events is None
     assert cfg.monitoring_allowed is True
     assert cfg.max_members is None
-    assert cfg.pay_as_you_go is True
+    assert cfg.pay_as_you_go is False
     assert cfg.monthly_price_cents == 0
 
 
-def test_get_limit_for_category_hobby() -> None:
-    plan = SubscriptionPlan.HOBBY
-    assert get_limit_for_category(plan, UsageCategory.TRACES) == 100
-    assert get_limit_for_category(plan, UsageCategory.TRACE_EVALS) == 100
-    assert get_limit_for_category(plan, UsageCategory.SESSION_EVALS) == 10
-
-
-def test_get_limit_for_category_startup() -> None:
-    plan = SubscriptionPlan.STARTUP
-    assert get_limit_for_category(plan, UsageCategory.TRACES) == 50_000
-    assert get_limit_for_category(plan, UsageCategory.TRACE_EVALS) == 50_000
-    assert get_limit_for_category(plan, UsageCategory.SESSION_EVALS) == 1_000
-
-
-def test_get_limit_for_category_enterprise() -> None:
-    plan = SubscriptionPlan.ENTERPRISE
-    assert get_limit_for_category(plan, UsageCategory.TRACES) == 0
-    assert get_limit_for_category(plan, UsageCategory.TRACE_EVALS) == 0
-    assert get_limit_for_category(plan, UsageCategory.SESSION_EVALS) == 0
+def test_development_is_unlimited_and_unbilled() -> None:
+    cfg = get_plan_config(SubscriptionPlan.DEVELOPMENT)
+    assert cfg.included_events is None
+    assert not cfg.pay_as_you_go
 
 
 def test_plan_limits_has_four_entries() -> None:
@@ -88,25 +68,19 @@ def test_overage_unit_price() -> None:
 
 def test_plan_config_accepts_valid_fields() -> None:
     cfg = PlanConfig(
-        base_traces=1,
-        base_trace_evals=2,
-        base_session_evals=3,
+        included_events=3,
         monitoring_allowed=True,
         max_members=5,
         pay_as_you_go=True,
         monthly_price_cents=100,
     )
-    assert cfg.base_traces == 1
-    assert cfg.base_trace_evals == 2
-    assert cfg.base_session_evals == 3
+    assert cfg.included_events == 3
 
 
 def test_plan_config_rejects_invalid_field_types() -> None:
     with pytest.raises(ValidationError):
         PlanConfig(
-            base_traces="not_int",
-            base_trace_evals=0,
-            base_session_evals=0,
+            included_events="not_int",
             monitoring_allowed=False,
             max_members=1,
             pay_as_you_go=False,
@@ -177,30 +151,31 @@ def test_usage_summary_defaults() -> None:
         status=SubscriptionStatus.ACTIVE,
         period_start=ps,
         period_end=pe,
+        limits=get_plan_config(SubscriptionPlan.HOBBY),
     )
     assert summary.traces == 0
     assert summary.trace_evals == 0
     assert summary.session_evals == 0
-    assert summary.limits == {}
+    assert summary.total_events == 0
+    assert summary.remaining_events == 1_000
 
 
-def test_overage_detail_total_cost_matches_sum_of_line_costs() -> None:
-    trace_over = 100
-    eval_over = 50
-    sess_over = 25
-    unit = OVERAGE_UNIT_PRICE
-    detail = OverageDetail(
-        trace_overage=trace_over,
-        trace_eval_overage=eval_over,
-        session_eval_overage=sess_over,
-        trace_overage_cost=unit * trace_over,
-        trace_eval_overage_cost=unit * eval_over,
-        session_eval_overage_cost=unit * sess_over,
-        total_cost=unit * (trace_over + eval_over + sess_over),
-    )
-    assert detail.total_cost == (
-        detail.trace_overage_cost + detail.trace_eval_overage_cost + detail.session_eval_overage_cost
-    )
+@pytest.mark.parametrize(
+    ("counts", "expected"),
+    [((100_000, 0, 0), 0), ((70_000, 20_000, 10_000), 0), ((0, 0, 100_000), 0), ((70_000, 25_000, 10_000), 5_000)],
+)
+def test_startup_applies_one_allowance(counts, expected) -> None:
+    pricing = plan_pricing(SubscriptionPlan.STARTUP)
+    assert overage_by_item(dict(zip(("traces", "trace_evals", "session_evals"), counts, strict=True)), pricing) == {
+        "events": expected
+    }
+
+
+def test_enterprise_pooled_usage_has_no_event_overage() -> None:
+    counts = {"traces": 1_000_000, "trace_evals": 200_000, "session_evals": 50_000}
+    pricing = plan_pricing(SubscriptionPlan.ENTERPRISE)
+    assert pricing == {"unit_price": "0", "included_events": None}
+    assert overage_by_item(counts, pricing) == {"events": 0}
 
 
 def test_subscription_plan_enum_members() -> None:

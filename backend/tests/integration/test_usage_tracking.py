@@ -1,3 +1,4 @@
+import asyncio
 import json
 from decimal import Decimal
 from unittest.mock import patch
@@ -86,7 +87,7 @@ async def test_check_and_increment_retry_preserves_quota_rejection(db_session, r
     await db_session.commit()
 
     key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
-    await redis_client.hset(key, "trace_evals", "98")
+    await redis_client.hset(key, mapping={"trace_evals": 98, "traces": 900})
     svc = UsageService(_ReplayEvalOnceRedis(redis_client), db_session)
 
     with pytest.raises(QuotaExceededError):
@@ -124,7 +125,7 @@ async def test_check_and_increment_hobby_raises_when_trace_limit_reached(db_sess
     await db_session.commit()
     svc = UsageService(redis_client, db_session)
     key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
-    await redis_client.hset(key, "traces", "100")
+    await redis_client.hset(key, mapping={"traces": 100, "session_evals": 900})
     with pytest.raises(QuotaExceededError):
         await svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACES)
 
@@ -219,7 +220,7 @@ async def test_post_traces_returns_429_when_hobby_trace_limit_reached(client: As
     sub = await repo.create_subscription(TEST_ORG_ID)
     await db_session.commit()
     key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
-    await redis_client.hset(key, "traces", "100")
+    await redis_client.hset(key, mapping={"traces": 100, "session_evals": 900})
     payload = _serialize_payload(build_trace_payload(name="over-quota"))
     resp = await client.post("/traces", json=payload)
     assert resp.status_code == 429
@@ -230,25 +231,25 @@ async def test_post_traces_returns_429_when_hobby_trace_limit_reached(client: As
 # ---------------------------------------------------------------------------
 
 
-async def test_hobby_trace_at_99_allows_one_more(db_session, redis_client):
-    """At 99/100, one more should succeed (reaching exactly the limit)."""
+async def test_hobby_at_999_events_allows_one_more_trace(db_session, redis_client):
+    """At 999/1,000, one more should succeed (reaching exactly the limit)."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(TEST_ORG_ID)
     await db_session.commit()
     key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
-    await redis_client.hset(key, "traces", "99")
+    await redis_client.hset(key, mapping={"traces": 99, "trace_evals": 900})
     svc = UsageService(redis_client, db_session)
     n = await svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACES)
     assert n == 100
 
 
-async def test_hobby_trace_at_100_blocks_next(db_session, redis_client):
+async def test_hobby_at_1000_events_blocks_next_trace(db_session, redis_client):
     """At exactly the limit, the next request must be rejected."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(TEST_ORG_ID)
     await db_session.commit()
     key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
-    await redis_client.hset(key, "traces", "100")
+    await redis_client.hset(key, mapping={"traces": 100, "session_evals": 900})
     svc = UsageService(redis_client, db_session)
     with pytest.raises(QuotaExceededError):
         await svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACES)
@@ -260,21 +261,39 @@ async def test_hobby_bulk_increment_crossing_limit_rejected_atomically(db_sessio
     sub = await repo.create_subscription(TEST_ORG_ID)
     await db_session.commit()
     key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
-    await redis_client.hset(key, "trace_evals", "98")
+    await redis_client.hset(key, mapping={"trace_evals": 98, "traces": 900})
     svc = UsageService(redis_client, db_session)
     with pytest.raises(QuotaExceededError):
-        await svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACE_EVALS, count=5)
-    raw_val = await redis_client.hget(key, "trace_evals")
-    assert int(raw_val) == 98, "Counter must be rolled back after rejected bulk increment"
+        await svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACE_EVALS, count=3)
+    assert await redis_client.hgetall(key) == {"trace_evals": "98", "traces": "900"}
+    assert await svc.check_and_increment(TEST_ORG_ID, UsageCategory.SESSION_EVALS, count=2) == 2
+    assert (await svc.get_current_usage(TEST_ORG_ID)).remaining_events == 0
 
 
-async def test_hobby_session_eval_limit_enforced(db_session, redis_client):
-    """HOBBY session eval limit (10) is enforced correctly."""
+async def test_concurrent_categories_share_the_last_event(db_session, redis_client):
+    sub = await BillingRepository(db_session).create_subscription(TEST_ORG_ID)
+    await db_session.commit()
+    key = UsageService._usage_key(TEST_ORG_ID, sub.current_period_start)
+    await redis_client.hset(key, mapping={"traces": 990, "session_evals": 9})
+    svc = UsageService(redis_client, db_session)
+    await svc.get_current_usage(TEST_ORG_ID)  # warm the shared subscription cache
+    results = await asyncio.gather(
+        svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACES),
+        svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACE_EVALS),
+        return_exceptions=True,
+    )
+    assert sum(isinstance(result, QuotaExceededError) for result in results) == 1
+    assert sum(isinstance(result, int) for result in results) == 1
+    assert (await svc.get_current_usage(TEST_ORG_ID)).total_events == 1_000
+
+
+async def test_hobby_event_limit_blocks_session_evals(db_session, redis_client):
+    """Session evaluations use the same quota as traces."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(TEST_ORG_ID)
     await db_session.commit()
     key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
-    await redis_client.hset(key, "session_evals", "10")
+    await redis_client.hset(key, mapping={"traces": 990, "session_evals": 10})
     svc = UsageService(redis_client, db_session)
     with pytest.raises(QuotaExceededError):
         await svc.check_and_increment(TEST_ORG_ID, UsageCategory.SESSION_EVALS)
@@ -302,7 +321,7 @@ async def test_hobby_bulk_fitting_exactly_at_limit_succeeds(db_session, redis_cl
     sub = await repo.create_subscription(TEST_ORG_ID)
     await db_session.commit()
     key = f"pp:usage:{TEST_ORG_ID}:{sub.current_period_start.strftime('%Y-%m-%d')}"
-    await redis_client.hset(key, "trace_evals", "95")
+    await redis_client.hset(key, mapping={"trace_evals": 95, "traces": 900})
     svc = UsageService(redis_client, db_session)
     n = await svc.check_and_increment(TEST_ORG_ID, UsageCategory.TRACE_EVALS, count=5)
     assert n == 100
@@ -332,7 +351,7 @@ async def test_canceled_subscription_raises_quota_error(db_session, redis_client
 
 
 async def test_unreported_overages_computes_correct_delta(db_session, redis_client):
-    """With watermark at 50000 and current at 50100 (base=50000), delta should be 100."""
+    """All three counts contribute to the 150 events above the shared allowance."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
         TEST_ORG_ID,
@@ -352,10 +371,8 @@ async def test_unreported_overages_computes_correct_delta(db_session, redis_clie
     billing_svc = BillingService(db_session, redis_client=redis_client)
     overages = await billing_svc.calculate_unreported_overages(TEST_ORG_ID)
 
-    assert overages.trace_overage == 100
-    assert overages.trace_eval_overage == 0
-    assert overages.session_eval_overage == 0
-    assert overages.total_cost == OVERAGE_UNIT_PRICE * 100
+    assert overages.overage_events == 150
+    assert overages.total_cost == OVERAGE_UNIT_PRICE * 150
 
 
 async def test_unreported_overages_second_call_yields_only_new_delta(db_session, redis_client):
@@ -386,7 +403,7 @@ async def test_unreported_overages_second_call_yields_only_new_delta(db_session,
     billing_svc = BillingService(db_session, redis_client=redis_client)
     overages = await billing_svc.calculate_unreported_overages(TEST_ORG_ID)
     assert overages.total_cost == Decimal("0")
-    assert overages.trace_overage == 0
+    assert overages.overage_events == 0
 
 
 async def test_unreported_overages_incremental_growth(db_session, redis_client):
@@ -416,7 +433,7 @@ async def test_unreported_overages_incremental_growth(db_session, redis_client):
 
     billing_svc = BillingService(db_session, redis_client=redis_client)
     overages = await billing_svc.calculate_unreported_overages(TEST_ORG_ID)
-    assert overages.trace_overage == 50
+    assert overages.overage_events == 50
     assert overages.total_cost == OVERAGE_UNIT_PRICE * 50
 
 
@@ -441,12 +458,11 @@ async def test_unreported_overages_below_base_returns_zero(db_session, redis_cli
     billing_svc = BillingService(db_session, redis_client=redis_client)
     overages = await billing_svc.calculate_unreported_overages(TEST_ORG_ID)
     assert overages.total_cost == Decimal("0")
-    assert overages.trace_overage == 0
-    assert overages.trace_eval_overage == 0
+    assert overages.overage_events == 0
 
 
 async def test_unreported_overages_cross_base_transition(db_session, redis_client):
-    """Watermark below base (49800), current above base (50100) — delta = 100."""
+    """A watermark below the shared allowance does not reduce the 100 billable events."""
     repo = BillingRepository(db_session)
     sub = await repo.create_subscription(
         TEST_ORG_ID,
@@ -458,21 +474,21 @@ async def test_unreported_overages_cross_base_transition(db_session, redis_clien
         sub.current_period_start,
         sub.current_period_end,
         trace_count=50100,
-        trace_eval_count=49000,
+        trace_eval_count=49950,
         session_eval_count=50,
     )
     await repo.update_reported_usage(
         TEST_ORG_ID,
         sub.current_period_start,
         reported_trace_count=49800,
-        reported_trace_eval_count=49000,
+        reported_trace_eval_count=49950,
         reported_session_eval_count=50,
     )
     await db_session.commit()
 
     billing_svc = BillingService(db_session, redis_client=redis_client)
     overages = await billing_svc.calculate_unreported_overages(TEST_ORG_ID)
-    assert overages.trace_overage == 100
+    assert overages.overage_events == 100
 
 
 async def test_unreported_overages_billed_period_returns_zero(db_session, redis_client):

@@ -3,7 +3,8 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.billing.entities import Subscription, UsageRecord
@@ -114,10 +115,11 @@ class BillingRepository:
         return list(rows)
 
     async def list_paid_active_org_ids(self) -> list[UUID]:
-        """Return org IDs for active paid subscriptions only."""
+        """Return active paid orgs with a Stripe customer for the overage worker."""
         stmt = select(SubscriptionModel.org_id).where(
             SubscriptionModel.plan != SubscriptionPlan.HOBBY.value,
             SubscriptionModel.status == SubscriptionStatus.ACTIVE.value,
+            SubscriptionModel.stripe_customer_id.is_not(None),
         )
         rows = (await self._session.execute(stmt)).scalars().all()
         return list(rows)
@@ -150,6 +152,10 @@ class BillingRepository:
         await self._session.execute(stmt)
 
     # -- Usage records --------------------------------------------------------
+
+    async def lock_usage_sync(self, usage_key: str) -> None:
+        """Serialize reads of a period's Redis hash until commit, even before its first usage row exists."""
+        await self._session.execute(select(func.pg_advisory_xact_lock(func.hashtextextended(usage_key, 0))))
 
     async def create_usage_record(
         self,
@@ -208,28 +214,23 @@ class BillingRepository:
         trace_eval_count: int = 0,
         session_eval_count: int = 0,
     ) -> None:
-        """Set usage counters from Redis snapshot (absolute values)."""
-        row = (
-            await self._session.execute(
-                select(UsageRecordModel).where(
-                    UsageRecordModel.org_id == org_id,
-                    UsageRecordModel.period_start == period_start,
-                )
-            )
-        ).scalar_one_or_none()
-
-        if row is None:
-            row = UsageRecordModel(
-                org_id=org_id,
-                period_start=period_start,
-                period_end=period_end,
-            )
-            self._session.add(row)
-
-        row.trace_count = trace_count
-        row.trace_eval_count = trace_eval_count
-        row.session_eval_count = session_eval_count
-        await self._session.flush()
+        """Replace all three usage counts with one Redis snapshot."""
+        counts = dict(
+            trace_count=trace_count, trace_eval_count=trace_eval_count, session_eval_count=session_eval_count
+        )
+        stmt = pg_insert(UsageRecordModel).values(
+            org_id=org_id, period_start=period_start, period_end=period_end, **counts
+        )
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_usage_record_org_period",
+            set_={**counts, "updated_at": datetime.now(timezone.utc)},
+            where=or_(
+                UsageRecordModel.trace_count != trace_count,
+                UsageRecordModel.trace_eval_count != trace_eval_count,
+                UsageRecordModel.session_eval_count != session_eval_count,
+            ),
+        )
+        await self._session.execute(stmt.returning(UsageRecordModel), execution_options={"populate_existing": True})
 
     async def mark_billed(self, org_id: UUID, period_start: datetime, stripe_invoice_id: str | None) -> None:
         """Mark a usage record as billed with the Stripe invoice ID."""

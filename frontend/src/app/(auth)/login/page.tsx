@@ -1,7 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useState, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { extractErrorMessage } from "@/lib/api/client";
 import { resetPassword } from "@/lib/auth/auth-service";
@@ -12,6 +14,34 @@ import { Spinner } from "@/components/ui/Spinner";
 
 type View = "sign-in" | "sign-up" | "forgot-password";
 
+function LoginHeader({ subtitle }: { subtitle: string }) {
+  return (
+    <div className="mb-8 text-start">
+      <h1 className="flex items-center gap-2 text-2xl font-mono text-primary tracking-tight">
+        <Image
+          src="/favicon-96x96.png"
+          alt=""
+          width={24}
+          height={24}
+          className="shrink-0"
+        />
+        PandaProbe
+      </h1>
+      <p className="mt-1 text-balance text-sm text-text-dim">{subtitle}</p>
+    </div>
+  );
+}
+
+function LoginDivider({ label }: { label: string }) {
+  return (
+    <p className="mb-5 flex items-center gap-2 text-xs text-text-muted">
+      <span aria-hidden="true" className="flex-1 border-t border-divider" />
+      {label}
+      <span aria-hidden="true" className="flex-1 border-t border-divider" />
+    </p>
+  );
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -21,6 +51,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [view, setView] = useState<View>("sign-in");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -42,6 +73,7 @@ function LoginForm() {
 
   function switchView(next: View) {
     setView(next);
+    setShowPassword(false);
     setError(null);
     setSuccess(null);
   }
@@ -94,13 +126,8 @@ function LoginForm() {
 
   if (view === "forgot-password") {
     return (
-      <div className="relative z-10 w-full max-w-sm border-engraved bg-surface p-8 animate-fade-in">
-        <div className="mb-8 text-center">
-          <h1 className="text-xl font-mono text-primary tracking-tight">
-            PandaProbe
-          </h1>
-          <p className="mt-1 text-xs text-text-dim">Reset your password</p>
-        </div>
+      <div className="animate-fade-in">
+        <LoginHeader subtitle="Reset your password" />
 
         <form onSubmit={handleResetPassword} className="space-y-4">
           <div>
@@ -139,18 +166,19 @@ function LoginForm() {
     );
   }
 
+  const visibilityLabel = showPassword ? "Hide password" : "Show password";
+  const VisibilityIcon = showPassword ? EyeOff : Eye;
+
   return (
-    <div className="relative z-10 w-full max-w-sm border-engraved bg-surface p-8 animate-fade-in">
-      <div className="mb-8 text-center">
-        <h1 className="text-xl font-mono text-primary tracking-tight">
-          PandaProbe
-        </h1>
-        <p className="mt-1 text-xs text-text-dim">Agent engineering platform</p>
-      </div>
+    <div className="animate-fade-in">
+      <LoginHeader subtitle="The platform for agent engineering" />
+      <LoginDivider
+        label={view === "sign-up" ? "Sign up with" : "Sign in with"}
+      />
 
       <Button
         variant="secondary"
-        className="w-full mb-6"
+        className="w-full mb-5"
         onClick={handleGoogleSignIn}
         disabled={submitting}
       >
@@ -181,14 +209,7 @@ function LoginForm() {
         )}
       </Button>
 
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-divider" />
-        </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-surface px-2 text-text-muted">or</span>
-        </div>
-      </div>
+      <LoginDivider label="or" />
 
       <form onSubmit={handleEmailSubmit} className="space-y-4">
         <div>
@@ -201,18 +222,37 @@ function LoginForm() {
             autoComplete="email"
           />
         </div>
-        <div>
+        <div className="relative">
           <Input
-            type="password"
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             autoComplete={
               view === "sign-up" ? "new-password" : "current-password"
             }
             minLength={6}
+            className="pr-11 [&::-ms-reveal]:hidden"
           />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={visibilityLabel}
+            aria-controls="password"
+            title={visibilityLabel}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => setShowPassword((visible) => !visible)}
+            className="absolute inset-y-0 right-px my-auto h-8 w-9 text-text-muted"
+          >
+            <VisibilityIcon aria-hidden="true" className="h-4 w-4" />
+          </Button>
         </div>
 
         {view === "sign-in" && (
@@ -259,14 +299,25 @@ function LoginForm() {
 export default function LoginPage() {
   useDocumentTitle("Login");
   return (
-    <Suspense
-      fallback={
-        <div className="flex h-full items-center justify-center">
-          <Spinner size="lg" />
+    <main className="login-page grid min-h-svh w-full">
+      <div className="grid min-w-0 place-items-center px-6 py-10">
+        <div className="w-full max-w-[22.5rem]">
+          <Suspense fallback={<Spinner size="lg" className="mx-auto" />}>
+            <LoginForm />
+          </Suspense>
         </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
+      </div>
+      <div className="login-artwork">
+        <figure className="max-w-md rounded-panel border border-divider bg-surface/95 p-6 lg:p-8">
+          <blockquote className="text-balance font-sans text-xl leading-snug tracking-tight text-primary lg:text-2xl">
+            “Production is where you discover what your agent still needs to
+            learn.”
+          </blockquote>
+          <figcaption className="mt-4 font-sans text-sm text-text-dim">
+            Sina Tayebati · Founder, PandaProbe
+          </figcaption>
+        </figure>
+      </div>
+    </main>
   );
 }

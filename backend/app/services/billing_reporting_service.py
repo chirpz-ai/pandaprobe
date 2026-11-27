@@ -5,24 +5,25 @@ before sending; retries never recalculate an already reserved charge from live u
 """
 
 from datetime import datetime, timedelta, timezone
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from itertools import islice
 from uuid import UUID, uuid4
 
 import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.billing.entities import BillingReport, Subscription
-from app.core.billing.plans import OVERAGE_UNIT_PRICE, get_plan_config
+from app.core.billing.entities import USAGE_COUNTERS, BillingReport, Subscription
+from app.core.billing.plans import get_plan_config, overage_by_item, plan_pricing, usd_cents
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.infrastructure.db.repositories.billing_report_repo import BillingReportRepository
 from app.logging import logger
 from app.registry.exceptions import PandaProbeError
 
-_COUNTERS = {
-    "traces": ("trace_count", "base_traces", "Trace overage"),
-    "trace_evals": ("trace_eval_count", "base_trace_evals", "Trace eval overage"),
-    "session_evals": ("session_eval_count", "base_session_evals", "Session eval overage"),
+_DESCRIPTIONS = {
+    "events": "Event overage",
+    "traces": "Trace overage",
+    "trace_evals": "Trace eval overage",
+    "session_evals": "Session eval overage",
 }
 _SAFE_RETRY_AGE = timedelta(hours=23)
 
@@ -56,14 +57,7 @@ class BillingReportingService:
         plan = get_plan_config(sub.plan)
         if not plan.pay_as_you_go and not previous:
             return None
-        pricing = (
-            previous[0].pricing
-            if previous
-            else {
-                "unit_price": str(OVERAGE_UNIT_PRICE),
-                **{category: getattr(plan, base) or 0 for category, (_, base, _) in _COUNTERS.items()},
-            }
-        )
+        pricing = previous[0].pricing if previous else plan_pricing(sub.plan)
         customer = previous[0].stripe_customer_id if previous else sub.stripe_customer_id
         subscription = previous[0].stripe_subscription_id if previous else sub.stripe_subscription_id
         if not customer:
@@ -71,19 +65,33 @@ class BillingReportingService:
 
         report_id = uuid4()
         requests = {}
-        snapshots = {}
-        for category, (counter, _, description) in _COUNTERS.items():
-            # Reservations count even if Stripe is down or an earlier attempt is ambiguous.
-            reserved = max(
-                [getattr(usage, f"reported_{counter}")] + [getattr(r, f"snapshot_{counter}") for r in previous]
-            )
-            snapshot = max(reserved, getattr(usage, counter))
-            snapshots[f"snapshot_{counter}"] = snapshot
-            base = pricing[category]
-            units = max(0, snapshot - base) - max(0, reserved - base)
+        # Include durable reservations even when an earlier delivery is still pending.
+        snapshots = [usage.reported_counts, *(report.snapshot_counts for report in previous)]
+        counts = usage.counts
+        if "included_events" in pricing:
+            # A dispatch rollback can reduce one category while another grows.
+            # Pool whole snapshots so a change in mix alone cannot create a charge.
+            reserved = max(snapshots, key=lambda snapshot: sum(snapshot.values()))
+        else:
+            reserved = {category: max(s[category] for s in snapshots) for category in counts}
+            counts = {category: max(count, reserved[category]) for category, count in counts.items()}
+        before = overage_by_item(reserved, pricing)
+        after = overage_by_item(counts, pricing)
+        rate = Decimal(pricing["unit_price"])
+        for category, overage in after.items():
+            units = overage - before[category]
             if units <= 0:
                 continue
-            amount = int((Decimal(pricing["unit_price"]) * units * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+            if category == "events":
+                # Round cumulative amounts so repeated small reports retain fractional cents.
+                amount = usd_cents(rate * overage) - usd_cents(rate * before[category])
+                if not amount:
+                    continue
+                from_count, to_count = sum(reserved.values()), sum(counts.values())
+            else:
+                amount = usd_cents(rate * units)
+                from_count, to_count = reserved[category], counts[category]
+            description = _DESCRIPTIONS[category]
             requests[category] = {
                 "customer": customer,
                 "currency": "usd",
@@ -94,8 +102,8 @@ class BillingReportingService:
                     "pp_report_id": str(report_id),
                     "category": category,
                     "org_id": str(sub.org_id),
-                    "from_count": str(reserved),
-                    "to_count": str(snapshot),
+                    "from_count": str(from_count),
+                    "to_count": str(to_count),
                 },
                 "idempotency_key": f"pp:report:{report_id}:{category}",
                 **({"subscription": subscription} if subscription else {}),
@@ -113,7 +121,7 @@ class BillingReportingService:
             pricing=pricing,
             requests=requests,
             status="pending" if requests else "reported",
-            **snapshots,
+            **{f"snapshot_{counter}": counts[key] for key, counter in USAGE_COUNTERS.items()},
         )
 
     async def _review(self, report: BillingReport, reason: str) -> None:

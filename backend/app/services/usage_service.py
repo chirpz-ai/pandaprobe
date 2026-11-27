@@ -15,7 +15,7 @@ import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.billing.entities import Subscription, UsageSummary
-from app.core.billing.plans import get_limit_for_category, get_plan_config
+from app.core.billing.plans import get_plan_config
 from app.infrastructure.db.repositories.billing_repo import BillingRepository
 from app.logging import logger
 from app.registry.constants import (
@@ -43,13 +43,16 @@ local cached_result = redis.call('GET', KEYS[2])
 if cached_result then
     return tonumber(cached_result)
 end
-local current = redis.call('HINCRBY', KEYS[1], ARGV[1], tonumber(ARGV[2]))
 local limit = tonumber(ARGV[3])
-if limit >= 0 and current > limit then
-    redis.call('HINCRBY', KEYS[1], ARGV[1], -tonumber(ARGV[2]))
-    redis.call('SET', KEYS[2], '-1', 'EX', tonumber(ARGV[5]))
-    return -1
+if limit >= 0 then
+    local counts = redis.call('HMGET', KEYS[1], 'traces', 'trace_evals', 'session_evals')
+    local total = tonumber(counts[1] or 0) + tonumber(counts[2] or 0) + tonumber(counts[3] or 0)
+    if total + tonumber(ARGV[2]) > limit then
+        redis.call('SET', KEYS[2], '-1', 'EX', tonumber(ARGV[5]))
+        return -1
+    end
 end
+local current = redis.call('HINCRBY', KEYS[1], ARGV[1], tonumber(ARGV[2]))
 redis.call('EXPIRE', KEYS[1], tonumber(ARGV[4]))
 redis.call('SET', KEYS[2], tostring(current), 'EX', tonumber(ARGV[5]))
 return current
@@ -85,8 +88,8 @@ class UsageService:
     ) -> int:
         """Atomically increment usage and enforce quota.
 
-        For HOBBY plans, raises ``QuotaExceededError`` when the hard
-        limit is reached.  For paid plans, always succeeds (pay-as-you-go).
+        HOBBY rejects requests that exceed its pooled allowance. STARTUP
+        accepts overage, and ENTERPRISE and DEVELOPMENT have unlimited usage.
 
         Returns the new counter value after increment.
         """
@@ -99,13 +102,8 @@ class UsageService:
         if sub.status not in (SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE):
             raise QuotaExceededError("Your subscription is not active.")
 
-        limit = get_limit_for_category(SubscriptionPlan(sub.plan), category)
-
-        hard_limit: int
-        if not get_plan_config(SubscriptionPlan(sub.plan)).pay_as_you_go:
-            hard_limit = limit if limit is not None else -1
-        else:
-            hard_limit = -1
+        plan = get_plan_config(sub.plan)
+        hard_limit = plan.included_events if not plan.pay_as_you_go else None
 
         usage_key = self._usage_key(org_id, sub.current_period_start)
         retry_dedup_key = f"{usage_key}:retry:{uuid4().hex}"
@@ -118,14 +116,14 @@ class UsageService:
             retry_dedup_key,
             category.value,
             str(count),
-            str(hard_limit),
+            str(hard_limit if hard_limit is not None else -1),
             str(ttl),
             str(_USAGE_RETRY_DEDUP_TTL_S),
         )
 
         if new_val == -1:
             raise QuotaExceededError(
-                f"You've reached the {category.value} limit ({limit}) for your {sub.plan} plan. "
+                f"This request would exceed the shared limit of {hard_limit} events for your {sub.plan} plan. "
                 "Please upgrade to continue."
             )
 
@@ -166,32 +164,26 @@ class UsageService:
         if sub is None:
             return UsageSummary(
                 plan=SubscriptionPlan.HOBBY,
+                limits=get_plan_config(SubscriptionPlan.HOBBY),
                 status=SubscriptionStatus.ACTIVE,
                 period_start=datetime.now(timezone.utc),
                 period_end=datetime.now(timezone.utc),
             )
 
-        plan_cfg = get_plan_config(SubscriptionPlan(sub.plan))
-        usage_key = self._usage_key(org_id, sub.current_period_start)
-        raw = await self._redis.hgetall(usage_key)  # type: ignore[union-attr]
-
+        counts = await self.get_period_counts(org_id, sub.current_period_start)
         return UsageSummary(
             plan=SubscriptionPlan(sub.plan),
             status=SubscriptionStatus(sub.status),
             period_start=sub.current_period_start,
             period_end=sub.current_period_end,
-            traces=int(raw.get("traces", 0)),
-            trace_evals=int(raw.get("trace_evals", 0)),
-            session_evals=int(raw.get("session_evals", 0)),
-            limits={
-                "base_traces": plan_cfg.base_traces,
-                "base_trace_evals": plan_cfg.base_trace_evals,
-                "base_session_evals": plan_cfg.base_session_evals,
-                "monitoring_allowed": plan_cfg.monitoring_allowed,
-                "max_members": plan_cfg.max_members,
-                "pay_as_you_go": plan_cfg.pay_as_you_go,
-            },
+            limits=get_plan_config(sub.plan),
+            **counts,
         )
+
+    async def get_period_counts(self, org_id: UUID, period_start: datetime) -> dict[str, int]:
+        """Read all three live counts for the specified organization and period."""
+        raw = await self._redis.hgetall(self._usage_key(org_id, period_start))  # type: ignore[union-attr]
+        return {category.value: int(raw.get(category.value, 0)) for category in UsageCategory}
 
     async def require_monitoring_allowed(self, org_id: UUID) -> None:
         """Raise ``QuotaExceededError`` if the org's plan doesn't permit monitors."""
@@ -216,6 +208,7 @@ class UsageService:
             period_start, period_end = sub.current_period_start, sub.current_period_end
 
         usage_key = self._usage_key(org_id, period_start)
+        await billing_repo.lock_usage_sync(usage_key)
         raw = await self._redis.hgetall(usage_key)  # type: ignore[union-attr]
         if not raw:
             return

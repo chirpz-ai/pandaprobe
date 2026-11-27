@@ -9,9 +9,11 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from app.registry.constants import SubscriptionPlan, SubscriptionStatus
+
+USAGE_COUNTERS = {"traces": "trace_count", "trace_evals": "trace_eval_count", "session_evals": "session_eval_count"}
 
 
 class Subscription(BaseModel):
@@ -48,13 +50,21 @@ class UsageRecord(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    @property
+    def counts(self) -> dict[str, int]:
+        """Return absolute database counts keyed by usage category."""
+        return {category: getattr(self, counter) for category, counter in USAGE_COUNTERS.items()}
+
+    @property
+    def reported_counts(self) -> dict[str, int]:
+        """Return confirmed usage watermarks keyed by usage category."""
+        return {category: getattr(self, f"reported_{counter}") for category, counter in USAGE_COUNTERS.items()}
+
 
 class PlanConfig(BaseModel):
     """Static configuration for a subscription plan tier."""
 
-    base_traces: int | None = Field(description="Included traces per period; None = unlimited")
-    base_trace_evals: int | None = Field(description="Included trace evaluations per period")
-    base_session_evals: int | None = Field(description="Included session evaluations per period")
+    included_events: int | None = Field(ge=0, description="Shared event allowance per period, or unlimited")
     monitoring_allowed: bool = Field(description="Whether monitor creation is permitted")
     max_members: int | None = Field(description="Max org members; None = unlimited")
     pay_as_you_go: bool = Field(description="Whether overages are billed rather than blocked")
@@ -81,6 +91,11 @@ class BillingReport(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    @property
+    def snapshot_counts(self) -> dict[str, int]:
+        """Return the three counters recorded together for this report."""
+        return {category: getattr(self, f"snapshot_{counter}") for category, counter in USAGE_COUNTERS.items()}
+
 
 class UsageSummary(BaseModel):
     """Current-period usage snapshot returned to the API caller."""
@@ -92,7 +107,48 @@ class UsageSummary(BaseModel):
     traces: int = 0
     trace_evals: int = 0
     session_evals: int = 0
-    limits: dict[str, Any] = Field(default_factory=dict)
+    limits: PlanConfig
+
+    @computed_field
+    @property
+    def total_events(self) -> int:
+        """Count the three billable event types across the organization."""
+        return self.traces + self.trace_evals + self.session_evals
+
+    @computed_field
+    @property
+    def remaining_events(self) -> int | None:
+        """Return unused included events, or None for unlimited usage."""
+        included = self.limits.included_events
+        return None if included is None else max(0, included - self.total_events)
+
+
+class CategoryUsage(BaseModel):
+    """Raw usage in a single category."""
+
+    used: int
+
+
+class BillingResponse(BaseModel):
+    """Current-period billing overview with cost projections."""
+
+    plan: SubscriptionPlan
+    period_start: str
+    period_end: str
+    base_price_cents: int
+    pay_as_you_go: bool
+    overage_unit_price: str
+    traces: CategoryUsage
+    trace_evals: CategoryUsage
+    session_evals: CategoryUsage
+    total_events: int
+    included_events: int | None
+    remaining_events: int | None
+    overage_events: int
+    total_overage_cost: str
+    reported_overage_cost: str
+    pending_overage_cost: str
+    estimated_total_cents: int
 
 
 class OverageDetail(BaseModel):
@@ -103,12 +159,7 @@ class OverageDetail(BaseModel):
     after successfully reporting the delta to Stripe.
     """
 
-    trace_overage: int = 0
-    trace_eval_overage: int = 0
-    session_eval_overage: int = 0
-    trace_overage_cost: Decimal = Decimal("0")
-    trace_eval_overage_cost: Decimal = Decimal("0")
-    session_eval_overage_cost: Decimal = Decimal("0")
+    overage_events: int = 0
     total_cost: Decimal = Decimal("0")
     snapshot_trace_count: int = 0
     snapshot_trace_eval_count: int = 0

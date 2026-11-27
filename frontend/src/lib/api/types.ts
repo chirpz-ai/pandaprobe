@@ -147,14 +147,20 @@ export interface UsageResponse {
   traces: number;
   trace_evals: number;
   session_evals: number;
-  limits: Record<string, unknown>;
+  total_events: number;
+  remaining_events: number | null;
+  limits: Pick<
+    PlanInfo,
+    | "included_events"
+    | "max_members"
+    | "monitoring_allowed"
+    | "pay_as_you_go"
+    | "monthly_price_cents"
+  >;
 }
 
-export interface CategoryBreakdown {
+interface CategoryUsage {
   used: number;
-  included: number | null;
-  overage_units: number;
-  overage_cost: string;
 }
 
 export interface BillingResponse {
@@ -162,10 +168,15 @@ export interface BillingResponse {
   period_start: string;
   period_end: string;
   base_price_cents: number;
+  pay_as_you_go: boolean;
   overage_unit_price: string;
-  traces: CategoryBreakdown;
-  trace_evals: CategoryBreakdown;
-  session_evals: CategoryBreakdown;
+  traces: CategoryUsage;
+  trace_evals: CategoryUsage;
+  session_evals: CategoryUsage;
+  total_events: number;
+  included_events: number | null;
+  remaining_events: number | null;
+  overage_events: number;
   total_overage_cost: string;
   reported_overage_cost: string;
   pending_overage_cost: string;
@@ -175,6 +186,7 @@ export interface BillingResponse {
 export interface UsageHistoryItem {
   period_start: string;
   period_end: string;
+  total_events: number;
   trace_count: number;
   trace_eval_count: number;
   session_eval_count: number;
@@ -184,9 +196,7 @@ export interface UsageHistoryItem {
 
 export interface PlanInfo {
   name: string;
-  base_traces: number | null;
-  base_trace_evals: number | null;
-  base_session_evals: number | null;
+  included_events: number | null;
   monitoring_allowed: boolean;
   max_members: number | null;
   pay_as_you_go: boolean;

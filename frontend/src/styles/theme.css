@@ -193,18 +193,34 @@
     border: 1px solid var(--color-border);
   }
 
-  .bg-dot-grid {
-    background-image:
-      radial-gradient(circle, var(--color-border) 1px, transparent 1px);
-    background-size: 28px 28px;
+  .login-artwork {
+    display: none;
   }
 
-  .bg-hero-glow {
-    background-image: radial-gradient(
-      ellipse 80% 60% at 50% -5%,
-      rgba(255, 255, 255, 0.05) 0%,
-      transparent 70%
-    );
+  @media (width >= 56rem) and (height >= 30rem) {
+    .login-page {
+      grid-template-columns: 5fr 7fr;
+    }
+
+    .login-artwork {
+      display: grid;
+      place-items: end start;
+      position: relative;
+      isolation: isolate;
+      margin: 1.25rem 1.25rem 1.25rem 0;
+      padding: clamp(1.5rem, 4vw, 4rem);
+      overflow: hidden;
+      border-radius: var(--radius-panel);
+    }
+
+    .login-artwork::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: url("/assets/sf-hills-login.webp") 24% center / cover no-repeat;
+      opacity: 0.52;
+    }
   }
 
   .token-keyword     { color: #c792ea; }
