@@ -13,6 +13,7 @@ from app.core.billing.plans import (
     PLAN_LIMITS,
     get_plan_config,
     overage_by_item,
+    plan_pricing,
 )
 from app.registry.constants import SubscriptionPlan, SubscriptionStatus, UsageCategory
 from app.registry.exceptions import QuotaExceededError
@@ -38,10 +39,10 @@ def test_get_plan_config_returns_startup_config() -> None:
 
 def test_get_plan_config_returns_enterprise_config() -> None:
     cfg = get_plan_config(SubscriptionPlan.ENTERPRISE)
-    assert cfg.included_events == 0
+    assert cfg.included_events is None
     assert cfg.monitoring_allowed is True
     assert cfg.max_members is None
-    assert cfg.pay_as_you_go is True
+    assert cfg.pay_as_you_go is False
     assert cfg.monthly_price_cents == 0
 
 
@@ -164,10 +165,17 @@ def test_usage_summary_defaults() -> None:
     [((100_000, 0, 0), 0), ((70_000, 20_000, 10_000), 0), ((0, 0, 100_000), 0), ((70_000, 25_000, 10_000), 5_000)],
 )
 def test_startup_applies_one_allowance(counts, expected) -> None:
-    pricing = {"included_events": get_plan_config(SubscriptionPlan.STARTUP).included_events}
+    pricing = plan_pricing(SubscriptionPlan.STARTUP)
     assert overage_by_item(dict(zip(("traces", "trace_evals", "session_evals"), counts, strict=True)), pricing) == {
         "events": expected
     }
+
+
+def test_enterprise_pooled_usage_has_no_event_overage() -> None:
+    counts = {"traces": 1_000_000, "trace_evals": 200_000, "session_evals": 50_000}
+    pricing = plan_pricing(SubscriptionPlan.ENTERPRISE)
+    assert pricing == {"unit_price": "0", "included_events": None}
+    assert overage_by_item(counts, pricing) == {"events": 0}
 
 
 def test_subscription_plan_enum_members() -> None:
