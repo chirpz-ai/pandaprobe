@@ -13,13 +13,23 @@ test.describe("Navigation", () => {
     await expect(page.locator("text=Analytics")).toBeVisible();
   });
 
-  test("sidebar renders settings navigation links", async ({ page }) => {
-    await page.goto(ORG_URL);
-    await expect(page.locator("text=Organization")).toBeVisible();
-    await expect(page.locator("text=Members")).toBeVisible();
-    await expect(page.locator("text=Projects")).toBeVisible();
-    await expect(page.locator("text=API Keys")).toBeVisible();
-    await expect(page.locator("text=Billing")).toBeVisible();
+  test("Settings opens API Keys and lists the organization tabs in priority order", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const sidebar = page.locator("aside");
+    await sidebar
+      .getByRole("button", { name: "Settings", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/org\/[^/]+\/settings\/api-keys$/);
+    await expect(sidebar.getByRole("navigation").getByRole("link")).toHaveText([
+      "API Keys",
+      "Projects",
+      "Plans",
+      "Billing",
+      "Members",
+      "Organization",
+    ]);
   });
 
   test("navigating to traces page shows the traces heading", async ({
