@@ -25,10 +25,10 @@ PLAN_LIMITS: dict[SubscriptionPlan, PlanConfig] = {
         monthly_price_cents=29_900,
     ),
     SubscriptionPlan.ENTERPRISE: PlanConfig(
-        included_events=0,
+        included_events=None,
         monitoring_allowed=True,
         max_members=None,
-        pay_as_you_go=True,
+        pay_as_you_go=False,
         monthly_price_cents=0,
     ),
     SubscriptionPlan.DEVELOPMENT: PlanConfig(
@@ -52,9 +52,8 @@ def get_plan_config(plan: SubscriptionPlan) -> PlanConfig:
 
 def plan_pricing(plan: SubscriptionPlan) -> dict[str, Any]:
     """Build the first price snapshot. Subsequent reports reuse the saved snapshot."""
-    rate = str(OVERAGE_UNIT_PRICE)
-    if plan == SubscriptionPlan.ENTERPRISE:
-        return {"unit_price": rate, "traces": 0, "trace_evals": 0, "session_evals": 0}
+    # Enterprise fees are set by contract outside the event meter.
+    rate = "0" if plan == SubscriptionPlan.ENTERPRISE else str(OVERAGE_UNIT_PRICE)
     return {"unit_price": rate, "included_events": get_plan_config(plan).included_events}
 
 
