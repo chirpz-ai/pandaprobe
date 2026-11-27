@@ -293,6 +293,42 @@ async def test_startup_usage_estimate_and_invoice_share_one_pool(client, seed_ap
     assert history[0]["total_events"] == 105_000
 
 
+async def test_enterprise_admits_and_tracks_mixed_usage_without_charging(client, seed_api_user, db_session):
+    repo = BillingRepository(db_session)
+    await repo.update_subscription(TEST_ORG_ID, plan=SubscriptionPlan.ENTERPRISE)
+    assert TEST_ORG_ID in await repo.list_all_active_org_ids()
+    assert TEST_ORG_ID not in await repo.list_paid_active_org_ids()
+    counts = {"traces": 1_000_000, "trace_evals": 200_000, "session_evals": 50_000}
+    async with aioredis.from_url(settings.REDIS_URL, decode_responses=True) as redis_client:
+        usage_service = UsageService(redis_client, db_session)
+        for category, count in counts.items():
+            assert await usage_service.check_and_increment(TEST_ORG_ID, category, count) == count
+        await usage_service.sync_to_database(TEST_ORG_ID)
+    await db_session.commit()
+
+    path = f"/organizations/{TEST_ORG_ID}/subscriptions"
+    usage = (await client.get(f"{path}/usage")).json()
+    billing = (await client.get(f"{path}/billing")).json()
+    history = (await client.get(f"{path}/invoices")).json()
+    assert {key: usage[key] for key in counts} == {key: billing[key]["used"] for key in counts} == counts
+    assert usage["total_events"] == billing["total_events"] == history[0]["total_events"] == 1_250_000
+    assert usage["limits"]["included_events"] is usage["remaining_events"] is None
+    assert billing["included_events"] is billing["remaining_events"] is None
+    assert not billing["pay_as_you_go"] and billing["overage_events"] == 0
+    assert all(
+        Decimal(billing[field]) == 0
+        for field in ("overage_unit_price", "total_overage_cost", "reported_overage_cost", "pending_overage_cost")
+    )
+    sub = await repo.update_subscription(TEST_ORG_ID, stripe_customer_id="cus_enterprise")
+    with patch("stripe.InvoiceItem.create") as create:
+        assert not await BillingService(db_session).report_overages_to_stripe(TEST_ORG_ID)
+        closing_report = await BillingReportingService(db_session).stage(
+            sub, sub.current_period_start, closing_invoice_id="in_enterprise"
+        )
+        assert closing_report is None
+        create.assert_not_called()
+
+
 async def test_billing_overview_preserves_unused_legacy_category_allowances(
     client, seed_api_user, db_session, monkeypatch
 ):
@@ -325,6 +361,9 @@ async def test_available_plans_exclude_retired_pro(client: AsyncClient):
     resp = await client.get("/subscriptions/plans")
     assert resp.status_code == 200
     assert [plan["name"] for plan in resp.json()] == ["HOBBY", "STARTUP", "ENTERPRISE"]
+    enterprise = next(plan for plan in resp.json() if plan["name"] == "ENTERPRISE")
+    assert enterprise["included_events"] is None
+    assert not enterprise["pay_as_you_go"] and Decimal(enterprise["overage_unit_price"]) == 0
 
 
 async def test_checkout_rejects_retired_pro_before_calling_stripe(client: AsyncClient, seed_api_user):
