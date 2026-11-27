@@ -52,10 +52,7 @@ class IdentityService:
     async def create_organization(
         self, name: str, owner_id: UUID, *, plan: SubscriptionPlan | None = None
     ) -> Organization:
-        """Create a new tenant organization and assign the owner membership.
-
-        A default ``onboarding`` project is provisioned alongside the org
-        """
+        """Create an organization with an owner membership and a project named ``default``."""
         owned_count = await self._repo.count_user_owned_orgs(owner_id)
         if owned_count >= MAX_OWNED_ORGS:
             raise OrgLimitReachedError()
@@ -80,8 +77,8 @@ class IdentityService:
 
         await self._project_repo.create_project(
             org_id=org.id,
-            name="onboarding",
-            description="Your onboarding project",
+            name="default",
+            description="Your default project",
         )
 
         return org
