@@ -71,4 +71,6 @@ async def test_create_organization_allowed_below_limit() -> None:
 
     result = await svc.create_organization(name="New Org", owner_id=uuid4())
     assert result.name == "New Org"
-    svc._project_repo.create_project.assert_awaited_once()
+    svc._project_repo.create_project.assert_awaited_once_with(
+        org_id=result.id, name="default", description="Your default project"
+    )
