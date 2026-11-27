@@ -88,8 +88,8 @@ class UsageService:
     ) -> int:
         """Atomically increment usage and enforce quota.
 
-        For HOBBY plans, raises ``QuotaExceededError`` when the hard
-        limit is reached.  For paid plans, always succeeds (pay-as-you-go).
+        HOBBY rejects requests that exceed its pooled allowance. STARTUP
+        accepts overage, and ENTERPRISE and DEVELOPMENT have unlimited usage.
 
         Returns the new counter value after increment.
         """
