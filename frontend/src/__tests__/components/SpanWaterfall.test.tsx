@@ -81,17 +81,17 @@ describe("Trace waterfall", () => {
     expect(long.className).not.toContain("border-l");
   });
 
-  it("switches between Waterfall and Timeline with shared selection and collapsed branches", async () => {
+  it("switches between Trace and Timeline with shared selection and collapsed branches", async () => {
     const user = userEvent.setup();
     render(<SpanWaterfall trace={makeTrace()} />);
-    expect(screen.getByRole("tab", { name: "Waterfall" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Trace" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
     expect(screen.queryByLabelText("Elapsed time")).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Timeline" }));
     await user.click(screen.getByRole("button", { name: /ChatOpenAI LLM/ }));
-    await user.click(screen.getByRole("tab", { name: "Waterfall" }));
+    await user.click(screen.getByRole("tab", { name: "Trace" }));
     expect(screen.queryByLabelText("Elapsed time")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /ChatOpenAI LLM/ }),
@@ -112,7 +112,7 @@ describe("Trace waterfall", () => {
     // Radix tabs also support keyboard switching.
     screen.getByRole("tab", { name: "Timeline" }).focus();
     await user.keyboard("{ArrowLeft}");
-    expect(screen.getByRole("tab", { name: "Waterfall" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Trace" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -151,10 +151,11 @@ describe("Trace waterfall", () => {
     expect(
       screen.getByRole("button", { name: "Span details" }),
     ).toHaveAttribute("aria-pressed", "true");
-    await user.click(screen.getByRole("button", { name: "Waterfall · 3" }));
-    expect(
-      screen.getByRole("button", { name: "Waterfall · 3" }),
-    ).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Trace · 3" }));
+    expect(screen.getByRole("button", { name: "Trace · 3" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("keeps trace content accessible with no spans and exposes errors without relying on color", async () => {
