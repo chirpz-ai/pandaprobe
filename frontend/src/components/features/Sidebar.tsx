@@ -418,7 +418,10 @@ export function Sidebar() {
   }
 
   function switchOrg(newOrgId: string) {
-    router.push(`/org/${newOrgId}/settings/organization`);
+    if (newOrgId === orgId) return;
+    const activeTab = orgSettingsGroups.flat().find(isActive);
+    const settingsPath = activeTab?.href.slice(orgBase.length) ?? "/settings";
+    router.push(`/org/${newOrgId}${settingsPath}`);
   }
 
   function switchProject(newProjectId: string) {

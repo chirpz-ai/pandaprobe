@@ -32,6 +32,64 @@ test.describe("Navigation", () => {
     ]);
   });
 
+  test("switching organizations keeps the Projects tab and shows the selected organization's projects", async ({
+    page,
+  }) => {
+    const createdAt = "2026-01-01T00:00:00Z";
+    const organizations = [
+      {
+        id: TEST_ORG_ID,
+        name: "First team",
+        role: "OWNER",
+        created_at: createdAt,
+      },
+      {
+        id: "other-org-id",
+        name: "Second team",
+        role: "MEMBER",
+        created_at: createdAt,
+      },
+    ];
+    await page.route("**/organizations", (route) =>
+      route.fulfill({ json: organizations }),
+    );
+    for (const org of organizations) {
+      await page.route(`**/organizations/${org.id}/projects`, (route) =>
+        route.fulfill({
+          json: [
+            {
+              id: `${org.id}-project`,
+              org_id: org.id,
+              name: `${org.name} project`,
+              description: "",
+              created_at: createdAt,
+            },
+          ],
+        }),
+      );
+    }
+
+    await page.goto(`${ORG_URL}/settings/projects`);
+    const main = page.getByRole("main");
+    await expect(
+      main.getByText("First team project", { exact: true }),
+    ).toBeVisible();
+    await page
+      .locator("aside")
+      .getByRole("button", { name: "First team", exact: true })
+      .click();
+    await page
+      .getByRole("menuitem", { name: "Second team", exact: true })
+      .click();
+    await expect(page).toHaveURL("/org/other-org-id/settings/projects");
+    await expect(
+      main.getByText("Second team project", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      main.getByText("First team project", { exact: true }),
+    ).toHaveCount(0);
+  });
+
   test("navigating to traces page shows the traces heading", async ({
     page,
   }) => {
