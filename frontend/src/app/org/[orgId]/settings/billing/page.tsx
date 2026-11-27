@@ -71,6 +71,8 @@ export default function BillingPage() {
   const subscription = subQuery.data;
   const billing = billingQuery.data;
   const invoices = invoicesQuery.data ?? [];
+  const contractBilling =
+    billing?.plan === SubscriptionPlan.ENTERPRISE && !billing.pay_as_you_go;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -173,7 +175,12 @@ export default function BillingPage() {
       )}
 
       {/* ── Billing Breakdown ────────────────────────────────────── */}
-      {billing && (
+      {contractBilling && (
+        <p className="border-engraved bg-surface p-4 text-xs font-mono text-text-muted">
+          Billed under your Enterprise agreement.
+        </p>
+      )}
+      {billing && !contractBilling && (
         <div className="border-engraved bg-surface p-4">
           <h2 className="text-xs font-mono text-text-muted mb-3">
             Billing breakdown
